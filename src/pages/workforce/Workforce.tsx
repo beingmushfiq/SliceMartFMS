@@ -153,7 +153,7 @@ export default function Workforce() {
                         <td className="capitalize text-slate-600">{a.shift}</td>
                         <td className="font-mono text-slate-600">{a.checkIn ?? '—'}</td>
                         <td className="font-mono text-slate-600">{a.checkOut ?? '—'}</td>
-                        <td className="font-mono text-slate-600">{a.overtimeHours > 0 ? `+${a.overtimeHours}h` : '—'}</td>
+                        <td className="font-mono text-slate-600">{(a.overtimeHours ?? 0) > 0 ? `+${a.overtimeHours}h` : '—'}</td>
                         <td>
                           <span className={cn(
                             'badge',

@@ -705,8 +705,8 @@ export function PurchaseHistory() {
                   <td className="font-500 text-slate-900">{po.supplierName}</td>
                   <td><span className="badge badge-navy">{po.warehouseId}</span></td>
                   <td className="col-numeric font-mono font-700 text-slate-900">{formatBDT(po.total)}</td>
-                  <td className="col-numeric font-mono text-success-600">{formatBDT(po.paid)}</td>
-                  <td className="col-numeric font-mono text-error-600 font-600">{formatBDT(po.due)}</td>
+                  <td className="col-numeric font-mono text-success-600">{formatBDT(po.paid ?? 0)}</td>
+                  <td className="col-numeric font-mono text-error-600 font-600">{formatBDT(po.due ?? 0)}</td>
                   <td><StatusBadge status={po.paymentStatus} /></td>
                   <td><StatusBadge status={po.status} /></td>
                 </tr>

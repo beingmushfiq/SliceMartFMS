@@ -21,7 +21,7 @@ import { KPICard } from '../../components/ui/KPICard';
 import { Tabs, TabList, TabTrigger, TabPanel } from '../../components/ui/Tabs';
 import { Modal } from '../../components/ui/Modal';
 import { cn, formatBDT, formatDate } from '../../lib/utils';
-import { CUSTOMERS, PRODUCTS, SALES_TREND_7D } from '../../data/mockData';
+import { SALES_TREND_7D } from '../../data/mockData';
 import { QuickAddCustomerModal, QuickAddProductModal, QuickAddButton } from '../../components/modals/QuickEntryModals';
 import type { Sale, SaleType, PaymentStatus, SaleStatus } from '../../types';
 

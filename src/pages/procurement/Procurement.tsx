@@ -164,7 +164,7 @@ export default function Procurement() {
       {/* Suppliers section */}
       <section className="card">
         <div className="card-header">
-          <h2 className="section-title">Registered Suppliers ({SUPPLIERS.length})</h2>
+          <h2 className="section-title">Registered Suppliers ({suppliers.length})</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="data-table" aria-label="Suppliers list">
@@ -179,7 +179,7 @@ export default function Procurement() {
               </tr>
             </thead>
             <tbody>
-              {SUPPLIERS.map(sup => (
+              {suppliers.map(sup => (
                 <tr key={sup.id}>
                   <td>
                     <div className="font-500 text-slate-800">{sup.name}</div>
