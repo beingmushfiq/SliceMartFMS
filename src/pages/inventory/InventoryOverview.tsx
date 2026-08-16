@@ -66,7 +66,7 @@ export default function InventoryOverview() {
         date:         new Date().toISOString().slice(0, 10),
         reference:    `ADJ-${Date.now()}`,
         notes:        adjForm.reason,
-        performedBy:  'Sohel Rana',
+        performedBy:  'Mushfiqur Rahman',
         createdAt:    new Date().toISOString(),
       });
       setAdjItem(null);

@@ -89,7 +89,7 @@ export default function ProductionOrders() {
         productionDate: newOrder.productionDate,
         expectedCompletion: newOrder.productionDate,
         notes: newOrder.notes,
-        createdBy: 'Sohel Rana',
+        createdBy: 'Mushfiqur Rahman',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

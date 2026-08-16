@@ -292,10 +292,10 @@ export function Header() {
             aria-label="User menu"
           >
             <div className="w-7 h-7 rounded-full bg-navy-900 border border-white/10 flex items-center justify-center shrink-0">
-              <span className="text-xs font-700 text-white">SR</span>
+              <span className="text-xs font-700 text-white">MR</span>
             </div>
             <div className="hidden lg:block text-left">
-              <p className="text-xs font-600 text-slate-900 leading-tight">Sohel Rana</p>
+              <p className="text-xs font-600 text-slate-900 leading-tight">Mushfiqur Rahman</p>
               <p className="text-2xs text-slate-400 leading-tight">Factory Manager</p>
             </div>
             <ChevronDown className="w-3 h-3 text-slate-400 hidden lg:block" aria-hidden="true" />
@@ -312,8 +312,8 @@ export function Header() {
                            rounded-xl shadow-xl py-1.5 z-50 overflow-hidden"
               >
                 <div className="px-3.5 py-2 border-b border-slate-100 bg-slate-50/50">
-                  <p className="text-xs font-700 text-slate-900">Sohel Rana</p>
-                  <p className="text-2xs text-slate-500 font-mono truncate">sohel@slicemart.com</p>
+                  <p className="text-xs font-700 text-slate-900">Mushfiqur Rahman</p>
+                  <p className="text-2xs text-slate-500 font-mono truncate">mushfiq@slicemart.com</p>
                 </div>
                 <button
                   onClick={() => { navigate('/admin/settings'); setProfileOpen(false); }}

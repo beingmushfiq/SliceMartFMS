@@ -117,7 +117,7 @@ export default function SalesPage() {
         saleDate:       new Date().toISOString().slice(0, 10),
         deliveryStatus: 'processing',
         notes:          newSale.notes,
-        createdBy:      'Sohel Rana',
+        createdBy:      'Mushfiqur Rahman',
         createdAt:      new Date().toISOString(),
         updatedAt:      new Date().toISOString(),
       };
@@ -137,7 +137,7 @@ export default function SalesPage() {
             date:         new Date().toISOString().slice(0, 10),
             reference:    sale.invoiceNo,
             notes:        `Sale to ${customer.name}`,
-            performedBy:  'Sohel Rana',
+            performedBy:  'Mushfiqur Rahman',
             createdAt:    new Date().toISOString(),
           });
         }

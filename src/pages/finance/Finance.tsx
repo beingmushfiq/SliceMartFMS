@@ -57,9 +57,9 @@ export default function Finance() {
         paymentMode: expForm.paymentMode,
         date:        new Date().toISOString().slice(0,10),
         status:      'approved',
-        approvedBy:  'Sohel Rana',
+        approvedBy:  'Mushfiqur Rahman',
         notes:       expForm.notes,
-        createdBy:   'Sohel Rana',
+        createdBy:   'Mushfiqur Rahman',
         createdAt:   new Date().toISOString(),
       };
       const txn: Transaction = {
@@ -74,7 +74,7 @@ export default function Finance() {
         date:        exp.date,
         balanceBefore: accounts.find(a => a.id === expForm.accountId)?.balance ?? 0,
         balanceAfter:  (accounts.find(a => a.id === expForm.accountId)?.balance ?? 0) - parseFloat(expForm.amount),
-        performedBy:   'Sohel Rana',
+        performedBy:   'Mushfiqur Rahman',
         createdAt:   new Date().toISOString(),
       };
       addExpense(exp);

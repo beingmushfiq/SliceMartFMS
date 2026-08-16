@@ -802,7 +802,7 @@ export function NewSale() {
       status: 'completed' as any,
       saleDate: new Date().toISOString().split('T')[0],
       warehouseId: 'WH-B' as any,
-      createdBy: 'Sohel Rana',
+      createdBy: 'Mushfiqur Rahman',
       createdAt: new Date().toISOString(),
     };
 
@@ -1589,22 +1589,22 @@ export function AdminUsers() {
             </thead>
             <tbody>
               <tr>
-                <td className="font-600 text-slate-900">Sohel Rana</td>
-                <td className="text-slate-500 font-mono text-xs">sohel@slicemart.com</td>
+                <td className="font-600 text-slate-900">Mushfiqur Rahman</td>
+                <td className="text-slate-500 font-mono text-xs">mushfiq@slicemart.com</td>
                 <td><span className="badge badge-navy">Factory Manager</span></td>
                 <td className="text-xs text-slate-700">Central Plant Control</td>
                 <td><span className="badge badge-green">Active</span></td>
               </tr>
               <tr>
-                <td className="font-600 text-slate-900">Md. Jamal Uddin</td>
-                <td className="text-slate-500 font-mono text-xs">jamal.qc@slicemart.com</td>
+                <td className="font-600 text-slate-900">Meshkat Afrose</td>
+                <td className="text-slate-500 font-mono text-xs">meshkat.qc@slicemart.com</td>
                 <td><span className="badge badge-blue">QC Inspector</span></td>
                 <td className="text-xs text-slate-700">Testing Lab</td>
                 <td><span className="badge badge-green">Active</span></td>
               </tr>
               <tr>
-                <td className="font-600 text-slate-900">Md. Faruk Ahmed</td>
-                <td className="text-slate-500 font-mono text-xs">faruk.store@slicemart.com</td>
+                <td className="font-600 text-slate-900">Rasel Ahmed</td>
+                <td className="text-slate-500 font-mono text-xs">rasel.store@slicemart.com</td>
                 <td><span className="badge badge-slate">Storekeeper</span></td>
                 <td className="text-xs text-slate-700">Warehouse A</td>
                 <td><span className="badge badge-green">Active</span></td>

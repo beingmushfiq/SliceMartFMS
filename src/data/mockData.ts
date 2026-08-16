@@ -90,12 +90,12 @@ export const BOMS: BOM[] = [
 export const EMPLOYEES: Employee[] = [
   { id: 'EMP-001', employeeId: 'SM-001', name: 'Md. Abdur Rahim', phone: '01711-234567', designation: 'Senior Production Worker', department: 'Production', shift: 'morning', joinDate: '2024-03-15', salary: 18000, status: 'active', address: 'Mirpur-12, Dhaka', createdAt: '2024-03-15T08:00:00Z', updatedAt: '2026-08-01T08:00:00Z' },
   { id: 'EMP-002', employeeId: 'SM-002', name: 'Md. Karim Hossain', phone: '01812-345678', designation: 'Production Worker', department: 'Production', shift: 'morning', joinDate: '2024-05-01', salary: 15000, status: 'active', address: 'Pallabi, Dhaka', createdAt: '2024-05-01T08:00:00Z', updatedAt: '2026-08-01T08:00:00Z' },
-  { id: 'EMP-003', employeeId: 'SM-003', name: 'Md. Jamal Uddin', phone: '01912-456789', designation: 'QC Inspector', department: 'Quality Control', shift: 'morning', joinDate: '2024-06-10', salary: 20000, status: 'active', address: 'Uttara, Dhaka', createdAt: '2024-06-10T08:00:00Z', updatedAt: '2026-08-01T08:00:00Z' },
+  { id: 'EMP-003', employeeId: 'SM-003', name: 'Meshkat Afrose', phone: '01912-456789', designation: 'QC Inspector', department: 'Quality Control', shift: 'morning', joinDate: '2024-06-10', salary: 20000, status: 'active', address: 'Uttara, Dhaka', createdAt: '2024-06-10T08:00:00Z', updatedAt: '2026-08-01T08:00:00Z' },
   { id: 'EMP-004', employeeId: 'SM-004', name: 'Rima Begum', phone: '01611-567890', designation: 'Assembly Worker', department: 'Production', shift: 'morning', joinDate: '2025-01-15', salary: 14000, status: 'active', address: 'Mirpur-10, Dhaka', createdAt: '2025-01-15T08:00:00Z', updatedAt: '2026-08-01T08:00:00Z' },
-  { id: 'EMP-005', employeeId: 'SM-005', name: 'Sohel Rana', phone: '01511-678901', designation: 'Production Supervisor', department: 'Production', shift: 'morning', joinDate: '2023-11-01', salary: 25000, status: 'active', address: 'Gazipur Sadar', createdAt: '2023-11-01T08:00:00Z', updatedAt: '2026-08-01T08:00:00Z' },
+  { id: 'EMP-005', employeeId: 'SM-005', name: 'Mushfiqur Rahman', phone: '01511-678901', designation: 'Production Supervisor', department: 'Production', shift: 'morning', joinDate: '2023-11-01', salary: 25000, status: 'active', address: 'Gazipur Sadar', createdAt: '2023-11-01T08:00:00Z', updatedAt: '2026-08-01T08:00:00Z' },
   { id: 'EMP-006', employeeId: 'SM-006', name: 'Nasrin Akter', phone: '01311-789012', designation: 'Packing Worker', department: 'Production', shift: 'afternoon', joinDate: '2025-03-20', salary: 13000, status: 'active', address: 'Dhanmondi, Dhaka', createdAt: '2025-03-20T08:00:00Z', updatedAt: '2026-08-01T08:00:00Z' },
   { id: 'EMP-007', employeeId: 'SM-007', name: 'Rakib Hassan', phone: '01411-890123', designation: 'Production Worker', department: 'Production', shift: 'afternoon', joinDate: '2025-06-01', salary: 14500, status: 'active', address: 'Tongi, Gazipur', createdAt: '2025-06-01T08:00:00Z', updatedAt: '2026-08-01T08:00:00Z' },
-  { id: 'EMP-008', employeeId: 'SM-008', name: 'Md. Faruk Ahmed', phone: '01711-901234', designation: 'Storekeeper', department: 'Warehouse', shift: 'morning', joinDate: '2024-08-15', salary: 16000, status: 'active', address: 'Savar, Dhaka', createdAt: '2024-08-15T08:00:00Z', updatedAt: '2026-08-01T08:00:00Z' },
+  { id: 'EMP-008', employeeId: 'SM-008', name: 'Rasel Ahmed', phone: '01711-901234', designation: 'Storekeeper', department: 'Warehouse', shift: 'morning', joinDate: '2024-08-15', salary: 16000, status: 'active', address: 'Savar, Dhaka', createdAt: '2024-08-15T08:00:00Z', updatedAt: '2026-08-01T08:00:00Z' },
   { id: 'EMP-009', employeeId: 'SM-009', name: 'Liton Kumar Das', phone: '01811-012345', designation: 'Electrical Technician', department: 'Production', shift: 'morning', joinDate: '2024-02-10', salary: 22000, status: 'active', address: 'Narsingdi Sadar', createdAt: '2024-02-10T08:00:00Z', updatedAt: '2026-08-01T08:00:00Z' },
   { id: 'EMP-010', employeeId: 'SM-010', name: 'Salma Khatun', phone: '01611-123456', designation: 'Assembly Worker', department: 'Production', shift: 'morning', joinDate: '2025-09-01', salary: 13500, status: 'active', address: 'Mirpur-13, Dhaka', createdAt: '2025-09-01T08:00:00Z', updatedAt: '2026-08-01T08:00:00Z' },
 ];
@@ -157,17 +157,17 @@ export const INVENTORY_ITEMS: InventoryItem[] = [
 
 // ── Production Orders ─────────────────────────────────────────
 export const PRODUCTION_ORDERS: ProductionOrder[] = [
-  { id: 'PO-001', orderNo: 'PO-00125', productId: 'PRD-001', productName: 'Infrared Cooker IR-101', model: 'IR-101', targetQty: 50, producedQty: 48, passedQty: 46, failedQty: 2, reworkQty: 2, status: 'qc_pending', assignedEmployees: ['EMP-001', 'EMP-002', 'EMP-004'], productionDate: '2026-08-17', expectedCompletion: '2026-08-17', createdBy: 'Sohel Rana', createdAt: '2026-08-17T07:00:00Z', updatedAt: '2026-08-17T14:30:00Z' },
-  { id: 'PO-002', orderNo: 'PO-00124', productId: 'PRD-004', productName: 'Infrared Stove IS-201', model: 'IS-201', targetQty: 40, producedQty: 40, passedQty: 38, failedQty: 0, reworkQty: 2, status: 'completed', assignedEmployees: ['EMP-001', 'EMP-009'], productionDate: '2026-08-16', expectedCompletion: '2026-08-16', createdBy: 'Sohel Rana', createdAt: '2026-08-16T07:00:00Z', updatedAt: '2026-08-16T16:45:00Z' },
-  { id: 'PO-003', orderNo: 'PO-00126', productId: 'PRD-007', productName: 'Infrared Cooker IR-104 (Economy)', model: 'IR-104', targetQty: 60, producedQty: 0, passedQty: 0, failedQty: 0, reworkQty: 0, status: 'ready', assignedEmployees: ['EMP-002', 'EMP-004', 'EMP-010'], productionDate: '2026-08-18', expectedCompletion: '2026-08-18', createdBy: 'Sohel Rana', createdAt: '2026-08-17T09:00:00Z', updatedAt: '2026-08-17T09:00:00Z' },
-  { id: 'PO-004', orderNo: 'PO-00123', productId: 'PRD-002', productName: 'Infrared Cooker IR-102 (Premium)', model: 'IR-102', targetQty: 30, producedQty: 30, passedQty: 29, failedQty: 0, reworkQty: 1, status: 'completed', assignedEmployees: ['EMP-009', 'EMP-001'], productionDate: '2026-08-15', expectedCompletion: '2026-08-15', createdBy: 'Sohel Rana', createdAt: '2026-08-15T07:00:00Z', updatedAt: '2026-08-15T16:30:00Z' },
+  { id: 'PO-001', orderNo: 'PO-00125', productId: 'PRD-001', productName: 'Infrared Cooker IR-101', model: 'IR-101', targetQty: 50, producedQty: 48, passedQty: 46, failedQty: 2, reworkQty: 2, status: 'qc_pending', assignedEmployees: ['EMP-001', 'EMP-002', 'EMP-004'], productionDate: '2026-08-17', expectedCompletion: '2026-08-17', createdBy: 'Mushfiqur Rahman', createdAt: '2026-08-17T07:00:00Z', updatedAt: '2026-08-17T14:30:00Z' },
+  { id: 'PO-002', orderNo: 'PO-00124', productId: 'PRD-004', productName: 'Infrared Stove IS-201', model: 'IS-201', targetQty: 40, producedQty: 40, passedQty: 38, failedQty: 0, reworkQty: 2, status: 'completed', assignedEmployees: ['EMP-001', 'EMP-009'], productionDate: '2026-08-16', expectedCompletion: '2026-08-16', createdBy: 'Mushfiqur Rahman', createdAt: '2026-08-16T07:00:00Z', updatedAt: '2026-08-16T16:45:00Z' },
+  { id: 'PO-003', orderNo: 'PO-00126', productId: 'PRD-007', productName: 'Infrared Cooker IR-104 (Economy)', model: 'IR-104', targetQty: 60, producedQty: 0, passedQty: 0, failedQty: 0, reworkQty: 0, status: 'ready', assignedEmployees: ['EMP-002', 'EMP-004', 'EMP-010'], productionDate: '2026-08-18', expectedCompletion: '2026-08-18', createdBy: 'Mushfiqur Rahman', createdAt: '2026-08-17T09:00:00Z', updatedAt: '2026-08-17T09:00:00Z' },
+  { id: 'PO-004', orderNo: 'PO-00123', productId: 'PRD-002', productName: 'Infrared Cooker IR-102 (Premium)', model: 'IR-102', targetQty: 30, producedQty: 30, passedQty: 29, failedQty: 0, reworkQty: 1, status: 'completed', assignedEmployees: ['EMP-009', 'EMP-001'], productionDate: '2026-08-15', expectedCompletion: '2026-08-15', createdBy: 'Mushfiqur Rahman', createdAt: '2026-08-15T07:00:00Z', updatedAt: '2026-08-15T16:30:00Z' },
 ];
 
 // ── QC Records ────────────────────────────────────────────────
 export const QC_RECORDS: QCRecord[] = [
-  { id: 'QC-001', qcNo: 'QC-00125', productionOrderId: 'PO-001', orderNo: 'PO-00125', productId: 'PRD-001', productName: 'Infrared Cooker IR-101', inspectedQty: 48, passedQty: 0, failedQty: 0, reworkQty: 0, status: 'pending', inspectedBy: 'Md. Jamal Uddin', inspectedAt: '2026-08-17T15:00:00Z', createdAt: '2026-08-17T15:00:00Z' },
-  { id: 'QC-002', qcNo: 'QC-00124', productionOrderId: 'PO-002', orderNo: 'PO-00124', productId: 'PRD-004', productName: 'Infrared Stove IS-201', inspectedQty: 40, passedQty: 38, failedQty: 2, reworkQty: 2, status: 'passed', failureReason: 'Glass top minor scratch on 2 units', inspectedBy: 'Md. Jamal Uddin', inspectedAt: '2026-08-16T15:30:00Z', reworkCompletedAt: '2026-08-16T17:00:00Z', retestStatus: 'passed', createdAt: '2026-08-16T15:30:00Z' },
-  { id: 'QC-003', qcNo: 'QC-00123', productionOrderId: 'PO-004', orderNo: 'PO-00123', productId: 'PRD-002', productName: 'Infrared Cooker IR-102 (Premium)', inspectedQty: 30, passedQty: 29, failedQty: 1, reworkQty: 1, status: 'retested', failureReason: 'PCB board heating issue on 1 unit', remarks: 'PCB replaced and retested — OK', inspectedBy: 'Md. Jamal Uddin', inspectedAt: '2026-08-15T14:00:00Z', retestStatus: 'passed', createdAt: '2026-08-15T14:00:00Z' },
+  { id: 'QC-001', qcNo: 'QC-00125', productionOrderId: 'PO-001', orderNo: 'PO-00125', productId: 'PRD-001', productName: 'Infrared Cooker IR-101', inspectedQty: 48, passedQty: 0, failedQty: 0, reworkQty: 0, status: 'pending', inspectedBy: 'Meshkat Afrose', inspectedAt: '2026-08-17T15:00:00Z', createdAt: '2026-08-17T15:00:00Z' },
+  { id: 'QC-002', qcNo: 'QC-00124', productionOrderId: 'PO-002', orderNo: 'PO-00124', productId: 'PRD-004', productName: 'Infrared Stove IS-201', inspectedQty: 40, passedQty: 38, failedQty: 2, reworkQty: 2, status: 'passed', failureReason: 'Glass top minor scratch on 2 units', inspectedBy: 'Meshkat Afrose', inspectedAt: '2026-08-16T15:30:00Z', reworkCompletedAt: '2026-08-16T17:00:00Z', retestStatus: 'passed', createdAt: '2026-08-16T15:30:00Z' },
+  { id: 'QC-003', qcNo: 'QC-00123', productionOrderId: 'PO-004', orderNo: 'PO-00123', productId: 'PRD-002', productName: 'Infrared Cooker IR-102 (Premium)', inspectedQty: 30, passedQty: 29, failedQty: 1, reworkQty: 1, status: 'retested', failureReason: 'PCB board heating issue on 1 unit', remarks: 'PCB replaced and retested — OK', inspectedBy: 'Meshkat Afrose', inspectedAt: '2026-08-15T14:00:00Z', retestStatus: 'passed', createdAt: '2026-08-15T14:00:00Z' },
 ];
 
 // ── Production Entries ────────────────────────────────────────
@@ -188,7 +188,7 @@ export const PURCHASE_ORDERS: PurchaseOrder[] = [
     status: 'received', paymentStatus: 'partial',
     subtotal: 63000, discount: 0, tax: 0, total: 63000, paid: 40000, due: 23000,
     warehouseId: 'WH-A', paymentMethod: 'bank_transfer', accountId: 'ACC-002',
-    createdBy: 'Md. Faruk Ahmed', createdAt: '2026-08-10T10:00:00Z', updatedAt: '2026-08-12T14:00:00Z',
+    createdBy: 'Rasel Ahmed', createdAt: '2026-08-10T10:00:00Z', updatedAt: '2026-08-12T14:00:00Z',
     receivedAt: '2026-08-12T14:00:00Z',
   },
   {
@@ -198,7 +198,7 @@ export const PURCHASE_ORDERS: PurchaseOrder[] = [
     ],
     status: 'ordered', paymentStatus: 'unpaid',
     subtotal: 36400, discount: 0, tax: 0, total: 36400, paid: 0, due: 36400,
-    warehouseId: 'WH-A', createdBy: 'Md. Faruk Ahmed', createdAt: '2026-08-16T11:00:00Z', updatedAt: '2026-08-16T11:00:00Z',
+    warehouseId: 'WH-A', createdBy: 'Rasel Ahmed', createdAt: '2026-08-16T11:00:00Z', updatedAt: '2026-08-16T11:00:00Z',
   },
 ];
 
@@ -266,9 +266,9 @@ export const DELIVERIES: Delivery[] = [
 
 // ── Stock Movements ───────────────────────────────────────────
 export const STOCK_MOVEMENTS: StockMovement[] = [
-  { id: 'SM-001', itemId: 'RM-007', itemType: 'material', itemName: 'PCB Control Board', warehouseId: 'WH-A', movementType: 'purchase', qty: 300, qtyBefore: 0, qtyAfter: 300, unit: 'pcs', referenceId: 'PUR-001', referenceType: 'purchase_order', createdBy: 'Md. Faruk Ahmed', createdAt: '2026-08-12T14:00:00Z' },
-  { id: 'SM-002', itemId: 'RM-007', itemType: 'material', itemName: 'PCB Control Board', warehouseId: 'WH-A', movementType: 'production_consumption', qty: -300, qtyBefore: 300, qtyAfter: 0, unit: 'pcs', referenceId: 'PO-004', referenceType: 'production_order', createdBy: 'Sohel Rana', createdAt: '2026-08-15T09:00:00Z' },
-  { id: 'SM-003', itemId: 'PRD-001', itemType: 'product', itemName: 'Infrared Cooker IR-101', warehouseId: 'WH-B', movementType: 'production_output', qty: 46, qtyBefore: 94, qtyAfter: 140, unit: 'pcs', referenceId: 'PO-002', referenceType: 'production_order', createdBy: 'Md. Jamal Uddin', createdAt: '2026-08-16T17:00:00Z' },
+  { id: 'SM-001', itemId: 'RM-007', itemType: 'material', itemName: 'PCB Control Board', warehouseId: 'WH-A', movementType: 'purchase', qty: 300, qtyBefore: 0, qtyAfter: 300, unit: 'pcs', referenceId: 'PUR-001', referenceType: 'purchase_order', createdBy: 'Rasel Ahmed', createdAt: '2026-08-12T14:00:00Z' },
+  { id: 'SM-002', itemId: 'RM-007', itemType: 'material', itemName: 'PCB Control Board', warehouseId: 'WH-A', movementType: 'production_consumption', qty: -300, qtyBefore: 300, qtyAfter: 0, unit: 'pcs', referenceId: 'PO-004', referenceType: 'production_order', createdBy: 'Mushfiqur Rahman', createdAt: '2026-08-15T09:00:00Z' },
+  { id: 'SM-003', itemId: 'PRD-001', itemType: 'product', itemName: 'Infrared Cooker IR-101', warehouseId: 'WH-B', movementType: 'production_output', qty: 46, qtyBefore: 94, qtyAfter: 140, unit: 'pcs', referenceId: 'PO-002', referenceType: 'production_order', createdBy: 'Meshkat Afrose', createdAt: '2026-08-16T17:00:00Z' },
   { id: 'SM-004', itemId: 'PRD-001', itemType: 'product', itemName: 'Infrared Cooker IR-101', warehouseId: 'WH-B', movementType: 'sale', qty: -20, qtyBefore: 140, qtyAfter: 120, unit: 'pcs', referenceId: 'SAL-001', referenceType: 'sale', createdBy: 'Sales Officer', createdAt: '2026-08-15T10:30:00Z' },
 ];
 
@@ -292,9 +292,9 @@ export const NOTIFICATIONS: Notification[] = [
 
 // ── Audit Log ─────────────────────────────────────────────────
 export const AUDIT_LOGS: AuditLog[] = [
-  { id: 'AUD-001', userId: 'USR-001', userName: 'Sohel Rana', action: 'create', module: 'Production', entityId: 'PO-001', entityType: 'ProductionOrder', description: 'Created Production Order PO-00125 for Infrared Cooker IR-101 (50 units)', createdAt: '2026-08-17T07:00:00Z' },
-  { id: 'AUD-002', userId: 'USR-002', userName: 'Md. Faruk Ahmed', action: 'update', module: 'Inventory', entityId: 'INV-RM-007-A', entityType: 'InventoryItem', description: 'Stock adjustment — PCB Control Board from 300 to 0 pcs (consumed in production)', previousValue: { qty: 300 }, newValue: { qty: 0 }, createdAt: '2026-08-15T09:05:00Z' },
-  { id: 'AUD-003', userId: 'USR-003', userName: 'Md. Jamal Uddin', action: 'approve', module: 'QC', entityId: 'QC-002', entityType: 'QCRecord', description: 'QC passed for PO-00124 — 38 units passed, 2 units sent for rework', createdAt: '2026-08-16T15:30:00Z' },
+  { id: 'AUD-001', userId: 'USR-001', userName: 'Mushfiqur Rahman', action: 'create', module: 'Production', entityId: 'PO-001', entityType: 'ProductionOrder', description: 'Created Production Order PO-00125 for Infrared Cooker IR-101 (50 units)', createdAt: '2026-08-17T07:00:00Z' },
+  { id: 'AUD-002', userId: 'USR-002', userName: 'Rasel Ahmed', action: 'update', module: 'Inventory', entityId: 'INV-RM-007-A', entityType: 'InventoryItem', description: 'Stock adjustment — PCB Control Board from 300 to 0 pcs (consumed in production)', previousValue: { qty: 300 }, newValue: { qty: 0 }, createdAt: '2026-08-15T09:05:00Z' },
+  { id: 'AUD-003', userId: 'USR-003', userName: 'Meshkat Afrose', action: 'approve', module: 'QC', entityId: 'QC-002', entityType: 'QCRecord', description: 'QC passed for PO-00124 — 38 units passed, 2 units sent for rework', createdAt: '2026-08-16T15:30:00Z' },
   { id: 'AUD-004', userId: 'USR-004', userName: 'Sales Officer', action: 'create', module: 'Sales', entityId: 'SAL-001', entityType: 'Sale', description: 'Created Invoice INV-0215 for Rahman Electronics — ৳49,000', createdAt: '2026-08-15T10:00:00Z' },
 ];
 
@@ -304,7 +304,7 @@ export const WAREHOUSE_TRANSFERS: WarehouseTransfer[] = [
     id: 'TRF-001', transferNo: 'TRF-0012',
     fromWarehouseId: 'WH-B', toWarehouseId: 'WH-A',
     items: [{ itemId: 'PRD-007', itemType: 'product', itemName: 'Infrared Cooker IR-104 (Economy)', qty: 30, unit: 'pcs' }],
-    status: 'received', requestedBy: 'Md. Faruk Ahmed', approvedBy: 'Sohel Rana',
+    status: 'received', requestedBy: 'Rasel Ahmed', approvedBy: 'Mushfiqur Rahman',
     notes: 'Transfer 30 units IR-104 for B2B order fulfillment',
     createdAt: '2026-08-14T09:00:00Z', updatedAt: '2026-08-14T11:00:00Z',
   },
@@ -366,9 +366,9 @@ export const ATTENDANCE_RECORDS: import('../types').AttendanceRecord[] = [
   { id: 'ATT-003', employeeId: 'EMP-003', employeeName: 'Md. Jahirul Islam',  date: '2026-08-17', checkIn: '2026-08-17T08:35:00Z', checkOut: '2026-08-17T17:00:00Z', status: 'late',     shift: 'morning',   notes: 'Traffic delay', createdAt: '2026-08-17T08:35:00Z' },
   { id: 'ATT-004', employeeId: 'EMP-004', employeeName: 'Fatema Khatun',      date: '2026-08-17', checkIn: '2026-08-17T08:00:00Z', checkOut: '2026-08-17T17:00:00Z', status: 'present',  shift: 'morning',   createdAt: '2026-08-17T08:00:00Z' },
   { id: 'ATT-005', employeeId: 'EMP-005', employeeName: 'Md. Nazmul Hossain', date: '2026-08-17',                                                                    status: 'absent',   shift: 'morning',   notes: 'Unscheduled absence', createdAt: '2026-08-17T09:00:00Z' },
-  { id: 'ATT-006', employeeId: 'EMP-006', employeeName: 'Sohel Rana',         date: '2026-08-17', checkIn: '2026-08-17T07:45:00Z', checkOut: '2026-08-17T18:00:00Z', status: 'present',  shift: 'morning',   createdAt: '2026-08-17T07:45:00Z' },
-  { id: 'ATT-007', employeeId: 'EMP-007', employeeName: 'Md. Faruk Ahmed',    date: '2026-08-17', checkIn: '2026-08-17T08:05:00Z',                                   status: 'present',  shift: 'morning',   createdAt: '2026-08-17T08:05:00Z' },
-  { id: 'ATT-008', employeeId: 'EMP-008', employeeName: 'Md. Jamal Uddin',    date: '2026-08-17', checkIn: '2026-08-17T08:00:00Z',                                   status: 'present',  shift: 'morning',   createdAt: '2026-08-17T08:00:00Z' },
+  { id: 'ATT-006', employeeId: 'EMP-006', employeeName: 'Mushfiqur Rahman',   date: '2026-08-17', checkIn: '2026-08-17T07:45:00Z', checkOut: '2026-08-17T18:00:00Z', status: 'present',  shift: 'morning',   createdAt: '2026-08-17T07:45:00Z' },
+  { id: 'ATT-007', employeeId: 'EMP-007', employeeName: 'Rasel Ahmed',        date: '2026-08-17', checkIn: '2026-08-17T08:05:00Z',                                   status: 'present',  shift: 'morning',   createdAt: '2026-08-17T08:05:00Z' },
+  { id: 'ATT-008', employeeId: 'EMP-008', employeeName: 'Meshkat Afrose',     date: '2026-08-17', checkIn: '2026-08-17T08:00:00Z',                                   status: 'present',  shift: 'morning',   createdAt: '2026-08-17T08:00:00Z' },
   { id: 'ATT-009', employeeId: 'EMP-009', employeeName: 'Nasrin Akter',       date: '2026-08-17',                                                                    status: 'on_leave', shift: 'morning',   notes: 'Annual leave', createdAt: '2026-08-17T09:00:00Z' },
   { id: 'ATT-010', employeeId: 'EMP-010', employeeName: 'Md. Rafiqul Islam',  date: '2026-08-17', checkIn: '2026-08-17T14:00:00Z',                                   status: 'present',  shift: 'afternoon', createdAt: '2026-08-17T14:00:00Z' },
 ];
