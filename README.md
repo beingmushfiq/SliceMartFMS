@@ -170,9 +170,10 @@ flowchart TD
 | :--- | :--- | :--- |
 | **Frontend Core** | React 19 + TypeScript | High-performance, strictly typed UI components |
 | **Build & Bundler** | Vite 8 | Sub-second HMR and optimized production bundling |
-| **Styling & System** | Tailwind CSS v4 + Vanilla CSS Tokens | Design system consistency, HSL tokens, dense enterprise layouts |
+| **Routing** | React Router v7 | Nested route architecture across 60+ operational routes |
+| **Styling & System** | Tailwind CSS v4 + Vanilla CSS Tokens | Design system consistency, HSL/hex tokens, dense enterprise layouts |
 | **Animations** | Framer Motion v13 | Route transitions, spring counters, staggered reveals, hover micro-interactions |
-| **State Management** | Zustand v5 | Reactive live inventory, notification triggers, and persistent UI state |
+| **State Management** | Zustand v5 | Reactive in-memory store for live inventory, notification triggers, and UI state (resets on reload) |
 | **Data Visualization** | Recharts v3 | Responsive Area charts, Bar charts, and trend analytics |
 | **PWA & Offline** | Service Worker + Web Manifest | Standalone mobile install, asset caching, and offline support |
 | **Error Handling** | ErrorBoundary + Inspector | Runtime exception safety, telemetry logging, and diagnostics |
