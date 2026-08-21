@@ -80,9 +80,9 @@ Two consequences people miss:
 | 2 | [PROJECT_CONTEXT.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/PROJECT_CONTEXT.md) | What the product is, who uses it, what the words mean, what is out of scope | 12 § |
 | 3 | [ARCHITECTURE.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/ARCHITECTURE.md) | Where code goes, how a request flows, how tenancy and auth are enforced | 11 § |
 | 4 | [DATABASE_DESIGN.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/DATABASE_DESIGN.md) | Tables, columns, keys, the inventory ledger, migration waves | 159 tables |
-| 5 | [API_CONTRACT.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/API_CONTRACT.md) | Envelope, error codes, pagination, idempotency, auth flow, endpoint families | 45 codes |
+| 5 | [API_CONTRACT.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/API_CONTRACT.md) | Envelope, error codes, pagination, idempotency, auth flow, endpoint families | 46 codes |
 | 6 | [UI_SYSTEM.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/UI_SYSTEM.md) | Tokens, dark mode, motion, the state matrix, accessibility, tables, forms | 21 § |
-| 7 | [MODULE_MAP.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/MODULE_MAP.md) | The 39 modules, their dependencies, their phase, the Definition of Done | 39 modules |
+| 7 | [MODULE_MAP.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/MODULE_MAP.md) | The 41 modules, their dependencies, their phase, the Definition of Done | 41 modules |
 
 ### Supporting — operational documents
 
@@ -183,7 +183,7 @@ changes.
 
 | | |
 |---|---|
-| **Phase 0 — Architecture & documentation** | **Documentation complete.** Nine canonical documents written, 14 legacy files archived, 31 ADRs accepted. Repository restructure and tooling baseline outstanding. |
+| **Phase 0 — Architecture & documentation** | **Documentation complete.** The seven canonical documents plus five supporting documents (12 in total) written, 14 legacy files archived, 31 ADRs accepted. Repository restructure and tooling baseline outstanding. |
 | **Phase 1 — Auth + Tenancy + RBAC + Design System** | **Not started.** Awaiting approval of Phase 0. |
 | **Code in repository** | A frontend prototype only, at the repository root. Non-authoritative. Triage plan in `UI_SYSTEM.md` §17. |
 
@@ -196,3 +196,4 @@ Live detail: [DEVELOPMENT_STATUS.md](file:///d:/Factory%20Production,%20Inventor
 | Date | Change |
 |---|---|
 | 2026-08-22 | Created. Establishes the documentation index and restates the binding precedence rule. Supersedes the navigation guidance in `_legacy/AI_PROJECT_CONTEXT.md`. |
+| 2026-08-22 | Consistency pass: §8 now states the document count as seven canonical plus five supporting (12 total) rather than "nine canonical". |

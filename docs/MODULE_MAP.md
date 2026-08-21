@@ -121,7 +121,7 @@ query key root                          ['<id>', '<resource>', ...]
 
 | ID | Module | Phase | Depends on | Scope |
 |---|---|---|---|---|
-| `reports` | RMS — 33 reports, standard control set, exports, saved views | 8 | every data-owning module | tenant |
+| `reports` | RMS — 58 reports, standard control set, exports, saved views | 8 | every data-owning module | tenant |
 | `dashboards` | Per-persona dashboards over materialised summaries | 8 | `reports` | tenant |
 
 ### 2.9 E-commerce (Phase 9)
@@ -138,9 +138,11 @@ query key root                          ['<id>', '<resource>', ...]
 | `subscription` | Plans, quotas enforcement, usage metering, billing state | 10 | `platform` | platform + tenant |
 | `ops` | Health checks, backup verification, job monitoring, data export/erase | 10 | all | platform |
 
-**Total: 39 modules.** The "35 domains" of the archived prompts are preserved;
-the count differs because responsibilities were split where a single name hid two
-boundaries (e.g. `sales` vs `payments`, `delivery` vs `couriers`).
+**Total: 41 modules** (8 core · 5 master data · 5 production · 3 procurement &
+inventory · 5 sales · 2 delivery · 7 workforce/assets/finance · 2 intelligence ·
+2 e-commerce · 2 hardening). The "35 domains" of the archived prompts are
+preserved; the count differs because responsibilities were split where a single
+name hid two boundaries (e.g. `sales` vs `payments`, `delivery` vs `couriers`).
 
 ---
 
@@ -290,7 +292,7 @@ called and allowed to fail. (ADR-024)
 | **5** | `crm`, `sales`, `pos`, `invoice-builder`, `payments` | One stock pool serves counter, dealer and phone sales; POS works offline |
 | **6** | `delivery`, `couriers` | Two adapters live; webhooks idempotent; capability matrix enforced |
 | **7** | `hr` (full), `attendance`, `payroll`, `assets`, `maintenance`, `finance`, `costing` | Payroll consumes production output and locks immutably |
-| **8** | `reports`, `dashboards` | All 33 reports with the standard control set and async export |
+| **8** | `reports`, `dashboards` | All 58 reports with the standard control set and async export |
 | **9** | `storefront`, `online-orders` | Online order lands in `sales` and reserves the same stock |
 | **10** | `subscription`, `ops` | Quotas enforced, backups restore-verified, E2E + a11y green |
 
@@ -338,4 +340,5 @@ No other top-level segment may be invented without adding the module here first.
 
 | Date | Change |
 |---|---|
-| 2026-08-22 | Created. Consolidates the module lists from `_legacy/MASTER_BACKEND_DEVELOPMENT_PROMPT.md` (35 domains), `_legacy/MASTER_FRONTEND_DEVELOPMENT_PROMPT.md` (14-item sidebar) and `_legacy/AI_PROJECT_CONTEXT.md` (17–32 modules) into one registry of 39 modules with an explicit dependency graph. |
+| 2026-08-22 | Created. Consolidates the module lists from `_legacy/MASTER_BACKEND_DEVELOPMENT_PROMPT.md` (35 domains), `_legacy/MASTER_FRONTEND_DEVELOPMENT_PROMPT.md` (14-item sidebar) and `_legacy/AI_PROJECT_CONTEXT.md` (17–32 modules) into one registry of 41 modules with an explicit dependency graph. |
+| 2026-08-22 | Consistency pass: the `reports` module and the Phase 8 exit row now say **58 reports**, matching the registry in `RMS_REPORT_MATRIX.md` (the stale "33" came from the archived report list). The stated total is corrected from 39 to **41 modules** — the §2 tables always enumerated 41; the summary line was wrong, not the registry. |

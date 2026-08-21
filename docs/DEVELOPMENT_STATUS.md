@@ -32,7 +32,7 @@ artefacts (`MODULE_MAP.md` §6), not a follow-up.
 | | |
 |---|---|
 | **Current phase** | Phase 0 — Architecture & documentation |
-| **Phase 0 status** | ✅ Documentation complete (9 documents) · 🔄 Repository restructure and tooling outstanding |
+| **Phase 0 status** | ✅ Documentation complete (7 canonical + 5 supporting = 12 documents) · 🔄 Repository restructure and tooling outstanding |
 | **Next phase** | Phase 1 — Auth, Tenancy, RBAC, Design System — **⬜ not started, awaiting approval** |
 | **Backend** | ⬜ Does not exist. No Laravel application, no migrations, no endpoints. |
 | **Frontend** | 🔄 A prototype exists at the repository root. **Non-authoritative.** See §4. |
@@ -64,7 +64,7 @@ mock data.
 | **9** | E-commerce | ⬜ Not started |
 | **10** | SaaS hardening · Testing · Deployment | ⬜ Not started |
 
-All 39 modules in `MODULE_MAP.md` §2 are ⬜ **not started**. No module has any
+All 41 modules in `MODULE_MAP.md` §2 are ⬜ **not started**. No module has any
 of the thirteen Definition of Done artefacts.
 
 ---
@@ -80,9 +80,9 @@ of the thirteen Definition of Done artefacts.
 | `PROJECT_CONTEXT.md` | ✅ Product, domain language, business rules, UI/UX charter | Rank 2 |
 | `ARCHITECTURE.md` | ✅ Layering, tenancy (5 layers), auth, request lifecycle, 11 transaction boundaries, exception→HTTP map | Rank 3 |
 | `DATABASE_DESIGN.md` | ✅ 159 tables in groups A–L, ledger design, migration waves 0–25 | Rank 4 |
-| `API_CONTRACT.md` | ✅ Envelope, 45 error codes, pagination, idempotency, auth, webhooks, endpoint families | Rank 4 |
+| `API_CONTRACT.md` | ✅ Envelope, 42 server error codes + 4 client pseudo-codes, pagination, idempotency, auth, webhooks, endpoint families | Rank 4 |
 | `UI_SYSTEM.md` | ✅ 21 sections: tokens, dark mode, motion, 20-row state matrix, a11y, tables, forms, charts, print | Rank 4 |
-| `MODULE_MAP.md` | ✅ 39 modules, dependency graph, phase mapping, Definition of Done, permission registry | Rank 5 |
+| `MODULE_MAP.md` | ✅ 41 modules, dependency graph, phase mapping, Definition of Done, permission registry | Rank 5 |
 | `ROADMAP.md` | ✅ Phases 0–10 with numbered exit gates, cross-cutting concerns, risk register | Rank 5 |
 | `RMS_REPORT_MATRIX.md` | ✅ 58 reports in 9 groups, each with source of truth, filters, permission and tier | Rank 5 |
 | `README.md` | ✅ Index + binding precedence table | — |
@@ -102,7 +102,9 @@ legacy generations (`DECISIONS.md` §6 traceability table).
 | 4 | CI skeleton | Lint · typecheck · test · contract-type-generation diff · bundle budget · axe · token-contrast test. Jobs may be stubs, but the pipeline exists. |
 | 5 | Dependency reconciliation | See §5 — several installed versions conflict with the documented stack. |
 
-**No Phase 1 code may begin until items 1–4 are complete.**
+**No Phase 1 code may begin until items 1–5 are complete.** Item 5 is not
+optional: the Phase 1 exit gate cannot be verified without the missing test,
+mock and documentation tooling (§5).
 
 ---
 
@@ -143,7 +145,7 @@ Nothing. No `/backend` directory, no `composer.json`, no Laravel installation.
 
 ---
 
-## 5. Dependency reconciliation required (Phase 0 item 6)
+## 5. Dependency reconciliation required (Phase 0 item 5)
 
 Installed in the root `package.json` versus the documented stack:
 
@@ -204,4 +206,5 @@ Q3, it stops and asks (`TASK_PROTOCOL.md` §3.2).
 
 | Date | Change |
 |---|---|
-| 2026-08-22 | Created. Replaces `_legacy/DEVELOPMENT_STATUS.md`, which claimed "pre-development" while a prototype application existed (contradiction C24). Records Phase 0 documentation complete, all 39 modules not started, and the six outstanding Phase 0 work items. |
+| 2026-08-22 | Created. Replaces `_legacy/DEVELOPMENT_STATUS.md`, which claimed "pre-development" while a prototype application existed (contradiction C24). Records Phase 0 documentation complete, all 41 modules not started, and the five outstanding Phase 0 work items. |
+| 2026-08-22 | Consistency pass: document count stated as 7 canonical + 5 supporting; §5 renumbered to Phase 0 item 5; the Phase 1 gate now requires items **1–5** (dependency reconciliation is a hard gate, since the Phase 1 exit criteria cannot be verified without the missing test, mock and Storybook tooling). |

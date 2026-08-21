@@ -211,7 +211,8 @@ same pull request.
 
 ## 3. Error taxonomy
 
-Complete catalogue. The exception→code mapping is implemented once, in the
+Complete catalogue: **42 server codes** (§§3.1–3.7) plus **4 client-only
+pseudo-codes** (§3.8). The exception→code mapping is implemented once, in the
 single exception handler (`ARCHITECTURE.md` §5.7). Adding a code to the backend
 without adding a row here is a review rejection.
 

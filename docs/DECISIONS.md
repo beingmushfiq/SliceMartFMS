@@ -51,7 +51,7 @@ created, so no precedence rule, module map, API contract, UI token spec, or ADR
 existed. The implemented code diverged from both generations.
 
 **All 14 legacy files are now archived under `docs/_legacy/` and are
-non-authoritative.** ADR-001 through ADR-030 below resolve every contradiction.
+non-authoritative.** ADR-001 through ADR-031 below resolve every contradiction.
 
 ---
 
@@ -955,7 +955,7 @@ Every contradiction found in the legacy documentation, and where it is resolved:
 | C1 | Single-client vs multi-tenant SaaS | ADR-001 → SaaS |
 | C2 | "2 warehouses / 1 line" hardcoded vs forbidden | ADR-002 → tenant config |
 | C3 | Schema had no tenancy tables | ADR-004, ADR-005 |
-| C4 | Four incompatible module lists (32 / 17 / 14 / 35) | `MODULE_MAP.md` — 35 domains canonical |
+| C4 | Four incompatible module lists (32 / 17 / 14 / 35) | `MODULE_MAP.md` — 41 modules canonical |
 | C5 | POS specified vs entirely absent | ADR-015 → in scope, Phase 5 |
 | C6 | E-commerce + courier specified vs absent | ADR-016, ADR-017 → Phases 6, 9 |
 | C7 | i18n mandated vs absent | ADR-018 → Phase 1 |
@@ -1019,6 +1019,7 @@ the question is escalated.
 |---|---|
 | 2026-08-21 | ADR-001 … ADR-030 accepted. Legacy docs archived to `docs/_legacy/`. Canonical documentation set created. |
 | 2026-08-22 | **ADR-031 accepted** — motion, craft and the two-library motion stack (Framer Motion + GSAP), motion tokens, the three-tier loading model with a custom brand loader, and the required/permitted/forbidden motion matrix. Supersedes the "restrained Framer Motion" line in ADR-024 and updates the frontend stack table in §2. |
+| 2026-08-22 | Consistency pass (no decision changed): §1 now reads "ADR-001 through ADR-031"; the C4 resolution now names the actual outcome — **41 modules** in `MODULE_MAP.md`, not "35 domains". |
 
 
 

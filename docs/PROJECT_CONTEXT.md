@@ -193,7 +193,7 @@ and phase mapping live in `MODULE_MAP.md`.
 49. Costing (material + labour + overhead → product cost)
 
 ### 5.10 Intelligence
-50. Reporting & Management System (RMS) — 33 reports, see
+50. Reporting & Management System (RMS) — 58 reports, see
     `RMS_REPORT_MATRIX.md`
 51. Dashboards per persona
 52. Exports (CSV / XLSX / PDF)
@@ -462,3 +462,4 @@ Mirrored from `DECISIONS.md` §7. These block the phases named.
 | Date | Change |
 |---|---|
 | 2026-08-22 | Created as the rank-2 canonical product context, superseding `_legacy/AI_PROJECT_CONTEXT.md` and the product sections of the archived `MASTER_*` prompts. |
+| 2026-08-22 | Consistency pass: capability 50 (RMS) now says **58 reports**, matching `RMS_REPORT_MATRIX.md`. |
