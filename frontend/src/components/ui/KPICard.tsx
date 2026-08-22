@@ -4,8 +4,9 @@
 
 import React, { useEffect, useRef } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { motion, useSpring, useTransform, useMotionValue } from 'framer-motion';
+import { m, useSpring, useTransform, useMotionValue } from 'framer-motion';
 import { cn } from '../../lib/utils';
+import { enterBase, stagger, craft } from '../../lib/motion/tokens';
 
 // ── Animated number counter ────────────────────────────────────
 function AnimatedNumber({ value, className }: { value: number; className?: string }) {
@@ -23,7 +24,7 @@ function AnimatedNumber({ value, className }: { value: number; className?: strin
     }
   }, [value, mv]);
 
-  return <motion.span className={className}>{display}</motion.span>;
+  return <m.span className={className}>{display}</m.span>;
 }
 
 interface KPICardProps {
@@ -34,7 +35,7 @@ interface KPICardProps {
   deltaLabel?: string;
   icon?:       React.ReactNode;
   iconColor?:  string;
-  alert?:      'warning' | 'error' | 'success';
+  alert?:      'warning' | 'danger' | 'success';
   onClick?:    () => void;
   className?:  string;
   index?:      number;  // for stagger
@@ -47,20 +48,19 @@ export function KPICard({
   const isNumeric   = typeof value === 'number';
 
   const alertBorder = {
-    warning: 'border-l-4 border-l-warning-500',
-    error:   'border-l-4 border-l-error-500',
-    success: 'border-l-4 border-l-success-500',
+    warning: 'border-l-4 border-l-warning',
+    danger:  'border-l-4 border-l-danger',
+    success: 'border-l-4 border-l-success',
   };
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: index * 0.06, ease: [0.25, 0.46, 0.45, 0.94] }}
-      whileHover={isClickable ? { y: -2, boxShadow: '0 8px 24px -4px rgb(0 0 0 / 0.1)' } : undefined}
-      whileTap={isClickable ? { scale: 0.985 } : undefined}
+      transition={{ ...enterBase, delay: index * stagger }}
+      {...(isClickable && { whileHover: { y: craft.hoverLift }, whileTap: { scale: craft.pressScale } })}
       className={cn(
-        'kpi-card',
+        'rounded-(--card-radius) p-(--card-padding) bg-(--card-bg) border border-(--card-border) shadow-(--card-shadow)',
         alert && alertBorder[alert],
         isClickable && 'cursor-pointer',
         className
@@ -73,50 +73,50 @@ export function KPICard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col gap-1 min-w-0">
-          <span className="kpi-label truncate">{label}</span>
+          <span className="text-2xs font-semibold tracking-wide uppercase text-muted truncate">{label}</span>
 
           {isNumeric ? (
-            <AnimatedNumber value={value as number} className="kpi-value" />
+            <AnimatedNumber value={value as number} className="text-(length:--kpi-value-size) font-bold text-default tabular" />
           ) : (
-            <motion.span
+            <m.span
               key={String(value)}
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25 }}
-              className="kpi-value"
+              transition={{ ...enterBase }}
+              className="text-(length:--kpi-value-size) font-bold text-default tabular"
             >
               {value}
-            </motion.span>
+            </m.span>
           )}
 
           {subValue && (
-            <span className="text-xs text-slate-400 font-400 mt-0.5">{subValue}</span>
+            <span className="text-xs text-muted mt-0.5">{subValue}</span>
           )}
         </div>
 
         {icon && (
-          <motion.div
+          <m.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: index * 0.06 + 0.15, type: 'spring', stiffness: 300, damping: 20 }}
+            transition={{ ...enterBase, delay: index * stagger + 0.15 }}
             className={cn(
               'w-9 h-9 rounded-lg flex items-center justify-center shrink-0',
-              iconColor ?? 'bg-slate-100 text-slate-400'
+              iconColor ?? 'bg-surface-sunken text-muted'
             )}
           >
             {icon}
-          </motion.div>
+          </m.div>
         )}
       </div>
 
       {delta !== undefined && (
-        <motion.div
+        <m.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: index * 0.06 + 0.25 }}
+          transition={{ delay: index * stagger + 0.25 }}
           className={cn(
             'flex items-center gap-1 text-xs',
-            delta > 0 ? 'kpi-delta-up' : delta < 0 ? 'kpi-delta-down' : 'text-slate-400'
+            delta > 0 ? 'text-success' : delta < 0 ? 'text-danger' : 'text-muted'
           )}
         >
           {delta > 0 ? (
@@ -128,11 +128,11 @@ export function KPICard({
           )}
           <span>
             {delta > 0 ? '+' : ''}{delta}%
-            {deltaLabel && <span className="text-slate-400 font-400 ml-1">{deltaLabel}</span>}
+            {deltaLabel && <span className="text-muted ml-1">{deltaLabel}</span>}
           </span>
-        </motion.div>
+        </m.div>
       )}
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -142,33 +142,33 @@ interface ProgressKPIProps {
   value: number;
   total: number;
   unit?:  string;
-  color?: 'blue' | 'green' | 'amber' | 'red';
+  color?: 'primary' | 'success' | 'warning' | 'danger';
 }
 
 const progressColors = {
-  blue:  'bg-blue-500',
-  green: 'bg-success-500',
-  amber: 'bg-warning-500',
-  red:   'bg-error-500',
+  primary: 'bg-primary',
+  success: 'bg-success',
+  warning: 'bg-warning',
+  danger:  'bg-danger',
 };
 
-export function ProgressKPI({ label, value, total, unit = 'pcs', color = 'blue' }: ProgressKPIProps) {
+export function ProgressKPI({ label, value, total, unit = 'pcs', color = 'primary' }: ProgressKPIProps) {
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-slate-500 font-500">{label}</span>
-        <span className="text-xs font-600 text-slate-900 font-mono">
-          {value.toLocaleString()}<span className="text-slate-400 font-400 ml-0.5">/{total.toLocaleString()} {unit}</span>
+        <span className="text-xs text-muted font-medium">{label}</span>
+        <span className="text-xs font-semibold text-default font-mono">
+          {value.toLocaleString()}<span className="text-muted ml-0.5">/{total.toLocaleString()} {unit}</span>
         </span>
       </div>
-      <div className="progress-bar">
-        <motion.div
-          className={cn('progress-fill', progressColors[color])}
+      <div className="h-(--progress-height) rounded-(--progress-radius) bg-surface-sunken overflow-hidden">
+        <m.div
+          className={cn('h-full rounded-(--progress-radius)', progressColors[color])}
           initial={{ width: 0 }}
           animate={{ width: `${Math.min(pct, 100)}%` }}
-          transition={{ duration: 0.8, ease: [0.34, 1.56, 0.64, 1], delay: 0.1 }}
+          transition={{ ...enterBase, delay: 0.1 }}
           role="progressbar"
           aria-valuenow={value}
           aria-valuemin={0}
@@ -176,7 +176,7 @@ export function ProgressKPI({ label, value, total, unit = 'pcs', color = 'blue' 
           aria-label={`${label}: ${pct}%`}
         />
       </div>
-      <span className="text-xs text-slate-400 font-mono">{pct}%</span>
+      <span className="text-xs text-muted font-mono">{pct}%</span>
     </div>
   );
 }

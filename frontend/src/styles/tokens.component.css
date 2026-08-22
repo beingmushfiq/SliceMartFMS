@@ -1,0 +1,210 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYER 3 — COMPONENT TOKENS                          UI_SYSTEM.md §2.4, §2.5
+   ───────────────────────────────────────────────────────────────────────────
+   Per-component knobs so a component's proportions can be tuned without
+   editing its class strings. Built only from layer 1 and layer 2.
+
+   Density (§2.5): two modes, user-selectable, persisted server-side via
+   PATCH /auth/preferences (density: "comfortable" | "compact"). Density
+   changes ONLY the values in this file — row heights, control heights,
+   paddings. It never changes font sizes, colours or layout structure.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── Buttons ──────────────────────────────────────────────────────────────
+     Heights are the density-sensitive dimension; horizontal padding and radius
+     are not. The -md height is the one that shifts between densities (§2.5);
+     -sm and -lg follow proportionally.
+     ──────────────────────────────────────────────────────────────────────── */
+  --btn-height-sm: 30px;
+  --btn-height-md: 36px;
+  --btn-height-lg: 42px;
+  --btn-px-sm: var(--space-2_5);
+  --btn-px-md: var(--space-4);
+  --btn-px-lg: var(--space-5);
+  --btn-gap: var(--space-2);
+  --btn-radius: var(--radius-sm);
+  --btn-font-size: var(--text-base);
+  --btn-font-weight: var(--font-weight-500);
+
+  /* ─── Inputs ───────────────────────────────────────────────────────────────
+     --input-font-size is deliberately NOT var(--text-base). Below the `sm`
+     breakpoint it is raised to 16px in base.css to prevent iOS zoom-on-focus
+     — the single documented exception to the 14px body ramp (§2.2).
+     ──────────────────────────────────────────────────────────────────────── */
+  --input-height: 38px;
+  --input-px: var(--space-3);
+  --input-radius: var(--radius-sm);
+  --input-border: var(--color-border-strong);
+  --input-border-focus: var(--color-primary);
+  --input-bg: var(--color-surface);
+  --input-font-size: var(--text-base);
+  --input-label-gap: var(--space-1_5);
+
+  /* ─── Cards ────────────────────────────────────────────────────────────── */
+  --card-padding: var(--space-5);
+  --card-header-padding: var(--space-4);
+  --card-gap: var(--space-4);
+  --card-radius: var(--radius-md);
+  --card-border: var(--color-border);
+  --card-bg: var(--color-surface);
+  --card-shadow: var(--shadow-xs);
+
+  /* ─── Tables ───────────────────────────────────────────────────────────────
+     The most-used surface in the product (§11). Row height is the primary
+     density lever: at 34px a clerk sees roughly a third more rows per screen,
+     which on a 500-line stock ledger is the difference between scrolling and
+     scanning.
+
+     --table-stripe is intentionally `transparent` — zebra striping is not used
+     by default; the hairline row border carries the separation. The token
+     exists so a specific dense report can opt in without inventing a colour.
+     ──────────────────────────────────────────────────────────────────────── */
+  --table-row-height: 44px;
+  --table-row-height-compact: 34px;
+  --table-cell-px: var(--space-3);
+  --table-header-height: 36px;
+  --table-header-bg: var(--color-surface-sunken);
+  --table-header-font-size: var(--text-2xs);
+  --table-header-weight: var(--font-weight-600);
+  --table-header-tracking: 0.075em;
+  --table-border: var(--color-border);
+  --table-stripe: transparent;
+  --table-hover: var(--color-surface-sunken);
+  --table-selected: var(--color-primary-subtle);
+
+  /* ─── Modals & Drawers ─────────────────────────────────────────────────── */
+  --modal-width-sm: 24rem;
+  --modal-width-md: 32rem;
+  --modal-width-lg: 44rem;
+  --modal-width-xl: 60rem;
+  --modal-radius: var(--radius-xl);
+  --modal-padding: var(--space-6);
+  --modal-shadow: var(--shadow-overlay);
+  --modal-max-height: 90dvh;
+  --drawer-width: 28rem;
+  --drawer-width-lg: 40rem;
+
+  /* ─── Toasts ───────────────────────────────────────────────────────────── */
+  --toast-width: 22rem;
+  --toast-radius: var(--radius-md);
+  --toast-padding: var(--space-3);
+  --toast-gap: var(--space-2);
+
+  /* ─── Badges ───────────────────────────────────────────────────────────────
+     Fixed height regardless of density: a badge is a label, not a control, and
+     resizing it with the grid makes status columns jitter between modes.
+     ──────────────────────────────────────────────────────────────────────── */
+  --badge-height: 18px;
+  --badge-px: var(--space-2);
+  --badge-gap: var(--space-1);
+  --badge-radius: var(--radius-full);
+  --badge-font-size: var(--text-2xs);
+  --badge-font-weight: var(--font-weight-600);
+  --badge-tracking: 0.05em;
+
+  /* ─── Navigation ───────────────────────────────────────────────────────────
+     The sidebar is dark chrome in BOTH modes (§3.4) — it does not re-map, so
+     its tokens resolve to navy primitives directly rather than to semantic
+     surface roles. This is the documented exception to the layer-2-only rule
+     and the reason these tokens exist at all: they give the sidebar a single
+     place to be theme-independent without any component hardcoding a hex.
+     ──────────────────────────────────────────────────────────────────────── */
+  --nav-item-height: 36px;
+  --nav-item-px: var(--space-3);
+  --nav-item-gap: var(--space-2_5);
+  --nav-item-radius: var(--radius-sm);
+  --nav-bg: var(--navy-900);
+  --nav-bg-deep: var(--navy-950);
+  --nav-fg: var(--slate-400);
+  --nav-fg-hover: #ffffff;
+  --nav-fg-active: #ffffff;
+  --nav-icon: var(--slate-500);
+  --nav-icon-hover: var(--slate-300);
+  --nav-icon-active: var(--blue-400);
+  --nav-hover-bg: rgb(255 255 255 / 0.08);
+  --nav-active-bg: rgb(37 99 235 / 0.18);
+  --nav-active-marker: var(--blue-400);
+  --nav-border: rgb(255 255 255 / 0.1);
+  --nav-section-fg: var(--slate-600);
+
+  /* ─── Tooltips & Popovers ──────────────────────────────────────────────────
+     The tooltip also ignores theme: a dark chip on a light surface and a dark
+     chip on a dark surface both read correctly because the ring separates it.
+     ──────────────────────────────────────────────────────────────────────── */
+  --tooltip-bg: var(--navy-900);
+  --tooltip-fg: var(--slate-50);
+  --tooltip-radius: var(--radius-xs);
+  --tooltip-px: var(--space-2);
+  --tooltip-py: var(--space-1);
+  --tooltip-font-size: var(--text-xs);
+  --popover-bg: var(--color-surface-raised);
+  --popover-radius: var(--radius-md);
+  --popover-shadow: var(--shadow-lg);
+  --popover-padding: var(--space-2);
+
+  /* ─── Application Shell ────────────────────────────────────────────────── */
+  --page-padding: var(--space-6);
+  --page-padding-mobile: var(--space-4);
+  --page-header-px: var(--space-6);
+  --page-header-py: var(--space-3);
+
+  /* ─── Focus Ring ───────────────────────────────────────────────────────────
+     One geometry, everywhere. Declared here so a component never types `2px`.
+     ──────────────────────────────────────────────────────────────────────── */
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-glow: 3px;
+
+  /* ─── Skeletons ────────────────────────────────────────────────────────── */
+  --skeleton-bg: var(--color-surface-sunken);
+  --skeleton-highlight: var(--color-border);
+  --skeleton-radius: var(--radius-xs);
+
+  /* ─── Data Display ─────────────────────────────────────────────────────── */
+  --kpi-value-size: var(--text-2xl);
+  --kpi-padding: var(--space-4);
+  --progress-height: 6px;
+  --progress-radius: var(--radius-full);
+  --status-dot-size: 6px;
+  --divider-color: var(--color-border);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COMPACT DENSITY                                             UI_SYSTEM.md §2.5
+   ───────────────────────────────────────────────────────────────────────────
+   Applied as `data-density="compact"` on <html>, alongside the theme class,
+   by the same pre-paint script.
+
+   Compact is what the accountant and the warehouse clerk switch to on day two.
+   Comfortable is what makes the product feel considered on day one.
+
+   Only these values change. No font size, no colour, no structural token
+   appears in this block — that is the rule that keeps density from becoming a
+   second design system.
+   ═══════════════════════════════════════════════════════════════════════════ */
+[data-density='compact'] {
+  --btn-height-sm: 26px;
+  --btn-height-md: 30px;
+  --btn-height-lg: 36px;
+  --btn-px-md: var(--space-3);
+  --btn-px-lg: var(--space-4);
+
+  --input-height: 32px;
+  --input-px: var(--space-2_5);
+
+  --card-padding: var(--space-3);
+  --card-header-padding: var(--space-3);
+  --card-gap: var(--space-3);
+
+  --table-row-height: var(--table-row-height-compact);
+  --table-cell-px: var(--space-2_5);
+  --table-header-height: 30px;
+
+  --nav-item-height: 30px;
+
+  --modal-padding: var(--space-4);
+  --page-padding: var(--space-4);
+  --page-header-py: var(--space-2);
+  --kpi-padding: var(--space-3);
+}

@@ -1,0 +1,471 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   BASE — resets, focus-visible, scrollbars, print base
+   ───────────────────────────────────────────────────────────────────────────
+   Element-level defaults only. No component classes live here; those belong in
+   `ui/` React primitives (UI_SYSTEM.md §10.1), not in a stylesheet.
+
+   Everything colour-related resolves through layer 2 semantic tokens, so this
+   file is automatically correct in both themes and never needs a `dark:`
+   variant (§3.2).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer base {
+  /* ─── Box model ────────────────────────────────────────────────────────── */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  /* ─── Document ─────────────────────────────────────────────────────────────
+     `color-scheme` is set from the theme class so native UI — scrollbars,
+     form controls, the browser's own autofill styling — follows the app theme
+     instead of fighting it.
+
+     No `scroll-behavior: smooth` at the root. It makes anchor jumps and
+     `scrollIntoView` in a 500-row virtualised table feel sluggish, and it is
+     a documented vestibular trigger. Smooth scrolling is opted into per call
+     site where it genuinely helps.
+     ──────────────────────────────────────────────────────────────────────── */
+  html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    color-scheme: light;
+    tab-size: 4;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Inter's contextual alternates and tabular figures are opt-in features.
+       `cv05` gives the lowercase `l` a tail, which disambiguates l / I / 1 —
+       this matters when reading batch codes and SKUs. */
+    font-feature-settings: 'cv05' 1, 'calt' 1;
+    text-rendering: optimizeLegibility;
+    /* Colour/background transition on theme toggle only. Declared on body so
+       the switch reads as a deliberate change rather than a flash; child
+       surfaces inherit their own transitions from component tokens. */
+    transition: background-color var(--motion-duration-base) var(--motion-ease-standard),
+      color var(--motion-duration-base) var(--motion-ease-standard);
+  }
+
+  /* ─── Typography defaults ──────────────────────────────────────────────────
+     Headings are unstyled beyond weight and inheritance. Size and colour are
+     applied by the component that owns the heading, because a card title and a
+     page title are the same element at different scales and hardcoding either
+     here guarantees one of them fights the token.
+     ──────────────────────────────────────────────────────────────────────── */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin: 0;
+    font-size: inherit;
+    font-weight: var(--font-weight-600);
+    line-height: 1.3;
+    text-wrap: balance;
+  }
+
+  p {
+    margin: 0;
+    text-wrap: pretty;
+  }
+
+  ul,
+  ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* ─── Numeric type ─────────────────────────────────────────────────────────
+     UI_SYSTEM.md §5.2 — numbers are a first-class typographic concern. Money,
+     quantities and counts are transported as decimal strings and must align
+     vertically in a column, so every monospace context gets tabular figures
+     and no ligatures (Fira Code's `!=` ligature in a quantity is a bug).
+     ──────────────────────────────────────────────────────────────────────── */
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: var(--font-mono);
+    font-size: 1em;
+    font-variant-numeric: tabular-nums;
+    font-variant-ligatures: none;
+  }
+
+  pre {
+    margin: 0;
+  }
+
+  /* ─── Media ────────────────────────────────────────────────────────────── */
+  img,
+  svg,
+  video,
+  canvas,
+  picture {
+    display: block;
+    max-width: 100%;
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  /* ─── Form controls ────────────────────────────────────────────────────────
+     Inherit typography rather than falling back to the browser's 13px
+     Arial. `font: inherit` is not enough on Safari for `<select>`, hence the
+     explicit family and size.
+     ──────────────────────────────────────────────────────────────────────── */
+  input,
+  button,
+  textarea,
+  select,
+  optgroup {
+    margin: 0;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+  }
+
+  button {
+    background: none;
+    border: none;
+    padding: 0;
+  }
+
+  button:not(:disabled),
+  [role='button']:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  /* Numeric inputs: strip the spinner. Quantity is entered by keyboard or by a
+     stepper component that carries its own accessible buttons; the native
+     spinner is 12px tall and unusable on a factory tablet. */
+  input[type='number'] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type='search']::-webkit-search-decoration,
+  input[type='search']::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
+
+  ::placeholder {
+    color: var(--color-text-subtle);
+    opacity: 1;
+  }
+
+  :disabled {
+    cursor: not-allowed;
+  }
+
+  /* iOS zoom-on-focus prevention (§2.2 — the one documented exception to the
+     14px ramp). Safari zooms the viewport when a focused field's font-size is
+     below 16px, which on a mobile POS screen throws the layout off-centre and
+     never fully recovers. */
+  @media (max-width: 640px) {
+    input,
+    textarea,
+    select {
+      font-size: 16px;
+    }
+  }
+
+  /* ─── Tables ───────────────────────────────────────────────────────────── */
+  table {
+    border-collapse: collapse;
+    border-spacing: 0;
+  }
+
+  th {
+    text-align: left;
+    font-weight: var(--font-weight-600);
+  }
+
+  /* ─── Links ────────────────────────────────────────────────────────────────
+     No default underline: nearly every anchor in an operational app is a nav
+     item, a row link or a breadcrumb, and underlining all of them is noise.
+     Prose links opt in via the `.prose-link` utility.
+     ──────────────────────────────────────────────────────────────────────── */
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* ─── Focus ────────────────────────────────────────────────────────────────
+     UI_SYSTEM.md §9.1 — one ring, one colour, everywhere, both modes.
+
+     `:focus-visible` rather than `:focus`, so a mouse click on a button does
+     not leave a ring behind, but every keyboard path shows one. The bare
+     `:focus` outline is removed only where `:focus-visible` is supported, so
+     older engines keep a visible focus indicator.
+
+     The ring animates in over `instant` so keyboard navigation feels tracked
+     rather than teleported (§7.4).
+     ──────────────────────────────────────────────────────────────────────── */
+  :focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-primary);
+    outline-offset: var(--focus-ring-offset);
+    border-radius: inherit;
+    transition: outline-offset var(--motion-duration-instant) var(--motion-ease-standard);
+  }
+
+  :is(a, button, input, textarea, select, [tabindex]):focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* High-contrast / forced-colors: let the OS draw the ring. */
+  @media (forced-colors: active) {
+    :focus-visible {
+      outline: 3px solid CanvasText;
+    }
+  }
+
+  /* ─── Selection ────────────────────────────────────────────────────────── */
+  ::selection {
+    background: var(--color-selection-bg);
+    color: var(--color-selection-fg);
+  }
+
+  /* ─── Scrollbars ───────────────────────────────────────────────────────────
+     6px, token-coloured, transparent track. Thin enough not to steal width
+     from a wide table, visible enough to be grabbable. Firefox gets the
+     standard properties; WebKit gets the pseudo-elements.
+     ──────────────────────────────────────────────────────────────────────── */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-strong) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border-strong);
+    border-radius: var(--radius-full);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-subtle);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* ─── Hidden ───────────────────────────────────────────────────────────── */
+  [hidden] {
+    display: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ACCESSIBILITY UTILITIES
+   ═══════════════════════════════════════════════════════════════════════════ */
+@layer utilities {
+  /* Visually hidden but announced. The clip-path + 1px box technique, which
+     unlike `display:none` or `visibility:hidden` keeps the node in the
+     accessibility tree, and unlike `text-indent:-9999px` does not create a
+     9999px scroll region. */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  /* Becomes visible on focus — for skip links and "reveal on tab" affordances. */
+  .sr-only-focusable:not(:focus):not(:focus-within) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Tabular figures. Applied to every money and quantity cell (§5.2). */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  .prose-link {
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .prose-link:hover {
+    color: var(--color-primary-hover);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SKIP LINK                                              UI_SYSTEM.md §9.1
+   ───────────────────────────────────────────────────────────────────────────
+   The first focusable element on every page. Kept here rather than in a React
+   primitive because it must be styled correctly even if the app shell fails to
+   mount and only the static HTML remains.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@layer components {
+  .skip-link {
+    position: fixed;
+    top: var(--space-2);
+    left: var(--space-2);
+    z-index: var(--z-boot);
+    padding: var(--space-2) var(--space-4);
+    background: var(--color-primary);
+    color: var(--color-primary-fg);
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-600);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md);
+    transform: translate3d(0, calc(-100% - var(--space-4)), 0);
+    transition: transform var(--motion-duration-fast) var(--motion-ease-entrance);
+  }
+
+  .skip-link:focus-visible {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PRINT BASE                                        UI_SYSTEM.md §3.4, §14
+   ───────────────────────────────────────────────────────────────────────────
+   Print output is always light — the token override lives in
+   tokens.semantic.dark.css. This block handles geometry and page breaks.
+
+   Invoices, delivery challans, purchase orders and stock reports are printed
+   daily in this product, so print is a first-class surface, not an
+   afterthought.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media print {
+  html {
+    font-size: 12pt;
+  }
+
+  body {
+    background: #fff;
+    overflow: visible;
+    transition: none;
+  }
+
+  /* Interactive chrome has no meaning on paper. Any element that exists to be
+     clicked is removed via this attribute rather than a class, so a component
+     declares its own print behaviour at its definition site. */
+  [data-print='hide'],
+  nav,
+  aside,
+  button,
+  [role='button'],
+  [role='tablist'],
+  [role='toolbar'] {
+    display: none !important;
+  }
+
+  [data-print='show'] {
+    display: revert !important;
+  }
+
+  /* Never break a total, a signature block or a table row across pages. */
+  tr,
+  th,
+  td,
+  img,
+  svg,
+  [data-print='keep-together'] {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-footer-group;
+  }
+
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  [data-print='break-before'] {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  /* Ensure token-driven backgrounds (table header fills, badge tints) actually
+     print instead of being stripped by the browser's ink-saving default. */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* A printed page has no hover, focus or elevation. */
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}

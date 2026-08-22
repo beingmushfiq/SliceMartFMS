@@ -183,11 +183,11 @@ changes.
 
 | | |
 |---|---|
-| **Phase 0 — Architecture & documentation** | **Documentation complete.** The seven canonical documents plus five supporting documents (12 in total) written, 14 legacy files archived, 31 ADRs accepted. Repository restructure and tooling baseline outstanding. |
-| **Phase 1 — Auth + Tenancy + RBAC + Design System** | **Not started.** Awaiting approval of Phase 0. |
-| **Code in repository** | A frontend prototype only, at the repository root. Non-authoritative. Triage plan in `UI_SYSTEM.md` §17. |
+| **Phase 0 — Architecture & documentation** | **Documentation complete**, restructure complete, closeout in progress. The seven canonical documents plus five supporting documents (12 in total) written, 14 legacy files archived, 31 ADRs accepted. Monorepo, Laravel skeleton, token cascade and dependency reconciliation done. UI primitive hardening, tooling configuration and CI outstanding. |
+| **Phase 1 — Auth + Tenancy + RBAC + Design System** | **Not started.** |
+| **Code in repository** | `/frontend` — design-system foundation and 2 of 8 UI primitives. `/backend` — Laravel 13.26.1 stock skeleton, no project code. No feature code, no migrations, no endpoints. |
 
-Live detail: [DEVELOPMENT_STATUS.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/DEVELOPMENT_STATUS.md).
+Live detail: [DEVELOPMENT_STATUS.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/DEVELOPMENT_STATUS.md). Resuming in a new session: start at its §7 and §8.
 
 ---
 
@@ -197,3 +197,4 @@ Live detail: [DEVELOPMENT_STATUS.md](file:///d:/Factory%20Production,%20Inventor
 |---|---|
 | 2026-08-22 | Created. Establishes the documentation index and restates the binding precedence rule. Supersedes the navigation guidance in `_legacy/AI_PROJECT_CONTEXT.md`. |
 | 2026-08-22 | Consistency pass: §8 now states the document count as seven canonical plus five supporting (12 total) rather than "nine canonical". |
+| 2026-08-23 | §8 corrected — it still described the code as "a frontend prototype only, at the repository root", which stopped being true when the monorepo restructure landed. |

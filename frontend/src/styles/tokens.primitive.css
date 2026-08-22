@@ -1,0 +1,239 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYER 1 — PRIMITIVES                                    UI_SYSTEM.md §2.2
+   ───────────────────────────────────────────────────────────────────────────
+   Raw, mode-agnostic values. Named for what they ARE, never for what they are
+   used for.
+
+   BINDING RULE: no component file may reference anything in this file.
+   Components read layer 2 (tokens.semantic.css) and layer 3
+   (tokens.component.css) only. Lint rule `no-raw-color-in-components`
+   enforces this.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── Neutrals ─────────────────────────────────────────────────────────────
+     Two families, deliberately distinct.
+
+     --navy-*  the spine. Dark application chrome: sidebar, command palette,
+               overlays, dark-mode surfaces. Carries blue chroma so it reads as
+               a considered colour rather than "dark grey".
+     --slate-* the cool neutral. Light-mode backgrounds, hairline borders,
+               muted and subtle text.
+
+     navy 900/950 are inherited unchanged from the prototype — the sidebar is
+     the one surface every operator sees all day and it was already right.
+     ──────────────────────────────────────────────────────────────────────── */
+  --navy-50: #eef2fb;
+  --navy-100: #dbe3f4;
+  --navy-200: #bac9e7;
+  --navy-300: #93a6d2;
+  --navy-400: #6a80b2;
+  --navy-500: #47598e;
+  --navy-600: #35456e;
+  --navy-700: #263352;
+  --navy-800: #1a2438;
+  --navy-900: #0f172a;
+  --navy-950: #020617;
+
+  --slate-50: #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1;
+  --slate-400: #94a3b8;
+  --slate-500: #64748b;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1e293b;
+  --slate-900: #0f172a;
+  --slate-950: #020617;
+
+  /* ─── Chromatics ───────────────────────────────────────────────────────────
+     Full 50→950 ramps. The semantic layer picks steps out of these; nothing
+     else may.
+     ──────────────────────────────────────────────────────────────────────── */
+
+  /* blue — primary action */
+  --blue-50: #eff6ff;
+  --blue-100: #dbeafe;
+  --blue-200: #bfdbfe;
+  --blue-300: #93c5fd;
+  --blue-400: #60a5fa;
+  --blue-500: #3b82f6;
+  --blue-600: #2563eb;
+  --blue-700: #1d4ed8;
+  --blue-800: #1e40af;
+  --blue-900: #1e3a8a;
+  --blue-950: #172554;
+
+  /* amber — the warm accent, and warning */
+  --amber-50: #fffbeb;
+  --amber-100: #fef3c7;
+  --amber-200: #fde68a;
+  --amber-300: #fcd34d;
+  --amber-400: #fbbf24;
+  --amber-500: #f59e0b;
+  --amber-600: #d97706;
+  --amber-700: #b45309;
+  --amber-800: #92400e;
+  --amber-900: #78350f;
+  --amber-950: #451a03;
+
+  /* green — success */
+  --green-50: #f0fdf4;
+  --green-100: #dcfce7;
+  --green-200: #bbf7d0;
+  --green-300: #86efac;
+  --green-400: #4ade80;
+  --green-500: #22c55e;
+  --green-600: #16a34a;
+  --green-700: #15803d;
+  --green-800: #166534;
+  --green-900: #14532d;
+  --green-950: #052e16;
+
+  /* red — danger */
+  --red-50: #fef2f2;
+  --red-100: #fee2e2;
+  --red-200: #fecaca;
+  --red-300: #fca5a5;
+  --red-400: #f87171;
+  --red-500: #ef4444;
+  --red-600: #dc2626;
+  --red-700: #b91c1c;
+  --red-800: #991b1b;
+  --red-900: #7f1d1d;
+  --red-950: #450a0a;
+
+  /* cyan — informational */
+  --cyan-50: #ecfeff;
+  --cyan-100: #cffafe;
+  --cyan-200: #a5f3fc;
+  --cyan-300: #67e8f9;
+  --cyan-400: #22d3ee;
+  --cyan-500: #06b6d4;
+  --cyan-600: #0891b2;
+  --cyan-700: #0e7490;
+  --cyan-800: #155e75;
+  --cyan-900: #164e63;
+  --cyan-950: #083344;
+
+  /* ─── Categorical chart series ─────────────────────────────────────────────
+     Eight hues, ordered so that adjacent series are distinguishable by
+     lightness as well as hue — a line chart must still be readable in
+     greyscale and to a deuteranope. Re-declared for dark mode in
+     tokens.semantic.dark.css (§3.3 rule 4).
+     ──────────────────────────────────────────────────────────────────────── */
+  --chart-1: #2563eb;
+  --chart-2: #f59e0b;
+  --chart-3: #0891b2;
+  --chart-4: #16a34a;
+  --chart-5: #7c3aed;
+  --chart-6: #dc2626;
+  --chart-7: #0f766e;
+  --chart-8: #b45309;
+
+  /* ─── Spacing — 4px base, no arbitrary values ────────────────────────────── */
+  --space-0: 0;
+  --space-px: 1px;
+  --space-0_5: 2px;
+  --space-1: 4px;
+  --space-1_5: 6px;
+  --space-2: 8px;
+  --space-2_5: 10px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ─── Z-index scale ───────────────────────────────────────────────────────
+     A closed set. A component that needs a layer not listed here needs a
+     design review, not a magic number.
+     ──────────────────────────────────────────────────────────────────────── */
+  --z-base: 0;
+  --z-sticky: 100;
+  --z-dropdown: 200;
+  --z-overlay: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-tooltip: 600;
+  --z-boot: 700;
+
+  /* ─── Layout constants — inherited from the prototype, kept ──────────────── */
+  --sidebar-width: 256px;
+  --sidebar-collapsed-width: 64px;
+  --header-height: 56px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TAILWIND NAMESPACE — scales whose canonical names already match Tailwind v4
+   ───────────────────────────────────────────────────────────────────────────
+   These live in `@theme` rather than `:root` because Tailwind's namespaces
+   (`--text-*`, `--radius-*`, `--shadow-*`, `--font-weight-*`) are the same
+   names §2.2 specifies. Declaring them here defines the primitive AND
+   generates the utility from one source — no second config to drift.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@theme {
+  /* Fonts (§2.2). Self-hosted via @font-face in base.css — no render-blocking
+     third-party stylesheet request. */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Fira Code', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Spacing multiplier — makes Tailwind's dynamic scale (p-4, gap-2) resolve
+     against the same 4px base as --space-*. */
+  --spacing: 4px;
+
+  /* Type ramp. --text-base is 14px, not 16px: this is an operational
+     back-office product and that is the density it needs (§2.2). Inputs are
+     the documented exception and use 16px at mobile breakpoints to prevent
+     iOS zoom-on-focus. */
+  --text-2xs: 0.625rem;
+  --text-2xs--line-height: 1rem;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.0625rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.1875rem;
+  --text-base: 0.875rem;
+  --text-base--line-height: 1.3125rem;
+  --text-md: 1rem;
+  --text-md--line-height: 1.5rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.6875rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 1.9375rem;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+
+  /* Weights */
+  --font-weight-400: 400;
+  --font-weight-500: 500;
+  --font-weight-600: 600;
+  --font-weight-700: 700;
+  --font-weight-800: 800;
+
+  /* Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-full: 9999px;
+
+  /* Shadows — five tiers, no more (§2.2). In dark mode these reduce to a
+     ring; elevation there is expressed by lightness (§3.3 rule 1). */
+  --shadow-xs: 0 1px 2px 0 rgb(2 6 23 / 0.04);
+  --shadow-sm: 0 1px 3px 0 rgb(2 6 23 / 0.08), 0 1px 2px -1px rgb(2 6 23 / 0.06);
+  --shadow-md: 0 4px 12px -2px rgb(2 6 23 / 0.1), 0 2px 4px -2px rgb(2 6 23 / 0.06);
+  --shadow-lg: 0 12px 24px -6px rgb(2 6 23 / 0.12), 0 4px 8px -4px rgb(2 6 23 / 0.08);
+  --shadow-overlay: 0 25px 50px -12px rgb(2 6 23 / 0.25);
+}

@@ -1,0 +1,320 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   STYLE ENTRY POINT — import order + Tailwind v4 bridge   UI_SYSTEM.md §2.1
+   ───────────────────────────────────────────────────────────────────────────
+   `tailwind.config.js` DOES NOT EXIST. Tailwind CSS v4 is configured CSS-first
+   from this file (ADR-020). Deleting the JS config was a deliberate act — two
+   config sources for one design system is how drift starts.
+
+   IMPORT ORDER IS LOAD-BEARING. Do not reorder:
+
+     1. tailwindcss              declares the theme/base/components/utilities
+                                 cascade layers everything else slots into
+     2. tokens.primitive.css     layer 1 — raw scales (must precede layer 2,
+                                 which references them)
+     3. tokens.semantic.css      layer 2 — light-mode role mapping
+     4. tokens.semantic.dark.css layer 2 — dark re-mapping. MUST follow (3):
+                                 `:root` and `.dark` have equal specificity, so
+                                 dark mode wins on source order alone
+     5. tokens.component.css     layer 3 — component knobs, built from (2)
+     6. tokens.motion.css        durations, easings, distances, keyframes
+     7. base.css                 element resets — consumes all of the above
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@import 'tailwindcss';
+
+@import './tokens.primitive.css';
+@import './tokens.semantic.css';
+@import './tokens.semantic.dark.css';
+@import './tokens.component.css';
+@import './tokens.motion.css';
+@import './base.css';
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DARK VARIANT — class-based, not media-based               UI_SYSTEM.md §3.1
+   ───────────────────────────────────────────────────────────────────────────
+   Tailwind's stock `dark:` variant keys off `prefers-color-scheme`, which is
+   wrong for this product: we support three user-facing modes (light / dark /
+   system), so the OS preference is an input to our resolver, not the source of
+   truth. Redefining the variant guarantees that if a `dark:` utility ever does
+   slip through review it at least follows `.dark` on <html> rather than
+   silently disagreeing with every token in the app.
+
+   This is a safety net, not a licence. `dark:` variants remain FORBIDDEN in
+   component files (§3.2, §19) — dark mode is a re-mapping of layer 2, so a
+   component written once is correct in both modes.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Density variant, so a component can express a compact-only adjustment
+   without duplicating a class string. Prefer a layer 3 token over this. */
+@custom-variant compact (&:where([data-density='compact'], [data-density='compact'] *));
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SEMANTIC UTILITY BRIDGE
+   ───────────────────────────────────────────────────────────────────────────
+   Maps the layer 2 semantic roles (§2.3) into Tailwind's utility namespace.
+
+   WHY `@utility` AND NOT `@theme`:
+   §2.3 names the semantic tokens `--color-surface`, `--color-danger` and so
+   on. Those names already occupy Tailwind's own `--color-*` theme namespace,
+   so declaring them inside `@theme` would produce a self-referential
+   `--color-surface: var(--color-surface)` — circular at computed-value time.
+   `@utility` sidesteps the collision entirely: the token keeps the name the
+   document mandates, the utility resolves it at runtime, and the value is read
+   from whichever of `:root` / `.dark` / `@media print` currently applies.
+
+   PRIMITIVE RAMPS ARE DELIBERATELY ABSENT from the colour namespace. There is
+   no `bg-navy-900`, no `text-red-600`, no `bg-success-50`. §2.3 rule 1 forbids
+   primitives in component files, and the cheapest way to enforce a rule is to
+   make breaking it impossible rather than merely lintable. Chrome that must
+   ignore the theme (sidebar, tooltip) reads its layer 3 tokens instead —
+   `--nav-bg`, `--tooltip-bg`.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Backgrounds ───────────────────────────────────────────────────────── */
+@utility bg-base {
+  background-color: var(--color-bg);
+}
+@utility bg-surface {
+  background-color: var(--color-surface);
+}
+@utility bg-surface-raised {
+  background-color: var(--color-surface-raised);
+}
+@utility bg-surface-sunken {
+  background-color: var(--color-surface-sunken);
+}
+@utility bg-overlay {
+  background-color: var(--color-overlay);
+}
+@utility bg-primary {
+  background-color: var(--color-primary);
+}
+/* The only `-hover` background in the semantic set (§2.3). Every other role
+   expresses hover with a subtle tint or an opacity shift, because inventing
+   `--color-danger-hover` would open a second colour per role and the set is
+   closed. Exists so the Button primitive never writes an arbitrary value. */
+@utility bg-primary-hover {
+  background-color: var(--color-primary-hover);
+}
+@utility bg-primary-subtle {
+  background-color: var(--color-primary-subtle);
+}
+@utility bg-accent {
+  background-color: var(--color-accent);
+}
+@utility bg-accent-subtle {
+  background-color: var(--color-accent-subtle);
+}
+@utility bg-success {
+  background-color: var(--color-success);
+}
+@utility bg-success-subtle {
+  background-color: var(--color-success-subtle);
+}
+@utility bg-warning {
+  background-color: var(--color-warning);
+}
+@utility bg-warning-subtle {
+  background-color: var(--color-warning-subtle);
+}
+@utility bg-danger {
+  background-color: var(--color-danger);
+}
+@utility bg-danger-subtle {
+  background-color: var(--color-danger-subtle);
+}
+@utility bg-info {
+  background-color: var(--color-info);
+}
+@utility bg-info-subtle {
+  background-color: var(--color-info-subtle);
+}
+
+/* ─── Text ─────────────────────────────────────────────────────────────────
+   `-fg` utilities are the guaranteed-4.5:1 partner for their background
+   (§2.3 rule 2). `text-primary-fg` on `bg-primary` is the only sanctioned
+   pairing; picking a foreground by eye is how contrast regressions ship.
+   ──────────────────────────────────────────────────────────────────────── */
+@utility text-default {
+  color: var(--color-text);
+}
+@utility text-muted {
+  color: var(--color-text-muted);
+}
+@utility text-subtle {
+  color: var(--color-text-subtle);
+}
+@utility text-primary {
+  color: var(--color-primary);
+}
+@utility text-primary-fg {
+  color: var(--color-primary-fg);
+}
+@utility text-accent {
+  color: var(--color-accent);
+}
+@utility text-accent-fg {
+  color: var(--color-accent-fg);
+}
+@utility text-success {
+  color: var(--color-success);
+}
+@utility text-success-fg {
+  color: var(--color-success-fg);
+}
+@utility text-warning {
+  color: var(--color-warning);
+}
+@utility text-warning-fg {
+  color: var(--color-warning-fg);
+}
+@utility text-danger {
+  color: var(--color-danger);
+}
+@utility text-danger-fg {
+  color: var(--color-danger-fg);
+}
+@utility text-info {
+  color: var(--color-info);
+}
+@utility text-info-fg {
+  color: var(--color-info-fg);
+}
+
+/* ─── Borders ──────────────────────────────────────────────────────────────
+   `border-default` is the hairline used by cards and table cells;
+   `border-strong` is for inputs and dividers that must read clearly. Status
+   borders exist because a validation error is communicated by border colour
+   plus a message, never by colour alone (§9.1).
+   ──────────────────────────────────────────────────────────────────────── */
+@utility border-default {
+  border-color: var(--color-border);
+}
+@utility border-strong {
+  border-color: var(--color-border-strong);
+}
+@utility border-primary {
+  border-color: var(--color-primary);
+}
+@utility border-success {
+  border-color: var(--color-success);
+}
+@utility border-warning {
+  border-color: var(--color-warning);
+}
+@utility border-danger {
+  border-color: var(--color-danger);
+}
+@utility border-info {
+  border-color: var(--color-info);
+}
+
+/* ─── Rings ────────────────────────────────────────────────────────────────
+   One focus geometry, from layer 3, so no component types `3px`.
+   ──────────────────────────────────────────────────────────────────────── */
+@utility ring-focus {
+  box-shadow: 0 0 0 var(--focus-ring-glow) var(--color-focus-ring);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CHART SERIES
+   ───────────────────────────────────────────────────────────────────────────
+   Recharts takes colours as props, not classes, so these are exposed for
+   `var(--chart-n)` reads in chart config. The utilities exist for legends and
+   custom tooltips, which are ordinary DOM.
+
+   Written out rather than generated as a functional `bg-chart-*` utility: v4's
+   `--value(--chart-*)` resolves against the `@theme` namespace, and these tokens
+   deliberately live in plain `:root` so tokens.semantic.dark.css can re-declare
+   them (§3.3 rule 4). Eight explicit rules cost less than a token in the wrong
+   layer.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@utility bg-chart-1 {
+  background-color: var(--chart-1);
+}
+@utility bg-chart-2 {
+  background-color: var(--chart-2);
+}
+@utility bg-chart-3 {
+  background-color: var(--chart-3);
+}
+@utility bg-chart-4 {
+  background-color: var(--chart-4);
+}
+@utility bg-chart-5 {
+  background-color: var(--chart-5);
+}
+@utility bg-chart-6 {
+  background-color: var(--chart-6);
+}
+@utility bg-chart-7 {
+  background-color: var(--chart-7);
+}
+@utility bg-chart-8 {
+  background-color: var(--chart-8);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOTION UTILITIES                                          UI_SYSTEM.md §7
+   ───────────────────────────────────────────────────────────────────────────
+   Token-driven, so a developer never types a duration or a curve. All of these
+   collapse automatically under reduced motion because the tokens they read do
+   (tokens.motion.css) — there is no second reduced-motion code path to keep in
+   sync.
+
+   Anything stateful, interruptible or sequenced belongs in Framer Motion or
+   GSAP (§7.1). These cover the fire-and-forget cases only.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@utility transition-token {
+  transition: var(--transition-control);
+}
+@utility transition-token-colors {
+  transition: var(--transition-colors);
+}
+@utility transition-token-transform {
+  transition: var(--transition-transform);
+}
+
+@utility animate-fade-in {
+  animation: sm-fade-in var(--motion-duration-base) var(--motion-ease-entrance) both;
+}
+@utility animate-rise-in {
+  animation: sm-rise-in var(--motion-duration-base) var(--motion-ease-entrance) both;
+}
+@utility animate-pulse-soft {
+  animation: sm-pulse 2s var(--motion-ease-standard) infinite;
+}
+@utility animate-shake {
+  animation: sm-shake var(--motion-duration-fast) var(--motion-ease-standard) both;
+}
+@utility animate-indeterminate {
+  animation: sm-indeterminate 1.4s var(--motion-ease-standard) infinite;
+}
+
+/* Skeleton shimmer. The solid `--skeleton-bg` is painted first so the surface
+   is still visibly a skeleton when the animation is suppressed under reduced
+   motion (§7.6) — the gradient is an enhancement, not the affordance. */
+@utility skeleton-shimmer {
+  background-color: var(--skeleton-bg);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--skeleton-highlight) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  border-radius: var(--skeleton-radius);
+  animation: sm-shimmer 1.6s var(--motion-ease-standard) infinite;
+}
+
+/* Press feedback — the cheapest, most satisfying feedback in UI design (§7.4).
+   Applied by the Button primitive; available to any custom pressable. */
+@utility press {
+  transition: transform var(--motion-duration-instant) var(--motion-ease-standard);
+}
+@utility press-active {
+  transform: scale(var(--motion-press-scale));
+}

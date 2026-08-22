@@ -1,0 +1,114 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYER 2 — SEMANTIC TOKENS (LIGHT MODE)                  UI_SYSTEM.md §2.3
+   ───────────────────────────────────────────────────────────────────────────
+   Role-based, mode-aware. This is the only layer a component may reference
+   for colour.
+
+   BINDING RULE (§2.3 rule 1): No raw hex, rgb(), oklch() or --navy-* /
+   --blue-* / --red-* primitive tokens in any component file. Lint rule
+   `no-raw-color-in-components` fails the build.
+
+   Every --color-x that can carry text has a matching --color-x-fg guaranteed
+   to meet 4.5:1 against it in both modes. Contrast pairs are unit tested
+   (UI_SYSTEM.md §9.4).
+
+   Dark mode is a re-mapping, not a variant. See tokens.semantic.dark.css.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── Surfaces & Backgrounds ──────────────────────────────────────────────
+     Light mode progression: slate-50 (application background) → white
+     (cards, tables) → white (modals, one step above) → slate-100 (table
+     headers, inset wells).
+
+     Dark mode inverts this: navy-950 → navy-900 → navy-800 → navy-950.
+     Elevation in dark mode is expressed by lightness, not shadow (§3.3).
+     ──────────────────────────────────────────────────────────────────────── */
+  --color-bg: var(--slate-50);
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: var(--slate-100);
+
+  /* ─── Borders ──────────────────────────────────────────────────────────────
+     Two weights. Hairline for cards and table cells; strong for inputs and
+     dividers that must read clearly.
+     ──────────────────────────────────────────────────────────────────────── */
+  --color-border: var(--slate-200);
+  --color-border-strong: var(--slate-300);
+
+  /* ─── Text Hierarchy ───────────────────────────────────────────────────────
+     Three tiers. Body uses navy-900 (the prototype's deliberate choice —
+     a warm dark that reads better than pure black). Muted for labels and help
+     text; subtle for placeholders and disabled states.
+     ──────────────────────────────────────────────────────────────────────── */
+  --color-text: var(--navy-900);
+  --color-text-muted: var(--slate-600);
+  --color-text-subtle: var(--slate-400);
+
+  /* ─── Primary (Interactive, Brand) ─────────────────────────────────────────
+     Tenant-overridable (§4). Blue 600 for actions, blue 700 for hover/active,
+     white foreground, blue 50 for selected rows and active tab backgrounds.
+     ──────────────────────────────────────────────────────────────────────── */
+  --color-primary: var(--blue-600);
+  --color-primary-hover: var(--blue-700);
+  --color-primary-fg: #ffffff;
+  --color-primary-subtle: var(--blue-50);
+
+  /* ─── Accent (Warm Emphasis, Non-Status) ───────────────────────────────────
+     Tenant-overridable (§4). Amber 500. Used for emphasis, never for status
+     (§2.3 rule 4). The invoice "Due" highlight, the KPI delta arrow, the warm
+     call-to-action that is not the primary button.
+     ──────────────────────────────────────────────────────────────────────── */
+  --color-accent: var(--amber-500);
+  --color-accent-fg: #ffffff;
+  --color-accent-subtle: var(--amber-50);
+
+  /* ─── Status Colours ───────────────────────────────────────────────────────
+     Four roles, closed set (§2.3 rule 4). Each has three variants: the main
+     colour (borders, icons, badge backgrounds), the foreground (text/icon on
+     the main colour), and the subtle background (alert panels, table row
+     tints, selected states).
+
+     NAMING NOTE (§2.2 binding): we say "danger", never "error". A validation
+     warning and a failed request are different roles that both used to get
+     called "error", and that ambiguity produced inconsistent UI. The primitive
+     layer still says --red-* (physical colour name); the semantic layer says
+     --color-danger (role name).
+     ──────────────────────────────────────────────────────────────────────── */
+
+  /* success — posted, passed QC, delivered, paid */
+  --color-success: var(--green-600);
+  --color-success-fg: #ffffff;
+  --color-success-subtle: var(--green-50);
+
+  /* warning — low stock, pending approval, stale data */
+  --color-warning: var(--amber-600);
+  --color-warning-fg: #ffffff;
+  --color-warning-subtle: var(--amber-50);
+
+  /* danger — failed, rejected, overdue, destructive action */
+  --color-danger: var(--red-600);
+  --color-danger-fg: #ffffff;
+  --color-danger-subtle: var(--red-50);
+
+  /* info — neutral informational, draft, hints */
+  --color-info: var(--cyan-600);
+  --color-info-fg: #ffffff;
+  --color-info-subtle: var(--cyan-50);
+
+  /* ─── Interactive States ───────────────────────────────────────────────────
+     Focus ring is one colour, everywhere, both modes (§9.1). Blue 600 at 15%
+     opacity produces the 3px glow around an input without obscuring the field.
+
+     Overlay is the scrim behind modals and drawers. Navy 900 at 60% in light
+     mode; the same in dark mode (it already sits on navy-950 so 60% navy-900
+     reads as a visible tint without being heavy).
+
+     Selection is text-selection background. Blue 100 with blue 800 text reads
+     clearly and matches the primary colour family.
+     ──────────────────────────────────────────────────────────────────────── */
+  --color-focus-ring: rgb(37 99 235 / 0.15);
+  --color-overlay: rgb(15 23 42 / 0.6);
+  --color-selection-bg: var(--blue-100);
+  --color-selection-fg: var(--blue-800);
+}

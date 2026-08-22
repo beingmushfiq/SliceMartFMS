@@ -1,0 +1,242 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOTION TOKENS                                 UI_SYSTEM.md §7 (ADR-031)
+   ───────────────────────────────────────────────────────────────────────────
+   Durations and easings are tokens. A developer never types a number.
+
+   Consumed by CSS transitions, by Framer Motion variants (read through
+   `motionTokens` in src/lib/motion.ts), and by GSAP timelines. One source, so
+   a route transition and a modal entrance cannot drift apart.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── Durations — five tiers ────────────────────────────────────────────────
+     HARD CEILING: 400ms for anything that blocks interaction. Only the
+     `deliberate` tier may exceed it, and only on non-blocking, non-repeating
+     surfaces (§7.2).
+     ──────────────────────────────────────────────────────────────────────── */
+  --motion-duration-instant: 80ms; /* colour/opacity on hover, checkbox tick   */
+  --motion-duration-fast: 150ms; /* tooltip, dropdown, small reveals         */
+  --motion-duration-base: 240ms; /* modal, drawer, tab panel, toast          */
+  --motion-duration-slow: 380ms; /* page/route transition, large panel       */
+  --motion-duration-deliberate: 600ms; /* onboarding, empty-state, celebratory     */
+
+  /* ─── Easings — four curves ────────────────────────────────────────────────
+     ENTRANCES ARE SLOWER THAN EXITS (§7.2). Arriving deserves attention;
+     leaving must not cost time. Enter with `entrance`, exit with `exit` at one
+     duration tier faster.
+
+     No bounce, no elastic, no spring overshoot on functional UI. Overshoot is
+     permitted only on the boot loader and on a genuine success celebration —
+     which is why `--motion-ease-overshoot` is defined separately and named for
+     what it is, so its use is greppable in review.
+     ──────────────────────────────────────────────────────────────────────── */
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1); /* both ends visible   */
+  --motion-ease-entrance: cubic-bezier(0.05, 0.7, 0.1, 1); /* decelerate in  */
+  --motion-ease-exit: cubic-bezier(0.3, 0, 0.8, 0.15); /* accelerate out     */
+  --motion-ease-emphasis: cubic-bezier(0.3, 0, 0, 1); /* attention, count-up */
+  --motion-ease-overshoot: cubic-bezier(0.34, 1.56, 0.64, 1); /* boot only   */
+
+  /* ─── Distances ────────────────────────────────────────────────────────────
+     Travel for a reveal. Small on purpose: an 8px rise reads as "this arrived",
+     a 40px rise reads as "this flew in from somewhere", which is decoration.
+     ──────────────────────────────────────────────────────────────────────── */
+  --motion-distance-xs: 2px; /* dropdown, popover, tooltip rise              */
+  --motion-distance-sm: 4px; /* route change content rise                    */
+  --motion-distance-md: 8px; /* card, panel, inline reveal                   */
+  --motion-distance-lg: 16px; /* modal, sheet                                */
+
+  /* ─── Stagger ──────────────────────────────────────────────────────────────
+     Between siblings in a staggered reveal. Capped at the first 12 items;
+     lists longer than that show the remainder immediately (§7.4 forbidden).
+     ──────────────────────────────────────────────────────────────────────── */
+  --motion-stagger: 40ms;
+
+  /* ─── Composite Transitions ────────────────────────────────────────────────
+     Ready-made property/duration/easing triples for the cases that recur
+     everywhere, so a component writes `transition: var(--transition-colors)`
+     instead of assembling three tokens and getting the easing wrong.
+
+     TRANSFORM AND OPACITY ONLY (§7.2). Animating width, height, top, left,
+     margin or box-shadow is forbidden — use transform + GSAP Flip, or
+     clip-path. No layout-triggering animation on a table with 500 rows.
+     `--transition-colors` is exempt: colour is not a layout property and does
+     not trigger reflow.
+     ──────────────────────────────────────────────────────────────────────── */
+  --transition-colors: color var(--motion-duration-instant) var(--motion-ease-standard),
+    background-color var(--motion-duration-instant) var(--motion-ease-standard),
+    border-color var(--motion-duration-instant) var(--motion-ease-standard);
+  --transition-transform: transform var(--motion-duration-fast) var(--motion-ease-standard);
+  --transition-opacity: opacity var(--motion-duration-fast) var(--motion-ease-standard);
+  --transition-control: color var(--motion-duration-instant) var(--motion-ease-standard),
+    background-color var(--motion-duration-instant) var(--motion-ease-standard),
+    border-color var(--motion-duration-instant) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-instant) var(--motion-ease-standard),
+    transform var(--motion-duration-instant) var(--motion-ease-standard);
+
+  /* ─── Craft Constants ──────────────────────────────────────────────────────
+     The permitted micro-interactions of §7.4, tokenised so they are applied
+     identically everywhere. Press-scale on a button and press-scale on a table
+     row action must be the same 0.98 or the product feels inconsistent in a
+     way users notice but cannot name.
+     ──────────────────────────────────────────────────────────────────────── */
+  --motion-press-scale: 0.98; /* button/row press — the cheapest good feedback */
+  --motion-hover-scale: 1.04; /* icon button hover                            */
+  --motion-hover-lift: -1px; /* card hover lift                              */
+  --motion-modal-scale-from: 0.98; /* modal panel entrance                    */
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   REDUCED MOTION                                          UI_SYSTEM.md §7.6
+   ───────────────────────────────────────────────────────────────────────────
+   Two triggers, treated identically:
+
+     1. `prefers-reduced-motion: reduce`  — the OS-level setting
+     2. `[data-reduced-motion="true"]`    — the in-app user preference, stored
+        server-side as `reduced_motion` and mirrored to localStorage so it is
+        applied pre-paint
+
+   The strategy is to collapse durations to ~0 rather than to disable
+   transitions outright. Collapsing keeps every transitionend / animationend
+   listener firing, so no component's state machine stalls waiting for an event
+   that will never arrive. Disabling `transition-property` would break them.
+
+   Distances collapse to 0 as well: a 16px slide at 1ms is a visible jump, and
+   a jump is precisely what the setting exists to prevent. Opacity crossfades
+   are retained (they are not vestibular triggers) but complete instantly.
+
+   Stagger goes to 0 — sequential reveal is motion, and it delays content.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-instant: 1ms;
+    --motion-duration-fast: 1ms;
+    --motion-duration-base: 1ms;
+    --motion-duration-slow: 1ms;
+    --motion-duration-deliberate: 1ms;
+    --motion-distance-xs: 0px;
+    --motion-distance-sm: 0px;
+    --motion-distance-md: 0px;
+    --motion-distance-lg: 0px;
+    --motion-stagger: 0ms;
+    --motion-press-scale: 1;
+    --motion-hover-scale: 1;
+    --motion-hover-lift: 0px;
+    --motion-modal-scale-from: 1;
+  }
+}
+
+[data-reduced-motion='true'] {
+  --motion-duration-instant: 1ms;
+  --motion-duration-fast: 1ms;
+  --motion-duration-base: 1ms;
+  --motion-duration-slow: 1ms;
+  --motion-duration-deliberate: 1ms;
+  --motion-distance-xs: 0px;
+  --motion-distance-sm: 0px;
+  --motion-distance-md: 0px;
+  --motion-distance-lg: 0px;
+  --motion-stagger: 0ms;
+  --motion-press-scale: 1;
+  --motion-hover-scale: 1;
+  --motion-hover-lift: 0px;
+  --motion-modal-scale-from: 1;
+}
+
+/* Infinite/looping animations are suppressed entirely rather than sped up — a
+   1ms loop is a strobe. Skeleton shimmer and status pulses fall back to their
+   static appearance, which is why the skeleton has a solid background colour
+   and not only a gradient. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-iteration-count: 1 !important;
+  }
+}
+
+[data-reduced-motion='true'] *,
+[data-reduced-motion='true'] *::before,
+[data-reduced-motion='true'] *::after {
+  animation-iteration-count: 1 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   KEYFRAMES
+   ───────────────────────────────────────────────────────────────────────────
+   The small set of CSS-driven animations. Anything stateful, interruptible or
+   sequenced belongs in Framer Motion or GSAP (§7.1) — these are only for
+   fire-and-forget effects and for the reduced-motion-safe loops.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes sm-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sm-rise-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, var(--motion-distance-md), 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Skeleton shimmer. Uses background-position, which does not trigger layout. */
+@keyframes sm-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Breathing pulse for "live"/"syncing" indicators and the boot mark hold. */
+@keyframes sm-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Submit-level validation failure only — never per keystroke (§7.3 row 8). */
+@keyframes sm-shake {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  25% {
+    transform: translate3d(-2px, 0, 0);
+  }
+  75% {
+    transform: translate3d(2px, 0, 0);
+  }
+}
+
+/* Indeterminate progress rail. Used ONLY where no real percentage exists;
+   a real percentage renders as a real width (§7.4 — no fake progress). */
+@keyframes sm-indeterminate {
+  from {
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    transform: translate3d(400%, 0, 0);
+  }
+}
+
+@keyframes sm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

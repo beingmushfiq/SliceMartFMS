@@ -1,0 +1,30 @@
+{
+  "name": "slicemart-platform",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Multi-tenant manufacturing, inventory, sales, workforce and delivery SaaS. Workspace root — see docs/README.md for the binding document precedence.",
+  "workspaces": [
+    "frontend"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "npm run dev --workspace frontend",
+    "build": "npm run build --workspace frontend",
+    "preview": "npm run preview --workspace frontend",
+    "lint": "npm run lint --workspace frontend",
+    "typecheck": "npm run typecheck --workspace frontend",
+    "test": "npm run test --workspace frontend",
+    "test:a11y": "npm run test:a11y --workspace frontend",
+    "depcruise": "npm run depcruise --workspace frontend",
+    "storybook": "npm run storybook --workspace frontend",
+    "format": "prettier --write \"frontend/src/**/*.{ts,tsx,css}\" \"docs/**/*.md\"",
+    "format:check": "prettier --check \"frontend/src/**/*.{ts,tsx,css}\" \"docs/**/*.md\"",
+    "verify": "npm run lint && npm run typecheck && npm run depcruise && npm run test"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
+  }
+}

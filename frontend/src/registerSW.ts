@@ -8,10 +8,10 @@ export function registerServiceWorker() {
       navigator.serviceWorker
         .register('/sw.js')
         .then((registration) => {
-          console.log('[SliceMart FMS] ServiceWorker registered with scope:', registration.scope);
+          console.log('[App] ServiceWorker registered with scope:', registration.scope);
         })
         .catch((error) => {
-          console.warn('[SliceMart FMS] ServiceWorker registration failed:', error);
+          console.warn('[App] ServiceWorker registration failed:', error);
         });
     });
   } else if ('serviceWorker' in navigator) {
