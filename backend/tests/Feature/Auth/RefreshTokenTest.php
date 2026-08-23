@@ -13,6 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class RefreshTokenTest extends TestCase
@@ -70,12 +71,26 @@ class RefreshTokenTest extends TestCase
         $this->refreshService = app(RefreshTokenService::class);
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function postWithRefreshToken(string $uri, string $token, array $data = []): TestResponse
+    {
+        return $this->call(
+            'POST',
+            $uri,
+            $data,
+            [$this->refreshService->getCookieName() => $token],
+            [],
+            ['HTTP_ACCEPT' => 'application/json']
+        );
+    }
+
     public function test_refresh_token_rotation_issues_new_token_and_revokes_old(): void
     {
         $initial = $this->refreshService->createRefreshToken($this->user);
 
-        $response = $this->withUnencryptedCookie($this->refreshService->getCookieName(), $initial['token'])
-            ->postJson('/api/v1/auth/refresh');
+        $response = $this->postWithRefreshToken('/api/v1/auth/refresh', $initial['token']);
 
         $response->assertStatus(200);
         $response->assertJsonPath('success', true);
@@ -106,8 +121,7 @@ class RefreshTokenTest extends TestCase
         $familyId = $t1['model']->family_id;
 
         // 2. Rotate T1 -> T2
-        $rotateResponse = $this->withUnencryptedCookie($this->refreshService->getCookieName(), $t1['token'])
-            ->postJson('/api/v1/auth/refresh');
+        $rotateResponse = $this->postWithRefreshToken('/api/v1/auth/refresh', $t1['token']);
         $rotateResponse->assertStatus(200);
 
         // T2 is active in database
@@ -118,10 +132,10 @@ class RefreshTokenTest extends TestCase
         $this->assertSame(1, $activeTokensCount);
 
         // 3. Stolen token scenario: Attacker presents already-rotated T1 again
-        $reusedResponse = $this->withUnencryptedCookie($this->refreshService->getCookieName(), $t1['token'])
-            ->postJson('/api/v1/auth/refresh');
+        $reusedResponse = $this->postWithRefreshToken('/api/v1/auth/refresh', $t1['token']);
 
         $reusedResponse->assertStatus(401);
+        $reusedResponse->assertJsonPath('error.code', 'REFRESH_REUSED');
 
         // 4. Verify ALL tokens in this family are now revoked
         $remainingActiveCount = RefreshToken::query()
@@ -138,9 +152,9 @@ class RefreshTokenTest extends TestCase
             'expires_at' => Carbon::now()->subDay(),
         ]);
 
-        $response = $this->withUnencryptedCookie($this->refreshService->getCookieName(), $t['token'])
-            ->postJson('/api/v1/auth/refresh');
+        $response = $this->postWithRefreshToken('/api/v1/auth/refresh', $t['token']);
 
         $response->assertStatus(401);
+        $response->assertJsonPath('error.code', 'REFRESH_EXPIRED');
     }
 }

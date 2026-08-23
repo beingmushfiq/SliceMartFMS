@@ -14,6 +14,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class LogoutTest extends TestCase
@@ -74,12 +75,26 @@ class LogoutTest extends TestCase
         $this->refreshService = app(RefreshTokenService::class);
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function postWithRefreshToken(string $uri, string $token, array $data = []): TestResponse
+    {
+        return $this->call(
+            'POST',
+            $uri,
+            $data,
+            [$this->refreshService->getCookieName() => $token],
+            [],
+            ['HTTP_ACCEPT' => 'application/json']
+        );
+    }
+
     public function test_logout_revokes_family_and_clears_cookie(): void
     {
         $token = $this->refreshService->createRefreshToken($this->user);
 
-        $response = $this->withUnencryptedCookie($this->refreshService->getCookieName(), $token['token'])
-            ->postJson('/api/v1/auth/logout');
+        $response = $this->postWithRefreshToken('/api/v1/auth/logout', $token['token']);
 
         $response->assertStatus(200);
         $response->assertJsonPath('success', true);

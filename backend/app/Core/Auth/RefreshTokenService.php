@@ -98,46 +98,51 @@ class RefreshTokenService
     ): array {
         $tokenHash = hash('sha256', $plainToken);
 
-        return DB::transaction(function () use ($tokenHash, $ipAddress, $userAgent) {
-            /** @var RefreshToken|null $existingToken */
-            $existingToken = RefreshToken::query()
-                ->where('token_hash', $tokenHash)
+        /** @var RefreshToken|null $existingToken */
+        $existingToken = RefreshToken::query()
+            ->where('token_hash', $tokenHash)
+            ->first();
+
+        if ($existingToken === null) {
+            throw new RefreshTokenInvalidException('The refresh token is invalid.', 401);
+        }
+
+        // Stolen Token Reuse Detection (ADR-007):
+        // If the token has already been revoked, someone is trying to reuse a rotated token!
+        if ($existingToken->revoked_at !== null) {
+            Log::warning('Stolen refresh token reuse detected. Revoking entire token family.', [
+                'family_id' => $existingToken->family_id,
+                'user_id' => $existingToken->user_id,
+                'tenant_id' => $existingToken->tenant_id,
+                'ip_address' => $ipAddress,
+            ]);
+
+            // Invalidate ALL tokens in this family immediately
+            RefreshToken::query()
+                ->where('family_id', $existingToken->family_id)
+                ->whereNull('revoked_at')
+                ->update(['revoked_at' => Carbon::now()]);
+
+            throw new RefreshTokenReusedException('Refresh token reuse detected. All sessions in this family revoked.', 401);
+        }
+
+        // Expiration check
+        if ($existingToken->expires_at->isPast()) {
+            $existingToken->update(['revoked_at' => Carbon::now()]);
+            throw new RefreshTokenExpiredException('The refresh token has expired.', 401);
+        }
+
+        return DB::transaction(function () use ($existingToken, $ipAddress, $userAgent) {
+            /** @var RefreshToken $lockedToken */
+            $lockedToken = RefreshToken::query()
+                ->where('id', $existingToken->id)
                 ->lockForUpdate()
-                ->first();
-
-            if ($existingToken === null) {
-                throw new RefreshTokenInvalidException('The refresh token is invalid.', 401);
-            }
-
-            // Stolen Token Reuse Detection (ADR-007):
-            // If the token has already been revoked, someone is trying to reuse a rotated token!
-            if ($existingToken->revoked_at !== null) {
-                Log::warning('Stolen refresh token reuse detected. Revoking entire token family.', [
-                    'family_id' => $existingToken->family_id,
-                    'user_id' => $existingToken->user_id,
-                    'tenant_id' => $existingToken->tenant_id,
-                    'ip_address' => $ipAddress,
-                ]);
-
-                // Invalidate ALL tokens in this family
-                RefreshToken::query()
-                    ->where('family_id', $existingToken->family_id)
-                    ->whereNull('revoked_at')
-                    ->update(['revoked_at' => Carbon::now()]);
-
-                throw new RefreshTokenReusedException('Refresh token reuse detected. All sessions in this family revoked.', 401);
-            }
-
-            // Expiration check
-            if ($existingToken->expires_at->isPast()) {
-                $existingToken->update(['revoked_at' => Carbon::now()]);
-                throw new RefreshTokenExpiredException('The refresh token has expired.', 401);
-            }
+                ->firstOrFail();
 
             /** @var User|null $user */
-            $user = User::withoutTenantScope()->find($existingToken->user_id);
+            $user = User::withoutTenantScope()->find($lockedToken->user_id);
             if ($user === null || ! $user->is_active) {
-                $existingToken->update(['revoked_at' => Carbon::now()]);
+                $lockedToken->update(['revoked_at' => Carbon::now()]);
                 throw new RefreshTokenInvalidException('The user associated with this token is invalid or inactive.', 401);
             }
 
@@ -152,7 +157,7 @@ class RefreshTokenService
                 'user_id' => $user->id,
                 'tenant_id' => $user->tenant_id,
                 'token_hash' => $newTokenHash,
-                'family_id' => $existingToken->family_id,
+                'family_id' => $lockedToken->family_id,
                 'replaced_by_id' => null,
                 'ip' => $ipAddress,
                 'user_agent' => $userAgent ? Str::limit($userAgent, 255, '') : null,
@@ -161,7 +166,7 @@ class RefreshTokenService
             ]);
 
             // Revoke current token and link successor
-            $existingToken->update([
+            $lockedToken->update([
                 'revoked_at' => Carbon::now(),
                 'replaced_by_id' => $newToken->id,
             ]);
