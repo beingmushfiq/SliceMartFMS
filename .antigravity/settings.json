@@ -7,7 +7,7 @@
   "antigravity.agent.provider": "openai-compatible",
   "antigravity.agent.openai-compatible.endpoint": "https://agentrouter.org",
   "antigravity.agent.openai-compatible.apiKey": "sk-fxTwBshgslBTaSaOUgOO70ajx1eYfN33sthlq3Q0VmlxNaHf",
-  "antigravity.agent.model": "gpt-5.6-sol"
+  "antigravity.agent.model": "gpt-5.6-sol",
   "antigravity.telemetry.enableTelemetry": false,
 "antigravity.cloud.autoConnect": false
 }
