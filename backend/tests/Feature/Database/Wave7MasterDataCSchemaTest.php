@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Database;
 
 use Illuminate\Support\Facades\DB;
-use Schema;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Wave 7 — master data C schema contract tests.
