@@ -4912,6 +4912,514 @@ abstract class SchemaTestCase extends TestCase
         ];
     }
 
+    // ─── chart_of_accounts ───────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertChartOfAccount(
+        int $tenantId,
+        int $companyId,
+        string $accountCode = '1010',
+        array $overrides = []
+    ): int {
+        return DB::table('chart_of_accounts')
+            ->insertGetId($this->chartOfAccountAttributes($tenantId, $companyId, $accountCode, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function chartOfAccountAttributes(
+        int $tenantId,
+        int $companyId,
+        string $accountCode = '1010',
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'company_id' => $companyId,
+            'account_code' => $accountCode.'_'.$counter,
+            'name' => 'Account '.$counter,
+            'account_type' => 'asset',
+            'account_subtype' => 'cash',
+            'parent_id' => null,
+            'is_group' => false,
+            'normal_balance' => 'debit',
+            'is_system' => false,
+            'is_active' => true,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── journal_entries ─────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertJournalEntry(
+        int $tenantId,
+        int $companyId,
+        array $overrides = []
+    ): int {
+        return DB::table('journal_entries')
+            ->insertGetId($this->journalEntryAttributes($tenantId, $companyId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function journalEntryAttributes(
+        int $tenantId,
+        int $companyId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'company_id' => $companyId,
+            'entry_number' => 'JE-'.$counter,
+            'entry_date' => '2026-08-24',
+            'entry_type' => 'manual',
+            'source_module' => null,
+            'reference_type' => null,
+            'reference_id' => null,
+            'narration' => 'Sample journal entry',
+            'total_debit' => '1000.0000',
+            'total_credit' => '1000.0000',
+            'status' => 'draft',
+            'posted_by' => null,
+            'posted_at' => null,
+            'voided_by' => null,
+            'voided_at' => null,
+            'void_reason' => null,
+            'reversal_of_entry_id' => null,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── journal_lines ───────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertJournalLine(
+        int $tenantId,
+        int $journalEntryId,
+        int $accountId,
+        array $overrides = []
+    ): int {
+        return DB::table('journal_lines')
+            ->insertGetId($this->journalLineAttributes($tenantId, $journalEntryId, $accountId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function journalLineAttributes(
+        int $tenantId,
+        int $journalEntryId,
+        int $accountId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'journal_entry_id' => $journalEntryId,
+            'account_id' => $accountId,
+            'debit_amount' => '1000.0000',
+            'credit_amount' => '0.0000',
+            'branch_id' => null,
+            'cost_center_code' => null,
+            'party_id' => null,
+            'narration' => 'Debit leg',
+            'sort_order' => 1,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── expense_categories ──────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertExpenseCategory(
+        int $tenantId,
+        string $code = 'OFFICE_EXP',
+        array $overrides = []
+    ): int {
+        return DB::table('expense_categories')
+            ->insertGetId($this->expenseCategoryAttributes($tenantId, $code, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function expenseCategoryAttributes(
+        int $tenantId,
+        string $code = 'OFFICE_EXP',
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'code' => $code.'_'.$counter,
+            'name' => 'Expense Category '.$counter,
+            'parent_id' => null,
+            'default_account_id' => null,
+            'requires_attachment' => false,
+            'approval_threshold' => '10000.0000',
+            'is_active' => true,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── bank_accounts ───────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertBankAccount(
+        int $tenantId,
+        int $companyId,
+        int $chartOfAccountId,
+        string $code = 'MAIN_CASH',
+        array $overrides = []
+    ): int {
+        return DB::table('bank_accounts')
+            ->insertGetId($this->bankAccountAttributes($tenantId, $companyId, $chartOfAccountId, $code, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function bankAccountAttributes(
+        int $tenantId,
+        int $companyId,
+        int $chartOfAccountId,
+        string $code = 'MAIN_CASH',
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'company_id' => $companyId,
+            'code' => $code.'_'.$counter,
+            'name' => 'Main Cash Desk '.$counter,
+            'account_type' => 'cash',
+            'bank_name' => null,
+            'account_number' => null,
+            'branch_name' => null,
+            'currency' => 'BDT',
+            'chart_of_account_id' => $chartOfAccountId,
+            'opening_balance' => '50000.0000',
+            'current_balance' => '50000.0000',
+            'is_default_for_pos' => false,
+            'is_active' => true,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── expenses ────────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertExpense(
+        int $tenantId,
+        int $companyId,
+        int $branchId,
+        int $expenseCategoryId,
+        array $overrides = []
+    ): int {
+        return DB::table('expenses')
+            ->insertGetId($this->expenseAttributes($tenantId, $companyId, $branchId, $expenseCategoryId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function expenseAttributes(
+        int $tenantId,
+        int $companyId,
+        int $branchId,
+        int $expenseCategoryId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'expense_number' => 'EXP-'.$counter,
+            'company_id' => $companyId,
+            'branch_id' => $branchId,
+            'expense_category_id' => $expenseCategoryId,
+            'expense_date' => '2026-08-24',
+            'payee_type' => 'other',
+            'payee_id' => null,
+            'payee_name' => 'Stationery Supplier',
+            'description' => 'Office supplies expense',
+            'amount' => '1500.0000',
+            'tax_amount' => '75.0000',
+            'total_amount' => '1575.0000',
+            'payment_method' => 'cash',
+            'bank_account_id' => null,
+            'reference_number' => null,
+            'attachment_id' => null,
+            'status' => 'draft',
+            'submitted_by' => null,
+            'approved_by' => null,
+            'approved_at' => null,
+            'rejection_reason' => null,
+            'paid_at' => null,
+            'journal_entry_id' => null,
+            'cost_center_code' => null,
+            'related_module' => null,
+            'related_reference_type' => null,
+            'related_reference_id' => null,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── bank_transactions ───────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertBankTransaction(
+        int $tenantId,
+        int $bankAccountId,
+        array $overrides = []
+    ): int {
+        return DB::table('bank_transactions')
+            ->insertGetId($this->bankTransactionAttributes($tenantId, $bankAccountId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function bankTransactionAttributes(
+        int $tenantId,
+        int $bankAccountId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'bank_account_id' => $bankAccountId,
+            'transaction_date' => '2026-08-24',
+            'direction' => 'in',
+            'amount' => '5000.0000',
+            'running_balance' => '55000.0000',
+            'transaction_type' => 'receipt',
+            'reference_type' => null,
+            'reference_id' => null,
+            'related_transaction_id' => null,
+            'journal_entry_id' => null,
+            'description' => 'Cash receipt',
+            'cleared_at' => '2026-08-24 14:00:00',
+            'reconciliation_status' => 'unreconciled',
+            'created_by' => null,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── payment_terms ───────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertPaymentTerm(
+        int $tenantId,
+        string $code = 'NET30',
+        array $overrides = []
+    ): int {
+        return DB::table('payment_terms')
+            ->insertGetId($this->paymentTermAttributes($tenantId, $code, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function paymentTermAttributes(
+        int $tenantId,
+        string $code = 'NET30',
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'code' => $code.'_'.$counter,
+            'name' => 'Net 30 Days '.$counter,
+            'net_days' => 30,
+            'discount_percentage' => '2.0000',
+            'discount_days' => 10,
+            'is_active' => true,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── party_credit_limits ─────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertPartyCreditLimit(
+        int $tenantId,
+        int $partyId,
+        array $overrides = []
+    ): int {
+        return DB::table('party_credit_limits')
+            ->insertGetId($this->partyCreditLimitAttributes($tenantId, $partyId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function partyCreditLimitAttributes(
+        int $tenantId,
+        int $partyId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'party_id' => $partyId,
+            'credit_limit' => '100000.0000',
+            'payment_term_id' => null,
+            'current_outstanding' => '0.0000',
+            'blocked' => false,
+            'blocked_reason' => null,
+            'reviewed_by' => null,
+            'reviewed_at' => null,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── product_costs ───────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertProductCost(
+        int $tenantId,
+        int $productId,
+        array $overrides = []
+    ): int {
+        return DB::table('product_costs')
+            ->insertGetId($this->productCostAttributes($tenantId, $productId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function productCostAttributes(
+        int $tenantId,
+        int $productId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'product_id' => $productId,
+            'variant_id' => null,
+            'warehouse_id' => null,
+            'costing_method' => 'weighted_average',
+            'material_cost' => '70.0000',
+            'labour_cost' => '20.0000',
+            'overhead_cost' => '10.0000',
+            'total_cost' => '100.0000',
+            'standard_cost' => '95.0000',
+            'last_purchase_cost' => '98.0000',
+            'effective_from' => '2026-08-01',
+            'effective_to' => null,
+            'source' => 'manual',
+            'source_reference_type' => null,
+            'source_reference_id' => null,
+            'calculated_at' => '2026-08-24 18:00:00',
+            'created_by' => null,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── production_cost_allocations ─────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertProductionCostAllocation(
+        int $tenantId,
+        int $productionBatchId,
+        array $overrides = []
+    ): int {
+        return DB::table('production_cost_allocations')
+            ->insertGetId($this->productionCostAllocationAttributes($tenantId, $productionBatchId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function productionCostAllocationAttributes(
+        int $tenantId,
+        int $productionBatchId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'production_batch_id' => $productionBatchId,
+            'cost_type' => 'overhead',
+            'source_reference_type' => null,
+            'source_reference_id' => null,
+            'amount' => '500.0000',
+            'allocation_basis' => 'per_unit',
+            'allocated_at' => '2026-08-24 18:00:00',
+            'notes' => 'Factory electricity allocation',
+            'created_by' => null,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
     /**
      * SQLite and MySQL word the same violation differently, and the suite runs
      * on SQLite while production runs on MySQL.

@@ -31,18 +31,18 @@ artefacts (`MODULE_MAP.md` §6), not a follow-up.
 
 | | |
 |---|---|
-| **Current phase** | Phase 1 — 🔄 **in progress.** Migration Waves 1–20 and the tenancy runtime (§7 item 29) complete; Waves 21+, auth and RBAC outstanding. |
+| **Current phase** | Phase 1 — 🔄 **in progress.** Migration Waves 1–21 and the tenancy runtime (§7 item 29) complete; Waves 22+, auth and RBAC outstanding. |
 | **Phase 0 status** | ✅ Documentation complete (7 canonical + 5 supporting = 12 documents) · ✅ Monorepo restructure · ✅ Dependency reconciliation · ✅ Token cascade · ✅ UI primitive hardening · ✅ §8 state-matrix primitives · ✅ Tooling config files (frontend **and** backend) · ✅ Test suites · ✅ CI — **every gate verified green, see §3.4** |
-| **Next phase** | Phase 1 continues at **§7 item 45 — migration Wave 21 (Finance & Costing)**, per `DATABASE_DESIGN.md` §16. |
-| **Backend** | 🔄 Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–20 migrations written and verified, and the tenancy runtime (§7 item 29) is live** — `app/Core`, `BelongsToTenant`, `ResolveTenant` and the three route files all exist. Still absent: `app/Modules`, `app/Support`, and every model, Action and endpoint. |
+| **Next phase** | Phase 1 continues at **§7 item 46 — migration Wave 22 (Reporting & Analytics)**, per `DATABASE_DESIGN.md` §16. |
+| **Backend** | 🔄 Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–21 migrations written and verified, and the tenancy runtime (§7 item 29) is live** — `app/Core`, `BelongsToTenant`, `ResolveTenant` and the three route files all exist. Still absent: `app/Modules`, `app/Support`, and every model, Action and endpoint. |
 | **Frontend** | ✅ `/frontend`. Token cascade, boot loader, all 9 UI primitives rebuilt, tooling configured, §8 state-matrix primitives complete (errors, logger, StateView, QueryBoundary, AsyncButton, Toast, LogInspector, four-level ErrorBoundary), and the single transport seam wired (`lib/api/client.ts` + `lib/api/queryClient.ts` + `QueryClientProvider`). See §4. |
-| **Database** | 🔄 Designed (159 tables). **131 of them exist** — Waves 1–20: platform (§4.6), org (§4.7), identity (§4.8), infrastructure (§4.9), master data A (§4.10), master data B (§4.11), master data C (§4.12), HR identity (§4.13), production (§4.14), QC & wastage (§4.15), ledger & stock inventory (§4.16), stock operations (§4.17), purchasing (§4.18), sales & invoicing (§4.19), payments & allocations (§4.20), POS (§4.21), delivery & logistics (§4.22), full HR & payroll (§4.23), assets & maintenance (§4.24). Waves 21–25 unwritten. |
-| **Tests** | 🔄 Real, but foundation-only. Frontend **128 tests across 7 files**, all passing, covering the reliability layer (`ErrorBoundary`, `StateView`, `QueryBoundary`, `AsyncButton`, `logger`, `api/errors`, `api/queryClient`). Backend **410 tests / 2019 assertions** — the PHP-floor guard, Wave 1–20 schema contracts, and Tenancy runtime contracts. |
+| **Database** | 🔄 Designed (159 tables). **142 of them exist** — Waves 1–21: platform (§4.6), org (§4.7), identity (§4.8), infrastructure (§4.9), master data A (§4.10), master data B (§4.11), master data C (§4.12), HR identity (§4.13), production (§4.14), QC & wastage (§4.15), ledger & stock inventory (§4.16), stock operations (§4.17), purchasing (§4.18), sales & invoicing (§4.19), payments & allocations (§4.20), POS (§4.21), delivery & logistics (§4.22), full HR & payroll (§4.23), assets & maintenance (§4.24), finance & costing (§4.25). Waves 22–25 unwritten. |
+| **Tests** | 🔄 Real, but foundation-only. Frontend **128 tests across 7 files**, all passing, covering the reliability layer (`ErrorBoundary`, `StateView`, `QueryBoundary`, `AsyncButton`, `logger`, `api/errors`, `api/queryClient`). Backend **424 tests / 2137 assertions** — the PHP-floor guard, Wave 1–21 schema contracts, and Tenancy runtime contracts. |
 | **CI** | ✅ `.github/workflows/ci.yml` — 3 jobs, 9 legs. Frontend matrix (lint · typecheck · test · depcruise · format:check) installing at the **repository root**, build + bundle budget with a `dist` artifact, and a backend matrix (lint · analyse · test) on PHP 8.5. Every leg has a locally reproducible equivalent. |
 
 **The most important thing to know:** this project still has **no feature code and
 no business logic**. What exists is a design-system foundation, two framework
-skeletons, and one hundred and thirty-one tables with no models, no Actions and no endpoints over
+skeletons, and one hundred and forty-two tables with no models, no Actions and no endpoints over
 them. No route, no screen. Any statement that a feature "works" is false.
 
 ---
@@ -52,7 +52,7 @@ them. No route, no screen. Any statement that a feature "works" is false.
 | Phase | Scope | Status |
 |---|---|---|
 | **0** | Architecture & documentation | ✅ See §3 |
-| **1** | Auth · Tenancy · RBAC · Design System | 🔄 Migration Waves 1–20 and Tenancy Runtime (§7 item 29) done. Wave 21+, auth, RBAC outstanding |
+| **1** | Auth · Tenancy · RBAC · Design System | 🔄 Migration Waves 1–21 and Tenancy Runtime (§7 item 29) done. Wave 22+, auth, RBAC outstanding |
 | **2** | Master data · Products · Warehouses | ⬜ Not started |
 | **3** | Production · Worker Production · QC | ⬜ Not started |
 | **4** | Purchase · Inventory | ⬜ Not started |
@@ -250,16 +250,17 @@ three Wave 16 payments & allocations tables (§4.20),
 three Wave 17 POS tables (§4.21),
 eight Wave 18 delivery & logistics tables (§4.22),
 fourteen Wave 19 full HR & payroll tables (§4.23),
-and eight Wave 20 assets & maintenance tables (§4.24)
+eight Wave 20 assets & maintenance tables (§4.24),
+and eleven Wave 21 finance & costing tables (§4.25)
 exist and are verified.
 
 **Absent — the rest of Phase 1:** `app/Modules`, `app/Support`, and every model,
-Action and endpoint over the one hundred and thirty-one tables. The three route files exist but
+Action and endpoint over the one hundred and forty-two tables. The three route files exist but
 register no routes yet.
 
 ### 4.5 Test coverage
 
-128 frontend tests over 7 files; **410 backend tests / 2019 assertions**. Frontend
+128 frontend tests over 7 files; **424 backend tests / 2137 assertions**. Frontend
 tests sit beside the code they cover (`vitest.config.ts`
 `include: ['src/**/*.{test,spec}.{ts,tsx}']`); backend schema contracts live in
 `tests/Feature/Database/` and the tenancy-runtime contract in
@@ -1261,6 +1262,51 @@ Verified: `migrate:fresh` — all **131 migrations** green ✅ · `pint lint:fix
 Wave 1 **11 tests** (328 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**,
 Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Wave 17 **14**, Wave 18 **18**, Wave 19 **18**, Wave 20 **12**, Tenancy runtime **3**, Unit+Example **2**.
 
+
+---
+
+### 4.25 Migrations — Wave 21 (Finance & Costing) complete
+
+Eleven Wave 21 migrations:
+`2026_08_24_117000` … `118000` — chart_of_accounts, journal_entries, journal_lines, expense_categories, bank_accounts, expenses, bank_transactions, payment_terms, party_credit_limits, product_costs, production_cost_allocations.
+
+| Table / Migration | Notes |
+|---|---|
+| `chart_of_accounts` | Standard chart of accounts hierarchy (`account_type`, `account_subtype`, `normal_balance`, `is_group`, `is_system`). Leaf accounts accept postings; group accounts cannot. Unique `(tenant_id, company_id, account_code)`. |
+| `journal_entries` | General ledger header fed by upstream modules (`total_debit`, `total_credit`, `status` draft/posted/void, `reversal_of_entry_id`). Balanced invariant enforced on posting. Unique `(tenant_id, company_id, entry_number)`. |
+| `journal_lines` | Debit/credit line entries with single-sided non-zero invariant. Hard cascades on parent `journal_entries`. References `chart_of_accounts`, `branches`, `parties` with `RESTRICT`. Index `(tenant_id, account_id)`. |
+| `expense_categories` | Hierarchical expense classification tree with default accounting mapping, `requires_attachment` flag, and approval threshold. Unique `(tenant_id, code)`. |
+| `bank_accounts` | Company bank, cash desk, and mobile wallet accounts with `current_balance` derived cache over `bank_transactions`. Unique `(tenant_id, company_id, code)`. |
+| `expenses` | Operational expense capture and approval workflow with snapshot payee labeling, attachment link, and payment method dispatch. Unique `(tenant_id, expense_number)`. |
+| `bank_transactions` | Immutable append-only cash/bank transaction ledger (`receipt`, `payment`, `transfer_in`, `transfer_out`, `pos_settlement`, `cod_settlement`, etc.). Transfers create paired records linked via `related_transaction_id`. Index `(tenant_id, bank_account_id, transaction_date)`. |
+| `payment_terms` | Credit and payment settlement terms (`net_days`, `discount_percentage`, `discount_days`). Unique `(tenant_id, code)`. |
+| `party_credit_limits` | Customer/party credit risk rules with `current_outstanding` cache and payment term binding. Unique `(tenant_id, party_id)`. |
+| `product_costs` | Append-only and time-sliced unit cost history tracking material, labour, overhead, and total cost (`DECIMAL(18,4)`). Index `(tenant_id, product_id, effective_from)`. |
+| `production_cost_allocations` | Append-only overhead, labour, and utility allocation records on completed production batches. Index `(tenant_id, production_batch_id)`. |
+
+**Invariants and rules enforced:**
+- Balanced Ledger Invariant: General ledger entries require balanced debits and credits on posted status.
+- Derived Bank Cache: `bank_accounts.current_balance` is a rebuildable cache over immutable `bank_transactions`.
+- Paired Transfer Integrity: Fund transfers between accounts write atomic double legs linked via `related_transaction_id`.
+- Time-Sliced Costing: `product_costs` is append-only with effective date bounds to preserve historical margin integrity.
+
+`Wave21FinanceSchemaTest` — **14 tests / 85 assertions** covering all 11 tables,
+`tenant_id` placement, soft-delete vs append-only ledger compliance, code/entry/account uniqueness,
+cascading child deletes, paired transfer references, cross-tenant composite FK rejections, and DECIMAL(18,4) precision round-trip.
+
+`SchemaTestCase` gained 11 fixture builder pairs: `insertChartOfAccount` / `chartOfAccountAttributes`,
+`insertJournalEntry` / `journalEntryAttributes`, `insertJournalLine` / `journalLineAttributes`,
+`insertExpenseCategory` / `expenseCategoryAttributes`, `insertBankAccount` / `bankAccountAttributes`,
+`insertExpense` / `expenseAttributes`, `insertBankTransaction` / `bankTransactionAttributes`,
+`insertPaymentTerm` / `paymentTermAttributes`, `insertPartyCreditLimit` / `partyCreditLimitAttributes`,
+`insertProductCost` / `productCostAttributes`, `insertProductionCostAllocation` / `productionCostAllocationAttributes`.
+
+Verified: `migrate:fresh` — all **142 migrations** green ✅ · `pint lint:fix` **PASS** ·
+`phpstan analyse` level 9 **[OK] No errors** · `artisan test`
+**424 passed / 2137 assertions**, none risky. Per-suite re-measured:
+Wave 1 **11 tests** (361 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**,
+Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Wave 17 **14**, Wave 18 **18**, Wave 19 **18**, Wave 20 **12**, Wave 21 **14**, Tenancy runtime **3**, Unit+Example **2**.
+
 ---
 
 ## 5. Dependency state — reconciled
@@ -1377,7 +1423,8 @@ Q3, it stops and asks (`TASK_PROTOCOL.md` §3.2).
 | 42 | Phase 1 **Wave 18 — Delivery & Logistics**, per `DATABASE_DESIGN.md` §16: `delivery_orders`, `delivery_order_items`, `delivery_status_events`, `run_sheets`, `courier_providers`, `courier_shipments`, `courier_webhook_events`, `cod_reconciliations`. See §4.22. | ✅ |
 | 43 | Phase 1 **Wave 19 — Full HR & Payroll**, per `DATABASE_DESIGN.md` §16: `shift_assignments`, `attendances`, `leave_types`, `leave_balances`, `leave_requests`, `holidays`, `employee_documents`, `salary_components`, `salary_structures`, `salary_structure_components`, `payroll_periods`, `payslips`, `payslip_items`, `payroll_advances`. See §4.23. | ✅ |
 | 44 | Phase 1 **Wave 20 — Assets & Maintenance**, per `DATABASE_DESIGN.md` §16: `asset_categories`, `assets`, `asset_assignments`, `asset_depreciation_entries`, `maintenance_schedules`, `maintenance_orders`, `maintenance_order_parts`, `asset_meter_readings`. See §4.24. | ✅ |
-| 45 | Phase 1 **Wave 21 — Finance & Costing**, per `DATABASE_DESIGN.md` §16: `chart_of_accounts`, `journal_entries`, `journal_lines`, `expense_categories`, `expenses`, `bank_accounts`, `bank_transactions`, `payment_terms`, `party_credit_limits`, `product_costs`, `production_cost_allocations`. | ⬜ |
+| 45 | Phase 1 **Wave 21 — Finance & Costing**, per `DATABASE_DESIGN.md` §16: `chart_of_accounts`, `journal_entries`, `journal_lines`, `expense_categories`, `bank_accounts`, `expenses`, `bank_transactions`, `payment_terms`, `party_credit_limits`, `product_costs`, `production_cost_allocations`. See §4.25. | ✅ |
+| 46 | Phase 1 **Wave 22 — Reporting & Analytics**, per `DATABASE_DESIGN.md` §16: `report_definitions`, `report_saved_views`, `report_schedules`, `report_exports`, `dashboard_widgets`, `summary_*` tables. | ⬜ |
 
 ---
 
@@ -1398,12 +1445,13 @@ stock inventory) is done** (§4.16), **Wave 13 (stock operations) is done**
 (§4.19), **Wave 16 (payments & collections) is done** (§4.20),
 **Wave 17 (POS) is done** (§4.21),
 **Wave 18 (delivery & logistics) is done** (§4.22),
-**Wave 19 (full HR & payroll) is done** (§4.23), and
-**Wave 20 (assets & maintenance) is done** (§4.24) — `asset_categories`,
-`assets`, `asset_assignments`, `asset_depreciation_entries`,
-`maintenance_schedules`, `maintenance_orders`, `maintenance_order_parts`,
-`asset_meter_readings`.
-Start at **§7 item 45 — Wave 21 (Finance & Costing)**, per `DATABASE_DESIGN.md` §16.
+**Wave 19 (full HR & payroll) is done** (§4.23),
+**Wave 20 (assets & maintenance) is done** (§4.24), and
+**Wave 21 (finance & costing) is done** (§4.25) — `chart_of_accounts`,
+`journal_entries`, `journal_lines`, `expense_categories`, `bank_accounts`,
+`expenses`, `bank_transactions`, `payment_terms`, `party_credit_limits`,
+`product_costs`, `production_cost_allocations`.
+Start at **§7 item 46 — Wave 22 (Reporting & Analytics)**, per `DATABASE_DESIGN.md` §16.
 
 
 These constraints are already settled. Do not re-derive them, and do not
@@ -1478,6 +1526,7 @@ contradict them:
 | 2026-08-24 | **Phase 1 Wave 18 (Delivery & Logistics) written and verified.** Eight migrations: `courier_providers`, `run_sheets`, `delivery_orders`, `delivery_order_items`, `delivery_status_events`, `courier_shipments`, `courier_webhook_events`, `cod_reconciliations` (`113000`–`113700`). Detailed per-table in **§4.22**. Own-fleet dispatch run sheets, central fulfillment delivery orders with 11 lifecycle statuses, append-only timeline events with webhook idempotency guard (ADR-017), courier shipment integration, raw webhook payload buffer, and COD cash reconciliation sheets. `SchemaTestCase` gained eight fixture builder pairs. `Wave18DeliverySchemaTest` — **18 tests / 97 assertions**. Verified: `migrate:fresh` ✅ (109 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **380 passed / 1779 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (262 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Wave 17 **14**, Wave 18 **18**, Tenancy runtime **3**, Unit+Example **2**. §7 item 42 complete. Next: §7 item 43 — Wave 19 (Full HR & Payroll). |
 | 2026-08-24 | **Phase 1 Wave 19 (Full HR & Payroll) written and verified.** Fourteen migrations: `leave_types`, `leave_requests`, `leave_balances`, `shift_assignments`, `holidays`, `employee_documents`, `salary_components`, `salary_structures`, `salary_structure_components`, `payroll_periods`, `attendances`, `payslips`, `payslip_items`, `payroll_advances` (`114000`–`115300`). Detailed per-table in **§4.23**. Policy-driven leave tracking with annual balance transactional cache, shift schedules, company/branch holiday calendar, cascading employee documents, salary structure components, immutable closed payroll cycles with frozen attendance locking stamps, and ADR-019 snapshotted payslips. Added `uq_attachments_tenant_id` on `attachments` for composite FK referential integrity. `SchemaTestCase` gained 14 fixture builder pairs. `Wave19HrPayrollSchemaTest` — **18 tests / 110 assertions**. Verified: `migrate:fresh` ✅ (123 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **398 passed / 1931 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (304 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Wave 17 **14**, Wave 18 **18**, Wave 19 **18**, Tenancy runtime **3**, Unit+Example **2**. §7 item 43 complete. Next: §7 item 44 — Wave 20 (Assets & Maintenance). |
 | 2026-08-24 | **Phase 1 Wave 20 (Assets & Maintenance) written and verified.** Eight migrations: `asset_categories`, `assets`, `asset_assignments`, `asset_depreciation_entries`, `maintenance_schedules`, `maintenance_orders`, `maintenance_order_parts`, `asset_meter_readings` (`116000`–`116700`). Detailed per-table in **§4.24**. Tree-structured asset category hierarchy, capital assets ledger distinct from stock inventory (DECISIONS C21), asset custody/assignment tracking, immutable append-only depreciation ledger without soft deletes, time/meter maintenance schedules, maintenance work orders with full cost tracking and cascading spare parts consumption, and monotonic meter reading logs. `SchemaTestCase` gained eight fixture builder pairs. `Wave20AssetsSchemaTest` — **12 tests / 64 assertions**. Verified: `migrate:fresh` ✅ (131 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **410 passed / 2019 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (328 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Wave 17 **14**, Wave 18 **18**, Wave 19 **18**, Wave 20 **12**, Tenancy runtime **3**, Unit+Example **2**. §7 item 44 complete. Next: §7 item 45 — Wave 21 (Finance & Costing). |
+| 2026-08-24 | **Phase 1 Wave 21 (Finance & Costing) written and verified.** Eleven migrations: `chart_of_accounts`, `journal_entries`, `journal_lines`, `expense_categories`, `bank_accounts`, `expenses`, `bank_transactions`, `payment_terms`, `party_credit_limits`, `product_costs`, `production_cost_allocations` (`117000`–`118000`). Detailed per-table in **§4.25**. Chart of accounts leaf/group structure, general ledger with balanced debit/credit invariant, hard-cascading journal lines, expense category hierarchy, company cash/bank accounts with derived balance cache over immutable append-only bank transaction ledger, paired inter-account transfer links (`related_transaction_id`), commercial credit terms, customer credit limit risk bounds, and time-sliced unit product costing and batch overhead allocation ledgers. `SchemaTestCase` gained eleven fixture builder pairs. `Wave21FinanceSchemaTest` — **14 tests / 85 assertions**. Verified: `migrate:fresh` ✅ (142 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **424 passed / 2137 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (361 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Wave 17 **14**, Wave 18 **18**, Wave 19 **18**, Wave 20 **12**, Wave 21 **14**, Tenancy runtime **3**, Unit+Example **2**. §7 item 45 complete. Next: §7 item 46 — Wave 22 (Reporting & Analytics). |
 
 
 
