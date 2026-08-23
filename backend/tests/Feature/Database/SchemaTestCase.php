@@ -339,6 +339,14 @@ abstract class SchemaTestCase extends TestCase
 
     /**
      * @param  array<string, mixed>  $overrides
+     */
+    protected function insertAttachment(int $tenantId, array $overrides = []): int
+    {
+        return DB::table('attachments')->insertGetId($this->attachmentAttributes($tenantId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
      * @return array<string, mixed>
      */
     protected function attachmentAttributes(int $tenantId, array $overrides = []): array
@@ -3900,6 +3908,621 @@ abstract class SchemaTestCase extends TestCase
             'reconciled_by' => null,
             'reconciled_at' => null,
             'notes' => null,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── leave_types ─────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertLeaveType(
+        int $tenantId,
+        string $code = 'ANNUAL',
+        array $overrides = []
+    ): int {
+        return DB::table('leave_types')
+            ->insertGetId($this->leaveTypeAttributes($tenantId, $code, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function leaveTypeAttributes(
+        int $tenantId,
+        string $code = 'ANNUAL',
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'code' => $code.'_'.$counter,
+            'name' => 'Leave Type '.$counter,
+            'is_paid' => true,
+            'annual_quota_days' => '14.0000',
+            'accrual_method' => 'yearly',
+            'carry_forward_allowed' => true,
+            'max_carry_forward_days' => '5.0000',
+            'requires_attachment' => false,
+            'min_notice_days' => 2,
+            'is_active' => true,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── leave_requests ──────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertLeaveRequest(
+        int $tenantId,
+        int $employeeId,
+        int $leaveTypeId,
+        array $overrides = []
+    ): int {
+        return DB::table('leave_requests')
+            ->insertGetId($this->leaveRequestAttributes($tenantId, $employeeId, $leaveTypeId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function leaveRequestAttributes(
+        int $tenantId,
+        int $employeeId,
+        int $leaveTypeId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'request_number' => 'LR-'.$counter,
+            'employee_id' => $employeeId,
+            'leave_type_id' => $leaveTypeId,
+            'start_date' => '2026-08-24',
+            'end_date' => '2026-08-26',
+            'total_days' => '3.0000',
+            'is_half_day' => false,
+            'reason' => 'Family event',
+            'attachment_id' => null,
+            'status' => 'draft',
+            'approved_by' => null,
+            'approved_at' => null,
+            'rejection_reason' => null,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── leave_balances ──────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertLeaveBalance(
+        int $tenantId,
+        int $employeeId,
+        int $leaveTypeId,
+        int $year = 2026,
+        array $overrides = []
+    ): int {
+        return DB::table('leave_balances')
+            ->insertGetId($this->leaveBalanceAttributes($tenantId, $employeeId, $leaveTypeId, $year, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function leaveBalanceAttributes(
+        int $tenantId,
+        int $employeeId,
+        int $leaveTypeId,
+        int $year = 2026,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'employee_id' => $employeeId,
+            'leave_type_id' => $leaveTypeId,
+            'year' => $year,
+            'opening_days' => '14.0000',
+            'accrued_days' => '0.0000',
+            'used_days' => '2.0000',
+            'carried_forward_days' => '0.0000',
+            'balance_days' => '12.0000',
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── shift_assignments ───────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertShiftAssignment(
+        int $tenantId,
+        int $employeeId,
+        int $shiftId,
+        array $overrides = []
+    ): int {
+        return DB::table('shift_assignments')
+            ->insertGetId($this->shiftAssignmentAttributes($tenantId, $employeeId, $shiftId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function shiftAssignmentAttributes(
+        int $tenantId,
+        int $employeeId,
+        int $shiftId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'employee_id' => $employeeId,
+            'shift_id' => $shiftId,
+            'effective_from' => '2026-08-01',
+            'effective_to' => null,
+            'assigned_by' => null,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── holidays ────────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertHoliday(
+        int $tenantId,
+        string $holidayDate = '2026-12-25',
+        array $overrides = []
+    ): int {
+        return DB::table('holidays')
+            ->insertGetId($this->holidayAttributes($tenantId, $holidayDate, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function holidayAttributes(
+        int $tenantId,
+        string $holidayDate = '2026-12-25',
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'company_id' => null,
+            'name' => 'Holiday '.$counter,
+            'holiday_date' => $holidayDate,
+            'is_recurring' => true,
+            'applies_to_branch_id' => null,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── employee_documents ──────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertEmployeeDocument(
+        int $tenantId,
+        int $employeeId,
+        int $attachmentId,
+        string $docType = 'nid',
+        array $overrides = []
+    ): int {
+        return DB::table('employee_documents')
+            ->insertGetId($this->employeeDocumentAttributes($tenantId, $employeeId, $attachmentId, $docType, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function employeeDocumentAttributes(
+        int $tenantId,
+        int $employeeId,
+        int $attachmentId,
+        string $docType = 'nid',
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'employee_id' => $employeeId,
+            'document_type' => $docType,
+            'attachment_id' => $attachmentId,
+            'issued_on' => '2020-01-01',
+            'expires_on' => '2030-01-01',
+            'notes' => 'Official national identity document',
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── salary_components ───────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertSalaryComponent(
+        int $tenantId,
+        string $code = 'BASIC',
+        string $type = 'earning',
+        array $overrides = []
+    ): int {
+        return DB::table('salary_components')
+            ->insertGetId($this->salaryComponentAttributes($tenantId, $code, $type, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function salaryComponentAttributes(
+        int $tenantId,
+        string $code = 'BASIC',
+        string $type = 'earning',
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'code' => $code.'_'.$counter,
+            'name' => 'Salary Component '.$counter,
+            'component_type' => $type,
+            'is_taxable' => true,
+            'affects_gross' => true,
+            'is_active' => true,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── salary_structures ───────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertSalaryStructure(
+        int $tenantId,
+        string $code = 'EXEC_STRUCT',
+        array $overrides = []
+    ): int {
+        return DB::table('salary_structures')
+            ->insertGetId($this->salaryStructureAttributes($tenantId, $code, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function salaryStructureAttributes(
+        int $tenantId,
+        string $code = 'EXEC_STRUCT',
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'code' => $code.'_'.$counter,
+            'name' => 'Salary Structure '.$counter,
+            'effective_from' => '2026-01-01',
+            'effective_to' => null,
+            'pay_frequency' => 'monthly',
+            'is_active' => true,
+            'notes' => null,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── salary_structure_components ──────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertSalaryStructureComponent(
+        int $tenantId,
+        int $salaryStructureId,
+        int $componentId,
+        array $overrides = []
+    ): int {
+        return DB::table('salary_structure_components')
+            ->insertGetId($this->salaryStructureComponentAttributes($tenantId, $salaryStructureId, $componentId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function salaryStructureComponentAttributes(
+        int $tenantId,
+        int $salaryStructureId,
+        int $componentId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'salary_structure_id' => $salaryStructureId,
+            'component_id' => $componentId,
+            'calculation_type' => 'fixed',
+            'value' => '50000.0000',
+            'base_component_id' => null,
+            'sort_order' => 1,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── payroll_periods ─────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertPayrollPeriod(
+        int $tenantId,
+        int $companyId,
+        string $periodCode = '2026-08',
+        array $overrides = []
+    ): int {
+        return DB::table('payroll_periods')
+            ->insertGetId($this->payrollPeriodAttributes($tenantId, $companyId, $periodCode, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function payrollPeriodAttributes(
+        int $tenantId,
+        int $companyId,
+        string $periodCode = '2026-08',
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'company_id' => $companyId,
+            'period_code' => $periodCode.'_'.$counter,
+            'pay_frequency' => 'monthly',
+            'period_start' => '2026-08-01',
+            'period_end' => '2026-08-31',
+            'payment_date' => '2026-09-01',
+            'status' => 'open',
+            'total_gross' => '0.0000',
+            'total_deductions' => '0.0000',
+            'total_net' => '0.0000',
+            'employee_count' => 0,
+            'calculated_by' => null,
+            'calculated_at' => null,
+            'approved_by' => null,
+            'approved_at' => null,
+            'locked_at' => null,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── attendances ─────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertAttendance(
+        int $tenantId,
+        int $employeeId,
+        string $date = '2026-08-24',
+        array $overrides = []
+    ): int {
+        return DB::table('attendances')
+            ->insertGetId($this->attendanceAttributes($tenantId, $employeeId, $date, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function attendanceAttributes(
+        int $tenantId,
+        int $employeeId,
+        string $date = '2026-08-24',
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'employee_id' => $employeeId,
+            'attendance_date' => $date,
+            'shift_id' => null,
+            'check_in_at' => '2026-08-24 09:00:00',
+            'check_out_at' => '2026-08-24 18:00:00',
+            'check_in_source' => 'biometric',
+            'check_out_source' => 'biometric',
+            'worked_minutes' => 540,
+            'late_minutes' => 0,
+            'early_leave_minutes' => 0,
+            'overtime_minutes' => 0,
+            'status' => 'present',
+            'leave_request_id' => null,
+            'remarks' => null,
+            'approved_by' => null,
+            'approved_at' => null,
+            'payroll_period_id' => null,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── payslips ────────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertPayslip(
+        int $tenantId,
+        int $payrollPeriodId,
+        int $employeeId,
+        array $overrides = []
+    ): int {
+        return DB::table('payslips')
+            ->insertGetId($this->payslipAttributes($tenantId, $payrollPeriodId, $employeeId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function payslipAttributes(
+        int $tenantId,
+        int $payrollPeriodId,
+        int $employeeId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'payroll_period_id' => $payrollPeriodId,
+            'employee_id' => $employeeId,
+            'payslip_number' => 'SLIP-'.$counter,
+            'gross_amount' => '60000.0000',
+            'total_earnings' => '60000.0000',
+            'total_deductions' => '5000.0000',
+            'net_amount' => '55000.0000',
+            'paid_days' => '30.0000',
+            'absent_days' => '0.0000',
+            'leave_days' => '0.0000',
+            'overtime_minutes' => 0,
+            'produced_quantity' => null,
+            'payment_method' => 'bank',
+            'payment_status' => 'unpaid',
+            'paid_at' => null,
+            'payment_reference' => null,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── payslip_items ───────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertPayslipItem(
+        int $tenantId,
+        int $payslipId,
+        int $salaryComponentId,
+        array $overrides = []
+    ): int {
+        return DB::table('payslip_items')
+            ->insertGetId($this->payslipItemAttributes($tenantId, $payslipId, $salaryComponentId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function payslipItemAttributes(
+        int $tenantId,
+        int $payslipId,
+        int $salaryComponentId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'payslip_id' => $payslipId,
+            'salary_component_id' => $salaryComponentId,
+            'component_code' => 'BASIC',
+            'component_type' => 'earning',
+            'calculation_basis' => json_encode(['base_rate' => 50000]),
+            'quantity' => null,
+            'rate' => null,
+            'amount' => '50000.0000',
+            'sort_order' => 1,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── payroll_advances ────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertPayrollAdvance(
+        int $tenantId,
+        int $employeeId,
+        array $overrides = []
+    ): int {
+        return DB::table('payroll_advances')
+            ->insertGetId($this->payrollAdvanceAttributes($tenantId, $employeeId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function payrollAdvanceAttributes(
+        int $tenantId,
+        int $employeeId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'employee_id' => $employeeId,
+            'advance_number' => 'ADV-'.$counter,
+            'amount' => '20000.0000',
+            'issued_on' => '2026-08-01',
+            'recovery_start_period_id' => null,
+            'installment_amount' => '5000.0000',
+            'recovered_amount' => '0.0000',
+            'status' => 'active',
+            'notes' => 'Salary advance request',
             'created_at' => '2026-08-24 18:00:00',
             'updated_at' => '2026-08-24 18:00:00',
         ];

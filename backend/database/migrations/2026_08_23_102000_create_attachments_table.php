@@ -86,6 +86,7 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->unique('uuid', 'uq_attachments_uuid');
+            $table->unique(['tenant_id', 'id'], 'uq_attachments_tenant_id');
 
             $table->foreign('tenant_id', 'fk_attachments_tenant')
                 ->references('id')
