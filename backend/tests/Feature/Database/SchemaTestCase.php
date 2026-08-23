@@ -1657,6 +1657,270 @@ abstract class SchemaTestCase extends TestCase
         ];
     }
 
+    // ─── qc_parameters ─────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertQcParameter(
+        int $tenantId,
+        ?int $productId = null,
+        ?int $unitId = null,
+        array $overrides = []
+    ): int {
+        return DB::table('qc_parameters')
+            ->insertGetId($this->qcParameterAttributes($tenantId, $productId, $unitId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function qcParameterAttributes(
+        int $tenantId,
+        ?int $productId = null,
+        ?int $unitId = null,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'product_id' => $productId,
+            'name' => 'Visual Inspection',
+            'type' => 'boolean',
+            'unit_id' => $unitId,
+            'min_value' => null,
+            'max_value' => null,
+            'options' => null,
+            'is_mandatory' => 1,
+            'sort_order' => 0,
+        ];
+    }
+
+    // ─── qc_inspections ────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertQcInspection(
+        int $tenantId,
+        int $inspectorId,
+        ?int $productionBatchId = null,
+        ?int $productionOutputId = null,
+        array $overrides = []
+    ): int {
+        return DB::table('qc_inspections')
+            ->insertGetId($this->qcInspectionAttributes($tenantId, $inspectorId, $productionBatchId, $productionOutputId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function qcInspectionAttributes(
+        int $tenantId,
+        int $inspectorId,
+        ?int $productionBatchId = null,
+        ?int $productionOutputId = null,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'inspection_number' => 'QC-'.Str::upper(Str::random(6)),
+            'production_batch_id' => $productionBatchId,
+            'production_output_id' => $productionOutputId,
+            'goods_receipt_id' => null,
+            'inspection_date' => '2026-08-24',
+            'inspector_id' => $inspectorId,
+            'sample_size' => '10.0000',
+            'inspected_quantity' => '100.0000',
+            'passed_quantity' => '95.0000',
+            'failed_quantity' => '5.0000',
+            'rework_quantity' => '3.0000',
+            'scrap_quantity' => '2.0000',
+            'result' => 'pass',
+            'status' => 'approved',
+            'notes' => null,
+            'approved_by' => null,
+            'approved_at' => null,
+        ];
+    }
+
+    // ─── qc_inspection_results ─────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertQcInspectionResult(
+        int $tenantId,
+        int $qcInspectionId,
+        int $qcParameterId,
+        array $overrides = []
+    ): int {
+        return DB::table('qc_inspection_results')
+            ->insertGetId($this->qcInspectionResultAttributes($tenantId, $qcInspectionId, $qcParameterId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function qcInspectionResultAttributes(
+        int $tenantId,
+        int $qcInspectionId,
+        int $qcParameterId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'qc_inspection_id' => $qcInspectionId,
+            'qc_parameter_id' => $qcParameterId,
+            'value_numeric' => null,
+            'value_boolean' => 1,
+            'value_text' => 'Pass visual check',
+            'is_within_spec' => 1,
+            'notes' => null,
+        ];
+    }
+
+    // ─── qc_defects ────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertQcDefect(
+        int $tenantId,
+        int $qcInspectionId,
+        int $defectReasonId,
+        array $overrides = []
+    ): int {
+        return DB::table('qc_defects')
+            ->insertGetId($this->qcDefectAttributes($tenantId, $qcInspectionId, $defectReasonId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function qcDefectAttributes(
+        int $tenantId,
+        int $qcInspectionId,
+        int $defectReasonId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'qc_inspection_id' => $qcInspectionId,
+            'defect_reason_id' => $defectReasonId,
+            'quantity' => '5.0000',
+            'severity' => 'minor',
+            'notes' => null,
+        ];
+    }
+
+    // ─── wastage_records ───────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertWastageRecord(
+        int $tenantId,
+        int $productId,
+        int $unitId,
+        int $reasonCodeId,
+        ?int $productionBatchId = null,
+        ?int $warehouseId = null,
+        array $overrides = []
+    ): int {
+        return DB::table('wastage_records')
+            ->insertGetId($this->wastageRecordAttributes($tenantId, $productId, $unitId, $reasonCodeId, $productionBatchId, $warehouseId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function wastageRecordAttributes(
+        int $tenantId,
+        int $productId,
+        int $unitId,
+        int $reasonCodeId,
+        ?int $productionBatchId = null,
+        ?int $warehouseId = null,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'wastage_number' => 'WST-'.Str::upper(Str::random(6)),
+            'production_batch_id' => $productionBatchId,
+            'product_id' => $productId,
+            'stage' => 'in_process',
+            'quantity' => '12.5000',
+            'unit_id' => $unitId,
+            'reason_code_id' => $reasonCodeId,
+            'estimated_cost' => '250.0000',
+            'is_recoverable' => 0,
+            'recovered_quantity' => '0.0000',
+            'warehouse_id' => $warehouseId,
+            'stock_movement_id' => null,
+            'recorded_by' => null,
+            'recorded_at' => '2026-08-24 14:00:00',
+            'notes' => null,
+        ];
+    }
+
+    // ─── rework_orders ─────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertReworkOrder(
+        int $tenantId,
+        int $sourceBatchId,
+        int $productId,
+        int $unitId,
+        ?int $qcInspectionId = null,
+        ?int $targetBatchId = null,
+        array $overrides = []
+    ): int {
+        return DB::table('rework_orders')
+            ->insertGetId($this->reworkOrderAttributes($tenantId, $sourceBatchId, $productId, $unitId, $qcInspectionId, $targetBatchId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function reworkOrderAttributes(
+        int $tenantId,
+        int $sourceBatchId,
+        int $productId,
+        int $unitId,
+        ?int $qcInspectionId = null,
+        ?int $targetBatchId = null,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'rework_number' => 'RWK-'.Str::upper(Str::random(6)),
+            'source_batch_id' => $sourceBatchId,
+            'qc_inspection_id' => $qcInspectionId,
+            'product_id' => $productId,
+            'quantity' => '8.0000',
+            'unit_id' => $unitId,
+            'target_batch_id' => $targetBatchId,
+            'cycle_number' => 1,
+            'status' => 'pending',
+            'cost_incurred' => null,
+            'notes' => null,
+        ];
+    }
+
     /**
      * SQLite and MySQL word the same violation differently, and the suite runs
      * on SQLite while production runs on MySQL.

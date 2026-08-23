@@ -31,18 +31,18 @@ artefacts (`MODULE_MAP.md` §6), not a follow-up.
 
 | | |
 |---|---|
-| **Current phase** | Phase 1 — 🔄 **in progress.** Migration Waves 1–10 and the tenancy runtime (§7 item 29) complete; Waves 11+, auth and RBAC outstanding. |
+| **Current phase** | Phase 1 — 🔄 **in progress.** Migration Waves 1–11 and the tenancy runtime (§7 item 29) complete; Waves 12+, auth and RBAC outstanding. |
 | **Phase 0 status** | ✅ Documentation complete (7 canonical + 5 supporting = 12 documents) · ✅ Monorepo restructure · ✅ Dependency reconciliation · ✅ Token cascade · ✅ UI primitive hardening · ✅ §8 state-matrix primitives · ✅ Tooling config files (frontend **and** backend) · ✅ Test suites · ✅ CI — **every gate verified green, see §3.4** |
-| **Next phase** | Phase 1 continues at **§7 item 35 — migration Wave 11 (QC)**, per `DATABASE_DESIGN.md` §16. |
-| **Backend** | 🔄 Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–10 migrations written and verified, and the tenancy runtime (§7 item 29) is live** — `app/Core`, `BelongsToTenant`, `ResolveTenant` and the three route files all exist. Still absent: `app/Modules`, `app/Support`, and every model, Action and endpoint. |
+| **Next phase** | Phase 1 continues at **§7 item 36 — migration Wave 12 (Ledger)**, per `DATABASE_DESIGN.md` §16. |
+| **Backend** | 🔄 Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–11 migrations written and verified, and the tenancy runtime (§7 item 29) is live** — `app/Core`, `BelongsToTenant`, `ResolveTenant` and the three route files all exist. Still absent: `app/Modules`, `app/Support`, and every model, Action and endpoint. |
 | **Frontend** | ✅ `/frontend`. Token cascade, boot loader, all 9 UI primitives rebuilt, tooling configured, §8 state-matrix primitives complete (errors, logger, StateView, QueryBoundary, AsyncButton, Toast, LogInspector, four-level ErrorBoundary), and the single transport seam wired (`lib/api/client.ts` + `lib/api/queryClient.ts` + `QueryClientProvider`). See §4. |
-| **Database** | 🔄 Designed (159 tables). **61 of them exist** — Waves 1–10: platform (§4.6), org (§4.7), identity (§4.8), infrastructure (§4.9), master data A (§4.10), master data B (§4.11), master data C (§4.12), HR identity (§4.13), production (§4.14). Waves 11–25 unwritten. |
-| **Tests** | 🔄 Real, but foundation-only. Frontend **128 tests across 7 files**, all passing, covering the reliability layer (`ErrorBoundary`, `StateView`, `QueryBoundary`, `AsyncButton`, `logger`, `api/errors`, `api/queryClient`). Backend **216 tests / 995 assertions** — the PHP-floor guard, Wave 1–10 schema contracts, and Tenancy runtime contracts. |
+| **Database** | 🔄 Designed (159 tables). **67 of them exist** — Waves 1–11: platform (§4.6), org (§4.7), identity (§4.8), infrastructure (§4.9), master data A (§4.10), master data B (§4.11), master data C (§4.12), HR identity (§4.13), production (§4.14), QC & wastage (§4.15). Waves 12–25 unwritten. |
+| **Tests** | 🔄 Real, but foundation-only. Frontend **128 tests across 7 files**, all passing, covering the reliability layer (`ErrorBoundary`, `StateView`, `QueryBoundary`, `AsyncButton`, `logger`, `api/errors`, `api/queryClient`). Backend **240 tests / 1086 assertions** — the PHP-floor guard, Wave 1–11 schema contracts, and Tenancy runtime contracts. |
 | **CI** | ✅ `.github/workflows/ci.yml` — 3 jobs, 9 legs. Frontend matrix (lint · typecheck · test · depcruise · format:check) installing at the **repository root**, build + bundle budget with a `dist` artifact, and a backend matrix (lint · analyse · test) on PHP 8.5. Every leg has a locally reproducible equivalent. |
 
 **The most important thing to know:** this project still has **no feature code and
 no business logic**. What exists is a design-system foundation, two framework
-skeletons, and sixty-one tables with no models, no Actions and no endpoints over
+skeletons, and sixty-seven tables with no models, no Actions and no endpoints over
 them. No route, no screen. Any statement that a feature "works" is false.
 
 ---
@@ -52,7 +52,7 @@ them. No route, no screen. Any statement that a feature "works" is false.
 | Phase | Scope | Status |
 |---|---|---|
 | **0** | Architecture & documentation | ✅ See §3 |
-| **1** | Auth · Tenancy · RBAC · Design System | 🔄 Migration Waves 1–10 and Tenancy Runtime (§7 item 29) done. Wave 11+, auth, RBAC outstanding |
+| **1** | Auth · Tenancy · RBAC · Design System | 🔄 Migration Waves 1–11 and Tenancy Runtime (§7 item 29) done. Wave 12+, auth, RBAC outstanding |
 | **2** | Master data · Products · Warehouses | ⬜ Not started |
 | **3** | Production · Worker Production · QC | ⬜ Not started |
 | **4** | Purchase · Inventory | ⬜ Not started |
@@ -241,16 +241,17 @@ seven Wave 4 infrastructure tables (§4.9), six Wave 5 master data A tables
 plus the deferred FK closure (§4.10), five Wave 6 master data B tables (§4.11),
 nine Wave 7 master data C files (§4.12, including the deferred FK closure),
 four Wave 8 HR identity tables (§4.13), one Wave 9 HR FK closure,
-and eight Wave 10 production tables (§4.14)
+eight Wave 10 production tables (§4.14),
+and six Wave 11 QC & wastage tables (§4.15)
 exist and are verified.
 
 **Absent — the rest of Phase 1:** `app/Modules`, `app/Support`, and every model,
-Action and endpoint over the sixty-one tables. The three route files exist but
+Action and endpoint over the sixty-seven tables. The three route files exist but
 register no routes yet.
 
 ### 4.5 Test coverage
 
-128 frontend tests over 7 files; **216 backend tests / 995 assertions**. Frontend
+128 frontend tests over 7 files; **240 backend tests / 1086 assertions**. Frontend
 tests sit beside the code they cover (`vitest.config.ts`
 `include: ['src/**/*.{test,spec}.{ts,tsx}']`); backend schema contracts live in
 `tests/Feature/Database/` and the tenancy-runtime contract in
@@ -857,6 +858,45 @@ Verified: `migrate:fresh` — all **61 migrations** green ✅ · `pint lint:fix`
 Wave 1 **11 tests**, Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**,
 Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Tenancy runtime **3**, Unit+Example **2**.
 
+
+---
+
+### 4.15 Migrations — Wave 11 (QC & Wastage) complete
+
+Six Wave 11 migrations:
+`2026_08_24_106000` … `106500` — qc_parameters, qc_inspections, qc_inspection_results,
+qc_defects, wastage_records, rework_orders.
+
+| Table / Migration | Notes |
+|---|---|
+| `qc_parameters` | Tenant-defined inspection checklist. Scoped to `(tenant_id, id)`. Nullable composite FK to `products` (global parameter when product_id IS NULL) and `units`. Types: `numeric \| boolean \| select \| text`. Soft-deletable. |
+| `qc_inspections` | QC Inspection log header. Unique `(tenant_id, inspection_number)`. Composite FKs on `production_batches` (nullable), `production_outputs` (nullable), and `employees` (inspector_id, RESTRICT). Quantities: `sample_size`, `inspected_quantity`, `passed_quantity`, `failed_quantity`, `rework_quantity`, `scrap_quantity`. Statuses: `result` (`pass \| fail \| partial \| hold`), `status` (`draft \| submitted \| approved \| rejected`). Soft-deletable. |
+| `qc_inspection_results` | Line-item inspection readings. References `(tenant_id, qc_inspection_id)` with **CASCADE** delete. Unique `(tenant_id, qc_inspection_id, qc_parameter_id)`. Composite FK on `qc_parameters` (RESTRICT). Soft-deletable. |
+| `qc_defects` | Defect occurrences captured during inspection. References `(tenant_id, qc_inspection_id)` with **CASCADE** delete. Composite FK on `(tenant_id, defect_reason_id)` referencing `reason_codes(tenant_id, id)` (RESTRICT). Severity: `minor \| major \| critical`. Soft-deletable. |
+| `wastage_records` | Material and production wastage tracking. Unique `(tenant_id, wastage_number)`. Composite FKs on `production_batches` (nullable), `products`, `units`, `reason_codes` (reason_code_id), and `warehouses` (nullable) with RESTRICT. Stage: `input \| in_process \| output \| qc \| storage \| transit`. Supports recovery: `is_recoverable`, `recovered_quantity`. `stock_movement_id` is a deferred FK (Wave 12 / Wave 25). Soft-deletable. |
+| `rework_orders` | Production rework loop tracking. Unique `(tenant_id, rework_number)`. Composite FKs on `source_batch_id` (`production_batches`), `qc_inspections` (nullable), `products`, `units`, and `target_batch_id` (`production_batches`, nullable). `cycle_number` default 1 (guards infinite rework cycles). Status: `pending \| in_progress \| completed \| scrapped`. Soft-deletable. |
+
+**Invariants and rules enforced:**
+- `reason_codes`: Gained explicit `uq_reason_codes_tenant_id` on `(tenant_id, id)` in Wave 5 so child tables `qc_defects` and `wastage_records` can enforce composite FK referential integrity.
+- Cascading delete boundaries: `qc_inspection_results` and `qc_defects` CASCADE delete with parent `qc_inspections`; all catalogue and batch links use `RESTRICT`.
+
+`Wave11QcSchemaTest` — **24 tests / 73 assertions** covering all 6 tables,
+`tenant_id` second column placement, soft-deletes on all 6, no float/double/enum in migrations,
+inspection/wastage/rework number uniqueness, cross-tenant FK rejection for product/inspector/batch/parameter/reason_code/warehouse,
+inspection result and defect CASCADE deletes, result parameter uniqueness, and DECIMAL(18,4) precision round-trip.
+
+`SchemaTestCase` gained six fixture builder pairs: `insertQcParameter` /
+`qcParameterAttributes`, `insertQcInspection` / `qcInspectionAttributes`,
+`insertQcInspectionResult` / `qcInspectionResultAttributes`, `insertQcDefect` /
+`qcDefectAttributes`, `insertWastageRecord` / `wastageRecordAttributes`,
+`insertReworkOrder` / `reworkOrderAttributes`.
+
+Verified: `migrate:fresh` — all **67 migrations** green ✅ · `pint lint:fix` **PASS** ·
+`phpstan analyse` level 9 **[OK] No errors** · `artisan test`
+**240 passed / 1086 assertions**, none risky. Per-suite re-measured:
+Wave 1 **11 tests** (136 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**,
+Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Tenancy runtime **3**, Unit+Example **2**.
+
 ---
 
 ## 5. Dependency state — reconciled
@@ -963,7 +1003,8 @@ Q3, it stops and asks (`TASK_PROTOCOL.md` §3.2).
 | 32 | Phase 1 **Wave 7 — master data C**, per `DATABASE_DESIGN.md` §16: `warehouses`, `warehouse_locations`, `parties`, `party_addresses`, `party_contacts`, `price_lists`, `price_list_items`, `discount_rules`. First wave with a within-wave deferred FK closure (`parties → price_lists`). Unique-key NULL hole documented for `price_list_items.variant_id`. See §4.12. | ✅ |
 | 33 | Phase 1 **Wave 8 — HR identity** + **Wave 9 FK closure**, per `DATABASE_DESIGN.md` §16: `departments`, `designations`, `shifts`, `employees` (Wave 8), plus three circular FK closures in Wave 9. See §4.13. | ✅ |
 | 34 | Phase 1 **Wave 10 — production**, per `DATABASE_DESIGN.md` §16: `production_plans`, `production_plan_items`, `production_batches`, `material_issues`, `material_issue_items`, `production_batch_inputs`, `worker_production_entries`, `production_outputs`. See §4.14. | ✅ |
-| 35 | Phase 1 **Wave 11 — QC**, per `DATABASE_DESIGN.md` §16. | ⬜ |
+| 35 | Phase 1 **Wave 11 — QC & wastage**, per `DATABASE_DESIGN.md` §16: `qc_parameters`, `qc_inspections`, `qc_inspection_results`, `qc_defects`, `wastage_records`, `rework_orders`. See §4.15. | ✅ |
+| 36 | Phase 1 **Wave 12 — Ledger**, per `DATABASE_DESIGN.md` §16: `stock_movements`, `stock_balances`, `stock_reservations`. | ⬜ |
 
 ---
 
@@ -977,11 +1018,11 @@ this file. Phase 0 is complete and Phase 1 is under way: Wave 0 needed no work,
 (§4.9), **the tenancy runtime (§7 item 29) is done**, **Wave 5 (master
 data A) is done** (§4.10), **Wave 6 (master data B) is done** (§4.11),
 **Wave 7 (master data C) is done** (§4.12), **Wave 8 (HR identity) +
-Wave 9 (HR FK closure) are done** (§4.13), and **Wave 10 (production) is done**
-(§4.14) — `production_plans`, `production_plan_items`, `production_batches`,
-`material_issues`, `material_issue_items`, `production_batch_inputs`,
-`worker_production_entries`, `production_outputs`.
-Start at **§7 item 35 — Wave 11 (QC)**, per `DATABASE_DESIGN.md` §16.
+Wave 9 (HR FK closure) are done** (§4.13), **Wave 10 (production) is done**
+(§4.14), and **Wave 11 (QC & wastage) is done** (§4.15) — `qc_parameters`,
+`qc_inspections`, `qc_inspection_results`, `qc_defects`, `wastage_records`,
+`rework_orders`.
+Start at **§7 item 36 — Wave 12 (Ledger)**, per `DATABASE_DESIGN.md` §16.
 
 
 These constraints are already settled. Do not re-derive them, and do not
@@ -1046,5 +1087,7 @@ contradict them:
 | 2026-08-24 | **Phase 1 Wave 7 (master data C) written and verified — first wave with an intra-wave deferred FK closure and a documented unique-key NULL hole.** Nine migrations: `warehouses`, `warehouse_locations`, `parties`, `party_addresses`, `party_contacts`, `price_lists`, `price_list_items`, `discount_rules` (`103700`–`104400`), and `104500` deferred FK closure. Detailed per-table in **§4.12**. `warehouses` has nullable composite FKs on `company_id`, `branch_id`, `factory_id` (all MATCH SIMPLE, RESTRICT) — a `NULL` scope column means tenant-wide warehouse. `warehouse_locations` is self-referential: `(tenant_id, parent_id) → warehouse_locations(tenant_id, id)` RESTRICT, same NULL-root pattern as Wave 5's `categories`. `parties` unifies suppliers, customers, dealers, agents into one row with independent boolean flags — no role occupies two rows. `party_addresses` and `party_contacts` both use **CASCADE** (child rows have no independent lifecycle). `price_lists` created at `104200` after `parties` at `103900`; the `parties.price_list_id` composite FK was therefore deferred to the `104500` closure migration — same resolution as Wave 5's `103100` but intra-wave. **Unique-key NULL hole documented:** the `price_list_items` key `(tenant_id, price_list_id, product_id, variant_id, min_quantity)` cannot prevent duplicates when `variant_id IS NULL` because `NULL ≠ NULL`; application layer must guard; two tests pin the behaviour. **One failing test corrected before green:** initial test assumed the NULL-variant duplicate would be rejected by the DB — it is not; split into a non-NULL-fires test and a NULL-hole pin test. `SchemaTestCase` gained eight fixture builder pairs. `Wave7MasterDataCSchemaTest` — **30 tests**. Verified: `migrate:fresh` ✅ (48 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **166 passed / 745 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests**, Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Tenancy runtime **3**, Unit+Example **2**. §7 item 32 complete. Next: §7 item 33 — Wave 8. |
 | 2026-08-24 | **Phase 1 Wave 8 (HR identity) + Wave 9 (HR FK closure) written and verified.** Five migrations: `departments`, `designations`, `shifts`, `employees` (`104600`–`104750`), and `104900` deferred FK closure for three circular HR references. Detailed per-table in **§4.13**. `departments` has self-referential tree `parent_id` (RESTRICT) and company scoping `(tenant_id, company_id, code)` unique. `designations` has grade VARCHAR(32) and `(tenant_id, code)` unique. `shifts` stores TIME columns, `crosses_midnight` TINYINT flag (DATABASE_DESIGN invariant: attendance engine attributes to start date), and `(tenant_id, code)` unique. `employees` is the workforce record distinct from `users` (login record); `user_id` unique-when-set with documented NULL hole. Three circular FKs closed in Wave 9 (`104900`): `departments.head_employee_id`, `employees.reports_to_employee_id`, `employees.default_shift_id`. `SchemaTestCase` gained four fixture builder pairs. `Wave8HrIdentitySchemaTest` — **26 tests**. Three test fixtures fixed before green (company code column removal, users.uuid and users.status NOT NULL compliance). Verified: `migrate:fresh` ✅ (53 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **192 passed / 879 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests**, Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Tenancy runtime **3**, Unit+Example **2**. §7 item 33 complete. Next: §7 item 34 — Wave 10 (production). |
 | 2026-08-24 | **Phase 1 Wave 10 (production) written and verified.** Eight migrations: `production_plans`, `production_plan_items`, `production_batches`, `material_issues`, `material_issue_items`, `production_batch_inputs`, `worker_production_entries`, `production_outputs` (`105000`–`105700`). Detailed per-table in **§4.14**. Spine of production chain implemented (ADR-011). `production_batches` implements ADR-012 invariant: `yield_percentage`, `variance_quantity`, `variance_percentage` strictly nullable with no default (NULL until `context_completeness` is `context_complete`). `worker_production_entries` implements ADR-013 with 6-column composite uniqueness key. Cascading child deletes verified for plan items, issue items, and batch inputs. `SchemaTestCase` gained eight fixture builder pairs. `Wave10ProductionSchemaTest` — **24 tests / 92 assertions**. Verified: `migrate:fresh` ✅ (61 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **216 passed / 995 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests**, Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Tenancy runtime **3**, Unit+Example **2**. §7 item 34 complete. Next: §7 item 35 — Wave 11 (QC). |
+| 2026-08-24 | **Phase 1 Wave 11 (QC & wastage) written and verified.** Six migrations: `qc_parameters`, `qc_inspections`, `qc_inspection_results`, `qc_defects`, `wastage_records`, `rework_orders` (`106000`–`106500`). Detailed per-table in **§4.15**. `reason_codes` table in Wave 5 updated with missing `uq_reason_codes_tenant_id` on `(tenant_id, id)` enabling composite FK referential integrity for `qc_defects` and `wastage_records`. Cascade delete boundaries verified for inspection results and defects. `SchemaTestCase` gained six fixture builder pairs. `Wave11QcSchemaTest` — **24 tests / 73 assertions**. Verified: `migrate:fresh` ✅ (67 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **240 passed / 1086 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (136 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Tenancy runtime **3**, Unit+Example **2**. §7 item 35 complete. Next: §7 item 36 — Wave 12 (Ledger). |
+
 
 

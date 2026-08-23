@@ -65,6 +65,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
+            $table->unique(['tenant_id', 'id'], 'uq_reason_codes_tenant_id');
             $table->unique('uuid', 'uq_reason_codes_uuid');
 
             // §1.1 — a code is unique within a (tenant, context) pair. Two
