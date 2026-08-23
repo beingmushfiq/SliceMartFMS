@@ -29,6 +29,13 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')
     ->name('public.')
     ->group(static function (): void {
-        // Wave 5: auth endpoints (login, refresh, logout, forgot-password, reset-password).
-        // Wave 6+: public storefront, webhooks.
+        Route::prefix('auth')->name('auth.')->group(static function (): void {
+            Route::post('login', [\App\Modules\Auth\Controllers\AuthController::class, 'login'])->name('login');
+            Route::post('refresh', [\App\Modules\Auth\Controllers\AuthController::class, 'refresh'])->name('refresh');
+            Route::post('select-tenant', [\App\Modules\Auth\Controllers\AuthController::class, 'selectTenant'])->name('select-tenant');
+            Route::post('logout', [\App\Modules\Auth\Controllers\AuthController::class, 'logout'])->name('logout');
+            Route::post('forgot-password', [\App\Modules\Auth\Controllers\AuthController::class, 'forgotPassword'])->name('forgot-password');
+            Route::post('reset-password', [\App\Modules\Auth\Controllers\AuthController::class, 'resetPassword'])->name('reset-password');
+        });
     });
+

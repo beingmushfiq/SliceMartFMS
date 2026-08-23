@@ -21,11 +21,17 @@ use Illuminate\Support\Facades\Route;
  * Endpoints are registered here as modules are built. At this stage the file
  * exists and is valid PHP — no endpoints are defined until Wave 5+ modules ship.
  */
-Route::middleware(['auth:api', 'tenant.resolve', 'tenant.active'])
+Route::middleware(['auth.jwt', 'tenant.active'])
     ->prefix('v1')
     ->name('tenant.')
     ->group(static function (): void {
-        // Wave 5+: auth endpoints, user management.
-        // Wave 6+: production, inventory, sales modules.
-        // Each module will register its own sub-group here.
+        Route::prefix('auth')->name('auth.')->group(static function (): void {
+            Route::get('me', [\App\Modules\Auth\Controllers\AuthController::class, 'me'])->name('me');
+            Route::get('permissions', [\App\Modules\Auth\Controllers\AuthController::class, 'permissions'])->name('permissions');
+            Route::post('logout-all', [\App\Modules\Auth\Controllers\AuthController::class, 'logoutAll'])->name('logout-all');
+            Route::post('switch-branch', [\App\Modules\Auth\Controllers\AuthController::class, 'switchBranch'])->name('switch-branch');
+            Route::patch('preferences', [\App\Modules\Auth\Controllers\AuthController::class, 'updatePreferences'])->name('preferences');
+            Route::patch('change-password', [\App\Modules\Auth\Controllers\AuthController::class, 'changePassword'])->name('change-password');
+        });
     });
+

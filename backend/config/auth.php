@@ -130,4 +130,30 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | JWT & Refresh Token Settings (ADR-007)
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for JWT access tokens and rotating refresh tokens.
+    |
+    */
+
+    'jwt' => [
+        'secret' => env('JWT_SECRET', env('APP_KEY', 'base64:slicemart-default-secret-key-123456789012')),
+        'algo' => env('JWT_ALGO', 'HS256'),
+        'ttl' => (int) env('JWT_TTL', 900), // 15 minutes in seconds
+        'leeway' => (int) env('JWT_LEEWAY', 0), // clock skew allowance in seconds
+    ],
+
+    'refresh_token' => [
+        'ttl_days' => (int) env('REFRESH_TOKEN_TTL_DAYS', 14),
+        'cookie_name' => env('REFRESH_TOKEN_COOKIE_NAME', 'slicemart_refresh_token'),
+        'cookie_path' => env('REFRESH_TOKEN_COOKIE_PATH', '/api/v1/auth'),
+        'cookie_domain' => env('REFRESH_TOKEN_COOKIE_DOMAIN', null),
+        'cookie_secure' => env('REFRESH_TOKEN_COOKIE_SECURE', true),
+        'cookie_same_site' => env('REFRESH_TOKEN_COOKIE_SAME_SITE', 'strict'),
+    ],
+
 ];
+
