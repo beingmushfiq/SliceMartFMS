@@ -1100,6 +1100,563 @@ abstract class SchemaTestCase extends TestCase
         ];
     }
 
+    // =========================================================================
+    // Wave 8 — HR identity fixtures
+    // =========================================================================
+
+    // ─── departments ─────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertDepartment(
+        int $tenantId,
+        int $companyId,
+        array $overrides = []
+    ): int {
+        return DB::table('departments')
+            ->insertGetId($this->departmentAttributes($tenantId, $companyId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function departmentAttributes(
+        int $tenantId,
+        int $companyId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'company_id' => $companyId,
+            'code' => 'DEPT-'.$counter,
+            'name' => 'Department '.$counter,
+            'parent_id' => null,
+            'cost_center_code' => null,
+            'head_employee_id' => null,
+            'is_active' => 1,
+        ];
+    }
+
+    // ─── designations ────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertDesignation(int $tenantId, array $overrides = []): int
+    {
+        return DB::table('designations')
+            ->insertGetId($this->designationAttributes($tenantId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function designationAttributes(int $tenantId, array $overrides = []): array
+    {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'code' => 'DESIG-'.$counter,
+            'name' => 'Designation '.$counter,
+            'grade' => null,
+            'is_active' => 1,
+        ];
+    }
+
+    // ─── shifts ──────────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertShift(int $tenantId, array $overrides = []): int
+    {
+        return DB::table('shifts')
+            ->insertGetId($this->shiftAttributes($tenantId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function shiftAttributes(int $tenantId, array $overrides = []): array
+    {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'code' => 'SHIFT-'.$counter,
+            'name' => 'Shift '.$counter,
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'crosses_midnight' => 0,
+            'break_minutes' => 30,
+            'grace_in_minutes' => 10,
+            'grace_out_minutes' => 10,
+            'half_day_threshold_minutes' => 240,
+            'is_active' => 1,
+        ];
+    }
+
+    // ─── employees ───────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertEmployee(
+        int $tenantId,
+        int $companyId,
+        array $overrides = []
+    ): int {
+        return DB::table('employees')
+            ->insertGetId($this->employeeAttributes($tenantId, $companyId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function employeeAttributes(
+        int $tenantId,
+        int $companyId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'company_id' => $companyId,
+            'employee_code' => 'EMP-'.$counter,
+            'user_id' => null,
+            'branch_id' => null,
+            'factory_id' => null,
+            'production_line_id' => null,
+            'department_id' => null,
+            'designation_id' => null,
+            'reports_to_employee_id' => null,
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+            'display_name' => 'John Doe '.$counter,
+            'gender' => null,
+            'date_of_birth' => null,
+            'national_id' => null,
+            'phone' => '01700000000',
+            'email' => null,
+            'address_line1' => null,
+            'address_line2' => null,
+            'city' => null,
+            'photo_path' => null,
+            'date_of_joining' => '2024-01-01',
+            'date_of_leaving' => null,
+            'employment_type' => 'permanent',
+            'employment_status' => 'active',
+            'default_shift_id' => null,
+            'salary_structure_id' => null,
+            'bank_name' => null,
+            'bank_account_number' => null,
+            'mobile_wallet_number' => null,
+            'is_active' => 1,
+        ];
+    }
+
+    // =========================================================================
+    // Wave 10 — Production fixtures
+    // =========================================================================
+
+    // ─── production_plans ───────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertProductionPlan(
+        int $tenantId,
+        int $companyId,
+        int $factoryId,
+        array $overrides = []
+    ): int {
+        return DB::table('production_plans')
+            ->insertGetId($this->productionPlanAttributes($tenantId, $companyId, $factoryId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function productionPlanAttributes(
+        int $tenantId,
+        int $companyId,
+        int $factoryId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'company_id' => $companyId,
+            'factory_id' => $factoryId,
+            'plan_number' => 'PLAN-'.$counter,
+            'plan_date' => '2026-08-24',
+            'period_start' => '2026-08-24',
+            'period_end' => '2026-08-31',
+            'source' => 'manual',
+            'status' => 'draft',
+            'notes' => null,
+            'approved_by' => null,
+            'approved_at' => null,
+        ];
+    }
+
+    // ─── production_plan_items ──────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertProductionPlanItem(
+        int $tenantId,
+        int $productionPlanId,
+        int $productId,
+        int $bomId,
+        int $unitId,
+        array $overrides = []
+    ): int {
+        return DB::table('production_plan_items')
+            ->insertGetId($this->productionPlanItemAttributes($tenantId, $productionPlanId, $productId, $bomId, $unitId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function productionPlanItemAttributes(
+        int $tenantId,
+        int $productionPlanId,
+        int $productId,
+        int $bomId,
+        int $unitId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'production_plan_id' => $productionPlanId,
+            'product_id' => $productId,
+            'bill_of_material_id' => $bomId,
+            'planned_quantity' => '100.0000',
+            'unit_id' => $unitId,
+            'production_line_id' => null,
+            'scheduled_date' => '2026-08-24',
+            'produced_quantity' => '0.0000',
+            'status' => 'draft',
+            'sort_order' => 0,
+        ];
+    }
+
+    // ─── production_batches ─────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertProductionBatch(
+        int $tenantId,
+        int $factoryId,
+        int $productId,
+        int $bomId,
+        int $outputUnitId,
+        array $overrides = []
+    ): int {
+        return DB::table('production_batches')
+            ->insertGetId($this->productionBatchAttributes($tenantId, $factoryId, $productId, $bomId, $outputUnitId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function productionBatchAttributes(
+        int $tenantId,
+        int $factoryId,
+        int $productId,
+        int $bomId,
+        int $outputUnitId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'batch_number' => 'BATCH-'.$counter,
+            'production_plan_item_id' => null,
+            'factory_id' => $factoryId,
+            'production_line_id' => null,
+            'product_id' => $productId,
+            'bill_of_material_id' => $bomId,
+            'shift_id' => null,
+            'batch_date' => '2026-08-24',
+            'started_at' => null,
+            'completed_at' => null,
+            'planned_quantity' => '500.0000',
+            'output_unit_id' => $outputUnitId,
+            'status' => 'draft',
+            'context_completeness' => 'draft',
+            'total_input_quantity' => '0.0000',
+            'total_output_quantity' => '0.0000',
+            'worker_reported_quantity' => '0.0000',
+            'yield_percentage' => null,
+            'variance_quantity' => null,
+            'variance_percentage' => null,
+            'analysis' => null,
+            'supervisor_id' => null,
+            'closed_by' => null,
+            'closed_at' => null,
+        ];
+    }
+
+    // ─── material_issues ────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertMaterialIssue(
+        int $tenantId,
+        int $productionBatchId,
+        int $warehouseId,
+        array $overrides = []
+    ): int {
+        return DB::table('material_issues')
+            ->insertGetId($this->materialIssueAttributes($tenantId, $productionBatchId, $warehouseId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function materialIssueAttributes(
+        int $tenantId,
+        int $productionBatchId,
+        int $warehouseId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'issue_number' => 'MI-'.$counter,
+            'production_batch_id' => $productionBatchId,
+            'warehouse_id' => $warehouseId,
+            'issue_date' => '2026-08-24',
+            'status' => 'draft',
+            'issued_by' => null,
+            'notes' => null,
+        ];
+    }
+
+    // ─── material_issue_items ───────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertMaterialIssueItem(
+        int $tenantId,
+        int $materialIssueId,
+        int $productId,
+        int $unitId,
+        array $overrides = []
+    ): int {
+        return DB::table('material_issue_items')
+            ->insertGetId($this->materialIssueItemAttributes($tenantId, $materialIssueId, $productId, $unitId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function materialIssueItemAttributes(
+        int $tenantId,
+        int $materialIssueId,
+        int $productId,
+        int $unitId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'material_issue_id' => $materialIssueId,
+            'product_id' => $productId,
+            'requested_quantity' => '50.0000',
+            'issued_quantity' => '0.0000',
+            'returned_quantity' => '0.0000',
+            'unit_id' => $unitId,
+            'warehouse_location_id' => null,
+            'unit_cost' => '10.0000',
+            'stock_movement_id' => null,
+        ];
+    }
+
+    // ─── production_batch_inputs ────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertProductionBatchInput(
+        int $tenantId,
+        int $productionBatchId,
+        int $productId,
+        int $unitId,
+        array $overrides = []
+    ): int {
+        return DB::table('production_batch_inputs')
+            ->insertGetId($this->productionBatchInputAttributes($tenantId, $productionBatchId, $productId, $unitId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function productionBatchInputAttributes(
+        int $tenantId,
+        int $productionBatchId,
+        int $productId,
+        int $unitId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'production_batch_id' => $productionBatchId,
+            'product_id' => $productId,
+            'quantity' => '45.0000',
+            'unit_id' => $unitId,
+            'source' => 'material_issue',
+            'material_issue_item_id' => null,
+            'recorded_by' => null,
+            'recorded_at' => '2026-08-24 10:00:00',
+            'notes' => null,
+        ];
+    }
+
+    // ─── worker_production_entries ──────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertWorkerProductionEntry(
+        int $tenantId,
+        int $productionBatchId,
+        int $employeeId,
+        int $productId,
+        int $unitId,
+        array $overrides = []
+    ): int {
+        return DB::table('worker_production_entries')
+            ->insertGetId($this->workerProductionEntryAttributes($tenantId, $productionBatchId, $employeeId, $productId, $unitId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function workerProductionEntryAttributes(
+        int $tenantId,
+        int $productionBatchId,
+        int $employeeId,
+        int $productId,
+        int $unitId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'production_batch_id' => $productionBatchId,
+            'employee_id' => $employeeId,
+            'product_id' => $productId,
+            'production_line_id' => null,
+            'shift_id' => null,
+            'work_date' => '2026-08-24',
+            'measure_type' => 'piece',
+            'quantity' => '120.0000',
+            'unit_id' => $unitId,
+            'rework_quantity' => '0.0000',
+            'rejected_quantity' => '0.0000',
+            'hours_worked' => null,
+            'rate_type' => 'piece_rate',
+            'rate' => null,
+            'incentive_amount' => null,
+            'payroll_period_id' => null,
+            'entered_by' => null,
+            'verified_by' => null,
+            'verified_at' => null,
+            'status' => 'draft',
+        ];
+    }
+
+    // ─── production_outputs ─────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertProductionOutput(
+        int $tenantId,
+        int $productionBatchId,
+        int $productId,
+        int $unitId,
+        int $targetWarehouseId,
+        array $overrides = []
+    ): int {
+        return DB::table('production_outputs')
+            ->insertGetId($this->productionOutputAttributes($tenantId, $productionBatchId, $productId, $unitId, $targetWarehouseId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function productionOutputAttributes(
+        int $tenantId,
+        int $productionBatchId,
+        int $productId,
+        int $unitId,
+        int $targetWarehouseId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'production_batch_id' => $productionBatchId,
+            'product_id' => $productId,
+            'variant_id' => null,
+            'quantity' => '100.0000',
+            'unit_id' => $unitId,
+            'output_type' => 'primary',
+            'batch_code' => 'LOT-001',
+            'expiry_date' => null,
+            'target_warehouse_id' => $targetWarehouseId,
+            'qc_required' => 1,
+            'qc_status' => 'pending',
+            'stock_movement_id' => null,
+            'recorded_by' => null,
+            'recorded_at' => '2026-08-24 12:00:00',
+        ];
+    }
+
     /**
      * SQLite and MySQL word the same violation differently, and the suite runs
      * on SQLite while production runs on MySQL.

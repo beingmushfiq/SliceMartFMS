@@ -31,18 +31,18 @@ artefacts (`MODULE_MAP.md` §6), not a follow-up.
 
 | | |
 |---|---|
-| **Current phase** | Phase 1 — 🔄 **in progress.** Migration Waves 1–7 and the tenancy runtime (§7 item 29) complete; Waves 8+, auth and RBAC outstanding. |
+| **Current phase** | Phase 1 — 🔄 **in progress.** Migration Waves 1–10 and the tenancy runtime (§7 item 29) complete; Waves 11+, auth and RBAC outstanding. |
 | **Phase 0 status** | ✅ Documentation complete (7 canonical + 5 supporting = 12 documents) · ✅ Monorepo restructure · ✅ Dependency reconciliation · ✅ Token cascade · ✅ UI primitive hardening · ✅ §8 state-matrix primitives · ✅ Tooling config files (frontend **and** backend) · ✅ Test suites · ✅ CI — **every gate verified green, see §3.4** |
-| **Next phase** | Phase 1 continues at **§7 item 33 — migration Wave 8**, per `DATABASE_DESIGN.md` §16. |
-| **Backend** | 🔄 Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–7 migrations written and verified, and the tenancy runtime (§7 item 29) is live** — `app/Core`, `BelongsToTenant`, `ResolveTenant` and the three route files all exist. Still absent: `app/Modules`, `app/Support`, and every model, Action and endpoint. |
+| **Next phase** | Phase 1 continues at **§7 item 35 — migration Wave 11 (QC)**, per `DATABASE_DESIGN.md` §16. |
+| **Backend** | 🔄 Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–10 migrations written and verified, and the tenancy runtime (§7 item 29) is live** — `app/Core`, `BelongsToTenant`, `ResolveTenant` and the three route files all exist. Still absent: `app/Modules`, `app/Support`, and every model, Action and endpoint. |
 | **Frontend** | ✅ `/frontend`. Token cascade, boot loader, all 9 UI primitives rebuilt, tooling configured, §8 state-matrix primitives complete (errors, logger, StateView, QueryBoundary, AsyncButton, Toast, LogInspector, four-level ErrorBoundary), and the single transport seam wired (`lib/api/client.ts` + `lib/api/queryClient.ts` + `QueryClientProvider`). See §4. |
-| **Database** | 🔄 Designed (159 tables). **48 of them exist** — Waves 1–7: platform (§4.6), org (§4.7), identity (§4.8), infrastructure (§4.9), master data A (§4.10), master data B (§4.11), master data C (§4.12). Waves 8–25 unwritten. |
-| **Tests** | 🔄 Real, but foundation-only. Frontend **128 tests across 7 files**, all passing, covering the reliability layer (`ErrorBoundary`, `StateView`, `QueryBoundary`, `AsyncButton`, `logger`, `api/errors`, `api/queryClient`). Backend **166 tests / 745 assertions** — the PHP-floor guard, Wave 1–7 schema contracts, and Tenancy runtime contracts. |
+| **Database** | 🔄 Designed (159 tables). **61 of them exist** — Waves 1–10: platform (§4.6), org (§4.7), identity (§4.8), infrastructure (§4.9), master data A (§4.10), master data B (§4.11), master data C (§4.12), HR identity (§4.13), production (§4.14). Waves 11–25 unwritten. |
+| **Tests** | 🔄 Real, but foundation-only. Frontend **128 tests across 7 files**, all passing, covering the reliability layer (`ErrorBoundary`, `StateView`, `QueryBoundary`, `AsyncButton`, `logger`, `api/errors`, `api/queryClient`). Backend **216 tests / 995 assertions** — the PHP-floor guard, Wave 1–10 schema contracts, and Tenancy runtime contracts. |
 | **CI** | ✅ `.github/workflows/ci.yml` — 3 jobs, 9 legs. Frontend matrix (lint · typecheck · test · depcruise · format:check) installing at the **repository root**, build + bundle budget with a `dist` artifact, and a backend matrix (lint · analyse · test) on PHP 8.5. Every leg has a locally reproducible equivalent. |
 
 **The most important thing to know:** this project still has **no feature code and
 no business logic**. What exists is a design-system foundation, two framework
-skeletons, and forty-eight tables with no models, no Actions and no endpoints over
+skeletons, and sixty-one tables with no models, no Actions and no endpoints over
 them. No route, no screen. Any statement that a feature "works" is false.
 
 ---
@@ -52,7 +52,7 @@ them. No route, no screen. Any statement that a feature "works" is false.
 | Phase | Scope | Status |
 |---|---|---|
 | **0** | Architecture & documentation | ✅ See §3 |
-| **1** | Auth · Tenancy · RBAC · Design System | 🔄 Migration Waves 1–7 and Tenancy Runtime (§7 item 29) done. Waves 8+, auth, RBAC outstanding |
+| **1** | Auth · Tenancy · RBAC · Design System | 🔄 Migration Waves 1–10 and Tenancy Runtime (§7 item 29) done. Wave 11+, auth, RBAC outstanding |
 | **2** | Master data · Products · Warehouses | ⬜ Not started |
 | **3** | Production · Worker Production · QC | ⬜ Not started |
 | **4** | Purchase · Inventory | ⬜ Not started |
@@ -239,16 +239,18 @@ through `bootstrap/app.php`. Migrations are present too — the six Wave 1 platf
 tables (§4.6), four Wave 2 org tables (§4.7), seven Wave 3 identity tables (§4.8),
 seven Wave 4 infrastructure tables (§4.9), six Wave 5 master data A tables
 plus the deferred FK closure (§4.10), five Wave 6 master data B tables (§4.11),
-and nine Wave 7 master data C files (§4.12, including the deferred FK closure)
+nine Wave 7 master data C files (§4.12, including the deferred FK closure),
+four Wave 8 HR identity tables (§4.13), one Wave 9 HR FK closure,
+and eight Wave 10 production tables (§4.14)
 exist and are verified.
 
 **Absent — the rest of Phase 1:** `app/Modules`, `app/Support`, and every model,
-Action and endpoint over the forty-eight tables. The three route files exist but
+Action and endpoint over the sixty-one tables. The three route files exist but
 register no routes yet.
 
 ### 4.5 Test coverage
 
-128 frontend tests over 7 files; **166 backend tests / 745 assertions**. Frontend
+128 frontend tests over 7 files; **216 backend tests / 995 assertions**. Frontend
 tests sit beside the code they cover (`vitest.config.ts`
 `include: ['src/**/*.{test,spec}.{ts,tsx}']`); backend schema contracts live in
 `tests/Feature/Database/` and the tenancy-runtime contract in
@@ -758,6 +760,103 @@ Verified: `migrate:fresh` — all **48 migrations** green ✅ · `pint lint:fix`
 Wave 1 **11 tests**, Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**,
 Wave 6 **28**, Wave 7 **30**, Tenancy runtime **3**, Unit+Example **2**.
 
+
+---
+
+### 4.13 Migrations — Wave 8 (HR identity) + Wave 9 (HR FK closure) complete
+
+Four Wave 8 migrations + one Wave 9 closure:
+`2026_08_24_104600` … `104750` — departments, designations, shifts, employees.
+`2026_08_24_104900` — Wave 9 deferred FK closure for three circular HR references.
+
+| Table / Migration | Notes |
+|---|---|
+| `departments` | Organizational cost-centre units scoped to a company. Self-referential tree via `(tenant_id, parent_id) → departments(tenant_id, id)` RESTRICT (same NULL-root MATCH SIMPLE pattern as `categories` and `warehouse_locations`). Unique `(tenant_id, company_id, code)` — same code can exist in different companies. `head_employee_id` column created here; FK deferred to Wave 9 (circular: departments references employees which references departments). Soft-deletable. |
+| `designations` | Tenant-wide job-title catalogue (e.g. "Senior Production Operator"). `grade` is VARCHAR(32), not ENUM — grade schemes vary per tenant. Unique `(tenant_id, code)`. Soft-deletable. |
+| `shifts` | Named work schedules with TIME columns (not DATETIME). `crosses_midnight TINYINT` is a DATABASE_DESIGN invariant — when 1, `end_time < start_time` and the attendance engine attributes the shift to the **start** date; comparing raw times without this flag is a documented defect. Duration columns are SMALLINT(minutes). Unique `(tenant_id, code)`. Soft-deletable. |
+| `employees` | The workforce record; distinct from `users` (the login record) by design (DECISIONS C18). `user_id` nullable and unique-when-set — not every employee logs in. Inline composite FKs on company/branch/factory/production_line/department/designation (all RESTRICT). Three FKs deferred to Wave 9: `reports_to_employee_id` (self-referential), `default_shift_id`, and `salary_structure_id` (Wave 19 table — added in Wave 25 closure). `employment_type` VARCHAR(32): `permanent \| contract \| daily_wage \| piece_rate \| probation`. DATABASE_DESIGN invariant: `piece_rate` makes a `worker_production_entries` row payable per unit. Soft-deletable. |
+| Wave 9 FK closure (104900) | Adds three deferred FK constraints: (1) `departments.head_employee_id → employees(tenant_id, id)` RESTRICT; (2) `employees.reports_to_employee_id → employees(tenant_id, id)` RESTRICT (self-referential); (3) `employees.default_shift_id → shifts(tenant_id, id)` RESTRICT. `salary_structure_id → salary_structures` is NOT added here — `salary_structures` is Wave 19; that FK is added by Wave 25. |
+
+**Three test-infrastructure defects corrected before green:**
+(a) `insertCompany` fixture was called with a `code` override that does not exist
+as a column on `companies` (unique by `(tenant_id, name)` not code). Fixed to pass
+unique `name` overrides instead.
+(b) Raw DB insert into `users` was missing `uuid` (NOT NULL). Added.
+(c) Raw DB insert into `users` was missing `status` (NOT NULL, no default). Added
+`'status' => 'active'`. Three successive runs, three distinct failure messages —
+each corrected before re-declaring the suite green.
+
+**Unique-key NULL hole documented (employees.user_id):** the `unique(tenant_id, user_id)`
+key cannot prevent multiple `NULL` user_id rows because `NULL ≠ NULL`. Two tests
+pin this: one proves the key fires when `user_id` is set; the other proves multiple
+null-user_id employees are permitted (floor workers with no login account).
+
+`Wave8HrIdentitySchemaTest` — **26 tests** covering: all 4 tables exist,
+`tenant_id` placement, soft-delete on all 4 (all are master data), no float/double/enum,
+department code uniqueness within a company (and allowed across companies), department
+self-referential RESTRICT, cross-tenant company FK rejection, designation code
+uniqueness, shift code uniqueness, `crosses_midnight` stores correctly, employee
+code uniqueness, cross-tenant company/department/designation FK rejection, Wave 9
+closure: head_employee_id cross-tenant rejection and delete-blocked-when-head,
+reports_to self-referential cross-tenant rejection and delete-blocked-when-manager,
+default_shift_id cross-tenant rejection and delete-blocked-when-referenced,
+user_id unique-when-set and NULL-hole documented.
+
+`SchemaTestCase` gained four fixture builder pairs: `insertDepartment` /
+`departmentAttributes`, `insertDesignation` / `designationAttributes`,
+`insertShift` / `shiftAttributes`, `insertEmployee` / `employeeAttributes`.
+
+Verified: `migrate:fresh` — all **53 migrations** green ✅ · `pint lint:fix` **PASS** ·
+`phpstan analyse` level 9 **[OK] No errors** · `artisan test`
+**192 passed / 879 assertions**, none risky. Per-suite re-measured:
+Wave 1 **11 tests**, Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**,
+Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Tenancy runtime **3**, Unit+Example **2**.
+
+
+---
+
+### 4.14 Migrations — Wave 10 (Production) complete
+
+Eight Wave 10 migrations:
+`2026_08_24_105000` … `105700` — production_plans, production_plan_items, production_batches,
+material_issues, material_issue_items, production_batch_inputs, worker_production_entries, production_outputs.
+
+| Table / Migration | Notes |
+|---|---|
+| `production_plans` | Master planning header. Scoped to `(tenant_id, company_id)` and `(tenant_id, factory_id)` via composite FKs (RESTRICT). Unique `(tenant_id, plan_number)`. Status `draft \| approved \| in_progress \| completed \| cancelled`. Source `manual \| sales_order \| forecast \| reorder`. Soft-deletable. |
+| `production_plan_items` | Recipe item rows for a production plan. References `(tenant_id, production_plan_id)` with **CASCADE** delete (plan items have no independent existence). Composite FKs on `products`, `bill_of_materials`, `units`, and nullable `production_lines` (all RESTRICT). Soft-deletable. |
+| `production_batches` | The spine of the production chain (ADR-011). Unique `(tenant_id, batch_number)`. Optional `production_plan_item_id` (unplanned batches are legal). Composite FKs on `factory_id`, `production_line_id` (nullable), `product_id`, `bill_of_material_id` (freezes BoM version), `shift_id` (nullable), and `output_unit_id` (all RESTRICT). **ADR-012 invariant:** `yield_percentage`, `variance_quantity`, and `variance_percentage` are nullable with NO default (must remain NULL while `context_completeness` is `draft` or `collecting`; a default of 0 is a defect). Soft-deletable. |
+| `material_issues` | Warehouse-side issue document posted to batch. Unique `(tenant_id, issue_number)`. Composite FKs on `(tenant_id, production_batch_id)` and `(tenant_id, warehouse_id)` (RESTRICT). Soft-deletable. |
+| `material_issue_items` | Line items issued from warehouse to batch. References `(tenant_id, material_issue_id)` with **CASCADE** delete. Composite FKs on `products`, `units`, `warehouse_locations` (nullable) with RESTRICT. `stock_movement_id` is a deferred cross-group reference (Wave 12 / Wave 25). Soft-deletable. |
+| `production_batch_inputs` | What actually entered the production line (recorded independently of warehouse issue). References `(tenant_id, production_batch_id)` with **CASCADE** delete. Composite FKs on `products`, `units`, and optional `material_issue_items` (RESTRICT). Soft-deletable. |
+| `worker_production_entries` | Many-to-many worker logging per batch/product/shift (ADR-013). Composite unique `(tenant_id, production_batch_id, employee_id, product_id, work_date, shift_id)`. Composite FKs on `production_batches`, `employees`, `products`, `production_lines`, `shifts`, `units` (all RESTRICT). `rate` and `incentive_amount` nullable (NULL until payroll). `payroll_period_id` is a deferred FK (Wave 19 / Wave 25). Soft-deletable. |
+| `production_outputs` | Output yield from batch. Composite FKs on `production_batches`, `products`, `product_variants` (nullable), `units`, and `target_warehouse_id` (all RESTRICT). Invariant: output is quarantined and does not become available stock until QC clears (`qc_required = 1`, `qc_status = 'pending'`). `stock_movement_id` is a deferred FK (Wave 12 / Wave 25). Soft-deletable. |
+
+**Invariants and rules enforced:**
+- `production_batches`: `yield_percentage`, `variance_quantity`, and `variance_percentage` strictly `NULL` on creation (ADR-012).
+- `worker_production_entries`: 6-column composite uniqueness key strictly enforced per tenant.
+- Cascading delete boundaries: `production_plan_items`, `material_issue_items`, and `production_batch_inputs` CASCADE on parent deletion; all cross-entity catalogue references strictly `RESTRICT`.
+
+`Wave10ProductionSchemaTest` — **24 tests / 92 assertions** covering all 8 tables,
+`tenant_id` second column placement, soft-deletes on all 8, no float/double/enum in migrations,
+plan number uniqueness, cross-tenant FK rejection for company/factory/product/bom/warehouse/employee/batch,
+plan item CASCADE, issue item CASCADE, batch input CASCADE, worker entry composite uniqueness,
+batch ADR-012 NULL invariants, and DECIMAL(18,4) precision round-trip.
+
+`SchemaTestCase` gained eight fixture builder pairs: `insertProductionPlan` /
+`productionPlanAttributes`, `insertProductionPlanItem` / `productionPlanItemAttributes`,
+`insertProductionBatch` / `productionBatchAttributes`, `insertMaterialIssue` /
+`materialIssueAttributes`, `insertMaterialIssueItem` / `materialIssueItemAttributes`,
+`insertProductionBatchInput` / `productionBatchInputAttributes`,
+`insertWorkerProductionEntry` / `workerProductionEntryAttributes`,
+`insertProductionOutput` / `productionOutputAttributes`.
+
+Verified: `migrate:fresh` — all **61 migrations** green ✅ · `pint lint:fix` **PASS** ·
+`phpstan analyse` level 9 **[OK] No errors** · `artisan test`
+**216 passed / 995 assertions**, none risky. Per-suite re-measured:
+Wave 1 **11 tests**, Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**,
+Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Tenancy runtime **3**, Unit+Example **2**.
+
 ---
 
 ## 5. Dependency state — reconciled
@@ -862,7 +961,9 @@ Q3, it stops and asks (`TASK_PROTOCOL.md` §3.2).
 | 30 | Phase 1 **Wave 5 — master data A**, per `DATABASE_DESIGN.md` §16: `units`, `unit_conversions`, `categories`, `brands`, `tax_profiles`, `reason_codes`. Note `units` is the deferred forward reference `production_lines.capacity_unit_id` waits on (§16.1 rule 2, closed in **Wave 5** — the index is already pre-created, so the closure is an `ADD` composite FK, not an `ALTER` of the column) | ✅ |
 | 31 | Phase 1 **Wave 6 — master data B**, per `DATABASE_DESIGN.md` §16: `products`, `product_variants`, `product_images`, `bill_of_materials`, `bill_of_material_items`. First wave with a CASCADE delete rule (BoM items) and the first with versioned master data (BoM unique per product+version). See §4.11. | ✅ |
 | 32 | Phase 1 **Wave 7 — master data C**, per `DATABASE_DESIGN.md` §16: `warehouses`, `warehouse_locations`, `parties`, `party_addresses`, `party_contacts`, `price_lists`, `price_list_items`, `discount_rules`. First wave with a within-wave deferred FK closure (`parties → price_lists`). Unique-key NULL hole documented for `price_list_items.variant_id`. See §4.12. | ✅ |
-| 33 | Phase 1 **Wave 8**, per `DATABASE_DESIGN.md` §16. | ⬜ |
+| 33 | Phase 1 **Wave 8 — HR identity** + **Wave 9 FK closure**, per `DATABASE_DESIGN.md` §16: `departments`, `designations`, `shifts`, `employees` (Wave 8), plus three circular FK closures in Wave 9. See §4.13. | ✅ |
+| 34 | Phase 1 **Wave 10 — production**, per `DATABASE_DESIGN.md` §16: `production_plans`, `production_plan_items`, `production_batches`, `material_issues`, `material_issue_items`, `production_batch_inputs`, `worker_production_entries`, `production_outputs`. See §4.14. | ✅ |
+| 35 | Phase 1 **Wave 11 — QC**, per `DATABASE_DESIGN.md` §16. | ⬜ |
 
 ---
 
@@ -874,14 +975,13 @@ this file. Phase 0 is complete and Phase 1 is under way: Wave 0 needed no work,
 **Wave 1 (platform) is done** (§4.6), **Wave 2 (org) is done** (§4.7),
 **Wave 3 (identity) is done** (§4.8), **Wave 4 (infrastructure) is done**
 (§4.9), **the tenancy runtime (§7 item 29) is done**, **Wave 5 (master
-data A) is done** (§4.10) — `units`, `unit_conversions`, `categories`, `brands`,
-`tax_profiles`, `reason_codes`, plus the deferred `production_lines.capacity_unit_id`
-FK closure — **Wave 6 (master data B) is done** (§4.11) — `products`,
-`product_variants`, `product_images`, `bill_of_materials`, `bill_of_material_items`
-— and **Wave 7 (master data C) is done** (§4.12) — `warehouses`, `warehouse_locations`,
-`parties`, `party_addresses`, `party_contacts`, `price_lists`, `price_list_items`,
-`discount_rules`, plus the deferred `parties → price_lists` FK closure.
-Start at **§7 item 33 — Wave 8**, per `DATABASE_DESIGN.md` §16.
+data A) is done** (§4.10), **Wave 6 (master data B) is done** (§4.11),
+**Wave 7 (master data C) is done** (§4.12), **Wave 8 (HR identity) +
+Wave 9 (HR FK closure) are done** (§4.13), and **Wave 10 (production) is done**
+(§4.14) — `production_plans`, `production_plan_items`, `production_batches`,
+`material_issues`, `material_issue_items`, `production_batch_inputs`,
+`worker_production_entries`, `production_outputs`.
+Start at **§7 item 35 — Wave 11 (QC)**, per `DATABASE_DESIGN.md` §16.
 
 
 These constraints are already settled. Do not re-derive them, and do not
@@ -944,3 +1044,7 @@ contradict them:
 | 2026-08-24 | **Phase 1 Wave 5 (master data A) written and verified — the first wave where the schema as documented was implementable without amendment.** Seven migrations: `units`, `unit_conversions`, `categories`, `brands`, `tax_profiles`, `reason_codes` (migrations `102500`–`103000`), and `103100` closing the deferred `production_lines.capacity_unit_id` FK from Wave 2. Detailed per-table in **§4.10**. All six tables are tenant-scoped leaf catalogues (`unique (tenant_id, id)` on each so child tables can declare composite FKs) with `RESTRICT` deletes. `unit_conversions` has composite FKs on **both** `from_unit_id` and `to_unit_id` — a test proves each side independently rejects a cross-tenant unit, because a one-sided test would pass on a table that only checks one column. `categories` is self-referential: `(tenant_id, parent_id) → categories(tenant_id, id)` with `RESTRICT`, and MATCH SIMPLE means a `NULL parent_id` root is not checked (correct semantics). `tax_profiles.rate` is `DECIMAL(8,4)`, type is `VARCHAR(32)` (not ENUM) — open question Q2 is still open and both `inclusive` and `exclusive` must insert, proved by test. `reason_codes` context vocabulary (`qc_defect` \| `wastage` \| `stock_adjustment` \| `sales_return` \| `purchase_return` \| `cancellation` \| `rework`) is similarly left as `VARCHAR(32)` rather than locked by an ENUM. The deferred FK closure (`103100`) required no column `ALTER` because the index `ix_production_lines_tenant_capacity_unit` was pre-created in Wave 2; only the `ADD FOREIGN KEY` was needed. The Wave 2 placeholder test `test_the_deferred_capacity_unit_foreign_key_is_still_owed` was replaced in `Wave2OrgSchemaTest` by a live enforcement test proving a cross-tenant `capacity_unit_id` is rejected. **One defect in the test, caught before green:** `reason_codes` was initially classified as a leaf table (no `softDeletes`) when it is in fact tenant-configurable catalogue data that must be deactivatable without breaking historical references. Corrected before the suite was declared green. `SchemaTestCase` gained twelve new methods (six insert/attributes pairs). `Wave5MasterDataASchemaTest` — **23 tests**. Verified: `migrate:fresh` ✅ (34 migrations) · `pint lint:fix` **PASS** · `phpstan` level 9 **[OK] No errors** · `artisan test` **103 passed / 456 assertions**, none risky. §7 item 30 complete. Next: §7 item 31 — Wave 6 (master data B). |
 | 2026-08-24 | **Phase 1 Wave 6 (master data B) written and verified — the structurally richest wave so far, with the first CASCADE rule and the first versioned master-data table.** Five migrations: `products`, `product_variants`, `product_images`, `bill_of_materials`, `bill_of_material_items` (`103200`–`103600`). Detailed per-table in **§4.11**. `products` is the central catalogue ADR-016 designates as the single source of truth for every downstream wave; it carries six composite FKs (base/purchase/sales unit, category, brand, tax profile), all `RESTRICT`. `product_variants` adds SKU-level differentiation and a `price_delta DECIMAL(18,4)` for variant pricing. `product_images` is the first leaf table with no `deleted_at` — images have no independent lifecycle. `bill_of_materials` introduces the wave's first versioning constraint: `unique (tenant_id, product_id, version)` means two BoMs for one product need different version strings but two products may each claim version `'1'`. `bill_of_material_items` introduces the wave's first `CASCADE` delete: items are orphaned the moment their recipe is deleted and carry no independent meaning, which is the one case `DATABASE_DESIGN.md` §1.3 permits CASCADE; `input_product_id` remains `RESTRICT` because a raw-material product that feeds a BoM must not be silently deleted. **No schema corrections required** — the DATABASE_DESIGN.md §4 Group C spec was implementable without amendment. **Two test-infrastructure defects caught and corrected.** (a) `insertTenant()` was called with the raw array returned by `insertPlan()` rather than `insertPlan()['id']`. `insertPlan()` returns `array{id: int, uuid: string}` — the correct pattern, established in Wave 5, is `$plan = $this->insertPlan(); $t = $this->insertTenant($plan['id'], 'slug')`. All multi-tenant tests (Wave 6 uses 12 two-tenant isolation tests) applied the fix. (b) Three DECIMAL precision assertions used strict string equality (`assertSame('87.5000', ...)`) while SQLite strips trailing zeros on read, returning `'87.5'`. The canonical fix from Wave 5's `assertSame(5.5, (float) $rate)` pattern is to cast to `float` before asserting: the cast proves the value round-tripped without precision loss (`87.5000 == 87.5` as float, but `87.4999 != 87.5`), so a rounding defect still fails. `SchemaTestCase` gained five fixture builder pairs. `Wave6MasterDataBSchemaTest` — **28 tests / 64 assertions**. Verified: `migrate:fresh` ✅ (39 migrations) · `pint lint:fix` **PASS** (binary operator spacing) · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **131 passed / 535 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests**, Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Tenancy runtime **3**, Unit+Example **2**. |
 | 2026-08-24 | **Phase 1 Wave 7 (master data C) written and verified — first wave with an intra-wave deferred FK closure and a documented unique-key NULL hole.** Nine migrations: `warehouses`, `warehouse_locations`, `parties`, `party_addresses`, `party_contacts`, `price_lists`, `price_list_items`, `discount_rules` (`103700`–`104400`), and `104500` deferred FK closure. Detailed per-table in **§4.12**. `warehouses` has nullable composite FKs on `company_id`, `branch_id`, `factory_id` (all MATCH SIMPLE, RESTRICT) — a `NULL` scope column means tenant-wide warehouse. `warehouse_locations` is self-referential: `(tenant_id, parent_id) → warehouse_locations(tenant_id, id)` RESTRICT, same NULL-root pattern as Wave 5's `categories`. `parties` unifies suppliers, customers, dealers, agents into one row with independent boolean flags — no role occupies two rows. `party_addresses` and `party_contacts` both use **CASCADE** (child rows have no independent lifecycle). `price_lists` created at `104200` after `parties` at `103900`; the `parties.price_list_id` composite FK was therefore deferred to the `104500` closure migration — same resolution as Wave 5's `103100` but intra-wave. **Unique-key NULL hole documented:** the `price_list_items` key `(tenant_id, price_list_id, product_id, variant_id, min_quantity)` cannot prevent duplicates when `variant_id IS NULL` because `NULL ≠ NULL`; application layer must guard; two tests pin the behaviour. **One failing test corrected before green:** initial test assumed the NULL-variant duplicate would be rejected by the DB — it is not; split into a non-NULL-fires test and a NULL-hole pin test. `SchemaTestCase` gained eight fixture builder pairs. `Wave7MasterDataCSchemaTest` — **30 tests**. Verified: `migrate:fresh` ✅ (48 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **166 passed / 745 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests**, Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Tenancy runtime **3**, Unit+Example **2**. §7 item 32 complete. Next: §7 item 33 — Wave 8. |
+| 2026-08-24 | **Phase 1 Wave 8 (HR identity) + Wave 9 (HR FK closure) written and verified.** Five migrations: `departments`, `designations`, `shifts`, `employees` (`104600`–`104750`), and `104900` deferred FK closure for three circular HR references. Detailed per-table in **§4.13**. `departments` has self-referential tree `parent_id` (RESTRICT) and company scoping `(tenant_id, company_id, code)` unique. `designations` has grade VARCHAR(32) and `(tenant_id, code)` unique. `shifts` stores TIME columns, `crosses_midnight` TINYINT flag (DATABASE_DESIGN invariant: attendance engine attributes to start date), and `(tenant_id, code)` unique. `employees` is the workforce record distinct from `users` (login record); `user_id` unique-when-set with documented NULL hole. Three circular FKs closed in Wave 9 (`104900`): `departments.head_employee_id`, `employees.reports_to_employee_id`, `employees.default_shift_id`. `SchemaTestCase` gained four fixture builder pairs. `Wave8HrIdentitySchemaTest` — **26 tests**. Three test fixtures fixed before green (company code column removal, users.uuid and users.status NOT NULL compliance). Verified: `migrate:fresh` ✅ (53 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **192 passed / 879 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests**, Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Tenancy runtime **3**, Unit+Example **2**. §7 item 33 complete. Next: §7 item 34 — Wave 10 (production). |
+| 2026-08-24 | **Phase 1 Wave 10 (production) written and verified.** Eight migrations: `production_plans`, `production_plan_items`, `production_batches`, `material_issues`, `material_issue_items`, `production_batch_inputs`, `worker_production_entries`, `production_outputs` (`105000`–`105700`). Detailed per-table in **§4.14**. Spine of production chain implemented (ADR-011). `production_batches` implements ADR-012 invariant: `yield_percentage`, `variance_quantity`, `variance_percentage` strictly nullable with no default (NULL until `context_completeness` is `context_complete`). `worker_production_entries` implements ADR-013 with 6-column composite uniqueness key. Cascading child deletes verified for plan items, issue items, and batch inputs. `SchemaTestCase` gained eight fixture builder pairs. `Wave10ProductionSchemaTest` — **24 tests / 92 assertions**. Verified: `migrate:fresh` ✅ (61 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **216 passed / 995 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests**, Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Tenancy runtime **3**, Unit+Example **2**. §7 item 34 complete. Next: §7 item 35 — Wave 11 (QC). |
+
+
