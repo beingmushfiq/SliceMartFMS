@@ -31,18 +31,18 @@ artefacts (`MODULE_MAP.md` §6), not a follow-up.
 
 | | |
 |---|---|
-| **Current phase** | Phase 1 — 🔄 **in progress.** Migration Waves 1–23 and the tenancy runtime (§7 item 29) complete; Waves 24+, auth and RBAC outstanding. |
+| **Current phase** | Phase 1 — 🔄 **in progress.** All Migration Waves (Waves 1–25) and the tenancy runtime (§7 item 29) are **100% complete**; auth and RBAC outstanding. |
 | **Phase 0 status** | ✅ Documentation complete (7 canonical + 5 supporting = 12 documents) · ✅ Monorepo restructure · ✅ Dependency reconciliation · ✅ Token cascade · ✅ UI primitive hardening · ✅ §8 state-matrix primitives · ✅ Tooling config files (frontend **and** backend) · ✅ Test suites · ✅ CI — **every gate verified green, see §3.4** |
-| **Next phase** | Phase 1 continues at **§7 item 48 — migration Wave 24 (Integrations)**, per `DATABASE_DESIGN.md` §16. |
-| **Backend** | 🔄 Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–23 migrations written and verified, and the tenancy runtime (§7 item 29) is live** — `app/Core`, `BelongsToTenant`, `ResolveTenant` and the three route files all exist. Still absent: `app/Modules`, `app/Support`, and every model, Action and endpoint. |
+| **Next phase** | Phase 1 continues at **§7 item 50 — Auth & RBAC Implementation**, per `MODULE_MAP.md` & `ARCHITECTURE.md`. |
+| **Backend** | 🔄 Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–25 migrations written and verified (all 169 tables + all deferred closures), and the tenancy runtime (§7 item 29) is live** — `app/Core`, `BelongsToTenant`, `ResolveTenant` and the three route files all exist. Still absent: `app/Modules`, `app/Support`, and every model, Action and endpoint. |
 | **Frontend** | ✅ `/frontend`. Token cascade, boot loader, all 9 UI primitives rebuilt, tooling configured, §8 state-matrix primitives complete (errors, logger, StateView, QueryBoundary, AsyncButton, Toast, LogInspector, four-level ErrorBoundary), and the single transport seam wired (`lib/api/client.ts` + `lib/api/queryClient.ts` + `QueryClientProvider`). See §4. |
-| **Database** | 🔄 Designed (170+ tables). **166 of them exist** — Waves 1–23: platform (§4.6), org (§4.7), identity (§4.8), infrastructure (§4.9), master data A (§4.10), master data B (§4.11), master data C (§4.12), HR identity (§4.13), production (§4.14), QC & wastage (§4.15), ledger & stock inventory (§4.16), stock operations (§4.17), purchasing (§4.18), sales & invoicing (§4.19), payments & allocations (§4.20), POS (§4.21), delivery & logistics (§4.22), full HR & payroll (§4.23), assets & maintenance (§4.24), finance & costing (§4.25), reporting & analytics (§4.26), and e-commerce (§4.27). Waves 24–25 unwritten. |
-| **Tests** | 🔄 Real, but foundation-only. Frontend **128 tests across 7 files**, all passing, covering the reliability layer (`ErrorBoundary`, `StateView`, `QueryBoundary`, `AsyncButton`, `logger`, `api/errors`, `api/queryClient`). Backend **452 tests / 2404 assertions** — the PHP-floor guard, Wave 1–23 schema contracts, and Tenancy runtime contracts. |
+| **Database** | ✅ Fully migrated (169 tables, 170 migrations). **All tables and closures exist** — Waves 1–25: platform (§4.6), org (§4.7), identity (§4.8), infrastructure (§4.9), master data A (§4.10), master data B (§4.11), master data C (§4.12), HR identity (§4.13), production (§4.14), QC & wastage (§4.15), ledger & stock inventory (§4.16), stock operations (§4.17), purchasing (§4.18), sales & invoicing (§4.19), payments & allocations (§4.20), POS (§4.21), delivery & logistics (§4.22), full HR & payroll (§4.23), assets & maintenance (§4.24), finance & costing (§4.25), reporting & analytics (§4.26), e-commerce (§4.27), integrations (§4.28), and deferred closures (§4.29). |
+| **Tests** | 🔄 Real, but foundation-only. Frontend **128 tests across 7 files**, all passing, covering the reliability layer (`ErrorBoundary`, `StateView`, `QueryBoundary`, `AsyncButton`, `logger`, `api/errors`, `api/queryClient`). Backend **467 tests / 2465 assertions** — the PHP-floor guard, Wave 1–25 schema contracts, and Tenancy runtime contracts. |
 | **CI** | ✅ `.github/workflows/ci.yml` — 3 jobs, 9 legs. Frontend matrix (lint · typecheck · test · depcruise · format:check) installing at the **repository root**, build + bundle budget with a `dist` artifact, and a backend matrix (lint · analyse · test) on PHP 8.5. Every leg has a locally reproducible equivalent. |
 
 **The most important thing to know:** this project still has **no feature code and
 no business logic**. What exists is a design-system foundation, two framework
-skeletons, and one hundred and sixty-six tables with no models, no Actions and no endpoints over
+skeletons, and one hundred and sixty-nine tables with no models, no Actions and no endpoints over
 them. No route, no screen. Any statement that a feature "works" is false.
 
 ---
@@ -52,7 +52,7 @@ them. No route, no screen. Any statement that a feature "works" is false.
 | Phase | Scope | Status |
 |---|---|---|
 | **0** | Architecture & documentation | ✅ See §3 |
-| **1** | Auth · Tenancy · RBAC · Design System | 🔄 Migration Waves 1–23 and Tenancy Runtime (§7 item 29) done. Wave 24+, auth, RBAC outstanding |
+| **1** | Auth · Tenancy · RBAC · Design System | 🔄 Migration Waves 1–25 and Tenancy Runtime (§7 item 29) done. Auth and RBAC outstanding |
 | **2** | Master data · Products · Warehouses | ⬜ Not started |
 | **3** | Production · Worker Production · QC | ⬜ Not started |
 | **4** | Purchase · Inventory | ⬜ Not started |
@@ -1383,6 +1383,43 @@ Verified: `migrate:fresh` — all **166 migrations** green ✅ · `pint lint:fix
 Wave 1 **11 tests** (535 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**,
 Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Wave 17 **14**, Wave 18 **18**, Wave 19 **18**, Wave 20 **12**, Wave 21 **14**, Wave 22 **14**, Wave 23 **14**, Tenancy runtime **3**, Unit+Example **2**.
 
+### 4.28 Phase 1 Wave 24 — Integrations (3 tables)
+
+Per `DATABASE_DESIGN.md` §13.3 & §16, outbound integration webhooks and batch data import entities were written in `backend/database/migrations/`:
+
+| Table | Migration File | Key Structure & Invariants |
+|---|---|---|
+| `webhook_endpoints` | `2026_08_24_121000_create_webhook_endpoints_table.php` | Outbound webhook endpoint registrations with target URL, encrypted signing secret, subscribed event topics array, active flag, and auto-disabling circuit breaker on consecutive delivery failures. |
+| `webhook_deliveries` | `2026_08_24_121100_create_webhook_deliveries_table.php` | Immutable append-only delivery attempt log with response statuses, truncated response bodies, delivery statuses (`pending`, `delivered`, `failed`, `abandoned`), and indexed on `(tenant_id, status, next_retry_at)` for async exponential retry workers. Hard cascades on endpoint deletion. No `deleted_at`. |
+| `imports` | `2026_08_24_121200_create_imports_table.php` | Bulk import jobs (`products`, `parties`, `employees`, `opening_stock`, `price_list`, `attendance`) tracking total, processed, success, and failed row counts, JSON column mapping, dry-run simulation mode (`dry_run = 1`), error report spreadsheet path, and requesting user reference. |
+
+`SchemaTestCase` gained 3 fixture builder pairs: `insertWebhookEndpoint` / `webhookEndpointAttributes`,
+`insertWebhookDelivery` / `webhookDeliveryAttributes`, `insertImport` / `importAttributes`.
+
+`Wave24IntegrationsSchemaTest` — **6 tests / 31 assertions** verifying table existence, tenant_id ordinality, soft-delete rules, webhook delivery cascading lifecycle, dry-run imports, and cross-tenant reference rejection.
+
+### 4.29 Phase 1 Wave 25 — Deferred Cross-Group FK Closures (1 migration)
+
+Per `DATABASE_DESIGN.md` §16, all deferred circular and forward-referenced foreign keys across earlier migration waves were closed in a single dedicated migration `backend/database/migrations/2026_08_24_122000_wave25_deferred_fk_closure.php`:
+
+1. `employees.salary_structure_id` → `salary_structures(tenant_id, id)` (`SET NULL` on delete)
+2. `material_issue_items.stock_movement_id` → `stock_movements(tenant_id, id)` (`RESTRICT` on delete)
+3. `production_outputs.stock_movement_id` → `stock_movements(tenant_id, id)` (`RESTRICT` on delete)
+4. `qc_inspections.goods_receipt_id` → `goods_receipts(tenant_id, id)` (`RESTRICT` on delete)
+5. `wastage_records.stock_movement_id` → `stock_movements(tenant_id, id)` (`RESTRICT` on delete)
+6. `worker_production_entries.payroll_period_id` → `payroll_periods(tenant_id, id)` (`RESTRICT` on delete)
+7. `run_sheets.vehicle_id` → `assets(tenant_id, id)` (`RESTRICT` on delete)
+8. `cod_reconciliations.bank_account_id` → `bank_accounts(tenant_id, id)` (`RESTRICT` on delete)
+9. `asset_depreciation_entries.journal_entry_id` → `journal_entries(tenant_id, id)` (`RESTRICT` on delete)
+
+`Wave25DeferredClosureSchemaTest` — **9 tests / 18 assertions** asserting that every single deferred foreign key strictly enforces composite `(tenant_id, parent_id)` referential integrity and rejects cross-tenant references across all 9 domain boundaries.
+
+Verified: `migrate:fresh` — all **170 migrations** green ✅ · `pint lint:fix` **PASS** ·
+`phpstan analyse` level 9 **[OK] No errors** · `artisan test`
+**467 passed / 2465 assertions**, none risky. Per-suite re-measured:
+Wave 1 **11 tests** (547 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**,
+Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Wave 17 **14**, Wave 18 **18**, Wave 19 **18**, Wave 20 **12**, Wave 21 **14**, Wave 22 **14**, Wave 23 **14**, Wave 24 **6**, Wave 25 **9**, Tenancy runtime **3**, Unit+Example **2**.
+
 ---
 
 ## 5. Dependency state — reconciled
@@ -1502,7 +1539,9 @@ Q3, it stops and asks (`TASK_PROTOCOL.md` §3.2).
 | 45 | Phase 1 **Wave 21 — Finance & Costing**, per `DATABASE_DESIGN.md` §16: `chart_of_accounts`, `journal_entries`, `journal_lines`, `expense_categories`, `bank_accounts`, `expenses`, `bank_transactions`, `payment_terms`, `party_credit_limits`, `product_costs`, `production_cost_allocations`. See §4.25. | ✅ |
 | 46 | Phase 1 **Wave 22 — Reporting & Analytics**, per `DATABASE_DESIGN.md` §16: `report_definitions`, `report_saved_views`, `report_schedules`, `report_exports`, `dashboard_widgets`, `summary_*` tables. See §4.26. | ✅ |
 | 47 | Phase 1 **Wave 23 — E-commerce**, per `DATABASE_DESIGN.md` §16: `storefronts`, `storefront_pages`, `storefront_products`, `carts`, `cart_items`, `coupons`, `coupon_redemptions`, `shipping_zones`, `product_reviews`, `wishlists`. See §4.27. | ✅ |
-| 48 | Phase 1 **Wave 24 — Integrations**, per `DATABASE_DESIGN.md` §16: `webhook_endpoints`, `webhook_deliveries`, `imports`. | ⬜ |
+| 48 | Phase 1 **Wave 24 — Integrations**, per `DATABASE_DESIGN.md` §16: `webhook_endpoints`, `webhook_deliveries`, `imports`. See §4.28. | ✅ |
+| 49 | Phase 1 **Wave 25 — Deferred Closures**, per `DATABASE_DESIGN.md` §16: closed all 9 cross-group foreign keys. See §4.29. | ✅ |
+| 50 | Phase 1 **Auth & RBAC Implementation**, per `ROADMAP.md` & `MODULE_MAP.md`: Token Service (ADR-004 / ADR-007), Password hashing (Argon2id), RBAC middleware & permission enforcement. | ⬜ |
 
 ---
 
@@ -1510,7 +1549,7 @@ Q3, it stops and asks (`TASK_PROTOCOL.md` §3.2).
 
 Read, in precedence order: `DECISIONS.md` · `PROJECT_CONTEXT.md` ·
 `ARCHITECTURE.md` · `UI_SYSTEM.md` (§2, §7, §8, §9.2, §10.2–10.4, §17, §18) ·
-this file. Phase 0 is complete and Phase 1 is under way: Wave 0 needed no work,
+this file. Phase 0 is complete and Phase 1 database schema is **100% complete**: Wave 0 needed no work,
 **Wave 1 (platform) is done** (§4.6), **Wave 2 (org) is done** (§4.7),
 **Wave 3 (identity) is done** (§4.8), **Wave 4 (infrastructure) is done**
 (§4.9), **the tenancy runtime (§7 item 29) is done**, **Wave 5 (master
@@ -1526,11 +1565,11 @@ stock inventory) is done** (§4.16), **Wave 13 (stock operations) is done**
 **Wave 19 (full HR & payroll) is done** (§4.23),
 **Wave 20 (assets & maintenance) is done** (§4.24),
 **Wave 21 (finance & costing) is done** (§4.25),
-**Wave 22 (reporting & analytics) is done** (§4.26), and
-**Wave 23 (e-commerce) is done** (§4.27) — `storefronts`,
-`storefront_pages`, `storefront_products`, `carts`, `cart_items`,
-`coupons`, `coupon_redemptions`, `shipping_zones`, `product_reviews`, `wishlists`.
-Start at **§7 item 48 — Wave 24 (Integrations)**, per `DATABASE_DESIGN.md` §16.
+**Wave 22 (reporting & analytics) is done** (§4.26),
+**Wave 23 (e-commerce) is done** (§4.27),
+**Wave 24 (integrations) is done** (§4.28), and
+**Wave 25 (deferred closures) is done** (§4.29) — all 169 tables and 170 migrations.
+Start at **§7 item 50 — Auth & RBAC Implementation**, per `MODULE_MAP.md` & `ARCHITECTURE.md`.
 
 
 These constraints are already settled. Do not re-derive them, and do not
@@ -1607,6 +1646,8 @@ contradict them:
 | 2026-08-24 | **Phase 1 Wave 21 (Finance & Costing) written and verified.** Eleven migrations: `chart_of_accounts`, `journal_entries`, `journal_lines`, `expense_categories`, `bank_accounts`, `expenses`, `bank_transactions`, `payment_terms`, `party_credit_limits`, `product_costs`, `production_cost_allocations` (`117000`–`118000`). Detailed per-table in **§4.25**. Chart of accounts leaf/group structure, general ledger with balanced debit/credit invariant, hard-cascading journal lines, expense category hierarchy, company cash/bank accounts with derived balance cache over immutable append-only bank transaction ledger, paired inter-account transfer links (`related_transaction_id`), commercial credit terms, customer credit limit risk bounds, and time-sliced unit product costing and batch overhead allocation ledgers. `SchemaTestCase` gained eleven fixture builder pairs. `Wave21FinanceSchemaTest` — **14 tests / 85 assertions**. Verified: `migrate:fresh` ✅ (142 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **424 passed / 2137 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (361 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Wave 17 **14**, Wave 18 **18**, Wave 19 **18**, Wave 20 **12**, Wave 21 **14**, Tenancy runtime **3**, Unit+Example **2**. §7 item 45 complete. Next: §7 item 46 — Wave 22 (Reporting & Analytics). |
 | 2026-08-24 | **Phase 1 Wave 22 (Reporting & Analytics) written and verified.** Fourteen migrations: `report_definitions`, `report_saved_views`, `report_schedules`, `report_exports`, `dashboard_widgets`, `summary_daily_production`, `summary_daily_worker_output`, `summary_daily_sales`, `summary_daily_stock`, `summary_daily_delivery`, `summary_monthly_finance`, `summary_monthly_payroll`, `summary_product_margin`, `summary_taxes` (`119000`–`119580`). Detailed per-table in **§4.26**. RMS registry architecture with platform/tenant definition scoping, custom saved filter/column views, automated digest schedules, asynchronous export queuing, dashboard grid layouts, and Tier 2 rebuildable materialized summary tables across production, workforce, sales, inventory, logistics, finance, payroll, margin, and tax domains with `refreshed_at` freshness timestamps. `SchemaTestCase` gained 14 fixture builder pairs. `Wave22ReportingSchemaTest` — **14 tests / 111 assertions**. Verified: `migrate:fresh` ✅ (156 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **438 passed / 2290 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (403 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Wave 17 **14**, Wave 18 **18**, Wave 19 **18**, Wave 20 **12**, Wave 21 **14**, Wave 22 **14**, Tenancy runtime **3**, Unit+Example **2**. §7 item 46 complete. Next: §7 item 47 — Wave 23 (E-commerce). |
 | 2026-08-24 | **Phase 1 Wave 23 (E-commerce) written and verified.** Ten migrations: `storefronts`, `storefront_pages`, `storefront_products`, `carts`, `cart_items`, `coupons`, `coupon_redemptions`, `shipping_zones`, `product_reviews`, `wishlists` (`120000`–`120900`). Detailed per-table in **§4.27**. Storefront channel over unified sales core (ADR-016), landing/content pages, merchandising catalog overrides with variant sentinels, shopping carts with non-reserving add-to-cart invariant and stale price re-resolution, promo coupon codes with order redemption ledger, shipping zone rule engine with rate calculation and fallback catch-all indexing, moderated customer reviews (pending by default) linked to verified orders, and customer wishlists. `SchemaTestCase` gained ten fixture builder pairs. `Wave23EcommerceSchemaTest` — **14 tests / 84 assertions**. Verified: `migrate:fresh` ✅ (166 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **452 passed / 2404 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (535 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Wave 17 **14**, Wave 18 **18**, Wave 19 **18**, Wave 20 **12**, Wave 21 **14**, Wave 22 **14**, Wave 23 **14**, Tenancy runtime **3**, Unit+Example **2**. §7 item 47 complete. Next: §7 item 48 — Wave 24 (Integrations). |
+| 2026-08-24 | **Phase 1 Wave 24 (Integrations) written and verified.** Three migrations: `webhook_endpoints`, `webhook_deliveries`, `imports` (`121000`–`121200`). Detailed per-table in **§4.28**. Outbound event webhooks with automatic circuit breaker on consecutive failures, immutable append-only webhook delivery attempt logs with async retry queue indexing, and bulk import jobs supporting simulation dry runs and error report spreadsheet paths. `SchemaTestCase` gained three fixture builder pairs. `Wave24IntegrationsSchemaTest` — **6 tests / 31 assertions**. Verified: `migrate:fresh` ✅ (169 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **458 passed / 2444 assertions**, none risky. §7 item 48 complete. Next: §7 item 49 — Wave 25 (Deferred Closures). |
+| 2026-08-24 | **Phase 1 Wave 25 (Deferred Cross-Group FK Closures) written and verified — All 25 Migration Waves 100% complete!** One migration: `wave25_deferred_fk_closure` (`122000`). Detailed in **§4.29**. Closed all 9 cross-group and forward-referenced foreign keys: `employees.salary_structure_id`, `material_issue_items.stock_movement_id`, `production_outputs.stock_movement_id`, `qc_inspections.goods_receipt_id`, `wastage_records.stock_movement_id`, `worker_production_entries.payroll_period_id`, `run_sheets.vehicle_id`, `cod_reconciliations.bank_account_id`, `asset_depreciation_entries.journal_entry_id`. `Wave25DeferredClosureSchemaTest` — **9 tests / 18 assertions** confirming composite `(tenant_id, parent_id)` foreign keys are strictly enforced and cross-tenant references rejected across all 9 domain boundaries. Verified: `migrate:fresh` — all **170 migrations** green ✅ · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **467 passed / 2465 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (547 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Wave 17 **14**, Wave 18 **18**, Wave 19 **18**, Wave 20 **12**, Wave 21 **14**, Wave 22 **14**, Wave 23 **14**, Wave 24 **6**, Wave 25 **9**, Tenancy runtime **3**, Unit+Example **2**. §7 item 49 complete. The **entire database schema (169 tables, 170 migrations)** is fully built, migrated, and verified. Next: §7 item 50 — Auth & RBAC Implementation. |
 
 
 
