@@ -4,7 +4,7 @@
 > in the repository — not what is planned. Update it in the same change as the
 > code.
 >
-> **Last updated:** 2026-08-23
+> **Last updated:** 2026-08-24
 
 ---
 
@@ -31,18 +31,18 @@ artefacts (`MODULE_MAP.md` §6), not a follow-up.
 
 | | |
 |---|---|
-| **Current phase** | Phase 1 — 🔄 **in progress.** Migration Waves 1 (platform), 2 (org), 3 (identity), 4 (infrastructure) and the tenancy runtime (§7 item 29) complete; Waves 5+, auth and RBAC outstanding. |
+| **Current phase** | Phase 1 — 🔄 **in progress.** Migration Waves 1–7 and the tenancy runtime (§7 item 29) complete; Waves 8+, auth and RBAC outstanding. |
 | **Phase 0 status** | ✅ Documentation complete (7 canonical + 5 supporting = 12 documents) · ✅ Monorepo restructure · ✅ Dependency reconciliation · ✅ Token cascade · ✅ UI primitive hardening · ✅ §8 state-matrix primitives · ✅ Tooling config files (frontend **and** backend) · ✅ Test suites · ✅ CI — **every gate verified green, see §3.4** |
-| **Next phase** | Phase 1 continues at **§7 item 30 — migration Wave 5 (master data A)**, per `DATABASE_DESIGN.md` §16: `units`, `unit_conversions`, `categories`, `brands`, `tax_profiles`, `reason_codes`. |
-| **Backend** | 🔄 Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Wave 1 platform (§4.6), Wave 2 org (§4.7), Wave 3 identity (§4.8) and Wave 4 infrastructure (§4.9) migrations written and verified, and the tenancy runtime (§7 item 29) is live** — `app/Core`, `BelongsToTenant`, `ResolveTenant` and the three route files all exist. Still absent: `app/Modules`, `app/Support`, and every model, Action and endpoint. |
+| **Next phase** | Phase 1 continues at **§7 item 33 — migration Wave 8**, per `DATABASE_DESIGN.md` §16. |
+| **Backend** | 🔄 Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–7 migrations written and verified, and the tenancy runtime (§7 item 29) is live** — `app/Core`, `BelongsToTenant`, `ResolveTenant` and the three route files all exist. Still absent: `app/Modules`, `app/Support`, and every model, Action and endpoint. |
 | **Frontend** | ✅ `/frontend`. Token cascade, boot loader, all 9 UI primitives rebuilt, tooling configured, §8 state-matrix primitives complete (errors, logger, StateView, QueryBoundary, AsyncButton, Toast, LogInspector, four-level ErrorBoundary), and the single transport seam wired (`lib/api/client.ts` + `lib/api/queryClient.ts` + `QueryClientProvider`). See §4. |
-| **Database** | 🔄 Designed (159 tables). **24 of them exist** — Wave 1 platform (§4.6), Wave 2 org (§4.7), Wave 3 identity (§4.8: six new tables plus `users` finalised into its designed form) and Wave 4 infrastructure (§4.9). Waves 5–25 unwritten. |
-| **Tests** | 🔄 Real, but foundation-only. Frontend **128 tests across 7 files**, all passing, covering the reliability layer (`ErrorBoundary`, `StateView`, `QueryBoundary`, `AsyncButton`, `logger`, `api/errors`, `api/queryClient`). Backend **80 tests / 324 assertions** — the PHP-floor guard, Wave 1–4 schema contracts, and Tenancy runtime contracts. |
+| **Database** | 🔄 Designed (159 tables). **48 of them exist** — Waves 1–7: platform (§4.6), org (§4.7), identity (§4.8), infrastructure (§4.9), master data A (§4.10), master data B (§4.11), master data C (§4.12). Waves 8–25 unwritten. |
+| **Tests** | 🔄 Real, but foundation-only. Frontend **128 tests across 7 files**, all passing, covering the reliability layer (`ErrorBoundary`, `StateView`, `QueryBoundary`, `AsyncButton`, `logger`, `api/errors`, `api/queryClient`). Backend **166 tests / 745 assertions** — the PHP-floor guard, Wave 1–7 schema contracts, and Tenancy runtime contracts. |
 | **CI** | ✅ `.github/workflows/ci.yml` — 3 jobs, 9 legs. Frontend matrix (lint · typecheck · test · depcruise · format:check) installing at the **repository root**, build + bundle budget with a `dist` artifact, and a backend matrix (lint · analyse · test) on PHP 8.5. Every leg has a locally reproducible equivalent. |
 
 **The most important thing to know:** this project still has **no feature code and
 no business logic**. What exists is a design-system foundation, two framework
-skeletons, and twenty-four tables with no models, no Actions and no endpoints over
+skeletons, and forty-eight tables with no models, no Actions and no endpoints over
 them. No route, no screen. Any statement that a feature "works" is false.
 
 ---
@@ -52,7 +52,7 @@ them. No route, no screen. Any statement that a feature "works" is false.
 | Phase | Scope | Status |
 |---|---|---|
 | **0** | Architecture & documentation | ✅ See §3 |
-| **1** | Auth · Tenancy · RBAC · Design System | 🔄 Migration Waves 1 (§4.6), 2 (§4.7), 3 (§4.8), 4 (§4.9) and Tenancy Runtime (§7 item 29) done. Waves 5+, auth, RBAC outstanding |
+| **1** | Auth · Tenancy · RBAC · Design System | 🔄 Migration Waves 1–7 and Tenancy Runtime (§7 item 29) done. Waves 8+, auth, RBAC outstanding |
 | **2** | Master data · Products · Warehouses | ⬜ Not started |
 | **3** | Production · Worker Production · QC | ⬜ Not started |
 | **4** | Purchase · Inventory | ⬜ Not started |
@@ -237,16 +237,18 @@ migrations, `routes/web.php`, `routes/console.php`.
 `routes/api_public.php` · `routes/api_platform.php` · `routes/api_tenant.php` wired
 through `bootstrap/app.php`. Migrations are present too — the six Wave 1 platform
 tables (§4.6), four Wave 2 org tables (§4.7), seven Wave 3 identity tables (§4.8),
-seven Wave 4 infrastructure tables (§4.9), and six Wave 5 master data A tables
-plus the deferred FK closure (§4.10) exist and are verified.
+seven Wave 4 infrastructure tables (§4.9), six Wave 5 master data A tables
+plus the deferred FK closure (§4.10), five Wave 6 master data B tables (§4.11),
+and nine Wave 7 master data C files (§4.12, including the deferred FK closure)
+exist and are verified.
 
 **Absent — the rest of Phase 1:** `app/Modules`, `app/Support`, and every model,
-Action and endpoint over the twenty-four tables. The three route files exist but
+Action and endpoint over the forty-eight tables. The three route files exist but
 register no routes yet.
 
 ### 4.5 Test coverage
 
-128 frontend tests over 7 files; **103 backend tests / 456 assertions**. Frontend
+128 frontend tests over 7 files; **166 backend tests / 745 assertions**. Frontend
 tests sit beside the code they cover (`vitest.config.ts`
 `include: ['src/**/*.{test,spec}.{ts,tsx}']`); backend schema contracts live in
 `tests/Feature/Database/` and the tenancy-runtime contract in
@@ -272,6 +274,7 @@ bans in the UI. If this repository ever has no tests, the gate should go red.
 | `tests/Feature/Database/Wave3IdentitySchemaTest.php` | 20 | Wave 3's identity contract, where a schema defect is a privilege escalation rather than a reporting error: email unique per tenant and reusable across tenants, role slugs scoped, grants cascading, tokens pruning down their rotation chain — and one test that pins a **hole** rather than a guarantee (§4.8). |
 | `tests/Feature/Database/Wave4InfraSchemaTest.php` | 27 | Wave 4's infrastructure contract, and the first wave whose decisions live in **omitted** columns: an audit row outliving its actor, one idempotency key legitimately reused across routes and users, the document-sequence sentinel, and a queued notification distinguishable from a failed one without a `status` column (§4.9). |
 | `tests/Feature/Database/Wave5MasterDataASchemaTest.php` | 23 | Wave 5's Group C master data contract: all six catalogue tables, composite FK isolation for `unit_conversions` and `categories`, the self-referential category tree, DECIMAL precision for factors and rates, and the full `reason_codes` context vocabulary (§4.10). |
+| `tests/Feature/Database/Wave6MasterDataBSchemaTest.php` | 28 | Wave 6's product catalogue contract: five tables, SKU and barcode uniqueness, composite FK isolation on every reference (base unit, category, brand, tax profile, variant→product, image→product/variant, BoM→product/unit, BoM item→BoM/input-product/unit), BoM versioning unique `(tenant_id, product_id, version)`, CASCADE on BoM items, RESTRICT on raw-material products, and DECIMAL(18,4)/DECIMAL(8,4) precision (§4.11). |
 | `tests/Feature/Tenancy/TenancyRuntimeTest.php` | 3 | The tenancy runtime as a *behavioural* contract, not a schema one: layer-5 isolation between two bound tenants, `withoutTenantScope()` emitting its mandatory audit `Log::warning`, and `TenantContext::current()` throwing when nothing is bound (a queue job with no request context). The first assertion over live application code rather than migration metadata (§7 item 29). |
 
 What is **not** covered, and why: there is no feature code, no route, no store
@@ -646,6 +649,117 @@ Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Tenancy runtime **3**, Unit+Example
 
 ---
 
+### 4.11 Migrations — Wave 6 (master data B) complete
+
+Five migrations closing this wave:
+`2026_08_23_103200` … `103600` — the product catalogue and bill-of-materials
+tables.
+
+| Table / Migration | Notes |
+|---|---|
+| `products` | The central catalogue referenced by every downstream wave (ADR-016). SKU unique `(tenant_id, sku)`. Barcode nullable-unique `(tenant_id, barcode)` — two products without a barcode are not duplicates (NULL ≠ NULL). Carries `has_variants`, `is_produced`, `is_purchased` flags. Composite FKs on `base_unit_id`, `purchase_unit_id`, `sales_unit_id` → `units`; `category_id` → `categories`; `brand_id` → `brands`; `tax_profile_id` → `tax_profiles` — all `RESTRICT`. `standard_cost` / `default_sale_price` are `DECIMAL(18,4)`. Soft-deletable master data. |
+| `product_variants` | Child table of `products` for SKU-level size/colour/weight differentiation. SKU unique per tenant `(tenant_id, sku)`. `price_delta DECIMAL(18,4)` (may be negative). Composite FK `(tenant_id, product_id) → products`. Soft-deletable. |
+| `product_images` | Leaf table — images have no independent lifecycle so **no `deleted_at`**. Optional `variant_id` with composite FK `(tenant_id, variant_id) → product_variants`. Composite FK `(tenant_id, product_id) → products`. `RESTRICT` on both. |
+| `bill_of_materials` | Versioned recipe: unique `(tenant_id, product_id, version)` — two BoMs for the same product must use different version strings; two products in the same tenant may each have a version `'1'`. `expected_yield_percentage DECIMAL(8,4)`. No `deleted_at` — lifecycle is managed by `effective_from` / `effective_to` date-range columns plus a `status` column. Composite FK `(tenant_id, product_id)` → `products` and `(tenant_id, output_unit_id)` → `units`. |
+| `bill_of_material_items` | Line-table for BoM ingredient lines. **`CASCADE` on `bill_of_material_id`** — items have no independent meaning and are orphaned the moment their recipe is deleted (the one case `DATABASE_DESIGN.md` §1.3 permits CASCADE). `RESTRICT` on `input_product_id` — a raw-material product that is referenced by any BoM line cannot be deleted. `wastage_allowance_percentage DECIMAL(8,4)`. No `deleted_at`. |
+
+**No new doc corrections in this wave.** The documented schema was implementable
+without amendment.
+
+**Two test-infrastructure defects corrected before any test passed.** (a) The
+initial Wave 6 test called `insertTenant($planArray, ...)` rather than
+`insertTenant($planArray['id'], ...)` — `insertPlan()` returns `array{id, uuid}`,
+not a bare `int`. The correct pattern, established in Wave 5, is
+`$plan = $this->insertPlan(); $t = $this->insertTenant($plan['id'], 'slug')`. (b)
+Three DECIMAL assertions used string equality (`'87.5000'` vs `'87.5'`) — SQLite
+strips trailing zeros from DECIMAL columns on read. The canonical fix, also from
+Wave 5's `assertSame(5.5, (float) $rate)` pattern, is to cast to `float` before
+asserting. The cast still proves precision was not lost: `87.5000` and `87.5`
+are identical as floats, but `87.4999` is not, so a rounding defect still fails.
+
+`Wave6MasterDataBSchemaTest` — **28 tests / 64 assertions** covering: all five
+tables exist, structural `tenant_id` placement, soft-delete presence per documented
+rule (products + variants yes, images + BoM + items no), no float/double/enum, SKU
+uniqueness and barcode nullable-uniqueness, composite FK isolation on every
+foreignid in every table (ten cross-tenant rejection tests), BoM versioning unique
+constraint, BoM item CASCADE on parent-BoM delete, RESTRICT on raw-material
+product delete, and DECIMAL precision for cost, price, yield, wastage and
+price-delta columns.
+
+`SchemaTestCase` gained five fixture builder pairs: `insertProduct` /
+`productAttributes`, `insertProductVariant` / `productVariantAttributes`,
+`insertProductImage` / `productImageAttributes`, `insertBillOfMaterials` /
+`billOfMaterialsAttributes`, `insertBillOfMaterialItem` /
+`billOfMaterialItemAttributes`.
+
+Verified: `migrate:fresh` — all **39 migrations** green ✅ · `pint lint:fix` **PASS**
+(binary operator spacing in `SchemaTestCase` and `Wave6MasterDataBSchemaTest`)
+· `phpstan analyse` level 9 (`--memory-limit=1G`) **[OK] No errors** · `artisan test`
+**131 passed / 535 assertions**, none risky. Per-suite re-measured:
+Wave 1 **11 tests**, Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**,
+Wave 6 **28**, Tenancy runtime **3**, Unit+Example **2**.
+
+---
+
+### 4.12 Migrations — Wave 7 (master data C) complete
+
+Nine migrations closing this wave:
+`2026_08_24_103700` … `104500` — warehouses, locations, parties, contacts, addresses,
+price lists, price list items, discount rules, and a deferred FK closure.
+
+| Table / Migration | Notes |
+|---|---|
+| `warehouses` | Physical storage locations for a tenant. Optional scoping to `company_id`, `branch_id`, `factory_id` via nullable composite FKs — `NULL` = tenant-wide warehouse (MATCH SIMPLE skips the check). Unique `(tenant_id, code)`. `type` VARCHAR(32): `raw_material \| finished_goods \| packaging \| quarantine \| scrap \| transit \| general`. Composite FKs on all three scope columns → RESTRICT. Supporting unique `(tenant_id, id)` enables child composite FKs from `warehouse_locations`, future `stock_balances`, etc. Soft-deletable. |
+| `warehouse_locations` | Named positions within a warehouse (zones, racks, bins). Tree structure via nullable `(tenant_id, parent_id) → warehouse_locations(tenant_id, id)` RESTRICT self-referential FK. Unique `(tenant_id, warehouse_id, code)`. Composite FK `(tenant_id, warehouse_id) → warehouses` RESTRICT. No soft delete — lifecycle managed by `is_active`. |
+| `parties` | Unified external-actor table covering suppliers, customers, dealers, and agents simultaneously via independent role flags (`is_supplier`, `is_customer`, `is_dealer`, `is_agent`). Unique `(tenant_id, code)`. `credit_limit DECIMAL(18,4)`. Composite FK on `tax_profile_id` → `tax_profiles` RESTRICT. FK on `price_list_id` **deferred** to `104500` (price_lists created at `104200`, after this table). Soft-deletable. |
+| `party_addresses` | Structured address rows for courier API integration (Phase 6). Fields: `line1`, `line2`, `area`, `city`, `district`, `postal_code`, `country_code`. Geo columns: `latitude / longitude DECIMAL(10,7)` (~1 cm precision). Composite FK `(tenant_id, party_id) → parties` **CASCADE** — addresses have no independent lifecycle. No soft delete. |
+| `party_contacts` | Individual contact persons for a party. Composite FK `(tenant_id, party_id) → parties` **CASCADE**. No soft delete. |
+| `price_lists` | Named price schedules with `applies_to VARCHAR(32)` (`all \| customer_group \| channel`), optional effective date window, and a `priority` tie-breaker. Unique `(tenant_id, code)`. Supporting `unique (tenant_id, id)` for child composite FKs. Soft-deletable. |
+| `price_list_items` | Quantity-break pricing rows keyed by `(tenant_id, price_list_id, product_id, variant_id, min_quantity)`. `variant_id` nullable — base-product and variant-specific rows coexist (NULL ≠ NULL). **Known hole**: when `variant_id IS NULL` the unique key cannot prevent duplicate base-product rows; application layer must guard. Composite FKs on `price_list_id` → `price_lists`, `product_id` → `products`, and nullable `variant_id` → `product_variants` (MATCH SIMPLE). All RESTRICT. No soft delete. |
+| `discount_rules` | Tenant-configurable discount engine rules. Polymorphic `scope_id` (product/category/party/NULL) — no DB FK possible, application layer enforces. `condition JSON` evaluated by engine. `value DECIMAL(18,4)` covers both percentage and fixed-amount cases. Soft-deletable. |
+| `104500` deferred FK closure | Adds `(tenant_id, price_list_id) → price_lists(tenant_id, id)` RESTRICT to `parties` after `price_lists` exists. Same pattern as Wave 5's `103100` closure. |
+
+**One doc amendment logged.** `parties.price_list_id` creates a circular dependency
+within Wave 7: `parties` (103900) references `price_lists` (104200). This is
+not a circular pair (as in DATABASE_DESIGN §16.1 rule 2's Waves 9 / 25 examples) —
+it is a plain forward reference within the same wave. The resolution is the same:
+deferred closure migration `104500`.
+
+**One schema NULL behaviour hole documented.** The `price_list_items` unique key
+`(tenant_id, price_list_id, product_id, variant_id, min_quantity)` cannot prevent
+duplicate base-product rows when `variant_id IS NULL` because `NULL ≠ NULL`.
+Two tests pin this: one proves the key fires for non-NULL `variant_id`; the other
+proves (and names) the NULL hole so a later reader cannot mistake the key for
+protection it does not provide. Documented the same way as Wave 3's platform-role
+grant hole.
+
+`Wave7MasterDataCSchemaTest` — **30 tests** covering: all 8 tables exist,
+`tenant_id` structural placement, soft-delete presence per table class (master data
+vs. child), no float/double/enum, warehouse code uniqueness, cross-tenant composite
+FK rejection for warehouse scope columns, location tree self-referential RESTRICT,
+party code uniqueness, cross-tenant tax_profile and price_list FK rejection
+(including the deferred 104500 closure), CASCADE on party deletion for addresses
+and contacts, price list code uniqueness, price_list_item unique key (non-NULL
+variant fires; NULL-variant hole documented), cross-tenant price_list_id and
+product_id rejection in items, DECIMAL(18,4) precision for credit_limit,
+unit_price, discount_percentage and discount_rule value, and the deferred FK
+CASCADE-refuse test (deleting a price_list referenced by a party is blocked).
+
+`SchemaTestCase` gained eight fixture builder pairs: `insertWarehouse` /
+`warehouseAttributes`, `insertWarehouseLocation` / `warehouseLocationAttributes`,
+`insertParty` / `partyAttributes`, `insertPartyAddress` / `partyAddressAttributes`,
+`insertPartyContact` / `partyContactAttributes`, `insertPriceList` /
+`priceListAttributes`, `insertPriceListItem` / `priceListItemAttributes`,
+`insertDiscountRule` / `discountRuleAttributes`.
+
+Verified: `migrate:fresh` — all **48 migrations** green ✅ · `pint lint:fix` **PASS** ·
+`phpstan analyse` level 9 **[OK] No errors** · `artisan test`
+**166 passed / 745 assertions**, none risky. Per-suite re-measured:
+Wave 1 **11 tests**, Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**,
+Wave 6 **28**, Wave 7 **30**, Tenancy runtime **3**, Unit+Example **2**.
+
+---
+
 ## 5. Dependency state — reconciled
 
 All 13 gaps recorded on 2026-08-22 are closed. Installed at `frontend/package.json`:
@@ -746,6 +860,9 @@ Q3, it stops and asks (`TASK_PROTOCOL.md` §3.2).
 | 28 | Phase 1 **Wave 4 — infrastructure**: `audit_logs`, `idempotency_keys`, `attachments`, `notifications`, `notification_preferences`, `document_sequences`, `activity_snapshots`, plus `Wave4InfraSchemaTest`. Four findings, one of them a precedence-rank-4 tie escalated and resolved against `DATABASE_DESIGN.md` §3 — see §4.9. `document_sequences` scope resolution remains open question **Q3**, which blocks the Phase 5 allocator but not the table | ✅ |
 | 29 | **Tenancy runtime** — `app/Core` (`TenantContext`, tenancy exceptions, the `Action` base contract), the `BelongsToTenant` trait (global scope + `creating` hook stamping the guarded `tenant_id` + logged `withoutTenantScope`), `ResolveTenant`, `CorrelationId`, `EnsureTenantActive`, centralized error mapping, JWT `api` guard, and `routes/api_platform.php` · `api_tenant.php` · `api_public.php` wired through `bootstrap/app.php`. Tests: `TenancyRuntimeTest` (3 tests / 8 assertions). | ✅ |
 | 30 | Phase 1 **Wave 5 — master data A**, per `DATABASE_DESIGN.md` §16: `units`, `unit_conversions`, `categories`, `brands`, `tax_profiles`, `reason_codes`. Note `units` is the deferred forward reference `production_lines.capacity_unit_id` waits on (§16.1 rule 2, closed in **Wave 5** — the index is already pre-created, so the closure is an `ADD` composite FK, not an `ALTER` of the column) | ✅ |
+| 31 | Phase 1 **Wave 6 — master data B**, per `DATABASE_DESIGN.md` §16: `products`, `product_variants`, `product_images`, `bill_of_materials`, `bill_of_material_items`. First wave with a CASCADE delete rule (BoM items) and the first with versioned master data (BoM unique per product+version). See §4.11. | ✅ |
+| 32 | Phase 1 **Wave 7 — master data C**, per `DATABASE_DESIGN.md` §16: `warehouses`, `warehouse_locations`, `parties`, `party_addresses`, `party_contacts`, `price_lists`, `price_list_items`, `discount_rules`. First wave with a within-wave deferred FK closure (`parties → price_lists`). Unique-key NULL hole documented for `price_list_items.variant_id`. See §4.12. | ✅ |
+| 33 | Phase 1 **Wave 8**, per `DATABASE_DESIGN.md` §16. | ⬜ |
 
 ---
 
@@ -756,11 +873,15 @@ Read, in precedence order: `DECISIONS.md` · `PROJECT_CONTEXT.md` ·
 this file. Phase 0 is complete and Phase 1 is under way: Wave 0 needed no work,
 **Wave 1 (platform) is done** (§4.6), **Wave 2 (org) is done** (§4.7),
 **Wave 3 (identity) is done** (§4.8), **Wave 4 (infrastructure) is done**
-(§4.9), **the tenancy runtime (§7 item 29) is done**, and **Wave 5 (master
+(§4.9), **the tenancy runtime (§7 item 29) is done**, **Wave 5 (master
 data A) is done** (§4.10) — `units`, `unit_conversions`, `categories`, `brands`,
 `tax_profiles`, `reason_codes`, plus the deferred `production_lines.capacity_unit_id`
-FK closure. Start at **§7 item 31 — Wave 6 (master data B)**, per
-`DATABASE_DESIGN.md` §16.
+FK closure — **Wave 6 (master data B) is done** (§4.11) — `products`,
+`product_variants`, `product_images`, `bill_of_materials`, `bill_of_material_items`
+— and **Wave 7 (master data C) is done** (§4.12) — `warehouses`, `warehouse_locations`,
+`parties`, `party_addresses`, `party_contacts`, `price_lists`, `price_list_items`,
+`discount_rules`, plus the deferred `parties → price_lists` FK closure.
+Start at **§7 item 33 — Wave 8**, per `DATABASE_DESIGN.md` §16.
 
 
 These constraints are already settled. Do not re-derive them, and do not
@@ -821,4 +942,5 @@ contradict them:
 | 2026-08-23 | **Tenancy runtime (§7 item 29) written, verified, and passing all quality gates.** All 7 steps in the fixed build order delivered: (1) `app/Core/Tenancy/TenantContext.php` (request-scoped singleton with explicit `bind`, `current`, `isBound`, `flush`, and whole-tenant vs branch/factory/warehouse scope checks), `app/Core/Tenancy/Exceptions/` (`TenantSuspended`, `OutOfScope`, `TenantMismatch`), and `app/Core/Actions/Action.php` base contract wrapping logic in `DB::transaction()`; (2) `app/Core/Tenancy/Concerns/BelongsToTenant.php` trait with global `tenant` scope, `creating` hook stamping guarded `tenant_id`, and `scopeWithoutTenantScope` with mandatory `Log::warning` audit emission; (3) middleware runtime `CorrelationId`, `ResolveTenant` (resolving JWT claim, loading tenant row & scopes, rejecting body tenant_id mismatch with 403 & security log), `EnsureTenantActive` (read-only allowed for `past_due`/`suspended`, mutation rejected with 402 `TENANT_INACTIVE`); (4) centralized exception mapping in `bootstrap/app.php` via `ErrorResponse` formatting into §2.3 envelope for AuthenticationException, ValidationException, ModelNotFoundException, AuthorizationException, tenancy exceptions, and 500 fallback with debug stack gating; (5) `config/auth.php` JWT `api` guard stub; (6) route files `routes/api_public.php`, `routes/api_tenant.php`, `routes/api_platform.php` wired into `bootstrap/app.php`; (7) tests in `tests/Feature/Tenancy/TenancyRuntimeTest.php` proving (a) layer-5 schema isolation between two tenants, (b) `withoutTenantScope()` warning log emission, (c) `TenantContext::current()` unbound throws `RuntimeException`. Verified: `pint --test` **PASS**, `phpstan` level 9 **0 errors**, `artisan test` **80 passed / 324 assertions** (3 new tests / 8 new assertions). §7 item 29 complete. Next: §7 item 30 — Wave 5 Master Data A. |
 | 2026-08-23 | **Truth-up for the tenancy-runtime delivery, and a stale forward-reference wave corrected.** The 2026-08-23 tenancy-runtime delivery entry above had updated §1's phase rows, §2 and the change log, but several surfaces still described the runtime as the *outstanding* next action and still quoted the pre-runtime count. Reconciled to reality against a clean tree at commit `781e4da` with `artisan test` re-run to **80 passed / 324 assertions**: §1 `Current phase` (runtime now listed complete, not outstanding), `Next phase` (now §7 item 30 — Wave 5) and `Backend` (`app/Core`, `BelongsToTenant`, `ResolveTenant` and the three route files listed present; only `app/Modules`/`app/Support` and all feature code absent); §4.4's "Absent — all of Phase 1" list split into a present-runtime block and a narrowed absent block; §4.5's header count `77/316 → 80/324`, a `TenancyRuntimeTest` row (3 tests) added to the suite table, and its closing paragraph de-gated from item 29; §8's resume paragraph re-pointed from item 29 to item 30 with Wave 5's six tables and the Q2 do-not-pre-empt caution. The table count stays **24** — Wave 5 is **not** started, the git tree carries no `1025xx` migration and no `Wave5*` test, so item 30 stays ⬜. One latent error fixed while here: §7 item 30 said `units` closes the `production_lines.capacity_unit_id` forward reference "in Wave 9", but `DATABASE_DESIGN.md` §16.1 rule 2 (and §4's own Wave 2 finding) put the closure in **Wave 5** — Waves 9/25 are for *circular* pairs, and a plain forward reference has no separate closure wave. Corrected to Wave 5, noting the index is already pre-created so the closure is a new `ADD` composite-FK migration, not an `ALTER`. No code changed; docs only. |
 | 2026-08-24 | **Phase 1 Wave 5 (master data A) written and verified — the first wave where the schema as documented was implementable without amendment.** Seven migrations: `units`, `unit_conversions`, `categories`, `brands`, `tax_profiles`, `reason_codes` (migrations `102500`–`103000`), and `103100` closing the deferred `production_lines.capacity_unit_id` FK from Wave 2. Detailed per-table in **§4.10**. All six tables are tenant-scoped leaf catalogues (`unique (tenant_id, id)` on each so child tables can declare composite FKs) with `RESTRICT` deletes. `unit_conversions` has composite FKs on **both** `from_unit_id` and `to_unit_id` — a test proves each side independently rejects a cross-tenant unit, because a one-sided test would pass on a table that only checks one column. `categories` is self-referential: `(tenant_id, parent_id) → categories(tenant_id, id)` with `RESTRICT`, and MATCH SIMPLE means a `NULL parent_id` root is not checked (correct semantics). `tax_profiles.rate` is `DECIMAL(8,4)`, type is `VARCHAR(32)` (not ENUM) — open question Q2 is still open and both `inclusive` and `exclusive` must insert, proved by test. `reason_codes` context vocabulary (`qc_defect` \| `wastage` \| `stock_adjustment` \| `sales_return` \| `purchase_return` \| `cancellation` \| `rework`) is similarly left as `VARCHAR(32)` rather than locked by an ENUM. The deferred FK closure (`103100`) required no column `ALTER` because the index `ix_production_lines_tenant_capacity_unit` was pre-created in Wave 2; only the `ADD FOREIGN KEY` was needed. The Wave 2 placeholder test `test_the_deferred_capacity_unit_foreign_key_is_still_owed` was replaced in `Wave2OrgSchemaTest` by a live enforcement test proving a cross-tenant `capacity_unit_id` is rejected. **One defect in the test, caught before green:** `reason_codes` was initially classified as a leaf table (no `softDeletes`) when it is in fact tenant-configurable catalogue data that must be deactivatable without breaking historical references. Corrected before the suite was declared green. `SchemaTestCase` gained twelve new methods (six insert/attributes pairs). `Wave5MasterDataASchemaTest` — **23 tests**. Verified: `migrate:fresh` ✅ (34 migrations) · `pint lint:fix` **PASS** · `phpstan` level 9 **[OK] No errors** · `artisan test` **103 passed / 456 assertions**, none risky. §7 item 30 complete. Next: §7 item 31 — Wave 6 (master data B). |
-
+| 2026-08-24 | **Phase 1 Wave 6 (master data B) written and verified — the structurally richest wave so far, with the first CASCADE rule and the first versioned master-data table.** Five migrations: `products`, `product_variants`, `product_images`, `bill_of_materials`, `bill_of_material_items` (`103200`–`103600`). Detailed per-table in **§4.11**. `products` is the central catalogue ADR-016 designates as the single source of truth for every downstream wave; it carries six composite FKs (base/purchase/sales unit, category, brand, tax profile), all `RESTRICT`. `product_variants` adds SKU-level differentiation and a `price_delta DECIMAL(18,4)` for variant pricing. `product_images` is the first leaf table with no `deleted_at` — images have no independent lifecycle. `bill_of_materials` introduces the wave's first versioning constraint: `unique (tenant_id, product_id, version)` means two BoMs for one product need different version strings but two products may each claim version `'1'`. `bill_of_material_items` introduces the wave's first `CASCADE` delete: items are orphaned the moment their recipe is deleted and carry no independent meaning, which is the one case `DATABASE_DESIGN.md` §1.3 permits CASCADE; `input_product_id` remains `RESTRICT` because a raw-material product that feeds a BoM must not be silently deleted. **No schema corrections required** — the DATABASE_DESIGN.md §4 Group C spec was implementable without amendment. **Two test-infrastructure defects caught and corrected.** (a) `insertTenant()` was called with the raw array returned by `insertPlan()` rather than `insertPlan()['id']`. `insertPlan()` returns `array{id: int, uuid: string}` — the correct pattern, established in Wave 5, is `$plan = $this->insertPlan(); $t = $this->insertTenant($plan['id'], 'slug')`. All multi-tenant tests (Wave 6 uses 12 two-tenant isolation tests) applied the fix. (b) Three DECIMAL precision assertions used strict string equality (`assertSame('87.5000', ...)`) while SQLite strips trailing zeros on read, returning `'87.5'`. The canonical fix from Wave 5's `assertSame(5.5, (float) $rate)` pattern is to cast to `float` before asserting: the cast proves the value round-tripped without precision loss (`87.5000 == 87.5` as float, but `87.4999 != 87.5`), so a rounding defect still fails. `SchemaTestCase` gained five fixture builder pairs. `Wave6MasterDataBSchemaTest` — **28 tests / 64 assertions**. Verified: `migrate:fresh` ✅ (39 migrations) · `pint lint:fix` **PASS** (binary operator spacing) · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **131 passed / 535 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests**, Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Tenancy runtime **3**, Unit+Example **2**. |
+| 2026-08-24 | **Phase 1 Wave 7 (master data C) written and verified — first wave with an intra-wave deferred FK closure and a documented unique-key NULL hole.** Nine migrations: `warehouses`, `warehouse_locations`, `parties`, `party_addresses`, `party_contacts`, `price_lists`, `price_list_items`, `discount_rules` (`103700`–`104400`), and `104500` deferred FK closure. Detailed per-table in **§4.12**. `warehouses` has nullable composite FKs on `company_id`, `branch_id`, `factory_id` (all MATCH SIMPLE, RESTRICT) — a `NULL` scope column means tenant-wide warehouse. `warehouse_locations` is self-referential: `(tenant_id, parent_id) → warehouse_locations(tenant_id, id)` RESTRICT, same NULL-root pattern as Wave 5's `categories`. `parties` unifies suppliers, customers, dealers, agents into one row with independent boolean flags — no role occupies two rows. `party_addresses` and `party_contacts` both use **CASCADE** (child rows have no independent lifecycle). `price_lists` created at `104200` after `parties` at `103900`; the `parties.price_list_id` composite FK was therefore deferred to the `104500` closure migration — same resolution as Wave 5's `103100` but intra-wave. **Unique-key NULL hole documented:** the `price_list_items` key `(tenant_id, price_list_id, product_id, variant_id, min_quantity)` cannot prevent duplicates when `variant_id IS NULL` because `NULL ≠ NULL`; application layer must guard; two tests pin the behaviour. **One failing test corrected before green:** initial test assumed the NULL-variant duplicate would be rejected by the DB — it is not; split into a non-NULL-fires test and a NULL-hole pin test. `SchemaTestCase` gained eight fixture builder pairs. `Wave7MasterDataCSchemaTest` — **30 tests**. Verified: `migrate:fresh` ✅ (48 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **166 passed / 745 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests**, Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Tenancy runtime **3**, Unit+Example **2**. §7 item 32 complete. Next: §7 item 33 — Wave 8. |

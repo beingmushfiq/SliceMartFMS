@@ -587,6 +587,171 @@ abstract class SchemaTestCase extends TestCase
         ];
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Wave 6 fixtures — master data B
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A product (Wave 6). Requires a `tenant_id` and a `base_unit_id` from the
+     * same tenant. All nullable FK columns default to `null`.
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertProduct(int $tenantId, int $baseUnitId, array $overrides = []): int
+    {
+        return DB::table('products')->insertGetId($this->productAttributes($tenantId, $baseUnitId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function productAttributes(int $tenantId, int $baseUnitId, array $overrides = []): array
+    {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'sku' => 'SKU-001',
+            'name' => 'Test Product',
+            'type' => 'finished',
+            'base_unit_id' => $baseUnitId,
+            'is_produced' => 1,
+            'is_purchased' => 0,
+            'is_sold' => 1,
+            'is_stock_tracked' => 1,
+            'has_variants' => 0,
+            'tracking_mode' => 'none',
+            'standard_cost' => '0.0000',
+            'default_sale_price' => '0.0000',
+            'status' => 'active',
+        ];
+    }
+
+    /**
+     * A product variant (Wave 6). Requires a `tenant_id` and `product_id`.
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertProductVariant(int $tenantId, int $productId, array $overrides = []): int
+    {
+        return DB::table('product_variants')
+            ->insertGetId($this->productVariantAttributes($tenantId, $productId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function productVariantAttributes(int $tenantId, int $productId, array $overrides = []): array
+    {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'product_id' => $productId,
+            'sku' => 'SKU-001-RED-XL',
+            'attributes' => '{"colour":"red","size":"XL"}',
+            'price_delta' => '0.0000',
+            'is_active' => 1,
+        ];
+    }
+
+    /**
+     * A product image (Wave 6). Requires a `tenant_id` and `product_id`.
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertProductImage(int $tenantId, int $productId, array $overrides = []): int
+    {
+        return DB::table('product_images')
+            ->insertGetId($this->productImageAttributes($tenantId, $productId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function productImageAttributes(int $tenantId, int $productId, array $overrides = []): array
+    {
+        return $overrides + [
+            'tenant_id' => $tenantId,
+            'product_id' => $productId,
+            'path' => 'tenants/1/products/image.webp',
+            'sort_order' => 0,
+            'is_primary' => 1,
+        ];
+    }
+
+    /**
+     * A bill of materials (Wave 6). Requires a `tenant_id`, `product_id` (the
+     * output product), and `output_unit_id`.
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertBillOfMaterials(int $tenantId, int $productId, int $outputUnitId, array $overrides = []): int
+    {
+        return DB::table('bill_of_materials')
+            ->insertGetId($this->billOfMaterialsAttributes($tenantId, $productId, $outputUnitId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function billOfMaterialsAttributes(int $tenantId, int $productId, int $outputUnitId, array $overrides = []): array
+    {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'product_id' => $productId,
+            'version' => '1',
+            'name' => 'Standard Recipe v1',
+            'output_quantity' => '1.0000',
+            'output_unit_id' => $outputUnitId,
+            'expected_yield_percentage' => '100.0000',
+            'status' => 'active',
+        ];
+    }
+
+    /**
+     * A bill of materials item (Wave 6). Requires a `tenant_id`,
+     * `bill_of_material_id`, `product_id` (the input material), and `unit_id`.
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertBillOfMaterialItem(
+        int $tenantId,
+        int $bomId,
+        int $productId,
+        int $unitId,
+        array $overrides = [],
+    ): int {
+        return DB::table('bill_of_material_items')
+            ->insertGetId($this->billOfMaterialItemAttributes($tenantId, $bomId, $productId, $unitId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function billOfMaterialItemAttributes(
+        int $tenantId,
+        int $bomId,
+        int $productId,
+        int $unitId,
+        array $overrides = [],
+    ): array {
+        return $overrides + [
+            'tenant_id' => $tenantId,
+            'bill_of_material_id' => $bomId,
+            'product_id' => $productId,
+            'quantity' => '1.0000',
+            'unit_id' => $unitId,
+            'wastage_allowance_percentage' => '0.0000',
+            'is_optional' => 0,
+            'sort_order' => 0,
+        ];
+    }
+
     /**
      * Read one column from one row, narrowed to a string.
      *
@@ -683,6 +848,256 @@ abstract class SchemaTestCase extends TestCase
         }
 
         self::fail($message);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Wave 7 fixtures — master data C
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A warehouse (Wave 7). Scope columns (company_id, branch_id, factory_id)
+     * default to null — a tenant-wide warehouse.
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertWarehouse(int $tenantId, array $overrides = []): int
+    {
+        return DB::table('warehouses')->insertGetId($this->warehouseAttributes($tenantId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function warehouseAttributes(int $tenantId, array $overrides = []): array
+    {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'company_id' => null,
+            'branch_id' => null,
+            'factory_id' => null,
+            'code' => 'WH-MAIN',
+            'name' => 'Main Warehouse',
+            'type' => 'finished_goods',
+            'is_default' => 0,
+            'allows_negative_stock' => 0,
+            'is_active' => 1,
+        ];
+    }
+
+    /**
+     * A warehouse location (Wave 7). `parent_id => null` creates a root
+     * location (e.g. a zone).
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertWarehouseLocation(int $tenantId, int $warehouseId, array $overrides = []): int
+    {
+        return DB::table('warehouse_locations')
+            ->insertGetId($this->warehouseLocationAttributes($tenantId, $warehouseId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function warehouseLocationAttributes(int $tenantId, int $warehouseId, array $overrides = []): array
+    {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'warehouse_id' => $warehouseId,
+            'parent_id' => null,
+            'code' => 'ZONE-A',
+            'name' => 'Zone A',
+            'type' => 'zone',
+            'is_active' => 1,
+        ];
+    }
+
+    /**
+     * A party (Wave 7). Works as a supplier by default.
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertParty(int $tenantId, array $overrides = []): int
+    {
+        return DB::table('parties')->insertGetId($this->partyAttributes($tenantId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function partyAttributes(int $tenantId, array $overrides = []): array
+    {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'code' => 'SUP-001',
+            'name' => 'Acme Supplies',
+            'is_supplier' => 1,
+            'is_customer' => 0,
+            'is_dealer' => 0,
+            'is_agent' => 0,
+            'type' => 'business',
+            'credit_limit' => '0.0000',
+            'credit_days' => 30,
+            'opening_balance' => '0.0000',
+            'current_balance' => '0.0000',
+            'status' => 'active',
+        ];
+    }
+
+    /**
+     * A party address (Wave 7). Structured fields required by courier APIs.
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertPartyAddress(int $tenantId, int $partyId, array $overrides = []): int
+    {
+        return DB::table('party_addresses')
+            ->insertGetId($this->partyAddressAttributes($tenantId, $partyId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function partyAddressAttributes(int $tenantId, int $partyId, array $overrides = []): array
+    {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'party_id' => $partyId,
+            'type' => 'shipping',
+            'line1' => '123 Factory Road',
+            'city' => 'Dhaka',
+            'country_code' => 'BD',
+            'is_default' => 1,
+        ];
+    }
+
+    /**
+     * A party contact person (Wave 7).
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertPartyContact(int $tenantId, int $partyId, array $overrides = []): int
+    {
+        return DB::table('party_contacts')
+            ->insertGetId($this->partyContactAttributes($tenantId, $partyId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function partyContactAttributes(int $tenantId, int $partyId, array $overrides = []): array
+    {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'party_id' => $partyId,
+            'name' => 'Jane Smith',
+            'is_primary' => 1,
+        ];
+    }
+
+    /**
+     * A price list (Wave 7).
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertPriceList(int $tenantId, array $overrides = []): int
+    {
+        return DB::table('price_lists')->insertGetId($this->priceListAttributes($tenantId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function priceListAttributes(int $tenantId, array $overrides = []): array
+    {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'code' => 'PL-RETAIL',
+            'name' => 'Retail Price List',
+            'currency_code' => 'BDT',
+            'applies_to' => 'all',
+            'priority' => 0,
+            'is_active' => 1,
+        ];
+    }
+
+    /**
+     * A price list item (Wave 7). Requires tenant_id, price_list_id, and
+     * product_id. variant_id defaults to null (base-product pricing).
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertPriceListItem(
+        int $tenantId,
+        int $priceListId,
+        int $productId,
+        array $overrides = [],
+    ): int {
+        return DB::table('price_list_items')
+            ->insertGetId($this->priceListItemAttributes($tenantId, $priceListId, $productId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function priceListItemAttributes(
+        int $tenantId,
+        int $priceListId,
+        int $productId,
+        array $overrides = [],
+    ): array {
+        return $overrides + [
+            'tenant_id' => $tenantId,
+            'price_list_id' => $priceListId,
+            'product_id' => $productId,
+            'variant_id' => null,
+            'min_quantity' => '1.0000',
+            'unit_price' => '100.0000',
+            'discount_percentage' => '0.0000',
+        ];
+    }
+
+    /**
+     * A discount rule (Wave 7). Defaults to an order-level percentage rule.
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertDiscountRule(int $tenantId, array $overrides = []): int
+    {
+        return DB::table('discount_rules')
+            ->insertGetId($this->discountRuleAttributes($tenantId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function discountRuleAttributes(int $tenantId, array $overrides = []): array
+    {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'name' => 'Seasonal 10% Off',
+            'scope' => 'order',
+            'scope_id' => null,
+            'discount_type' => 'percentage',
+            'value' => '10.0000',
+            'priority' => 0,
+            'is_active' => 1,
+        ];
     }
 
     /**
