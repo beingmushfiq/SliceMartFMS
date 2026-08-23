@@ -4528,6 +4528,390 @@ abstract class SchemaTestCase extends TestCase
         ];
     }
 
+    // ─── asset_categories ────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertAssetCategory(
+        int $tenantId,
+        string $code = 'MACHINERY',
+        array $overrides = []
+    ): int {
+        return DB::table('asset_categories')
+            ->insertGetId($this->assetCategoryAttributes($tenantId, $code, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function assetCategoryAttributes(
+        int $tenantId,
+        string $code = 'MACHINERY',
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'code' => $code.'_'.$counter,
+            'name' => 'Asset Category '.$counter,
+            'parent_id' => null,
+            'default_depreciation_method' => 'straight_line',
+            'default_useful_life_months' => 60,
+            'default_salvage_percentage' => '10.0000',
+            'is_active' => true,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── assets ──────────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertAsset(
+        int $tenantId,
+        int $assetCategoryId,
+        int $companyId,
+        int $branchId,
+        array $overrides = []
+    ): int {
+        return DB::table('assets')
+            ->insertGetId($this->assetAttributes($tenantId, $assetCategoryId, $companyId, $branchId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function assetAttributes(
+        int $tenantId,
+        int $assetCategoryId,
+        int $companyId,
+        int $branchId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'asset_code' => 'AST-'.$counter,
+            'asset_tag' => 'TAG-'.$counter,
+            'name' => 'Asset Equipment '.$counter,
+            'asset_category_id' => $assetCategoryId,
+            'company_id' => $companyId,
+            'branch_id' => $branchId,
+            'factory_id' => null,
+            'production_line_id' => null,
+            'warehouse_id' => null,
+            'assigned_employee_id' => null,
+            'serial_number' => 'SN-'.$counter,
+            'manufacturer' => 'Industrial Corp',
+            'model' => 'Model-X',
+            'purchase_date' => '2026-01-01',
+            'purchase_order_id' => null,
+            'supplier_party_id' => null,
+            'purchase_cost' => '100000.0000',
+            'depreciation_method' => 'straight_line',
+            'useful_life_months' => 60,
+            'salvage_value' => '10000.0000',
+            'accumulated_depreciation' => '0.0000',
+            'book_value' => '100000.0000',
+            'warranty_expires_on' => '2028-01-01',
+            'status' => 'idle',
+            'condition' => 'good',
+            'disposal_date' => null,
+            'disposal_amount' => null,
+            'disposal_reason' => null,
+            'notes' => null,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── asset_assignments ───────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertAssetAssignment(
+        int $tenantId,
+        int $assetId,
+        string $assignedToType = 'employee',
+        int $assignedToId = 1,
+        array $overrides = []
+    ): int {
+        return DB::table('asset_assignments')
+            ->insertGetId($this->assetAssignmentAttributes($tenantId, $assetId, $assignedToType, $assignedToId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function assetAssignmentAttributes(
+        int $tenantId,
+        int $assetId,
+        string $assignedToType = 'employee',
+        int $assignedToId = 1,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'asset_id' => $assetId,
+            'assigned_to_type' => $assignedToType,
+            'assigned_to_id' => $assignedToId,
+            'assigned_from' => '2026-08-01',
+            'assigned_to_date' => null,
+            'assigned_by' => null,
+            'returned_at' => null,
+            'condition_on_return' => null,
+            'notes' => null,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── asset_depreciation_entries ──────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertAssetDepreciationEntry(
+        int $tenantId,
+        int $assetId,
+        int $periodYear = 2026,
+        int $periodMonth = 8,
+        array $overrides = []
+    ): int {
+        return DB::table('asset_depreciation_entries')
+            ->insertGetId($this->assetDepreciationEntryAttributes($tenantId, $assetId, $periodYear, $periodMonth, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function assetDepreciationEntryAttributes(
+        int $tenantId,
+        int $assetId,
+        int $periodYear = 2026,
+        int $periodMonth = 8,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'asset_id' => $assetId,
+            'period_year' => $periodYear,
+            'period_month' => $periodMonth,
+            'opening_book_value' => '100000.0000',
+            'depreciation_amount' => '1500.0000',
+            'closing_book_value' => '98500.0000',
+            'journal_entry_id' => null,
+            'posted_at' => '2026-08-24 18:00:00',
+            'created_by' => null,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── maintenance_schedules ───────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertMaintenanceSchedule(
+        int $tenantId,
+        int $assetId,
+        string $code = 'PM-01',
+        array $overrides = []
+    ): int {
+        return DB::table('maintenance_schedules')
+            ->insertGetId($this->maintenanceScheduleAttributes($tenantId, $assetId, $code, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function maintenanceScheduleAttributes(
+        int $tenantId,
+        int $assetId,
+        string $code = 'PM-01',
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'asset_id' => $assetId,
+            'code' => $code.'_'.$counter,
+            'name' => 'Preventive Maintenance '.$counter,
+            'trigger_type' => 'time_interval',
+            'interval_days' => 30,
+            'interval_meter_units' => null,
+            'last_performed_on' => null,
+            'last_meter_reading' => null,
+            'next_due_on' => '2026-09-01',
+            'next_due_meter' => null,
+            'checklist' => json_encode(['check_oil' => true, 'inspect_belts' => true]),
+            'assigned_team' => 'Mechanical',
+            'is_active' => true,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── maintenance_orders ──────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertMaintenanceOrder(
+        int $tenantId,
+        int $assetId,
+        array $overrides = []
+    ): int {
+        return DB::table('maintenance_orders')
+            ->insertGetId($this->maintenanceOrderAttributes($tenantId, $assetId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function maintenanceOrderAttributes(
+        int $tenantId,
+        int $assetId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'order_number' => 'MO-'.$counter,
+            'asset_id' => $assetId,
+            'maintenance_schedule_id' => null,
+            'maintenance_type' => 'preventive',
+            'priority' => 'normal',
+            'reported_by' => null,
+            'reported_at' => '2026-08-24 10:00:00',
+            'problem_description' => 'Routine monthly service',
+            'diagnosis' => null,
+            'scheduled_start' => '2026-08-25 09:00:00',
+            'scheduled_end' => '2026-08-25 12:00:00',
+            'actual_start' => null,
+            'actual_end' => null,
+            'downtime_minutes' => null,
+            'status' => 'requested',
+            'performed_by_employee_id' => null,
+            'vendor_party_id' => null,
+            'labour_cost' => '500.0000',
+            'parts_cost' => '250.0000',
+            'external_cost' => '0.0000',
+            'total_cost' => '750.0000',
+            'completion_notes' => null,
+            'approved_by' => null,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── maintenance_order_parts ─────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertMaintenanceOrderPart(
+        int $tenantId,
+        int $maintenanceOrderId,
+        int $productId,
+        int $warehouseId,
+        int $unitId,
+        array $overrides = []
+    ): int {
+        return DB::table('maintenance_order_parts')
+            ->insertGetId($this->maintenanceOrderPartAttributes($tenantId, $maintenanceOrderId, $productId, $warehouseId, $unitId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function maintenanceOrderPartAttributes(
+        int $tenantId,
+        int $maintenanceOrderId,
+        int $productId,
+        int $warehouseId,
+        int $unitId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'maintenance_order_id' => $maintenanceOrderId,
+            'product_id' => $productId,
+            'warehouse_id' => $warehouseId,
+            'quantity' => '2.0000',
+            'unit_id' => $unitId,
+            'unit_cost' => '125.0000',
+            'line_cost' => '250.0000',
+            'stock_movement_id' => null,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── asset_meter_readings ────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertAssetMeterReading(
+        int $tenantId,
+        int $assetId,
+        array $overrides = []
+    ): int {
+        return DB::table('asset_meter_readings')
+            ->insertGetId($this->assetMeterReadingAttributes($tenantId, $assetId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function assetMeterReadingAttributes(
+        int $tenantId,
+        int $assetId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'asset_id' => $assetId,
+            'reading_at' => '2026-08-24 12:00:00',
+            'meter_type' => 'hours',
+            'reading_value' => '1250.5000',
+            'recorded_by' => null,
+            'notes' => 'Monthly meter reading',
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
     /**
      * SQLite and MySQL word the same violation differently, and the suite runs
      * on SQLite while production runs on MySQL.
