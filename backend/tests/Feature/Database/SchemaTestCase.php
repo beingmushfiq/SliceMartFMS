@@ -6049,6 +6049,498 @@ abstract class SchemaTestCase extends TestCase
         ];
     }
 
+    // ─── storefronts ─────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertStorefront(
+        int $tenantId,
+        int $companyId,
+        int $branchId,
+        int $warehouseId,
+        string $code = 'SF_MAIN',
+        array $overrides = []
+    ): int {
+        return DB::table('storefronts')
+            ->insertGetId($this->storefrontAttributes($tenantId, $companyId, $branchId, $warehouseId, $code, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function storefrontAttributes(
+        int $tenantId,
+        int $companyId,
+        int $branchId,
+        int $warehouseId,
+        string $code = 'SF_MAIN',
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'code' => $code.'_'.$counter,
+            'name' => 'Main Storefront '.$counter,
+            'domain' => null,
+            'subdomain' => 'store-'.$counter.'-'.Str::random(6),
+            'company_id' => $companyId,
+            'default_branch_id' => $branchId,
+            'default_warehouse_id' => $warehouseId,
+            'price_list_id' => null,
+            'currency' => 'BDT',
+            'locale' => 'en',
+            'theme' => json_encode(['primary_color' => '#0F172A']),
+            'logo_attachment_id' => null,
+            'favicon_attachment_id' => null,
+            'meta_title' => 'Online Store',
+            'meta_description' => 'Online shopping storefront',
+            'guest_checkout_enabled' => true,
+            'cod_enabled' => true,
+            'online_payment_enabled' => true,
+            'min_order_amount' => null,
+            'status' => 'live',
+            'published_at' => '2026-08-24 18:00:00',
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── storefront_pages ────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertStorefrontPage(
+        int $tenantId,
+        int $storefrontId,
+        string $slug = 'about-us',
+        array $overrides = []
+    ): int {
+        return DB::table('storefront_pages')
+            ->insertGetId($this->storefrontPageAttributes($tenantId, $storefrontId, $slug, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function storefrontPageAttributes(
+        int $tenantId,
+        int $storefrontId,
+        string $slug = 'about-us',
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'storefront_id' => $storefrontId,
+            'slug' => $slug.'-'.$counter,
+            'title' => 'About Us '.$counter,
+            'page_type' => 'content',
+            'blocks' => json_encode([['type' => 'hero', 'heading' => 'Welcome']]),
+            'meta_title' => 'About Us',
+            'meta_description' => 'About our company',
+            'status' => 'published',
+            'published_at' => '2026-08-24 18:00:00',
+            'sort_order' => 1,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── storefront_products ─────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertStorefrontProduct(
+        int $tenantId,
+        int $storefrontId,
+        int $productId,
+        ?int $variantId = null,
+        array $overrides = []
+    ): int {
+        return DB::table('storefront_products')
+            ->insertGetId($this->storefrontProductAttributes($tenantId, $storefrontId, $productId, $variantId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function storefrontProductAttributes(
+        int $tenantId,
+        int $storefrontId,
+        int $productId,
+        ?int $variantId = null,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'storefront_id' => $storefrontId,
+            'product_id' => $productId,
+            'variant_id' => $variantId,
+            'display_name_override' => null,
+            'description_override' => null,
+            'price_override' => null,
+            'compare_at_price' => null,
+            'is_featured' => false,
+            'is_available' => true,
+            'sold_out_behaviour' => 'show_sold_out',
+            'seo_slug' => 'product-'.$productId.'-'.$counter,
+            'sort_order' => 1,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── carts ───────────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertCart(
+        int $tenantId,
+        int $storefrontId,
+        ?int $customerPartyId = null,
+        array $overrides = []
+    ): int {
+        return DB::table('carts')
+            ->insertGetId($this->cartAttributes($tenantId, $storefrontId, $customerPartyId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function cartAttributes(
+        int $tenantId,
+        int $storefrontId,
+        ?int $customerPartyId = null,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'storefront_id' => $storefrontId,
+            'customer_party_id' => $customerPartyId,
+            'session_token' => 'sess_'.Str::random(32),
+            'email' => 'shopper'.$counter.'@example.com',
+            'phone' => '+88017000000'.$counter,
+            'item_count' => 2,
+            'subtotal' => '500.0000',
+            'discount_amount' => '50.0000',
+            'tax_amount' => '25.0000',
+            'shipping_amount' => '60.0000',
+            'total_amount' => '535.0000',
+            'coupon_code' => null,
+            'price_list_id' => null,
+            'status' => 'active',
+            'converted_sales_order_id' => null,
+            'abandoned_at' => null,
+            'expires_at' => '2026-08-31 18:00:00',
+            'last_activity_at' => '2026-08-24 18:00:00',
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'Mozilla/5.0 Chrome/120.0',
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── cart_items ──────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertCartItem(
+        int $tenantId,
+        int $cartId,
+        int $productId,
+        int $unitId,
+        ?int $variantId = null,
+        array $overrides = []
+    ): int {
+        return DB::table('cart_items')
+            ->insertGetId($this->cartItemAttributes($tenantId, $cartId, $productId, $unitId, $variantId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function cartItemAttributes(
+        int $tenantId,
+        int $cartId,
+        int $productId,
+        int $unitId,
+        ?int $variantId = null,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'cart_id' => $cartId,
+            'product_id' => $productId,
+            'variant_id' => $variantId,
+            'product_name' => 'Premium White Bread',
+            'quantity' => '2.0000',
+            'unit_id' => $unitId,
+            'unit_price' => '250.0000',
+            'line_discount' => '25.0000',
+            'tax_amount' => '12.5000',
+            'line_total' => '237.5000',
+            'price_stale' => false,
+            'added_at' => '2026-08-24 18:00:00',
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── coupons ─────────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertCoupon(
+        int $tenantId,
+        string $code = 'SUMMER20',
+        ?int $storefrontId = null,
+        array $overrides = []
+    ): int {
+        return DB::table('coupons')
+            ->insertGetId($this->couponAttributes($tenantId, $code, $storefrontId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function couponAttributes(
+        int $tenantId,
+        string $code = 'SUMMER20',
+        ?int $storefrontId = null,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'storefront_id' => $storefrontId,
+            'code' => $code.'_'.$counter,
+            'name' => 'Summer Discount '.$counter,
+            'discount_type' => 'percentage',
+            'discount_value' => '20.0000',
+            'min_order_amount' => '500.0000',
+            'max_discount_amount' => '200.0000',
+            'applies_to' => 'order',
+            'applies_to_ids' => null,
+            'usage_limit_total' => 1000,
+            'usage_limit_per_customer' => 1,
+            'used_count' => 0,
+            'starts_at' => '2026-08-01 00:00:00',
+            'ends_at' => '2026-08-31 23:59:59',
+            'is_active' => true,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── coupon_redemptions ──────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertCouponRedemption(
+        int $tenantId,
+        int $couponId,
+        int $salesOrderId,
+        ?int $customerPartyId = null,
+        array $overrides = []
+    ): int {
+        return DB::table('coupon_redemptions')
+            ->insertGetId($this->couponRedemptionAttributes($tenantId, $couponId, $salesOrderId, $customerPartyId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function couponRedemptionAttributes(
+        int $tenantId,
+        int $couponId,
+        int $salesOrderId,
+        ?int $customerPartyId = null,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'coupon_id' => $couponId,
+            'sales_order_id' => $salesOrderId,
+            'customer_party_id' => $customerPartyId,
+            'discount_amount' => '100.0000',
+            'redeemed_at' => '2026-08-24 18:00:00',
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── shipping_zones ──────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertShippingZone(
+        int $tenantId,
+        int $storefrontId,
+        string $name = 'Dhaka City',
+        array $overrides = []
+    ): int {
+        return DB::table('shipping_zones')
+            ->insertGetId($this->shippingZoneAttributes($tenantId, $storefrontId, $name, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function shippingZoneAttributes(
+        int $tenantId,
+        int $storefrontId,
+        string $name = 'Dhaka City',
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'storefront_id' => $storefrontId,
+            'name' => $name.' '.$counter,
+            'match_type' => 'city',
+            'match_values' => json_encode(['Dhaka']),
+            'rate_type' => 'flat',
+            'base_rate' => '60.0000',
+            'per_unit_rate' => null,
+            'free_over_amount' => '1000.0000',
+            'courier_provider_id' => null,
+            'estimated_days_min' => 1,
+            'estimated_days_max' => 2,
+            'is_active' => true,
+            'sort_order' => 1,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── product_reviews ─────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertProductReview(
+        int $tenantId,
+        int $storefrontId,
+        int $productId,
+        array $overrides = []
+    ): int {
+        return DB::table('product_reviews')
+            ->insertGetId($this->productReviewAttributes($tenantId, $storefrontId, $productId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function productReviewAttributes(
+        int $tenantId,
+        int $storefrontId,
+        int $productId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'storefront_id' => $storefrontId,
+            'product_id' => $productId,
+            'customer_party_id' => null,
+            'sales_order_id' => null,
+            'reviewer_name' => 'Verified Buyer '.$counter,
+            'rating' => 5,
+            'title' => 'Excellent Product',
+            'body' => 'Super fresh and delicious taste. Will buy again!',
+            'status' => 'approved',
+            'moderated_by' => null,
+            'moderated_at' => '2026-08-24 18:00:00',
+            'helpful_count' => 3,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── wishlists ───────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertWishlist(
+        int $tenantId,
+        int $storefrontId,
+        int $customerPartyId,
+        int $productId,
+        ?int $variantId = null,
+        array $overrides = []
+    ): int {
+        return DB::table('wishlists')
+            ->insertGetId($this->wishlistAttributes($tenantId, $storefrontId, $customerPartyId, $productId, $variantId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function wishlistAttributes(
+        int $tenantId,
+        int $storefrontId,
+        int $customerPartyId,
+        int $productId,
+        ?int $variantId = null,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'storefront_id' => $storefrontId,
+            'customer_party_id' => $customerPartyId,
+            'product_id' => $productId,
+            'variant_id' => $variantId,
+            'added_at' => '2026-08-24 18:00:00',
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
     /**
      * SQLite and MySQL word the same violation differently, and the suite runs
      * on SQLite while production runs on MySQL.

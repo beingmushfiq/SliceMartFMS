@@ -31,18 +31,18 @@ artefacts (`MODULE_MAP.md` §6), not a follow-up.
 
 | | |
 |---|---|
-| **Current phase** | Phase 1 — 🔄 **in progress.** Migration Waves 1–22 and the tenancy runtime (§7 item 29) complete; Waves 23+, auth and RBAC outstanding. |
+| **Current phase** | Phase 1 — 🔄 **in progress.** Migration Waves 1–23 and the tenancy runtime (§7 item 29) complete; Waves 24+, auth and RBAC outstanding. |
 | **Phase 0 status** | ✅ Documentation complete (7 canonical + 5 supporting = 12 documents) · ✅ Monorepo restructure · ✅ Dependency reconciliation · ✅ Token cascade · ✅ UI primitive hardening · ✅ §8 state-matrix primitives · ✅ Tooling config files (frontend **and** backend) · ✅ Test suites · ✅ CI — **every gate verified green, see §3.4** |
-| **Next phase** | Phase 1 continues at **§7 item 47 — migration Wave 23 (E-commerce)**, per `DATABASE_DESIGN.md` §16. |
-| **Backend** | 🔄 Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–22 migrations written and verified, and the tenancy runtime (§7 item 29) is live** — `app/Core`, `BelongsToTenant`, `ResolveTenant` and the three route files all exist. Still absent: `app/Modules`, `app/Support`, and every model, Action and endpoint. |
+| **Next phase** | Phase 1 continues at **§7 item 48 — migration Wave 24 (Integrations)**, per `DATABASE_DESIGN.md` §16. |
+| **Backend** | 🔄 Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–23 migrations written and verified, and the tenancy runtime (§7 item 29) is live** — `app/Core`, `BelongsToTenant`, `ResolveTenant` and the three route files all exist. Still absent: `app/Modules`, `app/Support`, and every model, Action and endpoint. |
 | **Frontend** | ✅ `/frontend`. Token cascade, boot loader, all 9 UI primitives rebuilt, tooling configured, §8 state-matrix primitives complete (errors, logger, StateView, QueryBoundary, AsyncButton, Toast, LogInspector, four-level ErrorBoundary), and the single transport seam wired (`lib/api/client.ts` + `lib/api/queryClient.ts` + `QueryClientProvider`). See §4. |
-| **Database** | 🔄 Designed (159 tables). **156 of them exist** — Waves 1–22: platform (§4.6), org (§4.7), identity (§4.8), infrastructure (§4.9), master data A (§4.10), master data B (§4.11), master data C (§4.12), HR identity (§4.13), production (§4.14), QC & wastage (§4.15), ledger & stock inventory (§4.16), stock operations (§4.17), purchasing (§4.18), sales & invoicing (§4.19), payments & allocations (§4.20), POS (§4.21), delivery & logistics (§4.22), full HR & payroll (§4.23), assets & maintenance (§4.24), finance & costing (§4.25), reporting & analytics (§4.26). Waves 23–25 unwritten. |
-| **Tests** | 🔄 Real, but foundation-only. Frontend **128 tests across 7 files**, all passing, covering the reliability layer (`ErrorBoundary`, `StateView`, `QueryBoundary`, `AsyncButton`, `logger`, `api/errors`, `api/queryClient`). Backend **438 tests / 2290 assertions** — the PHP-floor guard, Wave 1–22 schema contracts, and Tenancy runtime contracts. |
+| **Database** | 🔄 Designed (170+ tables). **166 of them exist** — Waves 1–23: platform (§4.6), org (§4.7), identity (§4.8), infrastructure (§4.9), master data A (§4.10), master data B (§4.11), master data C (§4.12), HR identity (§4.13), production (§4.14), QC & wastage (§4.15), ledger & stock inventory (§4.16), stock operations (§4.17), purchasing (§4.18), sales & invoicing (§4.19), payments & allocations (§4.20), POS (§4.21), delivery & logistics (§4.22), full HR & payroll (§4.23), assets & maintenance (§4.24), finance & costing (§4.25), reporting & analytics (§4.26), and e-commerce (§4.27). Waves 24–25 unwritten. |
+| **Tests** | 🔄 Real, but foundation-only. Frontend **128 tests across 7 files**, all passing, covering the reliability layer (`ErrorBoundary`, `StateView`, `QueryBoundary`, `AsyncButton`, `logger`, `api/errors`, `api/queryClient`). Backend **452 tests / 2404 assertions** — the PHP-floor guard, Wave 1–23 schema contracts, and Tenancy runtime contracts. |
 | **CI** | ✅ `.github/workflows/ci.yml` — 3 jobs, 9 legs. Frontend matrix (lint · typecheck · test · depcruise · format:check) installing at the **repository root**, build + bundle budget with a `dist` artifact, and a backend matrix (lint · analyse · test) on PHP 8.5. Every leg has a locally reproducible equivalent. |
 
 **The most important thing to know:** this project still has **no feature code and
 no business logic**. What exists is a design-system foundation, two framework
-skeletons, and one hundred and fifty-six tables with no models, no Actions and no endpoints over
+skeletons, and one hundred and sixty-six tables with no models, no Actions and no endpoints over
 them. No route, no screen. Any statement that a feature "works" is false.
 
 ---
@@ -52,7 +52,7 @@ them. No route, no screen. Any statement that a feature "works" is false.
 | Phase | Scope | Status |
 |---|---|---|
 | **0** | Architecture & documentation | ✅ See §3 |
-| **1** | Auth · Tenancy · RBAC · Design System | 🔄 Migration Waves 1–22 and Tenancy Runtime (§7 item 29) done. Wave 23+, auth, RBAC outstanding |
+| **1** | Auth · Tenancy · RBAC · Design System | 🔄 Migration Waves 1–23 and Tenancy Runtime (§7 item 29) done. Wave 24+, auth, RBAC outstanding |
 | **2** | Master data · Products · Warehouses | ⬜ Not started |
 | **3** | Production · Worker Production · QC | ⬜ Not started |
 | **4** | Purchase · Inventory | ⬜ Not started |
@@ -1353,6 +1353,36 @@ Verified: `migrate:fresh` — all **156 migrations** green ✅ · `pint lint:fix
 Wave 1 **11 tests** (403 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**,
 Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Wave 17 **14**, Wave 18 **18**, Wave 19 **18**, Wave 20 **12**, Wave 21 **14**, Wave 22 **14**, Tenancy runtime **3**, Unit+Example **2**.
 
+### 4.27 Phase 1 Wave 23 — E-commerce (10 tables)
+
+Per `DATABASE_DESIGN.md` §13.2 & §16, the storefront is an online sales channel over the unified sales core (ADR-016), rather than a separate application. Ten tables were written in `backend/database/migrations/`:
+
+| Table | Migration File | Key Structure & Invariants |
+|---|---|---|
+| `storefronts` | `2026_08_24_120000_create_storefronts_table.php` | Storefront channel configurations with unique `(tenant_id, code)`, globally unique `subdomain` and optional unique custom `domain`. Composite FKs to `companies`, `branches`, `warehouses`, `price_lists`, and `attachments` (`logo_attachment_id`, `favicon_attachment_id`). JSON whitelisted branding tokens (`theme`). |
+| `storefront_pages` | `2026_08_24_120100_create_storefront_pages_table.php` | Content and landing page definitions with composite unique `(tenant_id, storefront_id, slug)`. Hard-cascades on parent storefront deletion. JSON static block structures for safe rendering. |
+| `storefront_products` | `2026_08_24_120200_create_storefront_products_table.php` | Merchandising catalog overrides. Virtual sentinel `variant_key = COALESCE(variant_id, 0)` under unique `(tenant_id, storefront_id, product_id, variant_key)` and unique `(tenant_id, storefront_id, seo_slug)`. Cascades on storefront, restricts on product/variant. |
+| `carts` | `2026_08_24_120300_create_carts_table.php` | Public shopping cart state tracking guest/customer party tokens, subtotal, tax, shipping, discounts, and expiration timestamps. Indexed on `(tenant_id, storefront_id, status, last_activity_at)`. Reserving stock on cart add is strictly forbidden (reservations occur at checkout order placement). |
+| `cart_items` | `2026_08_24_120400_create_cart_items_table.php` | Line items with snapshotted `product_name` and `unit_price`, line discounts, taxes, and `price_stale` flag for re-resolution detection at checkout. Cascades on parent cart deletion. No `deleted_at`. |
+| `coupons` | `2026_08_24_120500_create_coupons_table.php` | Promo codes with unique `(tenant_id, code)`. Supports percentage, fixed amount, and free shipping discount types across order, product, or category targets with total/per-customer limits. |
+| `coupon_redemptions` | `2026_08_24_120600_create_coupon_redemptions_table.php` | Immutable redemption ledger with unique `(tenant_id, coupon_id, sales_order_id)`. Tracks discount applied per order. |
+| `shipping_zones` | `2026_08_24_120700_create_shipping_zones_table.php` | Geolocation delivery rule engine matching on district/city/postcode/country or `catch_all`. Flat, per-kg, per-item, or courier-quoted rate calculation with free-shipping thresholds. Indexed on `(tenant_id, storefront_id, sort_order)`. |
+| `product_reviews` | `2026_08_24_120800_create_product_reviews_table.php` | Customer rating (1–5) and review body with moderation workflow (`pending` by default, `approved`, `rejected`, `spam`). Links to sales orders for verified purchase badges. Indexed on `(tenant_id, product_id, status)`. |
+| `wishlists` | `2026_08_24_120900_create_wishlists_table.php` | Customer product wishlists with virtual sentinel `variant_key = COALESCE(variant_id, 0)` under unique `(tenant_id, storefront_id, customer_party_id, product_id, variant_key)`. Cascades on storefront, customer, product, and variant deletions. |
+
+`SchemaTestCase` gained 10 fixture builder pairs: `insertStorefront` / `storefrontAttributes`,
+`insertStorefrontPage` / `storefrontPageAttributes`, `insertStorefrontProduct` / `storefrontProductAttributes`,
+`insertCart` / `cartAttributes`, `insertCartItem` / `cartItemAttributes`,
+`insertCoupon` / `couponAttributes`, `insertCouponRedemption` / `couponRedemptionAttributes`,
+`insertShippingZone` / `shippingZoneAttributes`, `insertProductReview` / `productReviewAttributes`,
+`insertWishlist` / `wishlistAttributes`.
+
+Verified: `migrate:fresh` — all **166 migrations** green ✅ · `pint lint:fix` **PASS** ·
+`phpstan analyse` level 9 **[OK] No errors** · `artisan test`
+**452 passed / 2404 assertions**, none risky. Per-suite re-measured:
+Wave 1 **11 tests** (535 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**,
+Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Wave 17 **14**, Wave 18 **18**, Wave 19 **18**, Wave 20 **12**, Wave 21 **14**, Wave 22 **14**, Wave 23 **14**, Tenancy runtime **3**, Unit+Example **2**.
+
 ---
 
 ## 5. Dependency state — reconciled
@@ -1471,7 +1501,8 @@ Q3, it stops and asks (`TASK_PROTOCOL.md` §3.2).
 | 44 | Phase 1 **Wave 20 — Assets & Maintenance**, per `DATABASE_DESIGN.md` §16: `asset_categories`, `assets`, `asset_assignments`, `asset_depreciation_entries`, `maintenance_schedules`, `maintenance_orders`, `maintenance_order_parts`, `asset_meter_readings`. See §4.24. | ✅ |
 | 45 | Phase 1 **Wave 21 — Finance & Costing**, per `DATABASE_DESIGN.md` §16: `chart_of_accounts`, `journal_entries`, `journal_lines`, `expense_categories`, `bank_accounts`, `expenses`, `bank_transactions`, `payment_terms`, `party_credit_limits`, `product_costs`, `production_cost_allocations`. See §4.25. | ✅ |
 | 46 | Phase 1 **Wave 22 — Reporting & Analytics**, per `DATABASE_DESIGN.md` §16: `report_definitions`, `report_saved_views`, `report_schedules`, `report_exports`, `dashboard_widgets`, `summary_*` tables. See §4.26. | ✅ |
-| 47 | Phase 1 **Wave 23 — E-commerce**, per `DATABASE_DESIGN.md` §16: `storefronts`, `storefront_pages`, `storefront_products`, `carts`, `cart_items`, `coupons`, `coupon_redemptions`, `shipping_zones`, `product_reviews`, `wishlists`. | ⬜ |
+| 47 | Phase 1 **Wave 23 — E-commerce**, per `DATABASE_DESIGN.md` §16: `storefronts`, `storefront_pages`, `storefront_products`, `carts`, `cart_items`, `coupons`, `coupon_redemptions`, `shipping_zones`, `product_reviews`, `wishlists`. See §4.27. | ✅ |
+| 48 | Phase 1 **Wave 24 — Integrations**, per `DATABASE_DESIGN.md` §16: `webhook_endpoints`, `webhook_deliveries`, `imports`. | ⬜ |
 
 ---
 
@@ -1494,13 +1525,12 @@ stock inventory) is done** (§4.16), **Wave 13 (stock operations) is done**
 **Wave 18 (delivery & logistics) is done** (§4.22),
 **Wave 19 (full HR & payroll) is done** (§4.23),
 **Wave 20 (assets & maintenance) is done** (§4.24),
-**Wave 21 (finance & costing) is done** (§4.25), and
-**Wave 22 (reporting & analytics) is done** (§4.26) — `report_definitions`,
-`report_saved_views`, `report_schedules`, `report_exports`, `dashboard_widgets`,
-`summary_daily_production`, `summary_daily_worker_output`, `summary_daily_sales`,
-`summary_daily_stock`, `summary_daily_delivery`, `summary_monthly_finance`,
-`summary_monthly_payroll`, `summary_product_margin`, `summary_taxes`.
-Start at **§7 item 47 — Wave 23 (E-commerce)**, per `DATABASE_DESIGN.md` §16.
+**Wave 21 (finance & costing) is done** (§4.25),
+**Wave 22 (reporting & analytics) is done** (§4.26), and
+**Wave 23 (e-commerce) is done** (§4.27) — `storefronts`,
+`storefront_pages`, `storefront_products`, `carts`, `cart_items`,
+`coupons`, `coupon_redemptions`, `shipping_zones`, `product_reviews`, `wishlists`.
+Start at **§7 item 48 — Wave 24 (Integrations)**, per `DATABASE_DESIGN.md` §16.
 
 
 These constraints are already settled. Do not re-derive them, and do not
@@ -1576,6 +1606,7 @@ contradict them:
 | 2026-08-24 | **Phase 1 Wave 20 (Assets & Maintenance) written and verified.** Eight migrations: `asset_categories`, `assets`, `asset_assignments`, `asset_depreciation_entries`, `maintenance_schedules`, `maintenance_orders`, `maintenance_order_parts`, `asset_meter_readings` (`116000`–`116700`). Detailed per-table in **§4.24**. Tree-structured asset category hierarchy, capital assets ledger distinct from stock inventory (DECISIONS C21), asset custody/assignment tracking, immutable append-only depreciation ledger without soft deletes, time/meter maintenance schedules, maintenance work orders with full cost tracking and cascading spare parts consumption, and monotonic meter reading logs. `SchemaTestCase` gained eight fixture builder pairs. `Wave20AssetsSchemaTest` — **12 tests / 64 assertions**. Verified: `migrate:fresh` ✅ (131 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **410 passed / 2019 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (328 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Wave 17 **14**, Wave 18 **18**, Wave 19 **18**, Wave 20 **12**, Tenancy runtime **3**, Unit+Example **2**. §7 item 44 complete. Next: §7 item 45 — Wave 21 (Finance & Costing). |
 | 2026-08-24 | **Phase 1 Wave 21 (Finance & Costing) written and verified.** Eleven migrations: `chart_of_accounts`, `journal_entries`, `journal_lines`, `expense_categories`, `bank_accounts`, `expenses`, `bank_transactions`, `payment_terms`, `party_credit_limits`, `product_costs`, `production_cost_allocations` (`117000`–`118000`). Detailed per-table in **§4.25**. Chart of accounts leaf/group structure, general ledger with balanced debit/credit invariant, hard-cascading journal lines, expense category hierarchy, company cash/bank accounts with derived balance cache over immutable append-only bank transaction ledger, paired inter-account transfer links (`related_transaction_id`), commercial credit terms, customer credit limit risk bounds, and time-sliced unit product costing and batch overhead allocation ledgers. `SchemaTestCase` gained eleven fixture builder pairs. `Wave21FinanceSchemaTest` — **14 tests / 85 assertions**. Verified: `migrate:fresh` ✅ (142 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **424 passed / 2137 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (361 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Wave 17 **14**, Wave 18 **18**, Wave 19 **18**, Wave 20 **12**, Wave 21 **14**, Tenancy runtime **3**, Unit+Example **2**. §7 item 45 complete. Next: §7 item 46 — Wave 22 (Reporting & Analytics). |
 | 2026-08-24 | **Phase 1 Wave 22 (Reporting & Analytics) written and verified.** Fourteen migrations: `report_definitions`, `report_saved_views`, `report_schedules`, `report_exports`, `dashboard_widgets`, `summary_daily_production`, `summary_daily_worker_output`, `summary_daily_sales`, `summary_daily_stock`, `summary_daily_delivery`, `summary_monthly_finance`, `summary_monthly_payroll`, `summary_product_margin`, `summary_taxes` (`119000`–`119580`). Detailed per-table in **§4.26**. RMS registry architecture with platform/tenant definition scoping, custom saved filter/column views, automated digest schedules, asynchronous export queuing, dashboard grid layouts, and Tier 2 rebuildable materialized summary tables across production, workforce, sales, inventory, logistics, finance, payroll, margin, and tax domains with `refreshed_at` freshness timestamps. `SchemaTestCase` gained 14 fixture builder pairs. `Wave22ReportingSchemaTest` — **14 tests / 111 assertions**. Verified: `migrate:fresh` ✅ (156 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **438 passed / 2290 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (403 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Wave 17 **14**, Wave 18 **18**, Wave 19 **18**, Wave 20 **12**, Wave 21 **14**, Wave 22 **14**, Tenancy runtime **3**, Unit+Example **2**. §7 item 46 complete. Next: §7 item 47 — Wave 23 (E-commerce). |
+| 2026-08-24 | **Phase 1 Wave 23 (E-commerce) written and verified.** Ten migrations: `storefronts`, `storefront_pages`, `storefront_products`, `carts`, `cart_items`, `coupons`, `coupon_redemptions`, `shipping_zones`, `product_reviews`, `wishlists` (`120000`–`120900`). Detailed per-table in **§4.27**. Storefront channel over unified sales core (ADR-016), landing/content pages, merchandising catalog overrides with variant sentinels, shopping carts with non-reserving add-to-cart invariant and stale price re-resolution, promo coupon codes with order redemption ledger, shipping zone rule engine with rate calculation and fallback catch-all indexing, moderated customer reviews (pending by default) linked to verified orders, and customer wishlists. `SchemaTestCase` gained ten fixture builder pairs. `Wave23EcommerceSchemaTest` — **14 tests / 84 assertions**. Verified: `migrate:fresh` ✅ (166 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **452 passed / 2404 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (535 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Wave 17 **14**, Wave 18 **18**, Wave 19 **18**, Wave 20 **12**, Wave 21 **14**, Wave 22 **14**, Wave 23 **14**, Tenancy runtime **3**, Unit+Example **2**. §7 item 47 complete. Next: §7 item 48 — Wave 24 (Integrations). |
 
 
 
