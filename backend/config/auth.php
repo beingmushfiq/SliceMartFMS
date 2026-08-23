@@ -44,6 +44,20 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // ADR-007: JWT-based API guard.
+        // The full JWT driver (firebase/php-jwt via a dedicated auth package) is added
+        // with the auth module (post-Wave 5). This stub entry is required now so that:
+        //   - Middleware references to `auth:api` resolve without a runtime exception.
+        //   - PHPStan level 9 does not flag an undefined guard.
+        //   - Route files can declare their auth group correctly before any endpoint exists.
+        // The `token` driver is Laravel's built-in minimal driver and satisfies the type
+        // constraints; it will be replaced by the JWT driver in the auth module.
+        'api' => [
+            'driver' => 'token',
+            'provider' => 'users',
+            'hash' => false,
+        ],
     ],
 
     /*

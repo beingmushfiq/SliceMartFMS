@@ -1,0 +1,34 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Support\Facades\Route;
+
+/**
+ * Public / unauthenticated API routes (ARCHITECTURE §5.1).
+ *
+ * Loaded by bootstrap/app.php in the `then:` closure with the `api` middleware
+ * group and CorrelationId prepended. No auth middleware.
+ *
+ * Public surfaces:
+ *   - Auth: POST /api/v1/auth/login, POST /api/v1/auth/refresh,
+ *            POST /api/v1/auth/logout, POST /api/v1/auth/forgot-password,
+ *            POST /api/v1/auth/reset-password (API_CONTRACT §8).
+ *   - Public storefront read endpoints (API_CONTRACT §9.1, §10).
+ *   - Inbound webhooks: POST /api/v1/webhooks/{provider} (API_CONTRACT §14).
+ *
+ * Rate limiting on public routes is applied per endpoint (API_CONTRACT §10):
+ *   - Login: 5/5min per email, 20/5min per IP.
+ *   - Forgot password: 3/1h per email.
+ *   - Storefront: 120/1min per IP.
+ *   - Webhooks: 600/1min per provider.
+ *
+ * Endpoints are registered here as modules are built. At this stage the file
+ * exists and is valid PHP — no endpoints are defined until Wave 5+ ships.
+ */
+Route::prefix('v1')
+    ->name('public.')
+    ->group(static function (): void {
+        // Wave 5: auth endpoints (login, refresh, logout, forgot-password, reset-password).
+        // Wave 6+: public storefront, webhooks.
+    });
