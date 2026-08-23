@@ -31,18 +31,18 @@ artefacts (`MODULE_MAP.md` §6), not a follow-up.
 
 | | |
 |---|---|
-| **Current phase** | Phase 1 — 🔄 **in progress.** Migration Waves 1–12 and the tenancy runtime (§7 item 29) complete; Waves 13+, auth and RBAC outstanding. |
+| **Current phase** | Phase 1 — 🔄 **in progress.** Migration Waves 1–13 and the tenancy runtime (§7 item 29) complete; Waves 14+, auth and RBAC outstanding. |
 | **Phase 0 status** | ✅ Documentation complete (7 canonical + 5 supporting = 12 documents) · ✅ Monorepo restructure · ✅ Dependency reconciliation · ✅ Token cascade · ✅ UI primitive hardening · ✅ §8 state-matrix primitives · ✅ Tooling config files (frontend **and** backend) · ✅ Test suites · ✅ CI — **every gate verified green, see §3.4** |
-| **Next phase** | Phase 1 continues at **§7 item 37 — migration Wave 13 (Stock Ops)**, per `DATABASE_DESIGN.md` §16. |
-| **Backend** | 🔄 Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–12 migrations written and verified, and the tenancy runtime (§7 item 29) is live** — `app/Core`, `BelongsToTenant`, `ResolveTenant` and the three route files all exist. Still absent: `app/Modules`, `app/Support`, and every model, Action and endpoint. |
+| **Next phase** | Phase 1 continues at **§7 item 38 — migration Wave 14 (Purchasing)**, per `DATABASE_DESIGN.md` §16. |
+| **Backend** | 🔄 Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–13 migrations written and verified, and the tenancy runtime (§7 item 29) is live** — `app/Core`, `BelongsToTenant`, `ResolveTenant` and the three route files all exist. Still absent: `app/Modules`, `app/Support`, and every model, Action and endpoint. |
 | **Frontend** | ✅ `/frontend`. Token cascade, boot loader, all 9 UI primitives rebuilt, tooling configured, §8 state-matrix primitives complete (errors, logger, StateView, QueryBoundary, AsyncButton, Toast, LogInspector, four-level ErrorBoundary), and the single transport seam wired (`lib/api/client.ts` + `lib/api/queryClient.ts` + `QueryClientProvider`). See §4. |
-| **Database** | 🔄 Designed (159 tables). **70 of them exist** — Waves 1–12: platform (§4.6), org (§4.7), identity (§4.8), infrastructure (§4.9), master data A (§4.10), master data B (§4.11), master data C (§4.12), HR identity (§4.13), production (§4.14), QC & wastage (§4.15), ledger & stock inventory (§4.16). Waves 13–25 unwritten. |
-| **Tests** | 🔄 Real, but foundation-only. Frontend **128 tests across 7 files**, all passing, covering the reliability layer (`ErrorBoundary`, `StateView`, `QueryBoundary`, `AsyncButton`, `logger`, `api/errors`, `api/queryClient`). Backend **258 tests / 1142 assertions** — the PHP-floor guard, Wave 1–12 schema contracts, and Tenancy runtime contracts. |
+| **Database** | 🔄 Designed (159 tables). **76 of them exist** — Waves 1–13: platform (§4.6), org (§4.7), identity (§4.8), infrastructure (§4.9), master data A (§4.10), master data B (§4.11), master data C (§4.12), HR identity (§4.13), production (§4.14), QC & wastage (§4.15), ledger & stock inventory (§4.16), stock operations (§4.17). Waves 14–25 unwritten. |
+| **Tests** | 🔄 Real, but foundation-only. Frontend **128 tests across 7 files**, all passing, covering the reliability layer (`ErrorBoundary`, `StateView`, `QueryBoundary`, `AsyncButton`, `logger`, `api/errors`, `api/queryClient`). Backend **284 tests / 1250 assertions** — the PHP-floor guard, Wave 1–13 schema contracts, and Tenancy runtime contracts. |
 | **CI** | ✅ `.github/workflows/ci.yml` — 3 jobs, 9 legs. Frontend matrix (lint · typecheck · test · depcruise · format:check) installing at the **repository root**, build + bundle budget with a `dist` artifact, and a backend matrix (lint · analyse · test) on PHP 8.5. Every leg has a locally reproducible equivalent. |
 
 **The most important thing to know:** this project still has **no feature code and
 no business logic**. What exists is a design-system foundation, two framework
-skeletons, and seventy tables with no models, no Actions and no endpoints over
+skeletons, and seventy-six tables with no models, no Actions and no endpoints over
 them. No route, no screen. Any statement that a feature "works" is false.
 
 ---
@@ -52,7 +52,7 @@ them. No route, no screen. Any statement that a feature "works" is false.
 | Phase | Scope | Status |
 |---|---|---|
 | **0** | Architecture & documentation | ✅ See §3 |
-| **1** | Auth · Tenancy · RBAC · Design System | 🔄 Migration Waves 1–12 and Tenancy Runtime (§7 item 29) done. Wave 13+, auth, RBAC outstanding |
+| **1** | Auth · Tenancy · RBAC · Design System | 🔄 Migration Waves 1–13 and Tenancy Runtime (§7 item 29) done. Wave 14+, auth, RBAC outstanding |
 | **2** | Master data · Products · Warehouses | ⬜ Not started |
 | **3** | Production · Worker Production · QC | ⬜ Not started |
 | **4** | Purchase · Inventory | ⬜ Not started |
@@ -243,16 +243,17 @@ nine Wave 7 master data C files (§4.12, including the deferred FK closure),
 four Wave 8 HR identity tables (§4.13), one Wave 9 HR FK closure,
 eight Wave 10 production tables (§4.14),
 six Wave 11 QC & wastage tables (§4.15),
-and three Wave 12 ledger & stock tables (§4.16)
+three Wave 12 ledger & stock tables (§4.16),
+and six Wave 13 stock operations tables (§4.17)
 exist and are verified.
 
 **Absent — the rest of Phase 1:** `app/Modules`, `app/Support`, and every model,
-Action and endpoint over the seventy tables. The three route files exist but
+Action and endpoint over the seventy-six tables. The three route files exist but
 register no routes yet.
 
 ### 4.5 Test coverage
 
-128 frontend tests over 7 files; **258 backend tests / 1142 assertions**. Frontend
+128 frontend tests over 7 files; **284 backend tests / 1250 assertions**. Frontend
 tests sit beside the code they cover (`vitest.config.ts`
 `include: ['src/**/*.{test,spec}.{ts,tsx}']`); backend schema contracts live in
 `tests/Feature/Database/` and the tenancy-runtime contract in
@@ -932,6 +933,44 @@ Verified: `migrate:fresh` — all **70 migrations** green ✅ · `pint lint:fix`
 Wave 1 **11 tests** (145 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**,
 Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Tenancy runtime **3**, Unit+Example **2**.
 
+
+---
+
+### 4.17 Migrations — Wave 13 (Stock Operations) complete
+
+Six Wave 13 migrations:
+`2026_08_24_108000` … `108500` — stock_transfers, stock_transfer_items, stock_adjustments, stock_adjustment_items, stock_counts, stock_count_items.
+
+| Table / Migration | Notes |
+|---|---|
+| `stock_transfers` | Warehouse-to-warehouse stock transfer document. Unique `(tenant_id, transfer_number)`. Status: `draft \| in_transit \| partially_received \| received \| cancelled`. Composite FKs on `from_warehouse_id` and `to_warehouse_id` (`warehouses`, RESTRICT). Dispatch and receipt user tracking (`users`, nullOnDelete). |
+| `stock_transfer_items` | Line items of transfer. Cascades on parent transfer (`stock_transfers`, CASCADE). Composite FKs on `products`, `product_variants` (nullable), `units`, `out_movement_id` (nullable), `in_movement_id` (nullable). Quantities: `sent_quantity`, `received_quantity`, `damaged_quantity` (`DECIMAL(18,4)`). |
+| `stock_adjustments` | Stock reconciliation & revaluation adjustment header. Unique `(tenant_id, adjustment_number)`. Type: `increase \| decrease \| revaluation`. Status: `draft \| pending_approval \| approved \| rejected`. Total value impact `DECIMAL(18,4)`. Composite FKs on `warehouses` and `reason_codes` (`reason_codes`, RESTRICT). |
+| `stock_adjustment_items` | Line items of adjustment. Cascades on parent adjustment (`stock_adjustments`, CASCADE). Composite FKs on `products`, `product_variants` (nullable), `stock_movements` (nullable). Quantities: `system_quantity`, `adjusted_quantity`, `difference_quantity`, `unit_cost` (`DECIMAL(18,4)`). |
+| `stock_counts` | Physical stock count / cycle count session header. Unique `(tenant_id, count_number)`. Type: `full \| cycle \| spot`. Status: `draft \| counting \| review \| reconciled \| cancelled`. `freeze_stock` TINYINT flag. Composite FKs on `warehouses` and `stock_adjustments` (nullable, the resulting adjustment). |
+| `stock_count_items` | Line items of physical count. Cascades on parent count (`stock_counts`, CASCADE). Composite FKs on `products`, `product_variants` (nullable), `warehouse_locations` (nullable). Quantities: `system_quantity` (frozen snapshot), `counted_quantity`, `variance_quantity`, `recount_quantity`. Status: `pending \| counted \| variance \| accepted`. |
+
+**Invariants and rules enforced:**
+- Cascade delete boundaries: Child items (`stock_transfer_items`, `stock_adjustment_items`, `stock_count_items`) cascade on parent header deletion, but reference catalog products/units/warehouses with `RESTRICT`.
+- Multi-warehouse isolation: `warehouseAttributes` fixture enhanced with auto-increment counter to guarantee conflict-free `(tenant_id, code)` generation in multi-warehouse test topologies.
+- Referential integrity: Composite FKs on `warehouses`, `reason_codes`, `products`, `product_variants`, `units`, and `stock_movements` strictly enforced.
+
+`Wave13StockOpsSchemaTest` — **26 tests / 90 assertions** covering all 6 tables,
+`tenant_id` placement, soft-delete compliance, no float/double/enum in migrations,
+document number uniqueness across transfers/adjustments/counts, cross-tenant composite FK rejections,
+cascading delete lifecycle for line items, and DECIMAL(18,4) precision round-trip.
+
+`SchemaTestCase` gained six fixture builder pairs: `insertStockTransfer` / `stockTransferAttributes`,
+`insertStockTransferItem` / `stockTransferItemAttributes`, `insertStockAdjustment` / `stockAdjustmentAttributes`,
+`insertStockAdjustmentItem` / `stockAdjustmentItemAttributes`, `insertStockCount` / `stockCountAttributes`,
+`insertStockCountItem` / `stockCountItemAttributes`.
+
+Verified: `migrate:fresh` — all **76 migrations** green ✅ · `pint lint:fix` **PASS** ·
+`phpstan analyse` level 9 **[OK] No errors** · `artisan test`
+**284 passed / 1250 assertions**, none risky. Per-suite re-measured:
+Wave 1 **11 tests** (163 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**,
+Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Tenancy runtime **3**, Unit+Example **2**.
+
 ---
 
 ## 5. Dependency state — reconciled
@@ -1040,7 +1079,8 @@ Q3, it stops and asks (`TASK_PROTOCOL.md` §3.2).
 | 34 | Phase 1 **Wave 10 — production**, per `DATABASE_DESIGN.md` §16: `production_plans`, `production_plan_items`, `production_batches`, `material_issues`, `material_issue_items`, `production_batch_inputs`, `worker_production_entries`, `production_outputs`. See §4.14. | ✅ |
 | 35 | Phase 1 **Wave 11 — QC & wastage**, per `DATABASE_DESIGN.md` §16: `qc_parameters`, `qc_inspections`, `qc_inspection_results`, `qc_defects`, `wastage_records`, `rework_orders`. See §4.15. | ✅ |
 | 36 | Phase 1 **Wave 12 — Ledger**, per `DATABASE_DESIGN.md` §16: `stock_movements`, `stock_balances`, `stock_reservations`. See §4.16. | ✅ |
-| 37 | Phase 1 **Wave 13 — Stock ops**, per `DATABASE_DESIGN.md` §16: `stock_transfers`, `stock_transfer_items`, `stock_adjustments`, `stock_adjustment_items`, `stock_counts`, `stock_count_items`. | ⬜ |
+| 37 | Phase 1 **Wave 13 — Stock ops**, per `DATABASE_DESIGN.md` §16: `stock_transfers`, `stock_transfer_items`, `stock_adjustments`, `stock_adjustment_items`, `stock_counts`, `stock_count_items`. See §4.17. | ✅ |
+| 38 | Phase 1 **Wave 14 — Purchasing**, per `DATABASE_DESIGN.md` §16: `purchase_requisitions`, `purchase_requisition_items`, `purchase_orders`, `purchase_order_items`, `goods_receipt_notes`, `goods_receipt_note_items`, `purchase_returns`, `purchase_return_items`. | ⬜ |
 
 ---
 
@@ -1055,10 +1095,11 @@ this file. Phase 0 is complete and Phase 1 is under way: Wave 0 needed no work,
 data A) is done** (§4.10), **Wave 6 (master data B) is done** (§4.11),
 **Wave 7 (master data C) is done** (§4.12), **Wave 8 (HR identity) +
 Wave 9 (HR FK closure) are done** (§4.13), **Wave 10 (production) is done**
-(§4.14), **Wave 11 (QC & wastage) is done** (§4.15), and **Wave 12 (ledger &
-stock inventory) is done** (§4.16) — `stock_movements`, `stock_balances`,
-`stock_reservations`.
-Start at **§7 item 37 — Wave 13 (Stock ops)**, per `DATABASE_DESIGN.md` §16.
+(§4.14), **Wave 11 (QC & wastage) is done** (§4.15), **Wave 12 (ledger &
+stock inventory) is done** (§4.16), and **Wave 13 (stock operations) is done**
+(§4.17) — `stock_transfers`, `stock_transfer_items`, `stock_adjustments`,
+`stock_adjustment_items`, `stock_counts`, `stock_count_items`.
+Start at **§7 item 38 — Wave 14 (Purchasing)**, per `DATABASE_DESIGN.md` §16.
 
 
 These constraints are already settled. Do not re-derive them, and do not
@@ -1125,6 +1166,8 @@ contradict them:
 | 2026-08-24 | **Phase 1 Wave 10 (production) written and verified.** Eight migrations: `production_plans`, `production_plan_items`, `production_batches`, `material_issues`, `material_issue_items`, `production_batch_inputs`, `worker_production_entries`, `production_outputs` (`105000`–`105700`). Detailed per-table in **§4.14**. Spine of production chain implemented (ADR-011). `production_batches` implements ADR-012 invariant: `yield_percentage`, `variance_quantity`, `variance_percentage` strictly nullable with no default (NULL until `context_completeness` is `context_complete`). `worker_production_entries` implements ADR-013 with 6-column composite uniqueness key. Cascading child deletes verified for plan items, issue items, and batch inputs. `SchemaTestCase` gained eight fixture builder pairs. `Wave10ProductionSchemaTest` — **24 tests / 92 assertions**. Verified: `migrate:fresh` ✅ (61 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **216 passed / 995 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests**, Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Tenancy runtime **3**, Unit+Example **2**. §7 item 34 complete. Next: §7 item 35 — Wave 11 (QC). |
 | 2026-08-24 | **Phase 1 Wave 11 (QC & wastage) written and verified.** Six migrations: `qc_parameters`, `qc_inspections`, `qc_inspection_results`, `qc_defects`, `wastage_records`, `rework_orders` (`106000`–`106500`). Detailed per-table in **§4.15**. `reason_codes` table in Wave 5 updated with missing `uq_reason_codes_tenant_id` on `(tenant_id, id)` enabling composite FK referential integrity for `qc_defects` and `wastage_records`. Cascade delete boundaries verified for inspection results and defects. `SchemaTestCase` gained six fixture builder pairs. `Wave11QcSchemaTest` — **24 tests / 73 assertions**. Verified: `migrate:fresh` ✅ (67 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **240 passed / 1086 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (136 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Tenancy runtime **3**, Unit+Example **2**. §7 item 35 complete. Next: §7 item 36 — Wave 12 (Ledger). |
 | 2026-08-24 | **Phase 1 Wave 12 (Ledger & stock inventory) written and verified.** Three migrations: `stock_movements`, `stock_balances`, `stock_reservations` (`107000`–`107200`). Detailed per-table in **§4.16**. `stock_movements` is append-only ledger with 15 movement types and 5 stock states; immutable with `no deleted_at` and `no updated_at`. `stock_balances` is transactional cache with `no deleted_at` and 7-column composite unique cache slot enforced over stored generated sentinels (`variant_key`, `location_key`, `batch_key`) to eliminate NULL collision holes. `SchemaTestCase` gained three fixture builder pairs. `Wave12LedgerSchemaTest` — **18 tests / 47 assertions**. Verified: `migrate:fresh` ✅ (70 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **258 passed / 1142 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (145 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Tenancy runtime **3**, Unit+Example **2**. §7 item 36 complete. Next: §7 item 37 — Wave 13 (Stock ops). |
+| 2026-08-24 | **Phase 1 Wave 13 (Stock operations) written and verified.** Six migrations: `stock_transfers`, `stock_transfer_items`, `stock_adjustments`, `stock_adjustment_items`, `stock_counts`, `stock_count_items` (`108000`–`108500`). Detailed per-table in **§4.17**. Cascading delete lifecycles verified for child line items while preserving `RESTRICT` on catalog references. `warehouseAttributes` fixture enhanced with auto-increment counter to avoid collision on multi-warehouse fixtures. `SchemaTestCase` gained six fixture builder pairs. `Wave13StockOpsSchemaTest` — **26 tests / 90 assertions**. Verified: `migrate:fresh` ✅ (76 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **284 passed / 1250 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (163 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Tenancy runtime **3**, Unit+Example **2**. §7 item 37 complete. Next: §7 item 38 — Wave 14 (Purchasing). |
+
 
 
 
