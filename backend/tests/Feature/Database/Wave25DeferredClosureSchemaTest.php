@@ -121,13 +121,14 @@ class Wave25DeferredClosureSchemaTest extends SchemaTestCase
         $t1 = $this->insertTenant($plan['id'], 't1');
         $t2 = $this->insertTenant($plan['id'], 't2');
 
-        $inspector1 = $this->insertUser($t1);
-        $inspector2 = $this->insertUser($t2);
+        $c1 = $this->insertCompany($t1);
+        $inspector1 = $this->insertEmployee($t1, $c1);
 
         $w1 = $this->insertWarehouse($t1);
         $supplier1 = $this->insertParty($t1, ['is_supplier' => true]);
         $gr1 = $this->insertGoodsReceipt($t1, $supplier1, $w1);
 
+        $c2 = $this->insertCompany($t2);
         $w2 = $this->insertWarehouse($t2);
         $supplier2 = $this->insertParty($t2, ['is_supplier' => true]);
         $gr2 = $this->insertGoodsReceipt($t2, $supplier2, $w2);
