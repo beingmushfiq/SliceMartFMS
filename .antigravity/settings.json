@@ -1,0 +1,11 @@
+{
+  "antigravity.ai.provider": "openai-compatible",
+  "antigravity.openai-compatible.endpoint": "https://agentrouter.org",
+  "antigravity.openai-compatible.apiKey": "sk-fxTwBshgslBTaSaOUgOO70ajx1eYfN33sthlq3Q0VmlxNaHf",
+  "antigravity.ai.model": "gpt-5.6-sol",
+  "antigravity.agent.enabled": true,
+  "antigravity.agent.provider": "openai-compatible",
+  "antigravity.agent.openai-compatible.endpoint": "https://agentrouter.org",
+  "antigravity.agent.openai-compatible.apiKey": "sk-fxTwBshgslBTaSaOUgOO70ajx1eYfN33sthlq3Q0VmlxNaHf",
+  "antigravity.agent.model": "gpt-5.6-sol"
+}
