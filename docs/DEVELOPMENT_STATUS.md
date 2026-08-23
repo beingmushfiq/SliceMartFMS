@@ -31,18 +31,18 @@ artefacts (`MODULE_MAP.md` §6), not a follow-up.
 
 | | |
 |---|---|
-| **Current phase** | Phase 1 — 🔄 **in progress.** Migration Waves 1–15 and the tenancy runtime (§7 item 29) complete; Waves 16+, auth and RBAC outstanding. |
+| **Current phase** | Phase 1 — 🔄 **in progress.** Migration Waves 1–16 and the tenancy runtime (§7 item 29) complete; Waves 17+, auth and RBAC outstanding. |
 | **Phase 0 status** | ✅ Documentation complete (7 canonical + 5 supporting = 12 documents) · ✅ Monorepo restructure · ✅ Dependency reconciliation · ✅ Token cascade · ✅ UI primitive hardening · ✅ §8 state-matrix primitives · ✅ Tooling config files (frontend **and** backend) · ✅ Test suites · ✅ CI — **every gate verified green, see §3.4** |
-| **Next phase** | Phase 1 continues at **§7 item 40 — migration Wave 16 (Payments)**, per `DATABASE_DESIGN.md` §16. |
-| **Backend** | 🔄 Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–15 migrations written and verified, and the tenancy runtime (§7 item 29) is live** — `app/Core`, `BelongsToTenant`, `ResolveTenant` and the three route files all exist. Still absent: `app/Modules`, `app/Support`, and every model, Action and endpoint. |
+| **Next phase** | Phase 1 continues at **§7 item 41 — migration Wave 17 (POS)**, per `DATABASE_DESIGN.md` §16. |
+| **Backend** | 🔄 Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–16 migrations written and verified, and the tenancy runtime (§7 item 29) is live** — `app/Core`, `BelongsToTenant`, `ResolveTenant` and the three route files all exist. Still absent: `app/Modules`, `app/Support`, and every model, Action and endpoint. |
 | **Frontend** | ✅ `/frontend`. Token cascade, boot loader, all 9 UI primitives rebuilt, tooling configured, §8 state-matrix primitives complete (errors, logger, StateView, QueryBoundary, AsyncButton, Toast, LogInspector, four-level ErrorBoundary), and the single transport seam wired (`lib/api/client.ts` + `lib/api/queryClient.ts` + `QueryClientProvider`). See §4. |
-| **Database** | 🔄 Designed (159 tables). **95 of them exist** — Waves 1–15: platform (§4.6), org (§4.7), identity (§4.8), infrastructure (§4.9), master data A (§4.10), master data B (§4.11), master data C (§4.12), HR identity (§4.13), production (§4.14), QC & wastage (§4.15), ledger & stock inventory (§4.16), stock operations (§4.17), purchasing (§4.18), sales & invoicing (§4.19). Waves 16–25 unwritten. |
-| **Tests** | 🔄 Real, but foundation-only. Frontend **128 tests across 7 files**, all passing, covering the reliability layer (`ErrorBoundary`, `StateView`, `QueryBoundary`, `AsyncButton`, `logger`, `api/errors`, `api/queryClient`). Backend **335 tests / 1548 assertions** — the PHP-floor guard, Wave 1–15 schema contracts, and Tenancy runtime contracts. |
+| **Database** | 🔄 Designed (159 tables). **98 of them exist** — Waves 1–16: platform (§4.6), org (§4.7), identity (§4.8), infrastructure (§4.9), master data A (§4.10), master data B (§4.11), master data C (§4.12), HR identity (§4.13), production (§4.14), QC & wastage (§4.15), ledger & stock inventory (§4.16), stock operations (§4.17), purchasing (§4.18), sales & invoicing (§4.19), payments & allocations (§4.20). Waves 17–25 unwritten. |
+| **Tests** | 🔄 Real, but foundation-only. Frontend **128 tests across 7 files**, all passing, covering the reliability layer (`ErrorBoundary`, `StateView`, `QueryBoundary`, `AsyncButton`, `logger`, `api/errors`, `api/queryClient`). Backend **348 tests / 1605 assertions** — the PHP-floor guard, Wave 1–16 schema contracts, and Tenancy runtime contracts. |
 | **CI** | ✅ `.github/workflows/ci.yml` — 3 jobs, 9 legs. Frontend matrix (lint · typecheck · test · depcruise · format:check) installing at the **repository root**, build + bundle budget with a `dist` artifact, and a backend matrix (lint · analyse · test) on PHP 8.5. Every leg has a locally reproducible equivalent. |
 
 **The most important thing to know:** this project still has **no feature code and
 no business logic**. What exists is a design-system foundation, two framework
-skeletons, and ninety-five tables with no models, no Actions and no endpoints over
+skeletons, and ninety-eight tables with no models, no Actions and no endpoints over
 them. No route, no screen. Any statement that a feature "works" is false.
 
 ---
@@ -52,7 +52,7 @@ them. No route, no screen. Any statement that a feature "works" is false.
 | Phase | Scope | Status |
 |---|---|---|
 | **0** | Architecture & documentation | ✅ See §3 |
-| **1** | Auth · Tenancy · RBAC · Design System | 🔄 Migration Waves 1–15 and Tenancy Runtime (§7 item 29) done. Wave 16+, auth, RBAC outstanding |
+| **1** | Auth · Tenancy · RBAC · Design System | 🔄 Migration Waves 1–16 and Tenancy Runtime (§7 item 29) done. Wave 17+, auth, RBAC outstanding |
 | **2** | Master data · Products · Warehouses | ⬜ Not started |
 | **3** | Production · Worker Production · QC | ⬜ Not started |
 | **4** | Purchase · Inventory | ⬜ Not started |
@@ -246,16 +246,17 @@ six Wave 11 QC & wastage tables (§4.15),
 three Wave 12 ledger & stock tables (§4.16),
 six Wave 13 stock operations tables (§4.17),
 ten Wave 14 purchasing tables (§4.18),
-and nine Wave 15 sales & invoicing tables (§4.19)
+nine Wave 15 sales & invoicing tables (§4.19),
+and three Wave 16 payments & allocations tables (§4.20)
 exist and are verified.
 
 **Absent — the rest of Phase 1:** `app/Modules`, `app/Support`, and every model,
-Action and endpoint over the ninety-five tables. The three route files exist but
+Action and endpoint over the ninety-eight tables. The three route files exist but
 register no routes yet.
 
 ### 4.5 Test coverage
 
-128 frontend tests over 7 files; **335 backend tests / 1548 assertions**. Frontend
+128 frontend tests over 7 files; **348 backend tests / 1605 assertions**. Frontend
 tests sit beside the code they cover (`vitest.config.ts`
 `include: ['src/**/*.{test,spec}.{ts,tsx}']`); backend schema contracts live in
 `tests/Feature/Database/` and the tenancy-runtime contract in
@@ -1059,6 +1060,39 @@ Verified: `migrate:fresh` — all **95 migrations** green ✅ · `pint lint:fix`
 Wave 1 **11 tests** (220 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**,
 Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Tenancy runtime **3**, Unit+Example **2**.
 
+
+---
+
+### 4.20 Migrations — Wave 16 (Payments & Collections) complete
+
+Three Wave 16 migrations:
+`2026_08_24_111000` … `111200` — payments, payment_allocations, sales_order_payments.
+
+| Table / Migration | Notes |
+|---|---|
+| `payments` | Covers customer receipts (`in`) and supplier payments (`out`). Unique `(tenant_id, payment_number)`. Methods: `cash \| bank_transfer \| cheque \| card \| mobile_banking \| credit_adjustment`. Status: `draft \| posted \| bounced \| cancelled`. Composite FKs on `parties` (nullable), `companies` (nullable), `branches` (nullable). `bank_account_id` integer placeholder for Wave 21 Chart of Accounts closure. Amounts: `amount`, `allocated_amount`, `unallocated_amount` (`DECIMAL(18,4)`). |
+| `payment_allocations` | Allocates payment amounts to targets (`invoice`, `purchase_bill`, `sales_return`, `purchase_return`). Cascades on parent payment (`payments`, CASCADE). Invariant: sum of allocations <= payment amount. Amount: `DECIMAL(18,4)`. |
+| `sales_order_payments` | Split-tender POS and sales order payment records (supports cash + card + mobile in a single sale). Cascades on parent sales order (`sales_orders`, CASCADE). Composite FK on `payments` (nullable, RESTRICT). Pricing: `amount`, `change_given` (`DECIMAL(18,4)`). |
+
+**Invariants and rules enforced:**
+- Bi-directional payment handling: Both incoming collections and outgoing disbursements tracked in a single core model discriminated by `direction`.
+- Allocation integrity: `payment_allocations` cascades with payment lifecycle while preserving polymorphically typed target references.
+- Split tender: `sales_order_payments` enables multi-method POS tender with full change-given tracking.
+
+`Wave16PaymentsSchemaTest` — **13 tests / 48 assertions** covering all 3 tables,
+`tenant_id` placement, soft-delete compliance, no float/double/enum in migrations,
+payment number uniqueness, cross-tenant composite FK rejections,
+cascading delete lifecycle, and DECIMAL(18,4) precision round-trip.
+
+`SchemaTestCase` gained three fixture builder pairs: `insertPayment` / `paymentAttributes`,
+`insertPaymentAllocation` / `paymentAllocationAttributes`, `insertSalesOrderPayment` / `salesOrderPaymentAttributes`.
+
+Verified: `migrate:fresh` — all **98 migrations** green ✅ · `pint lint:fix` **PASS** ·
+`phpstan analyse` level 9 **[OK] No errors** · `artisan test`
+**348 passed / 1605 assertions**, none risky. Per-suite re-measured:
+Wave 1 **11 tests** (229 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**,
+Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Tenancy runtime **3**, Unit+Example **2**.
+
 ---
 
 ## 5. Dependency state — reconciled
@@ -1170,7 +1204,8 @@ Q3, it stops and asks (`TASK_PROTOCOL.md` §3.2).
 | 37 | Phase 1 **Wave 13 — Stock ops**, per `DATABASE_DESIGN.md` §16: `stock_transfers`, `stock_transfer_items`, `stock_adjustments`, `stock_adjustment_items`, `stock_counts`, `stock_count_items`. See §4.17. | ✅ |
 | 38 | Phase 1 **Wave 14 — Purchasing**, per `DATABASE_DESIGN.md` §16: `purchase_requisitions`, `purchase_requisition_items`, `purchase_orders`, `purchase_order_items`, `goods_receipts`, `goods_receipt_items`, `purchase_bills`, `purchase_bill_items`, `purchase_returns`, `purchase_return_items`. See §4.18. | ✅ |
 | 39 | Phase 1 **Wave 15 — Sales & Invoicing**, per `DATABASE_DESIGN.md` §16: `crm_leads`, `crm_activities`, `sales_orders`, `sales_order_items`, `invoice_templates`, `invoices`, `invoice_items`, `sales_returns`, `sales_return_items`. See §4.19. | ✅ |
-| 40 | Phase 1 **Wave 16 — Payments & Collections**, per `DATABASE_DESIGN.md` §16: `payments`, `payment_allocations`, `sales_order_payments`. | ⬜ |
+| 40 | Phase 1 **Wave 16 — Payments & Collections**, per `DATABASE_DESIGN.md` §16: `payments`, `payment_allocations`, `sales_order_payments`. See §4.20. | ✅ |
+| 41 | Phase 1 **Wave 17 — POS**, per `DATABASE_DESIGN.md` §16: `pos_terminals`, `pos_sessions`, `pos_offline_queue`. | ⬜ |
 
 ---
 
@@ -1187,10 +1222,10 @@ data A) is done** (§4.10), **Wave 6 (master data B) is done** (§4.11),
 Wave 9 (HR FK closure) are done** (§4.13), **Wave 10 (production) is done**
 (§4.14), **Wave 11 (QC & wastage) is done** (§4.15), **Wave 12 (ledger &
 stock inventory) is done** (§4.16), **Wave 13 (stock operations) is done**
-(§4.17), **Wave 14 (purchasing) is done** (§4.18), and **Wave 15 (sales & invoicing) is done**
-(§4.19) — `crm_leads`, `crm_activities`, `sales_orders`, `sales_order_items`,
-`invoice_templates`, `invoices`, `invoice_items`, `sales_returns`, `sales_return_items`.
-Start at **§7 item 40 — Wave 16 (Payments & Collections)**, per `DATABASE_DESIGN.md` §16.
+(§4.17), **Wave 14 (purchasing) is done** (§4.18), **Wave 15 (sales & invoicing) is done**
+(§4.19), and **Wave 16 (payments & collections) is done** (§4.20) — `payments`,
+`payment_allocations`, `sales_order_payments`.
+Start at **§7 item 41 — Wave 17 (POS)**, per `DATABASE_DESIGN.md` §16.
 
 
 These constraints are already settled. Do not re-derive them, and do not
@@ -1260,6 +1295,8 @@ contradict them:
 | 2026-08-24 | **Phase 1 Wave 13 (Stock operations) written and verified.** Six migrations: `stock_transfers`, `stock_transfer_items`, `stock_adjustments`, `stock_adjustment_items`, `stock_counts`, `stock_count_items` (`108000`–`108500`). Detailed per-table in **§4.17**. Cascading delete lifecycles verified for child line items while preserving `RESTRICT` on catalog references. `warehouseAttributes` fixture enhanced with auto-increment counter to avoid collision on multi-warehouse fixtures. `SchemaTestCase` gained six fixture builder pairs. `Wave13StockOpsSchemaTest` — **26 tests / 90 assertions**. Verified: `migrate:fresh` ✅ (76 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **284 passed / 1250 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (163 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Tenancy runtime **3**, Unit+Example **2**. §7 item 37 complete. Next: §7 item 38 — Wave 14 (Purchasing). |
 | 2026-08-24 | **Phase 1 Wave 14 (Purchasing) written and verified.** Ten migrations: `purchase_requisitions`, `purchase_requisition_items`, `purchase_orders`, `purchase_order_items`, `goods_receipts`, `goods_receipt_items`, `purchase_bills`, `purchase_bill_items`, `purchase_returns`, `purchase_return_items` (`109000`–`109900`). Detailed per-table in **§4.18**. Direct receipts enabled via nullable `goods_receipts.purchase_order_id`; service/expense non-catalog bills enabled via nullable `purchase_bill_items.product_id` and `unit_id`. Cascade delete boundaries verified across all 5 item tables while catalog references enforce `RESTRICT`. `SchemaTestCase` gained ten fixture builder pairs. `Wave14PurchasingSchemaTest` — **24 tests / 124 assertions**. Verified: `migrate:fresh` ✅ (86 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **308 passed / 1404 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (193 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Tenancy runtime **3**, Unit+Example **2**. §7 item 38 complete. Next: §7 item 39 — Wave 15 (Sales & Invoicing). |
 | 2026-08-24 | **Phase 1 Wave 15 (Sales & Invoicing) written and verified.** Nine migrations: `crm_leads`, `crm_activities`, `sales_orders`, `sales_order_items`, `invoice_templates`, `invoices`, `invoice_items`, `sales_returns`, `sales_return_items` (`110000`–`110800`). Detailed per-table in **§4.19**. ADR-015 single sales core channel discrimination (`counter`, `dealer`, `phone`, `field`, `online`); POS/walk-in agility via nullable party references; server-side price resolution contracts. Cascade delete boundaries verified across all 4 item tables while catalog references enforce `RESTRICT`. `SchemaTestCase` gained nine fixture builder pairs. `Wave15SalesSchemaTest` — **27 tests / 117 assertions**. Verified: `migrate:fresh` ✅ (95 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **335 passed / 1548 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (220 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Tenancy runtime **3**, Unit+Example **2**. §7 item 39 complete. Next: §7 item 40 — Wave 16 (Payments & Collections). |
+| 2026-08-24 | **Phase 1 Wave 16 (Payments & Collections) written and verified.** Three migrations: `payments`, `payment_allocations`, `sales_order_payments` (`111000`–`111200`). Detailed per-table in **§4.20**. Bi-directional payment ledger covering incoming customer receipts and outgoing supplier disbursements (`direction` in/out); payment allocations supporting invoices, bills, and returns; POS split tender support. `SchemaTestCase` gained three fixture builder pairs. `Wave16PaymentsSchemaTest` — **13 tests / 48 assertions**. Verified: `migrate:fresh` ✅ (98 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **348 passed / 1605 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (229 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Tenancy runtime **3**, Unit+Example **2**. §7 item 40 complete. Next: §7 item 41 — Wave 17 (POS). |
+
 
 
 

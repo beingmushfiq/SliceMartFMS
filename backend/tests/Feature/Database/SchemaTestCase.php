@@ -3256,6 +3256,131 @@ abstract class SchemaTestCase extends TestCase
         ];
     }
 
+    // ─── payments ──────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertPayment(
+        int $tenantId,
+        array $overrides = []
+    ): int {
+        return DB::table('payments')
+            ->insertGetId($this->paymentAttributes($tenantId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function paymentAttributes(
+        int $tenantId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'payment_number' => 'PAY-'.$counter,
+            'direction' => 'in',
+            'party_id' => null,
+            'company_id' => null,
+            'branch_id' => null,
+            'payment_date' => '2026-08-24',
+            'method' => 'cash',
+            'bank_account_id' => null,
+            'reference_number' => 'REF-'.$counter,
+            'amount' => '500.0000',
+            'allocated_amount' => '0.0000',
+            'unallocated_amount' => '500.0000',
+            'currency_code' => 'USD',
+            'status' => 'draft',
+            'received_by' => null,
+            'posted_at' => null,
+            'notes' => null,
+            'created_at' => '2026-08-24 10:00:00',
+            'updated_at' => '2026-08-24 10:00:00',
+        ];
+    }
+
+    // ─── payment_allocations ───────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertPaymentAllocation(
+        int $tenantId,
+        int $paymentId,
+        string $allocatableType,
+        int $allocatableId,
+        array $overrides = []
+    ): int {
+        return DB::table('payment_allocations')
+            ->insertGetId($this->paymentAllocationAttributes($tenantId, $paymentId, $allocatableType, $allocatableId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function paymentAllocationAttributes(
+        int $tenantId,
+        int $paymentId,
+        string $allocatableType,
+        int $allocatableId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'payment_id' => $paymentId,
+            'allocatable_type' => $allocatableType,
+            'allocatable_id' => $allocatableId,
+            'amount' => '200.0000',
+            'created_at' => '2026-08-24 10:00:00',
+            'updated_at' => '2026-08-24 10:00:00',
+        ];
+    }
+
+    // ─── sales_order_payments ──────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertSalesOrderPayment(
+        int $tenantId,
+        int $salesOrderId,
+        array $overrides = []
+    ): int {
+        return DB::table('sales_order_payments')
+            ->insertGetId($this->salesOrderPaymentAttributes($tenantId, $salesOrderId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function salesOrderPaymentAttributes(
+        int $tenantId,
+        int $salesOrderId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'sales_order_id' => $salesOrderId,
+            'payment_id' => null,
+            'method' => 'cash',
+            'amount' => '210.0000',
+            'change_given' => '0.0000',
+            'reference' => null,
+            'created_at' => '2026-08-24 10:00:00',
+            'updated_at' => '2026-08-24 10:00:00',
+        ];
+    }
+
     /**
      * SQLite and MySQL word the same violation differently, and the suite runs
      * on SQLite while production runs on MySQL.
