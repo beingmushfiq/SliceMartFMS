@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
@@ -7,10 +9,41 @@ use PHPUnit\Framework\TestCase;
 class ExampleTest extends TestCase
 {
     /**
-     * A basic test example.
+     * The suite must not silently run on an interpreter the application does
+     * not support: a CI matrix or a developer machine below the floor produces
+     * failures whose real cause is the runtime, not the code.
+     *
+     * The floor is read out of `composer.json` rather than written here as a
+     * literal. A hardcoded number is free to disagree with the declaration —
+     * which is exactly the drift this test exists to catch.
      */
-    public function test_that_true_is_true(): void
+    public function test_the_runtime_satisfies_the_declared_php_floor(): void
     {
-        $this->assertTrue(true);
+        $manifest = file_get_contents(__DIR__.'/../../composer.json');
+        $this->assertIsString($manifest, 'composer.json could not be read.');
+
+        $decoded = json_decode($manifest, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertIsArray($decoded);
+        $this->assertArrayHasKey('require', $decoded);
+        $this->assertIsArray($decoded['require']);
+        $this->assertArrayHasKey('php', $decoded['require']);
+
+        $constraint = $decoded['require']['php'];
+        $this->assertIsString($constraint);
+
+        // `^8.5` -> `8.5`. Only the caret form is declared; anything else is a
+        // deliberate change that should come with a deliberate test change.
+        $this->assertMatchesRegularExpression(
+            '/^\^\d+\.\d+$/',
+            $constraint,
+            "Unexpected PHP constraint {$constraint}; update this test alongside it."
+        );
+
+        $floor = ltrim($constraint, '^');
+
+        $this->assertTrue(
+            version_compare(PHP_VERSION, $floor.'.0', '>='),
+            "composer.json requires PHP {$constraint}; running ".PHP_VERSION.'.'
+        );
     }
 }

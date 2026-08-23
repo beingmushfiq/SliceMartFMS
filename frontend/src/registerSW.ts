@@ -22,25 +22,35 @@ export function registerServiceWorker() {
   }
 }
 
-// Global hook for beforeinstallprompt
-let deferredPrompt: any = null;
+// Global hook for beforeinstallprompt.
+// `beforeinstallprompt` is not in the TypeScript DOM lib (it is a Chromium
+// extension to the spec), so the event shape is declared locally and the
+// listener narrows via a cast at the single boundary where it arrives.
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+}
+
+let deferredPrompt: BeforeInstallPromptEvent | null = null;
 
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
-    deferredPrompt = e;
+    deferredPrompt = e as BeforeInstallPromptEvent;
     window.dispatchEvent(new Event('pwa-install-available'));
   });
 }
 
 export function promptPWAInstall(): Promise<boolean> {
-  if (!deferredPrompt) return Promise.resolve(false);
-  deferredPrompt.prompt();
-  return deferredPrompt.userChoice.then((choiceResult: { outcome: string }) => {
-    const installed = choiceResult.outcome === 'accepted';
-    deferredPrompt = null;
-    return installed;
-  });
+  const prompt = deferredPrompt;
+  if (!prompt) return Promise.resolve(false);
+  // The prompt is single-use: the browser discards it once shown, so clear our
+  // reference immediately rather than after the choice resolves. Otherwise
+  // `isPWAInstallable()` keeps reporting true for a prompt that can no longer
+  // be raised, and the banner offers a button that does nothing.
+  deferredPrompt = null;
+  void prompt.prompt();
+  return prompt.userChoice.then(({ outcome }) => outcome === 'accepted');
 }
 
 export function isPWAInstallable(): boolean {

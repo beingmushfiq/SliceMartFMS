@@ -6,7 +6,7 @@
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
-        "php": "^8.3",
+        "php": "^8.5",
         "laravel/framework": "^13.17",
         "laravel/tinker": "^3.0"
     },
@@ -46,9 +46,17 @@
             "Composer\\Config::disableProcessTimeout",
             "@php artisan dev"
         ],
+        "lint": "@php vendor/bin/pint --test",
+        "lint:fix": "@php vendor/bin/pint",
+        "analyse": "@php vendor/bin/phpstan analyse --no-progress --memory-limit=1G",
         "test": [
             "@php artisan config:clear --ansi @no_additional_args",
             "@php artisan test"
+        ],
+        "check": [
+            "@lint",
+            "@analyse",
+            "@test"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",

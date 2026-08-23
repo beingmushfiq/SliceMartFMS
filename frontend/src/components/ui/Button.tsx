@@ -161,37 +161,37 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
    construction (`aspect-square p-0`) so it cannot drift from Button's heights.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-interface IconButtonProps
-  extends Omit<ButtonBaseProps, 'leftIcon' | 'rightIcon' | 'children' | 'fullWidth'> {
+interface IconButtonProps extends Omit<
+  ButtonBaseProps,
+  'leftIcon' | 'rightIcon' | 'children' | 'fullWidth'
+> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   icon: React.ReactNode;
   label: string;
   loading?: boolean;
 }
 
-export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
-  function IconButton({ icon, label, size = 'md', loading, className, ...props }, ref) {
-    return (
-      <Button
-        ref={ref}
-        size={size}
-        aria-label={label}
-        {...(loading !== undefined && { loading })}
-        className={cn('aspect-square p-0', className)}
-        {...props}
-      >
-        {!loading && (
-          <span
-            className={cn(iconSizeMap[size], 'shrink-0 [&>svg]:size-full')}
-            aria-hidden="true"
-          >
-            {icon}
-          </span>
-        )}
-      </Button>
-    );
-  }
-);
+export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
+  { icon, label, size = 'md', loading, className, ...props },
+  ref
+) {
+  return (
+    <Button
+      ref={ref}
+      size={size}
+      aria-label={label}
+      {...(loading !== undefined && { loading })}
+      className={cn('aspect-square p-0', className)}
+      {...props}
+    >
+      {!loading && (
+        <span className={cn(iconSizeMap[size], 'shrink-0 [&>svg]:size-full')} aria-hidden="true">
+          {icon}
+        </span>
+      )}
+    </Button>
+  );
+});
 
 /* ═══════════════════════════════════════════════════════════════════════════
    BUTTON GROUP                                                        §10.2

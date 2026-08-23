@@ -111,7 +111,13 @@ function LogEntryRow({ entry }: { entry: LogEntry }) {
    This component handles nothing visual beyond layout.
    ─────────────────────────────────────────────────────────────────────────── */
 
-const ALL_LEVELS: readonly (LogLevel | 'all')[] = ['all', 'error', 'warn', 'info', 'debug'] as const;
+const ALL_LEVELS: readonly (LogLevel | 'all')[] = [
+  'all',
+  'error',
+  'warn',
+  'info',
+  'debug',
+] as const;
 
 export function LogInspector({ open, onClose }: LogInspectorProps) {
   const logs = useLogEntries();

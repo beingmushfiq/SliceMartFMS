@@ -51,7 +51,10 @@ function handleTabKeyDown(
   const current = tabs.findIndex((t) => t.dataset.tabId === currentId);
   if (current === -1) return;
 
-  let next = current;
+  // Declared without an initialiser on purpose: every reachable branch below
+  // assigns, and `default` returns, so TS proves it is definitely assigned.
+  // Seeding it with `current` would be a value no branch can ever observe.
+  let next: number;
   switch (e.key) {
     case 'ArrowRight':
       next = (current + 1) % tabs.length;
@@ -118,9 +121,7 @@ function TabList({ children, className, label }: TabListProps) {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      const tabs = Array.from(
-        listRef.current?.querySelectorAll<HTMLElement>('[role="tab"]') ?? []
-      );
+      const tabs = Array.from(listRef.current?.querySelectorAll<HTMLElement>('[role="tab"]') ?? []);
       handleTabKeyDown(e, tabs, activeTab, onValueChange);
     },
     [activeTab, onValueChange]
@@ -132,10 +133,7 @@ function TabList({ children, className, label }: TabListProps) {
       role="tablist"
       aria-label={label}
       onKeyDown={handleKeyDown}
-      className={cn(
-        'flex gap-1 overflow-x-auto',
-        className
-      )}
+      className={cn('flex gap-1 overflow-x-auto', className)}
     >
       {React.Children.map(children, (child) => {
         if (!React.isValidElement(child)) return child;

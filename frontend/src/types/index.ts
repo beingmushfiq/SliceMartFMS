@@ -117,7 +117,7 @@ export interface Warehouse {
 
 export interface InventoryItem {
   id: ID;
-  itemId: ID;            // product or material ID
+  itemId: ID; // product or material ID
   itemType: 'product' | 'material';
   itemName: string;
   warehouseId: WarehouseId;
@@ -221,13 +221,7 @@ export interface Attendance {
 // ── Production ────────────────────────────────────────────────
 
 export type ProductionOrderStatus =
-  | 'draft'
-  | 'planned'
-  | 'ready'
-  | 'in_production'
-  | 'qc_pending'
-  | 'completed'
-  | 'cancelled';
+  'draft' | 'planned' | 'ready' | 'in_production' | 'qc_pending' | 'completed' | 'cancelled';
 
 export interface ProductionOrder {
   id: ID;
@@ -417,7 +411,8 @@ export interface Customer {
 // ── Sales ─────────────────────────────────────────────────────
 
 export type SaleType = 'b2b' | 'b2c' | 'raw_material';
-export type SaleStatus = 'draft' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'returned' | 'cancelled';
+export type SaleStatus =
+  'draft' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'returned' | 'cancelled';
 
 export interface Sale {
   id: ID;
@@ -505,14 +500,7 @@ export interface DeliveryItem {
 // ── Finance ───────────────────────────────────────────────────
 
 export type PaymentMethodType =
-  | 'cash'
-  | 'bank_transfer'
-  | 'bkash'
-  | 'nagad'
-  | 'rocket'
-  | 'card'
-  | 'credit'
-  | 'other';
+  'cash' | 'bank_transfer' | 'bkash' | 'nagad' | 'rocket' | 'card' | 'credit' | 'other';
 
 export interface Account {
   id: ID;
@@ -599,7 +587,8 @@ export interface Notification {
 
 // ── Audit Log ─────────────────────────────────────────────────
 
-export type AuditAction = 'create' | 'update' | 'delete' | 'approve' | 'cancel' | 'adjustment' | 'payment';
+export type AuditAction =
+  'create' | 'update' | 'delete' | 'approve' | 'cancel' | 'adjustment' | 'payment';
 
 export interface AuditLog {
   id: ID;

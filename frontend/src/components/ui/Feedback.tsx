@@ -56,12 +56,18 @@ export function useDelayedFlag(active: boolean, delayMs: number = SKELETON_DELAY
   const [visible, setVisible] = React.useState(false);
 
   React.useEffect(() => {
-    if (!active) {
-      setVisible(false);
-      return;
-    }
+    if (!active) return;
     const timer = window.setTimeout(() => setVisible(true), delayMs);
-    return () => window.clearTimeout(timer);
+    /* The reset lives in cleanup, not in the effect body. Resetting in the body
+       is a synchronous setState during an effect, which cascades an extra
+       render on every deactivation; cleanup runs at exactly the same moment
+       without that cost. It is still required — without it a second activation
+       would inherit `visible: true` and paint the skeleton instantly, skipping
+       the 120ms gate this hook exists to enforce. */
+    return () => {
+      window.clearTimeout(timer);
+      setVisible(false);
+    };
   }, [active, delayMs]);
 
   return active && visible;
@@ -225,8 +231,14 @@ export function EmptyState({
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const heightMap = {
-  1: 'h-1', 2: 'h-2', 3: 'h-3', 4: 'h-4',
-  5: 'h-5', 6: 'h-6', 7: 'h-7', 8: 'h-8',
+  1: 'h-1',
+  2: 'h-2',
+  3: 'h-3',
+  4: 'h-4',
+  5: 'h-5',
+  6: 'h-6',
+  7: 'h-7',
+  8: 'h-8',
 } as const;
 type SkeletonHeight = keyof typeof heightMap;
 
@@ -303,7 +315,10 @@ type ProgressBarProps = {
   /** Renders the percentage as text beside the bar. Determinate only. */
   showValue?: boolean;
   className?: string;
-} & ({ value: number; max?: number; indeterminate?: never } | { indeterminate: true; value?: never; max?: never });
+} & (
+  | { value: number; max?: number; indeterminate?: never }
+  | { indeterminate: true; value?: never; max?: never }
+);
 
 export function ProgressBar(props: ProgressBarProps) {
   const { label, showValue = false, className } = props;
@@ -392,27 +407,23 @@ interface AlertProps {
 }
 
 const variantMap = {
-  info:    'bg-info-subtle text-info border-info',
+  info: 'bg-info-subtle text-info border-info',
   success: 'bg-success-subtle text-success border-success',
   warning: 'bg-warning-subtle text-warning border-warning',
-  danger:  'bg-danger-subtle text-danger border-danger',
+  danger: 'bg-danger-subtle text-danger border-danger',
 } as const;
 
 const iconMap: Record<AlertVariant, React.ReactNode> = {
-  info:    <Info className="size-4 shrink-0 mt-0.5" />,
+  info: <Info className="size-4 shrink-0 mt-0.5" />,
   success: <CircleCheckBig className="size-4 shrink-0 mt-0.5" />,
   warning: <TriangleAlert className="size-4 shrink-0 mt-0.5" />,
-  danger:  <CircleX className="size-4 shrink-0 mt-0.5" />,
+  danger: <CircleX className="size-4 shrink-0 mt-0.5" />,
 };
 
 export function Alert({ variant = 'info', title, children, onClose, className }: AlertProps) {
   return (
     <div
-      className={cn(
-        'flex items-start gap-3 border rounded-lg p-3',
-        variantMap[variant],
-        className
-      )}
+      className={cn('flex items-start gap-3 border rounded-lg p-3', variantMap[variant], className)}
       role="alert"
     >
       <span aria-hidden="true">{iconMap[variant]}</span>

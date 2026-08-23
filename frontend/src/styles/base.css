@@ -54,12 +54,15 @@
     /* Inter's contextual alternates and tabular figures are opt-in features.
        `cv05` gives the lowercase `l` a tail, which disambiguates l / I / 1 —
        this matters when reading batch codes and SKUs. */
-    font-feature-settings: 'cv05' 1, 'calt' 1;
+    font-feature-settings:
+      'cv05' 1,
+      'calt' 1;
     text-rendering: optimizeLegibility;
     /* Colour/background transition on theme toggle only. Declared on body so
        the switch reads as a deliberate change rather than a flash; child
        surfaces inherit their own transitions from component tokens. */
-    transition: background-color var(--motion-duration-base) var(--motion-ease-standard),
+    transition:
+      background-color var(--motion-duration-base) var(--motion-ease-standard),
       color var(--motion-duration-base) var(--motion-ease-standard);
   }
 

@@ -492,10 +492,7 @@ export function Drawer({
     <LazyMotion features={domAnimation}>
       <AnimatePresence>
         {open && (
-          <div
-            className="fixed inset-0 z-(--z-overlay)"
-            data-drawer="true"
-          >
+          <div className="fixed inset-0 z-(--z-overlay)" data-drawer="true">
             {/* §4.2 defect 11 — z-(--z-overlay) on scrim. */}
             <m.div
               className="fixed inset-0 bg-overlay"
@@ -543,9 +540,7 @@ export function Drawer({
               </div>
 
               {/* Body — scrollable */}
-              <div className="flex-1 overflow-y-auto px-6 py-5">
-                {children}
-              </div>
+              <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
 
               {/* Footer */}
               {footer && (

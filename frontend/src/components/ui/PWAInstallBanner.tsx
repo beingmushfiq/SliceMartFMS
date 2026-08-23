@@ -11,8 +11,8 @@ import { enterBase } from '../../lib/motion/tokens';
 
 export function PWAInstallBanner() {
   const [canInstall, setCanInstall] = useState(false);
-  const [isOffline,   setIsOffline]   = useState(!navigator.onLine);
-  const [dismissed,   setDismissed]   = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     // Check if installable
@@ -22,14 +22,14 @@ export function PWAInstallBanner() {
     window.addEventListener('pwa-install-available', handleInstallAvail);
 
     // Online / Offline handlers
-    const handleOnline  = () => setIsOffline(false);
+    const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
-    window.addEventListener('online',  handleOnline);
+    window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
     return () => {
       window.removeEventListener('pwa-install-available', handleInstallAvail);
-      window.removeEventListener('online',  handleOnline);
+      window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
@@ -77,13 +77,24 @@ export function PWAInstallBanner() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-600 text-default leading-tight">Install App</p>
               <p className="text-xs text-muted mt-1 leading-snug">
-                Add to your home screen for quick offline access, full-screen view & faster factory operations.
+                Add to your home screen for quick offline access, full-screen view & faster factory
+                operations.
               </p>
               <div className="flex items-center gap-2 mt-3">
-                <Button variant="primary" size="sm" onClick={handleInstall} leftIcon={<Download className="size-3" />}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleInstall}
+                  leftIcon={<Download className="size-3" />}
+                >
                   Install App
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setDismissed(true)} className="text-muted hover:text-default">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setDismissed(true)}
+                  className="text-muted hover:text-default"
+                >
                   Maybe Later
                 </Button>
               </div>

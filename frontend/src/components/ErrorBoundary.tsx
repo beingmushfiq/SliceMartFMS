@@ -23,15 +23,7 @@
 
 import React, { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
-import {
-  TriangleAlert,
-  RotateCcw,
-  Home,
-  Copy,
-  Check,
-  ShieldAlert,
-  Bug,
-} from 'lucide-react';
+import { TriangleAlert, RotateCcw, Home, Copy, Check, ShieldAlert, Bug } from 'lucide-react';
 import { Button } from './ui/Button';
 import { logBoundaryError } from '../lib/observability/logger';
 
@@ -151,7 +143,7 @@ function ErrorFallbackView({ level, error, errorInfo, onReset }: FallbackViewPro
       componentStack: errorInfo?.componentStack,
     },
     null,
-    2,
+    2
   );
 
   const handleCopy = () => {
@@ -167,7 +159,10 @@ function ErrorFallbackView({ level, error, errorInfo, onReset }: FallbackViewPro
         <span className="text-danger font-semibold">Something went wrong in this section. </span>
         <span className="text-danger">
           {import.meta.env.DEV && (
-            <span className="font-mono text-xs"> {error.name}: {error.message}</span>
+            <span className="font-mono text-xs">
+              {' '}
+              {error.name}: {error.message}
+            </span>
           )}
         </span>
         <Button
@@ -189,7 +184,7 @@ function ErrorFallbackView({ level, error, errorInfo, onReset }: FallbackViewPro
       <div className="flex items-center gap-3 p-3 rounded-lg bg-danger-subtle border border-danger">
         <TriangleAlert className="w-4 h-4 text-danger shrink-0" />
         <span className="text-sm text-danger flex-1">
-          This section couldn\u2019t load. Your other data is fine.
+          This section couldn&rsquo;t load. Your other data is fine.
         </span>
         <Button
           variant="ghost"
@@ -222,7 +217,7 @@ function ErrorFallbackView({ level, error, errorInfo, onReset }: FallbackViewPro
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => window.history.back()}
+              onClick={onReset}
               leftIcon={<RotateCcw className="w-4 h-4" />}
             >
               Go back
@@ -256,16 +251,14 @@ function ErrorFallbackView({ level, error, errorInfo, onReset }: FallbackViewPro
                 System Error
               </span>
             </div>
-            <h1 className="text-lg sm:text-xl font-bold text-default mt-1">
-              Something went wrong
-            </h1>
+            <h1 className="text-lg sm:text-xl font-bold text-default mt-1">Something went wrong</h1>
           </div>
         </div>
 
         {/* Safe copy — §8.3: what happened, what it means, what to do */}
         <p className="text-sm text-muted mb-4 leading-relaxed">
-          An unexpected error occurred. Nothing was saved and your data is safe.
-          You can return to the dashboard or try reloading the page.
+          An unexpected error occurred. Nothing was saved and your data is safe. You can return to
+          the dashboard or try reloading the page.
         </p>
 
         {/* Actions */}
@@ -290,7 +283,9 @@ function ErrorFallbackView({ level, error, errorInfo, onReset }: FallbackViewPro
             variant="ghost"
             size="sm"
             onClick={handleCopy}
-            leftIcon={copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
+            leftIcon={
+              copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />
+            }
           >
             {copied ? 'Copied' : 'Copy diagnostics'}
           </Button>

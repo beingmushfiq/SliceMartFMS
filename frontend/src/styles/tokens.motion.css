@@ -62,12 +62,14 @@
      `--transition-colors` is exempt: colour is not a layout property and does
      not trigger reflow.
      ──────────────────────────────────────────────────────────────────────── */
-  --transition-colors: color var(--motion-duration-instant) var(--motion-ease-standard),
+  --transition-colors:
+    color var(--motion-duration-instant) var(--motion-ease-standard),
     background-color var(--motion-duration-instant) var(--motion-ease-standard),
     border-color var(--motion-duration-instant) var(--motion-ease-standard);
   --transition-transform: transform var(--motion-duration-fast) var(--motion-ease-standard);
   --transition-opacity: opacity var(--motion-duration-fast) var(--motion-ease-standard);
-  --transition-control: color var(--motion-duration-instant) var(--motion-ease-standard),
+  --transition-control:
+    color var(--motion-duration-instant) var(--motion-ease-standard),
     background-color var(--motion-duration-instant) var(--motion-ease-standard),
     border-color var(--motion-duration-instant) var(--motion-ease-standard),
     box-shadow var(--motion-duration-instant) var(--motion-ease-standard),

@@ -10,9 +10,9 @@ import { enterBase, stagger, craft } from '../../lib/motion/tokens';
 
 // ── Animated number counter ────────────────────────────────────
 function AnimatedNumber({ value, className }: { value: number; className?: string }) {
-  const mv       = useMotionValue(0);
-  const spring   = useSpring(mv, { stiffness: 200, damping: 30, mass: 0.5 });
-  const display  = useTransform(spring, (v) => Math.round(v).toLocaleString());
+  const mv = useMotionValue(0);
+  const spring = useSpring(mv, { stiffness: 200, damping: 30, mass: 0.5 });
+  const display = useTransform(spring, (v) => Math.round(v).toLocaleString());
   const isMounted = useRef(false);
 
   useEffect(() => {
@@ -28,28 +28,38 @@ function AnimatedNumber({ value, className }: { value: number; className?: strin
 }
 
 interface KPICardProps {
-  label:       string;
-  value:       string | number;
-  subValue?:   string;
-  delta?:      number;
+  label: string;
+  value: string | number;
+  subValue?: string;
+  delta?: number;
   deltaLabel?: string;
-  icon?:       React.ReactNode;
-  iconColor?:  string;
-  alert?:      'warning' | 'danger' | 'success';
-  onClick?:    () => void;
-  className?:  string;
-  index?:      number;  // for stagger
+  icon?: React.ReactNode;
+  iconColor?: string;
+  alert?: 'warning' | 'danger' | 'success';
+  onClick?: () => void;
+  className?: string;
+  index?: number; // for stagger
 }
 
 export function KPICard({
-  label, value, subValue, delta, deltaLabel, icon, iconColor, alert, onClick, className, index = 0,
+  label,
+  value,
+  subValue,
+  delta,
+  deltaLabel,
+  icon,
+  iconColor,
+  alert,
+  onClick,
+  className,
+  index = 0,
 }: KPICardProps) {
   const isClickable = Boolean(onClick);
-  const isNumeric   = typeof value === 'number';
+  const isNumeric = typeof value === 'number';
 
   const alertBorder = {
     warning: 'border-l-4 border-l-warning',
-    danger:  'border-l-4 border-l-danger',
+    danger: 'border-l-4 border-l-danger',
     success: 'border-l-4 border-l-success',
   };
 
@@ -58,7 +68,10 @@ export function KPICard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ ...enterBase, delay: index * stagger }}
-      {...(isClickable && { whileHover: { y: craft.hoverLift }, whileTap: { scale: craft.pressScale } })}
+      {...(isClickable && {
+        whileHover: { y: craft.hoverLift },
+        whileTap: { scale: craft.pressScale },
+      })}
       className={cn(
         'rounded-(--card-radius) p-(--card-padding) bg-(--card-bg) border border-(--card-border) shadow-(--card-shadow)',
         alert && alertBorder[alert],
@@ -73,10 +86,15 @@ export function KPICard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col gap-1 min-w-0">
-          <span className="text-2xs font-semibold tracking-wide uppercase text-muted truncate">{label}</span>
+          <span className="text-2xs font-semibold tracking-wide uppercase text-muted truncate">
+            {label}
+          </span>
 
           {isNumeric ? (
-            <AnimatedNumber value={value as number} className="text-(length:--kpi-value-size) font-bold text-default tabular" />
+            <AnimatedNumber
+              value={value as number}
+              className="text-(length:--kpi-value-size) font-bold text-default tabular"
+            />
           ) : (
             <m.span
               key={String(value)}
@@ -89,9 +107,7 @@ export function KPICard({
             </m.span>
           )}
 
-          {subValue && (
-            <span className="text-xs text-muted mt-0.5">{subValue}</span>
-          )}
+          {subValue && <span className="text-xs text-muted mt-0.5">{subValue}</span>}
         </div>
 
         {icon && (
@@ -127,8 +143,8 @@ export function KPICard({
             <Minus className="w-3 h-3" aria-hidden="true" />
           )}
           <span>
-            {delta > 0 ? '+' : ''}{delta}%
-            {deltaLabel && <span className="text-muted ml-1">{deltaLabel}</span>}
+            {delta > 0 ? '+' : ''}
+            {delta}%{deltaLabel && <span className="text-muted ml-1">{deltaLabel}</span>}
           </span>
         </m.div>
       )}
@@ -141,7 +157,7 @@ interface ProgressKPIProps {
   label: string;
   value: number;
   total: number;
-  unit?:  string;
+  unit?: string;
   color?: 'primary' | 'success' | 'warning' | 'danger';
 }
 
@@ -149,10 +165,16 @@ const progressColors = {
   primary: 'bg-primary',
   success: 'bg-success',
   warning: 'bg-warning',
-  danger:  'bg-danger',
+  danger: 'bg-danger',
 };
 
-export function ProgressKPI({ label, value, total, unit = 'pcs', color = 'primary' }: ProgressKPIProps) {
+export function ProgressKPI({
+  label,
+  value,
+  total,
+  unit = 'pcs',
+  color = 'primary',
+}: ProgressKPIProps) {
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
 
   return (
@@ -160,7 +182,10 @@ export function ProgressKPI({ label, value, total, unit = 'pcs', color = 'primar
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted font-medium">{label}</span>
         <span className="text-xs font-semibold text-default font-mono">
-          {value.toLocaleString()}<span className="text-muted ml-0.5">/{total.toLocaleString()} {unit}</span>
+          {value.toLocaleString()}
+          <span className="text-muted ml-0.5">
+            /{total.toLocaleString()} {unit}
+          </span>
         </span>
       </div>
       <div className="h-(--progress-height) rounded-(--progress-radius) bg-surface-sunken overflow-hidden">

@@ -1,12 +1,15 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { LazyMotion, domAnimation, MotionConfig } from 'framer-motion';
 import type { ReducedMotionConfig } from 'framer-motion';
 
 import './styles/index.css';
 import App from './App';
 import { bootFail, bootStep } from './app/boot';
-import { ErrorBoundary } from './components/ErrorBoundary';
+import { GlobalBoundary } from './components/ErrorBoundary';
+import { Toaster } from './components/ui/Toast';
+import { createQueryClient } from './lib/api/queryClient';
 import { installGlobalErrorHandlers } from './lib/observability/logger';
 import { registerServiceWorker } from './registerSW';
 import { prefersReducedMotion } from './lib/motion/tokens';
@@ -31,6 +34,10 @@ installGlobalErrorHandlers();
    explicitly opts *in* to motion on a device that requests less of it. */
 const reducedMotion: ReducedMotionConfig = prefersReducedMotion() ? 'always' : 'never';
 
+/* One client for the process. Created here rather than inside a component so a
+   re-render can never swap the cache out from under in-flight queries. */
+const queryClient = createQueryClient();
+
 const container = document.getElementById('root');
 
 if (!container) {
@@ -41,13 +48,24 @@ if (!container) {
 } else {
   createRoot(container).render(
     <StrictMode>
-      <MotionConfig reducedMotion={reducedMotion}>
-        <LazyMotion features={domAnimation}>
-          <ErrorBoundary>
-            <App />
-          </ErrorBoundary>
-        </LazyMotion>
-      </MotionConfig>
+      {/* Outermost, and deliberately outside every provider: §8.4 level ① and
+          ARCHITECTURE.md §6.7 give the root boundary "provider/bootstrap
+          failure" as its job, which it cannot do from inside the providers it
+          is meant to catch. Its fallback imports only React, lucide and Button,
+          so it renders correctly with no context available at all. */}
+      <GlobalBoundary>
+        <MotionConfig reducedMotion={reducedMotion}>
+          <LazyMotion features={domAnimation}>
+            <QueryClientProvider client={queryClient}>
+              <App />
+              {/* §8.1 row 5, transient variant. A sibling of <App />, not a
+                  child of any route, so a route-level boundary tearing down
+                  cannot take an in-flight confirmation with it. */}
+              <Toaster />
+            </QueryClientProvider>
+          </LazyMotion>
+        </MotionConfig>
+      </GlobalBoundary>
     </StrictMode>
   );
 

@@ -16,15 +16,22 @@ interface PaginationProps {
   pageSize?: number;
 }
 
-export function Pagination({ page, totalPages, onPageChange, totalItems, pageSize }: PaginationProps) {
+export function Pagination({
+  page,
+  totalPages,
+  onPageChange,
+  totalItems,
+  pageSize,
+}: PaginationProps) {
   const start = pageSize ? (page - 1) * pageSize + 1 : undefined;
-  const end   = pageSize ? Math.min(page * pageSize, totalItems ?? 0) : undefined;
+  const end = pageSize ? Math.min(page * pageSize, totalItems ?? 0) : undefined;
 
   return (
     <div className="flex items-center justify-between px-4 py-3 border-t border-default">
       {totalItems !== undefined && pageSize && (
         <p className="text-xs text-muted">
-          Showing <span className="font-semibold">{start}</span>–<span className="font-semibold">{end}</span> of{' '}
+          Showing <span className="font-semibold">{start}</span>–
+          <span className="font-semibold">{end}</span> of{' '}
           <span className="font-semibold">{totalItems}</span> results
         </p>
       )}

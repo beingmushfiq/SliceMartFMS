@@ -1,3 +1,21 @@
+# Every gate here runs locally by the same name, so a red build is reproducible
+# without pushing a commit to find out what broke:
+#
+#   npm run verify                  lint + typecheck + depcruise + test
+#   npm run build && npm run budget  the build job
+#   cd backend && composer check     lint + analyse + test
+#
+# Two structural choices, both load-bearing:
+#
+# 1. `npm ci` runs at the REPOSITORY ROOT, not in `frontend/`. This is an npm
+#    workspace (`workspaces: ["frontend"]`), so the only lockfile is
+#    `package-lock.json` at the root and dependencies hoist to the root
+#    `node_modules`. A job that installs inside `frontend/` fails outright —
+#    there is no `frontend/package-lock.json` for `npm ci` to read.
+#
+# 2. The jobs are separate rather than sequential steps in one job. A push that
+#    breaks types AND formatting should report both, not stop at the first.
+
 name: CI
 
 on:
@@ -6,84 +24,132 @@ on:
   pull_request:
     branches: [main]
 
+# A force-push or a quick follow-up commit makes the previous run's result
+# irrelevant. Cancel it instead of paying for an answer nobody will read.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Pinned deliberately: the local dev machine runs Node 25, which is outside
+  # the supported range of `dependency-cruiser` and `jsdom`. CI is the reference
+  # runtime, and `package.json` declares `engines.node: >=22`.
+  NODE_VERSION: "22"
+
+  # `backend/composer.json` requires `^8.5`, and the installed Symfony 8.1 tree
+  # hard-requires >= 8.4.1. `tests/Unit/ExampleTest.php` reads that constraint
+  # out of the manifest and fails if this pin ever drops below it, so the two
+  # cannot drift apart silently.
+  PHP_VERSION: "8.5"
+
 jobs:
-  lint:
-    name: Lint
+  # ── Frontend ──────────────────────────────────────────────────────────────
+  frontend:
+    name: Frontend / ${{ matrix.task }}
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
+    strategy:
+      # Report every failing gate in one run, not just the first.
+      fail-fast: false
+      matrix:
+        # Quoted: in a YAML flow sequence an unquoted `format:check` is
+        # ambiguous and several parsers read it as the map `{format: check}`.
+        task: [lint, typecheck, test, depcruise, "format:check"]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
-      - run: npm run lint
 
-  typecheck:
-    name: Type Check
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
-      - run: npm run typecheck
+          cache-dependency-path: package-lock.json
 
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
       - run: npm ci
-      - run: npm run test
+
+      - run: npm run ${{ matrix.task }}
 
   build:
-    name: Build & Bundle Budget
+    name: Frontend / Build & Bundle Budget
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
-      - run: npm run build
-      # TODO: Add bundle size budget check
 
-  depcruise:
-    name: Dependency Cruiser
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - run: npm ci
+
+      - run: npm run build
+
+      # ARCHITECTURE.md §6.10 — initial JS <= 250 kB gzipped, route chunk
+      # <= 120 kB. Measured against the real `dist/` produced above, which is
+      # why it cannot run before the build. UI_SYSTEM.md §16 states a tighter
+      # figure; the script warns on it and fails only on §6.10, because
+      # `docs/README.md` §2 makes ARCHITECTURE the binding rank.
+      - run: npm run budget
+
+      # Kept for one build so a budget failure can be diagnosed from the size
+      # report without a local reproduction.
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 7
+
+  # ── Backend ───────────────────────────────────────────────────────────────
+  backend:
+    name: Backend / ${{ matrix.task }}
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: frontend
+        working-directory: backend
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [lint, analyse, test]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+
+      - uses: shivammathur/setup-php@v2
         with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
-      - run: npm run depcruise
+          php-version: ${{ env.PHP_VERSION }}
+          # `phpunit.xml` pins the suite to `DB_CONNECTION=sqlite` with an
+          # in-memory database, so pdo_sqlite is a hard requirement, not a
+          # convenience.
+          extensions: mbstring, pdo_sqlite, sqlite3, bcmath, intl
+          # PHPStan at level 9 across a Laravel tree needs the headroom, and
+          # `composer analyse` already passes --memory-limit=1G.
+          ini-values: memory_limit=1G
+          coverage: none
+
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: backend/vendor
+          key: composer-${{ env.PHP_VERSION }}-${{ hashFiles('backend/composer.lock') }}
+          restore-keys: composer-${{ env.PHP_VERSION }}-
+
+      # Before `composer install`, because `post-autoload-dump` runs
+      # `artisan package:discover`, which boots the application. An empty
+      # APP_KEY is fine there — the encrypter is resolved lazily, and this is
+      # the same order Laravel's own `create-project` flow uses — but a missing
+      # `.env` is not.
+      - run: cp .env.example .env
+
+      # Scripts are deliberately NOT skipped: `config.optimize-autoloader` is
+      # true, so this single step produces the optimized autoloader and the
+      # package-discovery cache together.
+      - run: composer install --prefer-dist --no-interaction --no-progress
+
+      # Every leg, not just `test`. Larastan boots the container to resolve
+      # model properties (`checkModelProperties: true` in `phpstan.neon`), so
+      # `analyse` fails without a key just as the suite would.
+      - run: php artisan key:generate
+
+      - run: composer run ${{ matrix.task }}

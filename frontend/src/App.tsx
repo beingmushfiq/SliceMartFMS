@@ -33,8 +33,8 @@ export default function App() {
         <h1 className="mt-2 text-xl font-bold">Platform bootstrapped</h1>
 
         <p className="text-muted mt-2 text-sm">
-          The monorepo, design tokens and tooling baseline are in place. No product module has
-          been built yet — Phase 1 (auth, tenancy, RBAC, design system) has not started.
+          The monorepo, design tokens and tooling baseline are in place. No product module has been
+          built yet — Phase 1 (auth, tenancy, RBAC, design system) has not started.
         </p>
 
         <dl className="border-default mt-5 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 border-t pt-4 text-sm">

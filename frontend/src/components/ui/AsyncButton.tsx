@@ -30,8 +30,7 @@ import { Button } from './Button';
 
 type AsyncButtonStatus = 'idle' | 'submitting' | 'success' | 'error';
 
-interface AsyncButtonBaseProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface AsyncButtonBaseProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: 'sm' | 'md' | 'lg';
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   leftIcon?: React.ReactNode;
@@ -74,16 +73,8 @@ const successIcon = <CircleCheckBig className="size-4 shrink-0" aria-hidden="tru
 
 export const AsyncButton = React.forwardRef<HTMLButtonElement, AsyncButtonProps>(
   function AsyncButton(
-    {
-      children,
-      onClick,
-      errorMessage,
-      status: controlledStatus,
-      className,
-      disabled,
-      ...rest
-    },
-    ref,
+    { children, onClick, errorMessage, status: controlledStatus, className, disabled, ...rest },
+    ref
   ) {
     const [internalStatus, setInternalStatus] = React.useState<AsyncButtonStatus>('idle');
     const [internalError, setInternalError] = React.useState<string | null>(null);
@@ -119,7 +110,7 @@ export const AsyncButton = React.forwardRef<HTMLButtonElement, AsyncButtonProps>
         setInternalStatus('error');
         setInternalError(
           errorMessage ??
-            (err instanceof Error ? err.message : 'Something went wrong. Please try again.'),
+            (err instanceof Error ? err.message : 'Something went wrong. Please try again.')
         );
       }
     };
@@ -154,14 +145,11 @@ export const AsyncButton = React.forwardRef<HTMLButtonElement, AsyncButtonProps>
             dismiss is optional because some error messages are critical enough
             that hiding them is more dangerous than showing them. */}
         {isError && internalError && (
-          <p
-            role="alert"
-            className="mt-1.5 text-xs text-danger leading-snug animate-fade-in"
-          >
+          <p role="alert" className="mt-1.5 text-xs text-danger leading-snug animate-fade-in">
             {internalError}
           </p>
         )}
       </div>
     );
-  },
+  }
 );

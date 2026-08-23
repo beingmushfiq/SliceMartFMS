@@ -85,7 +85,8 @@ const STATE_REGISTRY: Partial<Record<EmptyKind | ErrorCode, StateDescriptor>> = 
     iconTone: 'text-danger',
     iconSize: ICON_SM,
     title: 'Connection failed',
-    description: 'We couldn\u2019t reach the server. Your data is safe. If this keeps happening, try again in a moment.',
+    description:
+      'We couldn\u2019t reach the server. Your data is safe. If this keeps happening, try again in a moment.',
   },
   SERVICE_UNAVAILABLE: {
     icon: ServerCrash,
@@ -99,7 +100,8 @@ const STATE_REGISTRY: Partial<Record<EmptyKind | ErrorCode, StateDescriptor>> = 
     iconTone: 'text-warning',
     iconSize: ICON_SM,
     title: 'You\u2019re offline',
-    description: 'Your device isn\u2019t connected to the network. Cached data may be shown. Changes will sync when you\u2019re back online.',
+    description:
+      'Your device isn\u2019t connected to the network. Cached data may be shown. Changes will sync when you\u2019re back online.',
   },
 
   // ── row 11 · forbidden (403) ────────────────────────────────────────────
@@ -108,7 +110,8 @@ const STATE_REGISTRY: Partial<Record<EmptyKind | ErrorCode, StateDescriptor>> = 
     iconTone: 'text-danger',
     iconSize: ICON_SM,
     title: 'You don\u2019t have permission',
-    description: 'Your account doesn\u2019t have access to this area. If this seems wrong, contact your administrator.',
+    description:
+      'Your account doesn\u2019t have access to this area. If this seems wrong, contact your administrator.',
   },
   PLATFORM_ONLY: {
     icon: ShieldX,
@@ -124,14 +127,16 @@ const STATE_REGISTRY: Partial<Record<EmptyKind | ErrorCode, StateDescriptor>> = 
     iconTone: 'text-warning',
     iconSize: ICON_SM,
     title: 'Wrong scope',
-    description: 'This record belongs to a different branch or warehouse. Switch to the correct scope to access it.',
+    description:
+      'This record belongs to a different branch or warehouse. Switch to the correct scope to access it.',
   },
   TENANT_MISMATCH: {
     icon: Ban,
     iconTone: 'text-warning',
     iconSize: ICON_SM,
     title: 'Wrong tenant',
-    description: 'This record belongs to a different organisation. Switch to the correct tenant to access it.',
+    description:
+      'This record belongs to a different organisation. Switch to the correct tenant to access it.',
   },
 
   // ── row 13 · not found (404) ────────────────────────────────────────────
@@ -140,7 +145,8 @@ const STATE_REGISTRY: Partial<Record<EmptyKind | ErrorCode, StateDescriptor>> = 
     iconTone: 'text-muted',
     iconSize: ICON_SM,
     title: 'Not found',
-    description: 'This record may have been deleted or moved. If it was recently created, try refreshing.',
+    description:
+      'This record may have been deleted or moved. If it was recently created, try refreshing.',
   },
   RESOURCE_GONE: {
     icon: FileQuestionMark,
@@ -154,7 +160,8 @@ const STATE_REGISTRY: Partial<Record<EmptyKind | ErrorCode, StateDescriptor>> = 
     iconTone: 'text-muted',
     iconSize: ICON_SM,
     title: 'Page not found',
-    description: 'The page you\u2019re looking for doesn\u2019t exist. Check the URL or go back to the dashboard.',
+    description:
+      'The page you\u2019re looking for doesn\u2019t exist. Check the URL or go back to the dashboard.',
   },
 
   // ── row 14 · server error (500) ─────────────────────────────────────────
@@ -163,7 +170,8 @@ const STATE_REGISTRY: Partial<Record<EmptyKind | ErrorCode, StateDescriptor>> = 
     iconTone: 'text-danger',
     iconSize: ICON_SM,
     title: 'Something went wrong',
-    description: 'We couldn\u2019t complete this request. Nothing was saved. Try again, and if it persists, share the reference with support.',
+    description:
+      'We couldn\u2019t complete this request. Nothing was saved. Try again, and if it persists, share the reference with support.',
   },
   UPSTREAM_TIMEOUT: {
     icon: Clock,
@@ -188,7 +196,8 @@ const fallbackDescriptor: StateDescriptor = {
   iconTone: 'text-muted',
   iconSize: ICON_SM,
   title: 'Something went wrong',
-  description: 'An unexpected issue occurred. Try again, and if it persists, share the reference with support.',
+  description:
+    'An unexpected issue occurred. Try again, and if it persists, share the reference with support.',
 };
 
 function resolveState(code: ErrorCode | EmptyKind): StateDescriptor {
@@ -268,9 +277,7 @@ export function StateView({
         <>
           <div className="flex items-center gap-3">
             {icon}
-            <h3 className="text-md font-semibold text-default">
-              {titleOverride ?? state.title}
-            </h3>
+            <h3 className="text-md font-semibold text-default">{titleOverride ?? state.title}</h3>
           </div>
           <p className="text-sm text-muted text-center max-w-prose leading-relaxed">
             {descriptionOverride ?? state.description}

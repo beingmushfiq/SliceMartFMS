@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Factories;
 
 use App\Models\User;
@@ -20,7 +22,11 @@ class UserFactory extends Factory
     /**
      * Define the model's default state.
      *
-     * @return array<string, mixed>
+     * Keyed by `model-property<User>` rather than `string`, so with
+     * `checkModelProperties` on, a typo in a column name is a static-analysis
+     * error instead of a runtime one.
+     *
+     * @return array<model-property<User>, mixed>
      */
     public function definition(): array
     {

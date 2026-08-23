@@ -1,0 +1,27 @@
+# Prettier scope — see `docs/README.md` §2 for why the docs are excluded.
+#
+# Prettier's own default ignore already covers `.gitignore`, so `node_modules`
+# and `dist` are handled there. This file exists for the two things that are
+# tracked in git and would otherwise be reformatted by an editor's
+# format-on-save, which does not read the npm script's globs.
+
+# 1. Documentation.
+# The canonical docs in `docs/` are approved artefacts. Prettier's only change
+# to them is padding markdown table cells to a uniform width — the rendered
+# output is byte-for-byte identical, so the entire diff is noise that would bury
+# real content edits in review. `docs/_legacy/` is explicitly archived and
+# non-authoritative; reformatting it is pure churn.
+docs/
+
+# 2. Vendored and generated code.
+# `backend/.gitignore` excludes these, but Prettier only reads the root
+# `.gitignore`, so they have to be named again here.
+backend/vendor/
+backend/storage/
+backend/bootstrap/cache/
+backend/public/
+frontend/public/
+
+# Lockfiles are machine-written; formatting them creates conflicts.
+package-lock.json
+backend/composer.lock

@@ -1,0 +1,29 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 9
+
+    paths:
+        - app
+        - database
+        - routes
+        - tests
+
+    # Eloquent models are the main source of level-9 false positives in Laravel:
+    # PHPStan cannot see columns that exist only in a migration. Turning this on
+    # means an undeclared property is an error, which is the point — every model
+    # in app/Modules must carry an @property block generated from its migration.
+    # ARCHITECTURE.md §5 leans on typed models; without this the type check is
+    # decorative.
+    checkModelProperties: true
+
+    # A @var/@param that PHPStan can prove wrong is a lie in the code, not a
+    # style nit. Fail on it.
+    reportWrongPhpDocTypeInVarTag: true
+
+    # Phase 1 will add app/Modules/**. Nothing is excluded yet; when generated
+    # code appears (IDE helpers, compiled containers) it is excluded here and
+    # nowhere else, so the exclusion list stays reviewable.
+    excludePaths:
+        - bootstrap/cache

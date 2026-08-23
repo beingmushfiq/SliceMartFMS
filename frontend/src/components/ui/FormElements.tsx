@@ -42,7 +42,15 @@ interface FormGroupProps {
   id?: string;
 }
 
-export function FormGroup({ label, required, error, helper, children, className, id }: FormGroupProps) {
+export function FormGroup({
+  label,
+  required,
+  error,
+  helper,
+  children,
+  className,
+  id,
+}: FormGroupProps) {
   return (
     <div className={cn('flex flex-col gap-(--input-label-gap)', className)}>
       {label && (
@@ -58,11 +66,11 @@ export function FormGroup({ label, required, error, helper, children, className,
       )}
       {children}
       {error && (
-        <p className="text-xs text-danger" role="alert">{error}</p>
+        <p className="text-xs text-danger" role="alert">
+          {error}
+        </p>
       )}
-      {helper && !error && (
-        <p className="text-xs text-muted">{helper}</p>
-      )}
+      {helper && !error && <p className="text-xs text-muted">{helper}</p>}
     </div>
   );
 }
@@ -97,20 +105,12 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             {...props}
           />
           {rightElement && (
-            <span className="absolute right-3 flex items-center text-muted">
-              {rightElement}
-            </span>
+            <span className="absolute right-3 flex items-center text-muted">{rightElement}</span>
           )}
         </div>
       );
     }
-    return (
-      <input
-        ref={ref}
-        className={cn(inputBase, error && inputError, className)}
-        {...props}
-      />
-    );
+    return <input ref={ref} className={cn(inputBase, error && inputError, className)} {...props} />;
   }
 );
 Input.displayName = 'Input';
@@ -124,11 +124,7 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 
 export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
   ({ error, placeholder, children, className, ...props }, ref) => (
-    <select
-      ref={ref}
-      className={cn(inputBase, error && inputError, className)}
-      {...props}
-    >
+    <select ref={ref} className={cn(inputBase, error && inputError, className)} {...props}>
       {placeholder && (
         <option value="" disabled>
           {placeholder}
@@ -168,12 +164,11 @@ interface SearchInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 export function SearchInput({ onClear, className, ...props }: SearchInputProps) {
   return (
     <div className={cn('relative flex items-center', className)}>
-      <Search className="absolute left-3 size-4 text-muted pointer-events-none" aria-hidden="true" />
-      <input
-        className={cn(inputBase, 'pl-9', onClear && 'pr-9')}
-        type="search"
-        {...props}
+      <Search
+        className="absolute left-3 size-4 text-muted pointer-events-none"
+        aria-hidden="true"
       />
+      <input className={cn(inputBase, 'pl-9', onClear && 'pr-9')} type="search" {...props} />
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 > **Status:** Canonical index. Start here.
 >
-> **Last updated:** 2026-08-22 · **Phase:** 0 complete → Phase 1 not started
+> **Last updated:** 2026-08-23 · **Phase:** 0 closed → Phase 1 not started
 
 ---
 
@@ -183,9 +183,9 @@ changes.
 
 | | |
 |---|---|
-| **Phase 0 — Architecture & documentation** | **Documentation complete**, restructure complete, closeout in progress. The seven canonical documents plus five supporting documents (12 in total) written, 14 legacy files archived, 31 ADRs accepted. Monorepo, Laravel skeleton, token cascade and dependency reconciliation done. UI primitive hardening, tooling configuration and CI outstanding. |
-| **Phase 1 — Auth + Tenancy + RBAC + Design System** | **Not started.** |
-| **Code in repository** | `/frontend` — design-system foundation and 2 of 8 UI primitives. `/backend` — Laravel 13.26.1 stock skeleton, no project code. No feature code, no migrations, no endpoints. |
+| **Phase 0 — Architecture & documentation** | ✅ **Closed.** The seven canonical documents plus five supporting documents (12 in total) written, 14 legacy files archived, 31 ADRs accepted. Monorepo, Laravel skeleton, token cascade, dependency reconciliation, UI primitive hardening, the §8 state-matrix reliability layer, the transport seam, tooling configuration (frontend **and** backend), test suites and CI all complete — every gate measured green in `DEVELOPMENT_STATUS.md` §3.4. |
+| **Phase 1 — Auth + Tenancy + RBAC + Design System** | **Not started.** Next action is wave 0 tenancy migrations. |
+| **Code in repository** | `/frontend` — design-system foundation, all 9 UI primitives, the §8 reliability primitives and the single transport seam, with 128 passing tests. `/backend` — Laravel 13.26.1 skeleton on PHP `^8.5` with Pint + PHPStan level 9 passing, no project code. No feature code, no migrations, no endpoints. |
 
 Live detail: [DEVELOPMENT_STATUS.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/DEVELOPMENT_STATUS.md). Resuming in a new session: start at its §7 and §8.
 
@@ -198,3 +198,4 @@ Live detail: [DEVELOPMENT_STATUS.md](file:///d:/Factory%20Production,%20Inventor
 | 2026-08-22 | Created. Establishes the documentation index and restates the binding precedence rule. Supersedes the navigation guidance in `_legacy/AI_PROJECT_CONTEXT.md`. |
 | 2026-08-22 | Consistency pass: §8 now states the document count as seven canonical plus five supporting (12 total) rather than "nine canonical". |
 | 2026-08-23 | §8 corrected — it still described the code as "a frontend prototype only, at the repository root", which stopped being true when the monorepo restructure landed. |
+| 2026-08-23 | **Phase 0 marked closed.** §8 had said "closeout in progress" with UI primitives, tooling and CI outstanding, and still counted "2 of 8 UI primitives" — all three now complete and verified. Records the §8 reliability layer, the transport seam, backend tooling, the test suites and the rewritten CI, and points at `DEVELOPMENT_STATUS.md` §3.4 for the measured gate results rather than restating them here. |
