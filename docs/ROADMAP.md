@@ -489,4 +489,5 @@ milestone. Scheduling them separately is how they get dropped.
 | Date | Change |
 |---|---|
 | 2026-08-22 | Initial canonical roadmap. Phases 0–10 with per-phase module lists, deliverables and binding exit gates, aligned to `MODULE_MAP.md` §5. Adds the cross-cutting list and the risk register. |
+| 2026-08-23 | §2's sequence diagram advanced: Phase 0 marked ✅ closed and the `← current` marker moved to Phase 1. Its §4 exit gate — "the seven canonical documents are approved and the repository matches them" — is met; `DEVELOPMENT_STATUS.md` §3.4 records the measured evidence for the tooling half of the §3 Phase 0 baseline. No phase content changed. |
 

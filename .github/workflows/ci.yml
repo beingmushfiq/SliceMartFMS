@@ -1,11 +1,11 @@
 # Every gate here runs locally by the same name, so a red build is reproducible
 # without pushing a commit to find out what broke:
 #
-#   npm run verify                  lint + typecheck + depcruise + test
+#   npm run verify                   format:check + lint + typecheck + depcruise + test
 #   npm run build && npm run budget  the build job
 #   cd backend && composer check     lint + analyse + test
 #
-# Two structural choices, both load-bearing:
+# Three structural choices, all load-bearing:
 #
 # 1. `npm ci` runs at the REPOSITORY ROOT, not in `frontend/`. This is an npm
 #    workspace (`workspaces: ["frontend"]`), so the only lockfile is
@@ -15,6 +15,11 @@
 #
 # 2. The jobs are separate rather than sequential steps in one job. A push that
 #    breaks types AND formatting should report both, not stop at the first.
+#
+# 3. `format:check` covers THIS FILE. Root Prettier has no `.prettierrc`, so it
+#    defaults to double quotes here while `frontend/.prettierrc` keeps single
+#    quotes inside `frontend/`. This workflow failed that check once already;
+#    including it in the glob is what stops it happening unnoticed again.
 
 name: CI
 

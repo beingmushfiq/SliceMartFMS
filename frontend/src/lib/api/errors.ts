@@ -61,10 +61,7 @@ export type ConflictErrorCode =
 
 /* ── 413 / 428 / 429 · protocol preconditions ─────────────────────────────── */
 export type ProtocolErrorCode =
-  | 'PAYLOAD_TOO_LARGE'
-  | 'IDEMPOTENCY_KEY_REQUIRED'
-  | 'PRECONDITION_REQUIRED'
-  | 'RATE_LIMITED';
+  'PAYLOAD_TOO_LARGE' | 'IDEMPOTENCY_KEY_REQUIRED' | 'PRECONDITION_REQUIRED' | 'RATE_LIMITED';
 
 /* ── 5xx · server ─────────────────────────────────────────────────────────── */
 export type ServerErrorCode =
@@ -81,10 +78,7 @@ export type ServerErrorCode =
    normal consequence of navigation, and rendering it as a failure would make
    every route change look broken. ─────────────────────────────────────────── */
 export type ClientErrorCode =
-  | 'NETWORK_OFFLINE'
-  | 'REQUEST_TIMEOUT'
-  | 'REQUEST_CANCELLED'
-  | 'MALFORMED_RESPONSE';
+  'NETWORK_OFFLINE' | 'REQUEST_TIMEOUT' | 'REQUEST_CANCELLED' | 'MALFORMED_RESPONSE';
 
 export type ErrorCode =
   | AuthErrorCode

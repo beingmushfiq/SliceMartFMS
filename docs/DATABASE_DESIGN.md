@@ -41,6 +41,34 @@ UNIQUE KEY uq_invoices_tenant_number (tenant_id, company_id, invoice_number)
 A unique key that omits `tenant_id` is a defect — it leaks tenant existence and
 blocks onboarding.
 
+> **Amendment (2026-08-23, found while implementing Waves 1–3).** **A unique key
+> containing a nullable column cannot protect the rows where that column is
+> NULL.** On MySQL 8 and SQLite alike `NULL != NULL`, so such a key admits
+> unlimited duplicates among NULL rows. This cuts both ways and the distinction
+> must be deliberate in every case:
+>
+> - **Used on purpose** to mean "at most one per tenant": a generated column that
+>   folds to `tenant_id` when a flag is set and to NULL otherwise gives
+>   `companies` exactly one default company per tenant, with no restriction on the
+>   others (`companies.default_key`, `branches.default_key`).
+> - **A defect** wherever the nullable column is `tenant_id` itself and NULL
+>   carries meaning. `(tenant_id, email)` on `users` does not stop two *platform*
+>   users sharing an address — an authentication defect, not a data-quality one —
+>   and `(tenant_id, slug)` on `roles` does not stop two platform role templates
+>   sharing a slug, which would make `CreateTenant` (§17.2) copy an arbitrary one.
+>
+> The fix is a read-only **generated sentinel column** that folds NULL to a value
+> that does collide, with the unique key declared over the sentinel:
+> `tenant_key = coalesce(tenant_id, 0)`. Platform rows then share one namespace
+> and the key fires. `STORED` is the idiom inside `CREATE TABLE`; `VIRTUAL` is
+> required where an `ALTER` adds it, because SQLite rejects
+> `ADD COLUMN ... STORED` outright — see §16.1 rule 1. Both are indexable on
+> MySQL 8 and SQLite, and both are unwritable, so an Action cannot desynchronise
+> the sentinel from its source column.
+>
+> A sentinel solves **uniqueness only**. It cannot carry a foreign key on MySQL 8,
+> which is why the parallel problem in §1.3 has no schema fix.
+
 ### 1.2 Index policy
 
 - Every FK is indexed.
@@ -57,6 +85,62 @@ for a child that has no independent meaning (document lines, pivot rows,
 attachments). `SET NULL` is permitted only where the column is genuinely
 optional. Deletion of a referenced master record is prevented — records are
 deactivated, not deleted.
+
+Every reference to a tenant-scoped parent is a **composite** foreign key on
+`(tenant_id, <parent>_id)` targeting the parent's `unique (tenant_id, id)`. A
+single-column key only proves the parent row exists, not that it belongs to the
+caller's tenant, which would reduce ARCHITECTURE §3.1 layer 4 from a database
+guarantee to an application convention.
+
+> **Correction (2026-08-23, found while implementing Wave 2).** **No composite
+> foreign key led by `tenant_id` may use `ON DELETE SET NULL`**, even where the
+> child column is nullable and the rule above would otherwise permit it.
+> `SET NULL` nulls *every* column of the referencing key, so on
+> `(tenant_id, branch_id)` it also attempts to null `tenant_id`, which is
+> `NOT NULL`. The DDL migrates without complaint and the defect only appears at
+> runtime: deleting a referenced parent fails with
+> `NOT NULL constraint failed: factories.tenant_id`, an error naming the wrong
+> table at an unrelated call site, instead of either a clean detach or a clean
+> rejection. Verified on SQLite and structurally identical on MySQL 8. Use
+> `RESTRICT`, which is the correct semantic here anyway — the sentence above
+> already forbids hard-deleting referenced master data, so the detach path this
+> was meant to enable does not exist. Where a genuine detach *is* required, an
+> Action clears the child column inside the transaction before the parent is
+> deactivated. Pinned by
+> `Wave2OrgSchemaTest::test_deleting_a_referenced_branch_is_refused_cleanly`,
+> which distinguishes the two failure modes rather than merely asserting the
+> delete threw.
+
+> **Amendment (2026-08-23, found while implementing Wave 3).** **A composite
+> foreign key is not checked at all when any of its columns is NULL.** This is
+> MATCH SIMPLE, the only matching mode MySQL 8 and SQLite implement, and it means
+> a nullable `tenant_id` on a child table silently switches layer 4 off for
+> exactly those rows. Consequences, in order of severity:
+>
+> - Where the NULL means "no parent", this is correct and desirable — a Wave 2
+>   factory with `branch_id IS NULL` sits under no branch and no check is owed.
+> - Where the NULL means "platform", the guarantee is **lost on the rows that
+>   matter most**. `role_user.tenant_id` must be nullable so a platform user can
+>   hold a platform role (ARCHITECTURE §3.2), and on those rows neither
+>   `(tenant_id, role_id)` nor `(tenant_id, user_id)` is evaluated, so the
+>   database will accept a platform grant pointing at an ordinary tenant user.
+>
+> **No schema fix exists.** A CHECK spanning three tables is not expressible, a
+> trigger is unavailable on SQLite via `ALTER`, and MySQL 8 rejects a foreign key
+> on a virtual generated column, which rules out the sentinel technique §1.1 uses
+> for uniqueness. Therefore:
+>
+> 1. Prefer `tenant_id NOT NULL` on any table whose rows *grant* something, so
+>    the composite key is always evaluated. `user_scopes` does this deliberately,
+>    which is why a platform user cannot be given a scope row at all.
+> 2. Where nullability is forced, the obligation moves up one layer: the Action
+>    performing the write asserts both sides are platform, inside the
+>    transaction, before the insert. This is the one documented case where the
+>    database is not the last line of defence.
+> 3. The gap is pinned by a test that asserts the **hole**, not a guarantee —
+>    `Wave3IdentitySchemaTest::test_a_platform_role_assignment_is_not_checked_by_the_database`
+>    — so a later reader cannot mistake the composite keys for protection they do
+>    not provide on NULL-tenant rows.
 
 ### 1.4 Document numbering
 
@@ -185,10 +269,29 @@ Index `(user_id, family_id)`. Rotation and family invalidation per ADR-007.
 Index `(tenant_id, auditable_type, auditable_id)`, `(tenant_id, created_at)`,
 `(tenant_id, user_id, created_at)`.
 
+Both foreign keys are `RESTRICT`. §1.3 permits `CASCADE` for a child with no
+independent meaning, and an audit row can be mistaken for one — it is the
+opposite: it is the only row that outlives its subject. The consequence is a
+product constraint, not just a schema one: **a user who has done anything can
+never be hard-deleted, and neither can their tenant.** Offboarding is an
+explicit archive-then-purge Action, never a `DELETE`.
+
 ### `idempotency_keys`
 `tenant_id`, `user_id`, `key`, `endpoint`, `request_hash`, `response_status`,
-`response_body` (json), `expires_at`. Unique `(tenant_id, key)`. Purged after
-24 h (ADR-028).
+`response_body` (json), `expires_at`. Unique
+`(tenant_id, user_id, endpoint, key)`. Purged after 24 h (ADR-028).
+
+> **Correction (2026-08-23, found while implementing Wave 4).** This section
+> previously specified unique `(tenant_id, key)`, which contradicts
+> API_CONTRACT §6.2's scope of `(tenant_id, user_id, route, key)`. Both documents
+> are precedence rank 4, so per README §2 the tie is a rank-1 problem; it is
+> resolved here in favour of §6.2 because the narrow key is not merely stricter,
+> it is **unsafe**: two users of one tenant who generate the same UUID would
+> share a row, and §6.3's replay rule would return one user's stored response
+> body to the other. `user_id` is therefore NOT NULL on this table — an
+> idempotency row always belongs to the actor whose intent it de-duplicates.
+> Pinned by `Wave4InfraSchemaTest::test_one_idempotency_key_may_be_reused_across_routes_and_users`,
+> which fails closed if the key is ever narrowed back.
 
 ### `attachments`
 `tenant_id`, `attachable_type`, `attachable_id`, `disk`, `path`,
@@ -321,8 +424,21 @@ Phase 5.
 `tenant_id`, `company_id` (nullable), `branch_id` (nullable),
 `document_type`, `prefix`, `suffix`, `padding`, `next_number`,
 `reset_period` (`never` `yearly` `monthly`), `last_reset_at`.
-Unique `(tenant_id, company_id, branch_id, document_type)`. Locked
-`FOR UPDATE` during allocation (§1.4).
+Unique `(tenant_id, company_key, branch_key, document_type)` over the §1.1
+sentinels. Locked `FOR UPDATE` during allocation (§1.4).
+
+> **Correction (2026-08-23, found while implementing Wave 4).** The key was
+> specified over `company_id` and `branch_id` directly, which §1.1 shows cannot
+> fire: both are nullable, and the tenant-wide series that Q3 leaves on the table
+> is exactly the `(NULL, NULL)` row. A tenant could hold unlimited tenant-wide
+> series for one `document_type`, and §1.4's `FOR UPDATE` lock would then be
+> taken on an arbitrary one of them — duplicate document numbers on posted
+> financial documents. The stored generated sentinels
+> `company_key = coalesce(company_id, 0)` and `branch_key = coalesce(branch_id, 0)`
+> fold the NULLs into one namespace so the key fires on every row; the semantic
+> columns stay nullable and keep carrying the FKs, which the sentinels cannot
+> (§1.1). Those FKs are `RESTRICT`, not `SET NULL`, per §1.3's composite-key
+> amendment.
 
 ---
 
@@ -1697,6 +1813,30 @@ Unique `(tenant_id, customer_party_id, product_id, variant_id)`.
 `date`), `is_encrypted` (tinyint), `updated_by`.
 Unique `(tenant_id, scope, scope_id, group, key)`.
 
+**Correction (2026-08-23, found while implementing Wave 1).** That unique key
+cannot be implemented literally. `tenant_id` and `scope_id` are both nullable,
+and on MySQL 8 and SQLite alike a `NULL` never equals another `NULL` inside a
+UNIQUE index — so `(NULL, 'platform', NULL, 'general', 'x')` is insertable an
+unlimited number of times. The platform-default row, which the resolution order
+below depends on as its final fallback, would be the *least* protected row in
+the table.
+
+Uniqueness is therefore enforced over two **stored generated columns** that fold
+`NULL` to the sentinel `0`, while the semantic columns stay nullable exactly as
+documented above:
+
+```sql
+tenant_key BIGINT UNSIGNED AS (COALESCE(tenant_id, 0)) STORED
+scope_key  BIGINT UNSIGNED AS (COALESCE(scope_id, 0))  STORED
+UNIQUE KEY uq_settings_scope_key (tenant_key, scope, scope_key, `group`, `key`)
+```
+
+The database computes them, so they cannot drift from their source columns, and
+no application code may write them. Queries and foreign keys continue to use
+`tenant_id` / `scope_id`. `feature_flags` below carries the same correction for
+the same reason.
+
+
 **Resolution order (most specific wins):**
 
 ```
@@ -1715,7 +1855,8 @@ read API — the API returns a masked presence indicator only
 `tenant_id` (nullable — NULL = global), `key`, `enabled` (tinyint),
 `rollout_percentage` (nullable), `conditions` (json), `description`,
 `updated_by`.
-Unique `(tenant_id, key)`.
+Unique `(tenant_id, key)` — implemented as `(tenant_key, key)` per the
+`settings` correction above, because the global row has `tenant_id IS NULL`.
 
 **Design note:** flags gate **incomplete work**, not business options. A
 business option belongs in `settings`. Flags are expected to be short-lived
@@ -1778,6 +1919,19 @@ Unique `(tenant_id, snapshot_date)`.
 **Purpose:** feeds `tenant_usage_counters` (§2) for plan-limit enforcement
 and platform-level tenant health, without querying every tenant's
 transactional tables.
+
+`snapshot_date` names the **tenant's** local day, not a UTC one, because the
+limit being enforced is the tenant's trading day and a UTC bucket would split it
+across two rows. The consequence belongs here rather than in a report that
+rediscovers it: rows sharing one `snapshot_date` across different tenants do not
+describe the same wall-clock interval, so a platform-wide cross-tenant sum for a
+single date is an approximation and must be labelled as one.
+
+This is a **cache** in §18's sense and the one Wave 4 table that is deliberately
+recomputable: every row can be rebuilt from source, so a backfill is an upsert
+onto the unique key rather than a second row. That is why it carries
+`updated_at` and `audit_logs` does not — a snapshot row is arithmetic and must be
+rewritable, an audit row is evidence and must not be.
 
 ---
 
@@ -1991,6 +2145,13 @@ Wave 25 fk closure 2   deferred cross-group FKs
 
 ### 16.1 Rules
 
+0. **Wave 0 required no work.** Laravel's three default migrations already
+   create `users` (stub), `cache`, `cache_locks`, `jobs`, `job_batches`,
+   `failed_jobs`, `sessions` and `password_reset_tokens`. Only
+   `personal_access_tokens` is missing, and it is Sanctum's table — ADR-007
+   uses JWT plus a rotating refresh-token family (`refresh_tokens`, Wave 3),
+   so it is never created. The first migration this project writes is
+   therefore **Wave 1**.
 1. **`users` is created twice.** Wave 0 creates the framework stub so auth
    scaffolding boots; Wave 3 adds `tenant_id`, `perm_version` and the tenant
    FK. This is the only table permitted a two-step creation, because
@@ -1998,6 +2159,22 @@ Wave 25 fk closure 2   deferred cross-group FKs
 2. **Circular FKs are resolved in a closure wave** (9 and 25), never by
    dropping the constraint. A nullable FK added later is correct; a missing
    FK is not.
+
+   **Deferred keys owed by an earlier wave to a later one.** A wave may only
+   reference tables from an earlier wave or its own, so a forward reference
+   cannot be declared where its column is created. Waves 9 and 25 cover
+   *circular* pairs; a plain forward reference has no closure wave, and unless
+   it is recorded here it is simply forgotten. The column is created nullable
+   and unconstrained, its index is created with it (rule 5, so no `ALTER` on a
+   populated table later), and the wave that creates the *target* adds the key:
+
+   | Column | Created in | Target | Key added in |
+   |---|---|---|---|
+   | `production_lines.capacity_unit_id` | Wave 2 | `units` | **Wave 5** |
+
+   Each entry is also pinned by a test in the owning wave's schema contract
+   that fails once the target table appears, so the obligation surfaces in the
+   suite and not only in this table.
 3. **No migration writes data.** Reference data belongs in seeders (§17).
    An `INSERT` inside a migration is a defect.
 4. **No `down()` that loses data in production.** `down()` exists for local
