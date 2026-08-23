@@ -26,12 +26,11 @@ Route::middleware(['auth.jwt', 'tenant.active'])
     ->name('tenant.')
     ->group(static function (): void {
         Route::prefix('auth')->name('auth.')->group(static function (): void {
-            Route::get('me', [\App\Modules\Auth\Controllers\AuthController::class, 'me'])->name('me');
-            Route::get('permissions', [\App\Modules\Auth\Controllers\AuthController::class, 'permissions'])->name('permissions');
-            Route::post('logout-all', [\App\Modules\Auth\Controllers\AuthController::class, 'logoutAll'])->name('logout-all');
-            Route::post('switch-branch', [\App\Modules\Auth\Controllers\AuthController::class, 'switchBranch'])->name('switch-branch');
-            Route::patch('preferences', [\App\Modules\Auth\Controllers\AuthController::class, 'updatePreferences'])->name('preferences');
-            Route::patch('change-password', [\App\Modules\Auth\Controllers\AuthController::class, 'changePassword'])->name('change-password');
+            Route::get('me', [App\Modules\Auth\Controllers\AuthController::class, 'me'])->name('me');
+            Route::get('permissions', [App\Modules\Auth\Controllers\AuthController::class, 'permissions'])->name('permissions');
+            Route::post('logout-all', [App\Modules\Auth\Controllers\AuthController::class, 'logoutAll'])->name('logout-all');
+            Route::post('switch-branch', [App\Modules\Auth\Controllers\AuthController::class, 'switchBranch'])->name('switch-branch');
+            Route::patch('preferences', [App\Modules\Auth\Controllers\AuthController::class, 'updatePreferences'])->name('preferences');
+            Route::patch('change-password', [App\Modules\Auth\Controllers\AuthController::class, 'changePassword'])->name('change-password');
         });
     });
-

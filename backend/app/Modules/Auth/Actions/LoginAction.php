@@ -26,8 +26,7 @@ class LoginAction extends Action
     public function __construct(
         private readonly JwtService $jwtService,
         private readonly RefreshTokenService $refreshTokenService
-    ) {
-    }
+    ) {}
 
     /**
      * Execute login.
@@ -46,11 +45,16 @@ class LoginAction extends Action
      */
     public function execute(array $input): array
     {
-        $email = strtolower(trim((string) ($input['email'] ?? '')));
-        $password = (string) ($input['password'] ?? '');
-        $requestedTenantId = isset($input['tenant_id']) ? (int) $input['tenant_id'] : null;
-        $ipAddress = isset($input['ip_address']) ? (string) $input['ip_address'] : null;
-        $userAgent = isset($input['user_agent']) ? (string) $input['user_agent'] : null;
+        $rawEmail = $input['email'] ?? '';
+        $email = strtolower(trim(is_string($rawEmail) ? $rawEmail : ''));
+        $rawPassword = $input['password'] ?? '';
+        $password = is_string($rawPassword) ? $rawPassword : '';
+        $rawTenantId = $input['tenant_id'] ?? null;
+        $requestedTenantId = is_numeric($rawTenantId) ? (int) $rawTenantId : null;
+        $rawIp = $input['ip_address'] ?? null;
+        $ipAddress = is_string($rawIp) ? $rawIp : null;
+        $rawUserAgent = $input['user_agent'] ?? null;
+        $userAgent = is_string($rawUserAgent) ? $rawUserAgent : null;
 
         if ($email === '' || $password === '') {
             throw ValidationException::withMessages([
@@ -76,14 +80,14 @@ class LoginAction extends Action
 
         // Multi-tenant membership: if user belongs to multiple active tenants and no tenant was requested
         if ($validUsers->count() > 1 && $requestedTenantId === null) {
-            $tenants = $validUsers->map(function (User $u) {
+            $tenants = array_values($validUsers->map(function (User $u) {
                 return [
                     'id' => (int) $u->tenant_id,
-                    'uuid' => $u->tenant?->uuid ?? '',
-                    'name' => $u->tenant?->name ?? 'Default Organization',
-                    'slug' => $u->tenant?->slug ?? '',
+                    'uuid' => $u->tenant !== null ? $u->tenant->uuid : '',
+                    'name' => $u->tenant !== null ? $u->tenant->name : 'Default Organization',
+                    'slug' => $u->tenant !== null ? $u->tenant->slug : '',
                 ];
-            })->all();
+            })->all());
 
             return [
                 'requires_tenant_selection' => true,
@@ -107,16 +111,18 @@ class LoginAction extends Action
         $cookie = $this->refreshTokenService->createCookie($refreshResult['token']);
 
         // Resolve scopes & permissions
-        $scopes = $user->scopes->map(fn ($s) => [
+        /** @var list<array<string, mixed>> $scopes */
+        $scopes = array_values($user->scopes->map(fn ($s) => [
             'type' => $s->scope_type,
             'id' => $s->scope_id,
-        ])->all();
+        ])->all());
 
         $effectivePermissions = $user->getEffectivePermissions();
         $permVersion = PermissionCatalogue::computePermVersion($effectivePermissions);
 
         // Issue access JWT (15 min)
-        $ttl = (int) config('auth.jwt.ttl', 900);
+        $rawTtl = config('auth.jwt.ttl');
+        $ttl = is_numeric($rawTtl) ? (int) $rawTtl : 900;
         $accessToken = $this->jwtService->issueToken(
             userId: $user->id,
             tenantId: $user->tenant_id,

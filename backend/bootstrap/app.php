@@ -48,8 +48,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'correlation.id' => CorrelationId::class,
             'tenant.resolve' => ResolveTenant::class,
             'tenant.active' => EnsureTenantActive::class,
-            'auth.jwt' => \App\Core\Http\Middleware\AuthenticateJwt::class,
-            'permission' => \App\Core\Http\Middleware\AuthorizePermission::class,
+            'auth.jwt' => App\Core\Http\Middleware\AuthenticateJwt::class,
+            'permission' => App\Core\Http\Middleware\AuthorizePermission::class,
         ]);
 
         // Prepend CorrelationId to the api group so the id is bound before any
@@ -88,7 +88,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         // 401 REFRESH_REUSED — stolen token reuse detected (family revoked)
-        $exceptions->render(function (\App\Core\Auth\RefreshTokenReusedException $e, Request $request) {
+        $exceptions->render(function (App\Core\Auth\RefreshTokenReusedException $e, Request $request) {
             return ErrorResponse::make(
                 request: $request,
                 code: 'REFRESH_REUSED',
@@ -99,7 +99,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         // 401 REFRESH_EXPIRED
-        $exceptions->render(function (\App\Core\Auth\RefreshTokenExpiredException $e, Request $request) {
+        $exceptions->render(function (App\Core\Auth\RefreshTokenExpiredException $e, Request $request) {
             return ErrorResponse::make(
                 request: $request,
                 code: 'REFRESH_EXPIRED',
@@ -110,7 +110,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         // 401 REFRESH_INVALID
-        $exceptions->render(function (\App\Core\Auth\RefreshTokenInvalidException $e, Request $request) {
+        $exceptions->render(function (App\Core\Auth\RefreshTokenInvalidException $e, Request $request) {
             return ErrorResponse::make(
                 request: $request,
                 code: 'REFRESH_INVALID',
@@ -121,7 +121,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         // 401 TOKEN_EXPIRED
-        $exceptions->render(function (\App\Core\Auth\JwtExpiredException $e, Request $request) {
+        $exceptions->render(function (App\Core\Auth\JwtExpiredException $e, Request $request) {
             return ErrorResponse::make(
                 request: $request,
                 code: 'TOKEN_EXPIRED',
@@ -132,7 +132,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         // 401 TOKEN_INVALID
-        $exceptions->render(function (\App\Core\Auth\JwtInvalidException $e, Request $request) {
+        $exceptions->render(function (App\Core\Auth\JwtInvalidException $e, Request $request) {
             return ErrorResponse::make(
                 request: $request,
                 code: 'TOKEN_INVALID',

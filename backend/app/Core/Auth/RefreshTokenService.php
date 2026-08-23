@@ -34,16 +34,27 @@ class RefreshTokenService
 
     private bool $cookieSecure;
 
+    /** @var 'lax'|'strict'|'none' */
     private string $cookieSameSite;
 
     public function __construct()
     {
-        $this->ttlDays = (int) config('auth.refresh_token.ttl_days', 14);
-        $this->cookieName = (string) config('auth.refresh_token.cookie_name', 'slicemart_refresh_token');
-        $this->cookiePath = (string) config('auth.refresh_token.cookie_path', '/api/v1/auth');
-        $this->cookieDomain = config('auth.refresh_token.cookie_domain');
+        $ttl = config('auth.refresh_token.ttl_days');
+        $this->ttlDays = is_numeric($ttl) ? (int) $ttl : 14;
+
+        $name = config('auth.refresh_token.cookie_name');
+        $this->cookieName = is_string($name) ? $name : 'slicemart_refresh_token';
+
+        $path = config('auth.refresh_token.cookie_path');
+        $this->cookiePath = is_string($path) ? $path : '/api/v1/auth';
+
+        $domain = config('auth.refresh_token.cookie_domain');
+        $this->cookieDomain = is_string($domain) ? $domain : null;
+
         $this->cookieSecure = (bool) config('auth.refresh_token.cookie_secure', true);
-        $this->cookieSameSite = (string) config('auth.refresh_token.cookie_same_site', 'strict');
+
+        $sameSite = config('auth.refresh_token.cookie_same_site');
+        $this->cookieSameSite = is_string($sameSite) && in_array($sameSite, ['lax', 'strict', 'none'], true) ? $sameSite : 'strict';
     }
 
     /**

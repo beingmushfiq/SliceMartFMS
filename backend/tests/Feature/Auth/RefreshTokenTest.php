@@ -71,21 +71,6 @@ class RefreshTokenTest extends TestCase
         $this->refreshService = app(RefreshTokenService::class);
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
-    private function postWithRefreshToken(string $uri, string $token, array $data = []): TestResponse
-    {
-        return $this->call(
-            'POST',
-            $uri,
-            $data,
-            [$this->refreshService->getCookieName() => $token],
-            [],
-            ['HTTP_ACCEPT' => 'application/json']
-        );
-    }
-
     public function test_refresh_token_rotation_issues_new_token_and_revokes_old(): void
     {
         $initial = $this->refreshService->createRefreshToken($this->user);
@@ -104,12 +89,13 @@ class RefreshTokenTest extends TestCase
 
         // Verify old token is revoked
         $oldToken = RefreshToken::query()->find($initial['model']->id);
-        $this->assertNotNull($oldToken?->revoked_at);
-        $this->assertNotNull($oldToken?->replaced_by_id);
+        $this->assertInstanceOf(RefreshToken::class, $oldToken);
+        $this->assertNotNull($oldToken->revoked_at);
+        $this->assertNotNull($oldToken->replaced_by_id);
 
         // Verify new token exists in same family
-        $newToken = RefreshToken::query()->find($oldToken?->replaced_by_id);
-        $this->assertNotNull($newToken);
+        $newToken = RefreshToken::query()->find($oldToken->replaced_by_id);
+        $this->assertInstanceOf(RefreshToken::class, $newToken);
         $this->assertSame($initial['model']->family_id, $newToken->family_id);
         $this->assertNull($newToken->revoked_at);
     }
@@ -156,5 +142,21 @@ class RefreshTokenTest extends TestCase
 
         $response->assertStatus(401);
         $response->assertJsonPath('error.code', 'REFRESH_EXPIRED');
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return TestResponse<\Symfony\Component\HttpFoundation\Response>
+     */
+    private function postWithRefreshToken(string $uri, string $token, array $data = []): TestResponse
+    {
+        return $this->call(
+            'POST',
+            $uri,
+            $data,
+            [$this->refreshService->getCookieName() => $token],
+            [],
+            ['HTTP_ACCEPT' => 'application/json']
+        );
     }
 }

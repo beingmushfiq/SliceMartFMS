@@ -21,8 +21,7 @@ class RefreshTokenAction extends Action
     public function __construct(
         private readonly JwtService $jwtService,
         private readonly RefreshTokenService $refreshTokenService
-    ) {
-    }
+    ) {}
 
     /**
      * Execute refresh token rotation.
@@ -37,24 +36,29 @@ class RefreshTokenAction extends Action
      */
     public function execute(array $input): array
     {
-        $plainToken = (string) ($input['refresh_token'] ?? '');
-        $ipAddress = isset($input['ip_address']) ? (string) $input['ip_address'] : null;
-        $userAgent = isset($input['user_agent']) ? (string) $input['user_agent'] : null;
+        $rawPlainToken = $input['refresh_token'] ?? '';
+        $plainToken = is_string($rawPlainToken) ? $rawPlainToken : '';
+        $rawIp = $input['ip_address'] ?? null;
+        $ipAddress = is_string($rawIp) ? $rawIp : null;
+        $rawUserAgent = $input['user_agent'] ?? null;
+        $userAgent = is_string($rawUserAgent) ? $rawUserAgent : null;
 
         $rotationResult = $this->refreshTokenService->rotateRefreshToken($plainToken, $ipAddress, $userAgent);
 
         $user = $rotationResult['user'];
         $user->loadMissing(['scopes']);
 
-        $scopes = $user->scopes->map(fn ($s) => [
+        /** @var list<array<string, mixed>> $scopes */
+        $scopes = array_values($user->scopes->map(fn ($s) => [
             'type' => $s->scope_type,
             'id' => $s->scope_id,
-        ])->all();
+        ])->all());
 
         $effectivePermissions = $user->getEffectivePermissions();
         $permVersion = PermissionCatalogue::computePermVersion($effectivePermissions);
 
-        $ttl = (int) config('auth.jwt.ttl', 900);
+        $rawTtl = config('auth.jwt.ttl');
+        $ttl = is_numeric($rawTtl) ? (int) $rawTtl : 900;
         $accessToken = $this->jwtService->issueToken(
             userId: $user->id,
             tenantId: $user->tenant_id,

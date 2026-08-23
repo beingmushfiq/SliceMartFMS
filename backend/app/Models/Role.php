@@ -7,7 +7,6 @@ namespace App\Models;
 use App\Core\Tenancy\Concerns\BelongsToTenant;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -32,7 +31,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Role extends Model
 {
     use BelongsToTenant;
-    use HasFactory;
     use SoftDeletes;
 
     /**
@@ -47,17 +45,6 @@ class Role extends Model
         'is_system',
         'level',
     ];
-
-    /**
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'is_system' => 'boolean',
-            'level' => 'integer',
-        ];
-    }
 
     /**
      * Users assigned to this role.
@@ -77,5 +64,16 @@ class Role extends Model
     public function permissions(): BelongsToMany
     {
         return $this->belongsToMany(Permission::class, 'role_permission', 'role_id', 'permission_id');
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_system' => 'boolean',
+            'level' => 'integer',
+        ];
     }
 }

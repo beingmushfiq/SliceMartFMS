@@ -9,7 +9,6 @@ use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Firebase\JWT\SignatureInvalidException;
 use Illuminate\Support\Str;
-use RuntimeException;
 use Throwable;
 
 /**
@@ -38,7 +37,12 @@ class JwtService
 
     public function __construct(?string $secret = null, string $algo = 'HS256', int $ttl = 900, int $leeway = 0)
     {
-        $resolvedSecret = $secret ?? (string) config('auth.jwt.secret', config('app.key', ''));
+        $rawSecret = config('auth.jwt.secret') ?? config('app.key');
+        $resolvedSecret = is_string($rawSecret) ? $rawSecret : '';
+        if ($secret !== null) {
+            $resolvedSecret = $secret;
+        }
+
         if (str_starts_with($resolvedSecret, 'base64:')) {
             $decoded = base64_decode(substr($resolvedSecret, 7), true);
             $this->secret = $decoded !== false ? $decoded : $resolvedSecret;
@@ -46,14 +50,20 @@ class JwtService
             $this->secret = $resolvedSecret;
         }
 
-        $this->algo = $algo ?: (string) config('auth.jwt.algo', 'HS256');
-        $this->ttl = $ttl > 0 ? $ttl : (int) config('auth.jwt.ttl', 900);
-        $this->leeway = $leeway >= 0 ? $leeway : (int) config('auth.jwt.leeway', 0);
+        $rawAlgo = config('auth.jwt.algo');
+        $this->algo = $algo ?: (is_string($rawAlgo) ? $rawAlgo : 'HS256');
+
+        $rawTtl = config('auth.jwt.ttl');
+        $this->ttl = $ttl > 0 ? $ttl : (is_numeric($rawTtl) ? (int) $rawTtl : 900);
+
+        $rawLeeway = config('auth.jwt.leeway');
+        $this->leeway = $leeway >= 0 ? $leeway : (is_numeric($rawLeeway) ? (int) $rawLeeway : 0);
     }
 
     /**
      * Issue an access token for a user session.
      *
+     * @param  list<array<string, mixed>>  $scopes
      * @param  array<string, mixed>  $customClaims
      */
     public function issueToken(
@@ -67,9 +77,10 @@ class JwtService
     ): string {
         $now = time();
         $lifetime = $ttl ?? $this->ttl;
+        $appUrl = config('app.url');
 
         $payload = array_merge([
-            'iss' => (string) config('app.url', 'http://localhost'),
+            'iss' => is_string($appUrl) ? $appUrl : 'http://localhost',
             'sub' => $userId,
             'tenant_id' => $tenantId,
             'token_version' => $tokenVersion,

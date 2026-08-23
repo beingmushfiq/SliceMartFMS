@@ -75,21 +75,6 @@ class LogoutTest extends TestCase
         $this->refreshService = app(RefreshTokenService::class);
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
-    private function postWithRefreshToken(string $uri, string $token, array $data = []): TestResponse
-    {
-        return $this->call(
-            'POST',
-            $uri,
-            $data,
-            [$this->refreshService->getCookieName() => $token],
-            [],
-            ['HTTP_ACCEPT' => 'application/json']
-        );
-    }
-
     public function test_logout_revokes_family_and_clears_cookie(): void
     {
         $token = $this->refreshService->createRefreshToken($this->user);
@@ -136,5 +121,21 @@ class LogoutTest extends TestCase
             ->whereNull('revoked_at')
             ->count();
         $this->assertSame(0, $activeRefreshTokens);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return TestResponse<\Symfony\Component\HttpFoundation\Response>
+     */
+    private function postWithRefreshToken(string $uri, string $token, array $data = []): TestResponse
+    {
+        return $this->call(
+            'POST',
+            $uri,
+            $data,
+            [$this->refreshService->getCookieName() => $token],
+            [],
+            ['HTTP_ACCEPT' => 'application/json']
+        );
     }
 }

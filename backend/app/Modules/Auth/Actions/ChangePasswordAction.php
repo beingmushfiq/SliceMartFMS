@@ -20,8 +20,7 @@ class ChangePasswordAction extends Action
 {
     public function __construct(
         private readonly RefreshTokenService $refreshTokenService
-    ) {
-    }
+    ) {}
 
     /**
      * Execute password change.

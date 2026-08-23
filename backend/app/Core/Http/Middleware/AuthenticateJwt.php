@@ -23,13 +23,12 @@ class AuthenticateJwt
 {
     public function __construct(
         private readonly JwtService $jwtService
-    ) {
-    }
+    ) {}
 
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -62,7 +61,8 @@ class AuthenticateJwt
             );
         }
 
-        $userId = (int) ($claims['sub'] ?? 0);
+        $rawSub = $claims['sub'] ?? null;
+        $userId = is_numeric($rawSub) ? (int) $rawSub : 0;
         /** @var User|null $user */
         $user = User::withoutTenantScope()->find($userId);
 
@@ -78,7 +78,8 @@ class AuthenticateJwt
         // Token version revocation check (ADR-007):
         // If token_version in the token is older than the user's current token_version,
         // it means the session or all sessions were revoked.
-        $tokenVersion = (int) ($claims['token_version'] ?? 0);
+        $rawTokenVersion = $claims['token_version'] ?? null;
+        $tokenVersion = is_numeric($rawTokenVersion) ? (int) $rawTokenVersion : 0;
         if ($tokenVersion !== $user->token_version) {
             return ErrorResponse::make(
                 request: $request,
@@ -93,7 +94,8 @@ class AuthenticateJwt
         $request->setUserResolver(fn () => $user);
 
         // Bind TenantContext if tenant_id is present and not already bound
-        $tenantId = isset($claims['tenant_id']) && $claims['tenant_id'] !== null ? (int) $claims['tenant_id'] : null;
+        $rawTenantId = $claims['tenant_id'] ?? null;
+        $tenantId = is_numeric($rawTenantId) ? (int) $rawTenantId : null;
         if ($tenantId !== null && ! TenantContext::isBound()) {
             /** @var Tenant|null $tenant */
             $tenant = Tenant::query()->find($tenantId);

@@ -23,6 +23,7 @@ use App\Modules\Auth\Actions\UpdatePreferencesAction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Cookie;
+use Throwable;
 
 class AuthController extends Controller
 {
@@ -48,7 +49,7 @@ class AuthController extends Controller
                 'success' => true,
                 'data' => [
                     'requires_tenant_selection' => true,
-                    'tenants' => $result['tenants'],
+                    'tenants' => $result['tenants'] ?? [],
                 ],
                 'meta' => [
                     'correlation_id' => (string) $request->header('X-Correlation-Id', ''),
@@ -56,33 +57,37 @@ class AuthController extends Controller
             ]);
         }
 
-        /** @var Cookie $cookie */
-        $cookie = $result['cookie'];
+        /** @var Cookie|null $cookie */
+        $cookie = $result['cookie'] ?? null;
         unset($result['cookie']);
 
-        return response()->json([
+        $response = response()->json([
             'success' => true,
             'data' => $result,
             'meta' => [
                 'correlation_id' => (string) $request->header('X-Correlation-Id', ''),
             ],
-        ])->withCookie($cookie);
+        ]);
+
+        if ($cookie instanceof Cookie) {
+            $response->withCookie($cookie);
+        }
+
+        return $response;
     }
 
     public function refresh(Request $request, RefreshTokenAction $action, RefreshTokenService $refreshTokenService): JsonResponse
     {
         $cookieName = $refreshTokenService->getCookieName();
-        $cookieToken = (string) (
-            $request->cookie($cookieName)
+        $rawCookie = $request->cookie($cookieName)
             ?? $request->cookies->get($cookieName)
             ?? $request->input('refresh_token')
-            ?? $request->header('X-Refresh-Token')
-            ?? ''
-        );
+            ?? $request->header('X-Refresh-Token');
+        $cookieToken = is_string($rawCookie) ? $rawCookie : '';
 
         if ($cookieToken === '') {
-            $rawCookie = $request->header('Cookie', '');
-            if (is_string($rawCookie) && preg_match('/(?:^|;\s*)'.preg_quote($cookieName, '/').'=([^;]+)/', $rawCookie, $matches)) {
+            $rawHeaderCookie = $request->header('Cookie');
+            if (is_string($rawHeaderCookie) && preg_match('/(?:^|;\s*)'.preg_quote($cookieName, '/').'=([^;]+)/', $rawHeaderCookie, $matches)) {
                 $cookieToken = urldecode($matches[1]);
             }
         }
@@ -90,8 +95,11 @@ class AuthController extends Controller
         if ($cookieToken !== '') {
             if (str_starts_with($cookieToken, 'eyJ') || strlen($cookieToken) > 100) {
                 try {
-                    $cookieToken = (string) \Illuminate\Support\Facades\Crypt::decrypt($cookieToken, false);
-                } catch (\Throwable) {
+                    $decrypted = \Illuminate\Support\Facades\Crypt::decrypt($cookieToken, false);
+                    if (is_string($decrypted)) {
+                        $cookieToken = $decrypted;
+                    }
+                } catch (Throwable) {
                     // Not encrypted or corrupted
                 }
             }
@@ -155,17 +163,15 @@ class AuthController extends Controller
     public function logout(Request $request, LogoutAction $action, RefreshTokenService $refreshTokenService): JsonResponse
     {
         $cookieName = $refreshTokenService->getCookieName();
-        $cookieToken = (string) (
-            $request->cookie($cookieName)
+        $rawCookie = $request->cookie($cookieName)
             ?? $request->cookies->get($cookieName)
             ?? $request->input('refresh_token')
-            ?? $request->header('X-Refresh-Token')
-            ?? ''
-        );
+            ?? $request->header('X-Refresh-Token');
+        $cookieToken = is_string($rawCookie) ? $rawCookie : '';
 
         if ($cookieToken === '') {
-            $rawCookie = $request->header('Cookie', '');
-            if (is_string($rawCookie) && preg_match('/(?:^|;\s*)'.preg_quote($cookieName, '/').'=([^;]+)/', $rawCookie, $matches)) {
+            $rawHeaderCookie = $request->header('Cookie');
+            if (is_string($rawHeaderCookie) && preg_match('/(?:^|;\s*)'.preg_quote($cookieName, '/').'=([^;]+)/', $rawHeaderCookie, $matches)) {
                 $cookieToken = urldecode($matches[1]);
             }
         }
@@ -173,8 +179,11 @@ class AuthController extends Controller
         if ($cookieToken !== '') {
             if (str_starts_with($cookieToken, 'eyJ') || strlen($cookieToken) > 100) {
                 try {
-                    $cookieToken = (string) \Illuminate\Support\Facades\Crypt::decrypt($cookieToken, false);
-                } catch (\Throwable) {
+                    $decrypted = \Illuminate\Support\Facades\Crypt::decrypt($cookieToken, false);
+                    if (is_string($decrypted)) {
+                        $cookieToken = $decrypted;
+                    }
+                } catch (Throwable) {
                     // Not encrypted or corrupted
                 }
             }

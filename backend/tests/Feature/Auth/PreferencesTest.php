@@ -161,7 +161,8 @@ class PreferencesTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertJsonPath('success', true);
-        $permissions = $response->json('data.permissions');
+        /** @var list<string> $permissions */
+        $permissions = is_array($response->json('data.permissions')) ? array_values($response->json('data.permissions')) : [];
         $this->assertNotEmpty($permissions);
         $this->assertContains('production.batch.create', $permissions);
     }

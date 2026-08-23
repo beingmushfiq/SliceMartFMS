@@ -19,8 +19,7 @@ class LogoutAllAction extends Action
 {
     public function __construct(
         private readonly RefreshTokenService $refreshTokenService
-    ) {
-    }
+    ) {}
 
     /**
      * Execute logout for all user sessions.

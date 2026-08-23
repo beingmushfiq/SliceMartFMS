@@ -6,7 +6,6 @@ namespace App\Models;
 
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -36,7 +35,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Tenant extends Model
 {
-    use HasFactory;
     use SoftDeletes;
 
     /**
@@ -61,19 +59,6 @@ class Tenant extends Model
     ];
 
     /**
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'branding' => 'array',
-            'trial_ends_at' => 'datetime',
-            'grace_period_ends_at' => 'datetime',
-            'suspended_at' => 'datetime',
-        ];
-    }
-
-    /**
      * Users associated with this tenant.
      *
      * @return HasMany<User, $this>
@@ -89,5 +74,18 @@ class Tenant extends Model
     public function isActive(): bool
     {
         return $this->status === 'active' || $this->status === 'trialing';
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'branding' => 'array',
+            'trial_ends_at' => 'datetime',
+            'grace_period_ends_at' => 'datetime',
+            'suspended_at' => 'datetime',
+        ];
     }
 }

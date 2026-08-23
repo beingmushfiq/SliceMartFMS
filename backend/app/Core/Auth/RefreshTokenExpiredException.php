@@ -6,6 +6,4 @@ namespace App\Core\Auth;
 
 use Exception;
 
-class RefreshTokenExpiredException extends Exception
-{
-}
+class RefreshTokenExpiredException extends Exception {}

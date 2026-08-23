@@ -21,8 +21,7 @@ class SelectTenantAction extends Action
     public function __construct(
         private readonly JwtService $jwtService,
         private readonly RefreshTokenService $refreshTokenService
-    ) {
-    }
+    ) {}
 
     /**
      * Execute tenant selection.
@@ -39,10 +38,14 @@ class SelectTenantAction extends Action
      */
     public function execute(array $input): array
     {
-        $email = strtolower(trim((string) ($input['email'] ?? '')));
-        $tenantId = (int) ($input['tenant_id'] ?? 0);
-        $ipAddress = isset($input['ip_address']) ? (string) $input['ip_address'] : null;
-        $userAgent = isset($input['user_agent']) ? (string) $input['user_agent'] : null;
+        $rawEmail = $input['email'] ?? '';
+        $email = strtolower(trim(is_string($rawEmail) ? $rawEmail : ''));
+        $rawTenantId = $input['tenant_id'] ?? null;
+        $tenantId = is_numeric($rawTenantId) ? (int) $rawTenantId : 0;
+        $rawIp = $input['ip_address'] ?? null;
+        $ipAddress = is_string($rawIp) ? $rawIp : null;
+        $rawUserAgent = $input['user_agent'] ?? null;
+        $userAgent = is_string($rawUserAgent) ? $rawUserAgent : null;
 
         /** @var User|null $user */
         $user = User::withoutTenantScope()
@@ -66,15 +69,17 @@ class SelectTenantAction extends Action
         $refreshResult = $this->refreshTokenService->createRefreshToken($user, $ipAddress, $userAgent);
         $cookie = $this->refreshTokenService->createCookie($refreshResult['token']);
 
-        $scopes = $user->scopes->map(fn ($s) => [
+        /** @var list<array<string, mixed>> $scopes */
+        $scopes = array_values($user->scopes->map(fn ($s) => [
             'type' => $s->scope_type,
             'id' => $s->scope_id,
-        ])->all();
+        ])->all());
 
         $effectivePermissions = $user->getEffectivePermissions();
         $permVersion = PermissionCatalogue::computePermVersion($effectivePermissions);
 
-        $ttl = (int) config('auth.jwt.ttl', 900);
+        $rawTtl = config('auth.jwt.ttl');
+        $ttl = is_numeric($rawTtl) ? (int) $rawTtl : 900;
         $accessToken = $this->jwtService->issueToken(
             userId: $user->id,
             tenantId: $user->tenant_id,
@@ -108,7 +113,6 @@ class SelectTenantAction extends Action
                 'uuid' => $user->uuid,
                 'name' => $user->name,
                 'email' => $user->email,
-                'phone' => $user->phone,
                 'status' => $user->status,
                 'is_platform_admin' => $user->is_platform_admin,
                 'locale' => $user->locale ?? 'en',

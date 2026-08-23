@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Carbon\CarbonInterface;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -19,18 +18,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $token_hash
  * @property string $family_id
  * @property int|null $replaced_by_id
- * @property string|null $ip_address
+ * @property string|null $ip
  * @property string|null $user_agent
  * @property CarbonInterface $expires_at
  * @property CarbonInterface|null $revoked_at
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  * @property-read User $user
- * @property-read RefreshToken|null $replacedBy
+ * @property-read Tenant|null $tenant
  */
 class RefreshToken extends Model
 {
-    use HasFactory;
 
     /**
      * @var list<string>
@@ -47,17 +45,6 @@ class RefreshToken extends Model
         'expires_at',
         'revoked_at',
     ];
-
-    /**
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'expires_at' => 'datetime',
-            'revoked_at' => 'datetime',
-        ];
-    }
 
     /**
      * Owning user.
@@ -93,5 +80,16 @@ class RefreshToken extends Model
     public function isExpired(): bool
     {
         return $this->expires_at->isPast();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'expires_at' => 'datetime',
+            'revoked_at' => 'datetime',
+        ];
     }
 }

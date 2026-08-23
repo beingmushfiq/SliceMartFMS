@@ -50,6 +50,7 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable
 {
     use BelongsToTenant;
+    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory;
     use Notifiable;
     use SoftDeletes;
@@ -80,22 +81,6 @@ class User extends Authenticatable
         'remember_token',
         'two_factor_secret',
     ];
-
-    /**
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'token_version' => 'integer',
-            'perm_version' => 'integer',
-            'last_login_at' => 'datetime',
-            'two_factor_confirmed_at' => 'datetime',
-            'is_platform_user' => 'boolean',
-        ];
-    }
 
     public function getIsActiveAttribute(): bool
     {
@@ -183,5 +168,21 @@ class User extends Authenticatable
         $effective = $this->getEffectivePermissions();
 
         return in_array('*', $effective, true) || in_array($permission, $effective, true);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'token_version' => 'integer',
+            'perm_version' => 'integer',
+            'last_login_at' => 'datetime',
+            'two_factor_confirmed_at' => 'datetime',
+            'is_platform_user' => 'boolean',
+        ];
     }
 }

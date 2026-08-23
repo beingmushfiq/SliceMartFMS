@@ -115,7 +115,8 @@ class AuthMeTest extends TestCase
         $response->assertJsonPath('data.user.email', 'jane@acme.com');
         $response->assertJsonPath('data.tenant.name', 'Acme Foods Ltd');
 
-        $permissions = $response->json('data.permissions');
+        /** @var list<string> $permissions */
+        $permissions = is_array($response->json('data.permissions')) ? array_values($response->json('data.permissions')) : [];
         $this->assertContains('production.batch.view', $permissions);
         $this->assertContains('production.batch.create', $permissions);
 

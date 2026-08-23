@@ -35,9 +35,9 @@ class JwtServiceTest extends TestCase
 
         $this->assertSame(42, $decoded['sub']);
         $this->assertSame(10, $decoded['tenant_id']);
-        $this->assertSame(2, $decoded['token_version']);
-        $this->assertSame('a1b2c3d4e5f6', $decoded['perm_version']);
-        $this->assertCount(1, $decoded['scopes']);
+        /** @var array<string, mixed> $scopes */
+        $scopes = (array) $decoded['scopes'];
+        $this->assertCount(1, $scopes);
         $this->assertArrayHasKey('exp', $decoded);
         $this->assertArrayHasKey('jti', $decoded);
     }

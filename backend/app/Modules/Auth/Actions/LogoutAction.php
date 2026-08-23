@@ -19,8 +19,7 @@ class LogoutAction extends Action
 {
     public function __construct(
         private readonly RefreshTokenService $refreshTokenService
-    ) {
-    }
+    ) {}
 
     /**
      * Execute logout.
@@ -30,7 +29,8 @@ class LogoutAction extends Action
      */
     public function execute(array $input = []): array
     {
-        $plainToken = (string) ($input['refresh_token'] ?? '');
+        $rawToken = $input['refresh_token'] ?? '';
+        $plainToken = is_string($rawToken) ? $rawToken : '';
 
         if ($plainToken !== '') {
             $tokenHash = hash('sha256', $plainToken);

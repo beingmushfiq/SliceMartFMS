@@ -6,7 +6,6 @@ namespace App\Models;
 
 use App\Core\Tenancy\Concerns\BelongsToTenant;
 use Carbon\CarbonInterface;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -22,11 +21,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  * @property-read User $user
+ * @property-read Tenant $tenant
  */
 class UserScope extends Model
 {
     use BelongsToTenant;
-    use HasFactory;
 
     /**
      * @var list<string>

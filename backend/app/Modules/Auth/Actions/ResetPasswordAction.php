@@ -22,8 +22,7 @@ class ResetPasswordAction extends Action
 {
     public function __construct(
         private readonly RefreshTokenService $refreshTokenService
-    ) {
-    }
+    ) {}
 
     /**
      * Execute password reset.
@@ -48,7 +47,8 @@ class ResetPasswordAction extends Action
         }
 
         // Expiration check (default 60 minutes)
-        $expireMinutes = (int) config('auth.passwords.users.expire', 60);
+        $rawExpire = config('auth.passwords.users.expire');
+        $expireMinutes = is_numeric($rawExpire) ? (int) $rawExpire : 60;
         $createdAt = Carbon::parse((string) $record->created_at);
         if ($createdAt->addMinutes($expireMinutes)->isPast()) {
             DB::table('password_reset_tokens')->where('email', $email)->delete();

@@ -6,6 +6,4 @@ namespace App\Core\Auth;
 
 use Exception;
 
-class JwtExpiredException extends Exception
-{
-}
+class JwtExpiredException extends Exception {}
