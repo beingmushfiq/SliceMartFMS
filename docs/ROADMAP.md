@@ -4,7 +4,7 @@
 > previous phase's exit gate is signed off. Where this document and a wish to
 > "just quickly add" something disagree, this document wins.
 
-**Status:** Canonical · **Last updated:** 2026-08-22 · **Owner:** Architect
+**Status:** Canonical · **Last updated:** 2026-08-23 · **Owner:** Architect
 
 ---
 
@@ -51,10 +51,10 @@ A phase is done when, for every module in it:
 ## 2. Sequence at a glance
 
 ```
-Phase 0   Architecture & documentation                        ← current
+Phase 0   Architecture & documentation                        ✅ closed
    │      7 canonical docs + repo restructure
    ▼
-Phase 1   Auth + Tenancy + RBAC + Design System
+Phase 1   Auth + Tenancy + RBAC + Design System              ← current
    │      the spine. everything else assumes it.
    ▼
 Phase 2   Master Data + Products + Warehouses
