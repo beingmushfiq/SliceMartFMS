@@ -5420,6 +5420,635 @@ abstract class SchemaTestCase extends TestCase
         ];
     }
 
+    // ─── report_definitions ──────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertReportDefinition(
+        ?int $tenantId = null,
+        string $code = 'REP_SALES_SUMMARY',
+        array $overrides = []
+    ): int {
+        return DB::table('report_definitions')
+            ->insertGetId($this->reportDefinitionAttributes($tenantId, $code, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function reportDefinitionAttributes(
+        ?int $tenantId = null,
+        string $code = 'REP_SALES_SUMMARY',
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'code' => $code.'_'.$counter,
+            'name' => 'Report Definition '.$counter,
+            'module' => 'sales',
+            'category' => 'operational',
+            'description' => 'Sales summary operational report',
+            'default_filters' => json_encode(['date_range' => '30d']),
+            'available_columns' => json_encode(['date', 'order_number', 'amount']),
+            'required_permission' => 'sales.reports.view',
+            'supports_export' => true,
+            'tier' => 'live',
+            'summary_table' => null,
+            'is_active' => true,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── report_saved_views ──────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertReportSavedView(
+        int $tenantId,
+        int $reportDefinitionId,
+        int $userId,
+        array $overrides = []
+    ): int {
+        return DB::table('report_saved_views')
+            ->insertGetId($this->reportSavedViewAttributes($tenantId, $reportDefinitionId, $userId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function reportSavedViewAttributes(
+        int $tenantId,
+        int $reportDefinitionId,
+        int $userId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'report_definition_id' => $reportDefinitionId,
+            'user_id' => $userId,
+            'name' => 'My Custom View '.$counter,
+            'filters' => json_encode(['channel' => 'online']),
+            'columns' => json_encode(['order_number', 'amount']),
+            'sort' => json_encode(['amount' => 'desc']),
+            'is_shared' => false,
+            'is_default' => false,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── report_schedules ────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertReportSchedule(
+        int $tenantId,
+        int $reportDefinitionId,
+        array $overrides = []
+    ): int {
+        return DB::table('report_schedules')
+            ->insertGetId($this->reportScheduleAttributes($tenantId, $reportDefinitionId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function reportScheduleAttributes(
+        int $tenantId,
+        int $reportDefinitionId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'report_definition_id' => $reportDefinitionId,
+            'report_saved_view_id' => null,
+            'name' => 'Weekly Sales Digest '.$counter,
+            'frequency' => 'weekly',
+            'run_at_time' => '08:00:00',
+            'day_of_week' => 1,
+            'day_of_month' => null,
+            'format' => 'pdf',
+            'recipients' => json_encode(['admin@example.com']),
+            'last_run_at' => null,
+            'last_status' => null,
+            'next_run_at' => '2026-08-31 08:00:00',
+            'is_active' => true,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── report_exports ──────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertReportExport(
+        int $tenantId,
+        int $reportDefinitionId,
+        int $requestedBy,
+        array $overrides = []
+    ): int {
+        return DB::table('report_exports')
+            ->insertGetId($this->reportExportAttributes($tenantId, $reportDefinitionId, $requestedBy, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function reportExportAttributes(
+        int $tenantId,
+        int $reportDefinitionId,
+        int $requestedBy,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'report_definition_id' => $reportDefinitionId,
+            'requested_by' => $requestedBy,
+            'filters' => json_encode(['date_range' => '30d']),
+            'format' => 'xlsx',
+            'row_count' => 1250,
+            'file_path' => 'exports/2026/08/sales_30d.xlsx',
+            'file_size_bytes' => 1048576,
+            'status' => 'completed',
+            'error_message' => null,
+            'expires_at' => '2026-08-31 18:00:00',
+            'downloaded_count' => 1,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── dashboard_widgets ───────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertDashboardWidget(
+        int $tenantId,
+        string $widgetCode = 'WIDGET_REVENUE_CHART',
+        array $overrides = []
+    ): int {
+        return DB::table('dashboard_widgets')
+            ->insertGetId($this->dashboardWidgetAttributes($tenantId, $widgetCode, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function dashboardWidgetAttributes(
+        int $tenantId,
+        string $widgetCode = 'WIDGET_REVENUE_CHART',
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'user_id' => null,
+            'role_id' => null,
+            'widget_code' => $widgetCode,
+            'title_override' => 'Monthly Revenue',
+            'grid_x' => 0,
+            'grid_y' => 0,
+            'grid_w' => 6,
+            'grid_h' => 4,
+            'config' => json_encode(['chart_type' => 'bar']),
+            'is_visible' => true,
+            'sort_order' => 1,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── summary_daily_production ────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertSummaryDailyProduction(
+        int $tenantId,
+        int $factoryId,
+        int $productionLineId,
+        int $productId,
+        string $date = '2026-08-24',
+        array $overrides = []
+    ): int {
+        return DB::table('summary_daily_production')
+            ->insertGetId($this->summaryDailyProductionAttributes($tenantId, $factoryId, $productionLineId, $productId, $date, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function summaryDailyProductionAttributes(
+        int $tenantId,
+        int $factoryId,
+        int $productionLineId,
+        int $productId,
+        string $date = '2026-08-24',
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'factory_id' => $factoryId,
+            'production_line_id' => $productionLineId,
+            'product_id' => $productId,
+            'summary_date' => $date,
+            'input_quantity' => '1000.0000',
+            'output_quantity' => '950.0000',
+            'yield_percentage' => '95.0000',
+            'wastage_quantity' => '30.0000',
+            'rework_quantity' => '15.0000',
+            'scrap_quantity' => '5.0000',
+            'batch_count' => 4,
+            'refreshed_at' => '2026-08-24 18:00:00',
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── summary_daily_worker_output ─────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertSummaryDailyWorkerOutput(
+        int $tenantId,
+        int $employeeId,
+        int $productId,
+        string $date = '2026-08-24',
+        array $overrides = []
+    ): int {
+        return DB::table('summary_daily_worker_output')
+            ->insertGetId($this->summaryDailyWorkerOutputAttributes($tenantId, $employeeId, $productId, $date, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function summaryDailyWorkerOutputAttributes(
+        int $tenantId,
+        int $employeeId,
+        int $productId,
+        string $date = '2026-08-24',
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'employee_id' => $employeeId,
+            'product_id' => $productId,
+            'summary_date' => $date,
+            'produced_quantity' => '250.0000',
+            'rejected_quantity' => '5.0000',
+            'hours_worked' => '8.0000',
+            'piece_amount' => '1250.0000',
+            'refreshed_at' => '2026-08-24 18:00:00',
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── summary_daily_sales ─────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertSummaryDailySales(
+        int $tenantId,
+        int $branchId,
+        string $channel = 'counter',
+        string $date = '2026-08-24',
+        array $overrides = []
+    ): int {
+        return DB::table('summary_daily_sales')
+            ->insertGetId($this->summaryDailySalesAttributes($tenantId, $branchId, $channel, $date, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function summaryDailySalesAttributes(
+        int $tenantId,
+        int $branchId,
+        string $channel = 'counter',
+        string $date = '2026-08-24',
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'branch_id' => $branchId,
+            'channel' => $channel,
+            'summary_date' => $date,
+            'order_count' => 150,
+            'gross_amount' => '75000.0000',
+            'discount_amount' => '2500.0000',
+            'tax_amount' => '3750.0000',
+            'net_amount' => '76250.0000',
+            'returned_amount' => '1200.0000',
+            'refreshed_at' => '2026-08-24 18:00:00',
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── summary_daily_stock ─────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertSummaryDailyStock(
+        int $tenantId,
+        int $warehouseId,
+        int $productId,
+        string $date = '2026-08-24',
+        array $overrides = []
+    ): int {
+        return DB::table('summary_daily_stock')
+            ->insertGetId($this->summaryDailyStockAttributes($tenantId, $warehouseId, $productId, $date, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function summaryDailyStockAttributes(
+        int $tenantId,
+        int $warehouseId,
+        int $productId,
+        string $date = '2026-08-24',
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'warehouse_id' => $warehouseId,
+            'product_id' => $productId,
+            'summary_date' => $date,
+            'opening_quantity' => '500.0000',
+            'in_quantity' => '200.0000',
+            'out_quantity' => '150.0000',
+            'closing_quantity' => '550.0000',
+            'closing_value' => '55000.0000',
+            'refreshed_at' => '2026-08-24 18:00:00',
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── summary_daily_delivery ──────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertSummaryDailyDelivery(
+        int $tenantId,
+        int $branchId,
+        ?int $courierProviderId = null,
+        string $date = '2026-08-24',
+        array $overrides = []
+    ): int {
+        return DB::table('summary_daily_delivery')
+            ->insertGetId($this->summaryDailyDeliveryAttributes($tenantId, $branchId, $courierProviderId, $date, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function summaryDailyDeliveryAttributes(
+        int $tenantId,
+        int $branchId,
+        ?int $courierProviderId = null,
+        string $date = '2026-08-24',
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'branch_id' => $branchId,
+            'courier_provider_id' => $courierProviderId,
+            'summary_date' => $date,
+            'dispatched_count' => 120,
+            'delivered_count' => 110,
+            'failed_count' => 6,
+            'returned_count' => 4,
+            'cod_expected' => '120000.0000',
+            'cod_received' => '110000.0000',
+            'refreshed_at' => '2026-08-24 18:00:00',
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── summary_monthly_finance ─────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertSummaryMonthlyFinance(
+        int $tenantId,
+        int $companyId,
+        int $chartOfAccountId,
+        int $year = 2026,
+        int $month = 8,
+        array $overrides = []
+    ): int {
+        return DB::table('summary_monthly_finance')
+            ->insertGetId($this->summaryMonthlyFinanceAttributes($tenantId, $companyId, $chartOfAccountId, $year, $month, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function summaryMonthlyFinanceAttributes(
+        int $tenantId,
+        int $companyId,
+        int $chartOfAccountId,
+        int $year = 2026,
+        int $month = 8,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'company_id' => $companyId,
+            'chart_of_account_id' => $chartOfAccountId,
+            'period_year' => $year,
+            'period_month' => $month,
+            'debit_total' => '250000.0000',
+            'credit_total' => '180000.0000',
+            'net_movement' => '70000.0000',
+            'closing_balance' => '520000.0000',
+            'refreshed_at' => '2026-08-24 18:00:00',
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── summary_monthly_payroll ─────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertSummaryMonthlyPayroll(
+        int $tenantId,
+        int $companyId,
+        int $year = 2026,
+        int $month = 8,
+        array $overrides = []
+    ): int {
+        return DB::table('summary_monthly_payroll')
+            ->insertGetId($this->summaryMonthlyPayrollAttributes($tenantId, $companyId, $year, $month, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function summaryMonthlyPayrollAttributes(
+        int $tenantId,
+        int $companyId,
+        int $year = 2026,
+        int $month = 8,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'company_id' => $companyId,
+            'period_year' => $year,
+            'period_month' => $month,
+            'employee_count' => 45,
+            'gross_amount' => '1250000.0000',
+            'deductions_amount' => '125000.0000',
+            'net_amount' => '1125000.0000',
+            'overtime_minutes' => 3600,
+            'refreshed_at' => '2026-08-24 18:00:00',
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── summary_product_margin ──────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertSummaryProductMargin(
+        int $tenantId,
+        int $productId,
+        int $year = 2026,
+        int $month = 8,
+        array $overrides = []
+    ): int {
+        return DB::table('summary_product_margin')
+            ->insertGetId($this->summaryProductMarginAttributes($tenantId, $productId, $year, $month, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function summaryProductMarginAttributes(
+        int $tenantId,
+        int $productId,
+        int $year = 2026,
+        int $month = 8,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'product_id' => $productId,
+            'period_year' => $year,
+            'period_month' => $month,
+            'quantity_sold' => '3500.0000',
+            'revenue' => '350000.0000',
+            'cost' => '245000.0000',
+            'gross_margin' => '105000.0000',
+            'margin_percentage' => '30.0000',
+            'refreshed_at' => '2026-08-24 18:00:00',
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── summary_taxes ───────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertSummaryTax(
+        int $tenantId,
+        int $companyId,
+        int $taxProfileId,
+        int $year = 2026,
+        int $month = 8,
+        array $overrides = []
+    ): int {
+        return DB::table('summary_taxes')
+            ->insertGetId($this->summaryTaxAttributes($tenantId, $companyId, $taxProfileId, $year, $month, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function summaryTaxAttributes(
+        int $tenantId,
+        int $companyId,
+        int $taxProfileId,
+        int $year = 2026,
+        int $month = 8,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'company_id' => $companyId,
+            'tax_profile_id' => $taxProfileId,
+            'period_year' => $year,
+            'period_month' => $month,
+            'taxable_amount' => '500000.0000',
+            'tax_collected' => '25000.0000',
+            'tax_paid' => '15000.0000',
+            'net_tax' => '10000.0000',
+            'refreshed_at' => '2026-08-24 18:00:00',
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
     /**
      * SQLite and MySQL word the same violation differently, and the suite runs
      * on SQLite while production runs on MySQL.
