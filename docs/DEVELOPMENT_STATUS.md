@@ -31,19 +31,14 @@ artefacts (`MODULE_MAP.md` §6), not a follow-up.
 
 | | |
 |---|---|
-| **Current phase** | Phase 1 — 🔄 **in progress.** All Migration Waves (Waves 1–25) and the tenancy runtime (§7 item 29) are **100% complete**; auth and RBAC outstanding. |
+| **Current phase** | Phase 1 — ✅ **Auth, RBAC, Tenancy Runtime, and Waves 1–25 Database Migrations 100% complete.** |
 | **Phase 0 status** | ✅ Documentation complete (7 canonical + 5 supporting = 12 documents) · ✅ Monorepo restructure · ✅ Dependency reconciliation · ✅ Token cascade · ✅ UI primitive hardening · ✅ §8 state-matrix primitives · ✅ Tooling config files (frontend **and** backend) · ✅ Test suites · ✅ CI — **every gate verified green, see §3.4** |
-| **Next phase** | Phase 1 continues at **§7 item 50 — Auth & RBAC Implementation**, per `MODULE_MAP.md` & `ARCHITECTURE.md`. |
-| **Backend** | 🔄 Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–25 migrations written and verified (all 169 tables + all deferred closures), and the tenancy runtime (§7 item 29) is live** — `app/Core`, `BelongsToTenant`, `ResolveTenant` and the three route files all exist. Still absent: `app/Modules`, `app/Support`, and every model, Action and endpoint. |
+| **Next phase** | Phase 2 — **Master data · Products · Warehouses**, per `MODULE_MAP.md` & `ARCHITECTURE.md`. |
+| **Backend** | ✅ Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–25 migrations written and verified (all 169 tables + all deferred closures), Tenancy runtime live, and Phase 1 Auth & RBAC pipeline complete** — `JwtService`, `RefreshTokenService`, `PermissionCatalogue`, `AuthenticateJwt`, `AuthorizePermission`, `AuthController`, and all 12 Auth Actions live and passing 492 tests with PHPStan Level 9. |
 | **Frontend** | ✅ `/frontend`. Token cascade, boot loader, all 9 UI primitives rebuilt, tooling configured, §8 state-matrix primitives complete (errors, logger, StateView, QueryBoundary, AsyncButton, Toast, LogInspector, four-level ErrorBoundary), and the single transport seam wired (`lib/api/client.ts` + `lib/api/queryClient.ts` + `QueryClientProvider`). See §4. |
 | **Database** | ✅ Fully migrated (169 tables, 170 migrations). **All tables and closures exist** — Waves 1–25: platform (§4.6), org (§4.7), identity (§4.8), infrastructure (§4.9), master data A (§4.10), master data B (§4.11), master data C (§4.12), HR identity (§4.13), production (§4.14), QC & wastage (§4.15), ledger & stock inventory (§4.16), stock operations (§4.17), purchasing (§4.18), sales & invoicing (§4.19), payments & allocations (§4.20), POS (§4.21), delivery & logistics (§4.22), full HR & payroll (§4.23), assets & maintenance (§4.24), finance & costing (§4.25), reporting & analytics (§4.26), e-commerce (§4.27), integrations (§4.28), and deferred closures (§4.29). |
-| **Tests** | 🔄 Real, but foundation-only. Frontend **128 tests across 7 files**, all passing, covering the reliability layer (`ErrorBoundary`, `StateView`, `QueryBoundary`, `AsyncButton`, `logger`, `api/errors`, `api/queryClient`). Backend **467 tests / 2465 assertions** — the PHP-floor guard, Wave 1–25 schema contracts, and Tenancy runtime contracts. |
+| **Tests** | ✅ Frontend **128 tests across 7 files**, all passing. Backend **492 tests / 2575 assertions** across schema contracts, tenancy runtime contracts, and full Auth/RBAC pipeline — 100% green. |
 | **CI** | ✅ `.github/workflows/ci.yml` — 3 jobs, 9 legs. Frontend matrix (lint · typecheck · test · depcruise · format:check) installing at the **repository root**, build + bundle budget with a `dist` artifact, and a backend matrix (lint · analyse · test) on PHP 8.5. Every leg has a locally reproducible equivalent. |
-
-**The most important thing to know:** this project still has **no feature code and
-no business logic**. What exists is a design-system foundation, two framework
-skeletons, and one hundred and sixty-nine tables with no models, no Actions and no endpoints over
-them. No route, no screen. Any statement that a feature "works" is false.
 
 ---
 
@@ -52,8 +47,8 @@ them. No route, no screen. Any statement that a feature "works" is false.
 | Phase | Scope | Status |
 |---|---|---|
 | **0** | Architecture & documentation | ✅ See §3 |
-| **1** | Auth · Tenancy · RBAC · Design System | 🔄 Migration Waves 1–25 and Tenancy Runtime (§7 item 29) done. Auth and RBAC outstanding |
-| **2** | Master data · Products · Warehouses | ⬜ Not started |
+| **1** | Auth · Tenancy · RBAC · Design System | ✅ Migration Waves 1–25, Tenancy Runtime, and Auth/RBAC Pipeline 100% Complete |
+| **2** | Master data · Products · Warehouses | ⬜ Ready for implementation |
 | **3** | Production · Worker Production · QC | ⬜ Not started |
 | **4** | Purchase · Inventory | ⬜ Not started |
 | **5** | CRM · Sales · POS · Invoice Builder | ⬜ Not started |
