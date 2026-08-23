@@ -2813,6 +2813,449 @@ abstract class SchemaTestCase extends TestCase
         ];
     }
 
+    // ─── crm_leads ─────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertCrmLead(
+        int $tenantId,
+        array $overrides = []
+    ): int {
+        return DB::table('crm_leads')
+            ->insertGetId($this->crmLeadAttributes($tenantId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function crmLeadAttributes(
+        int $tenantId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'lead_number' => 'LEAD-'.$counter,
+            'name' => 'Acme Corporation Lead '.$counter,
+            'company_name' => 'Acme Corp',
+            'phone' => '+15551234567',
+            'email' => "lead{$counter}@acme.test",
+            'source' => 'walk_in',
+            'stage' => 'new',
+            'assigned_to' => null,
+            'expected_value' => '5000.0000',
+            'expected_close_date' => '2026-09-30',
+            'lost_reason_id' => null,
+            'converted_party_id' => null,
+            'converted_at' => null,
+            'notes' => null,
+            'created_at' => '2026-08-24 10:00:00',
+            'updated_at' => '2026-08-24 10:00:00',
+        ];
+    }
+
+    // ─── crm_activities ────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertCrmActivity(
+        int $tenantId,
+        string $subjectType,
+        int $subjectId,
+        array $overrides = []
+    ): int {
+        return DB::table('crm_activities')
+            ->insertGetId($this->crmActivityAttributes($tenantId, $subjectType, $subjectId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function crmActivityAttributes(
+        int $tenantId,
+        string $subjectType,
+        int $subjectId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'subject_type' => $subjectType,
+            'subject_id' => $subjectId,
+            'type' => 'call',
+            'title' => 'Follow up call '.$counter,
+            'description' => 'Discussed pricing and volume discounts.',
+            'due_at' => '2026-08-25 14:00:00',
+            'completed_at' => null,
+            'outcome' => null,
+            'assigned_to' => null,
+            'created_at' => '2026-08-24 10:00:00',
+            'updated_at' => '2026-08-24 10:00:00',
+        ];
+    }
+
+    // ─── sales_orders ──────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertSalesOrder(
+        int $tenantId,
+        array $overrides = []
+    ): int {
+        return DB::table('sales_orders')
+            ->insertGetId($this->salesOrderAttributes($tenantId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function salesOrderAttributes(
+        int $tenantId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'order_number' => 'SO-'.$counter,
+            'channel' => 'counter',
+            'company_id' => null,
+            'branch_id' => null,
+            'warehouse_id' => null,
+            'party_id' => null,
+            'customer_name' => 'Walk-in Customer '.$counter,
+            'customer_phone' => '+15559876543',
+            'pos_session_id' => null,
+            'order_date' => '2026-08-24',
+            'required_date' => '2026-08-26',
+            'price_list_id' => null,
+            'currency_code' => 'USD',
+            'subtotal' => '200.0000',
+            'discount_amount' => '0.0000',
+            'tax_amount' => '10.0000',
+            'shipping_amount' => '0.0000',
+            'round_off' => '0.0000',
+            'total_amount' => '210.0000',
+            'paid_amount' => '0.0000',
+            'due_amount' => '210.0000',
+            'delivery_type' => 'pickup',
+            'status' => 'draft',
+            'payment_status' => 'unpaid',
+            'salesperson_id' => null,
+            'notes' => null,
+            'internal_notes' => null,
+            'confirmed_by' => null,
+            'confirmed_at' => null,
+            'cancelled_by' => null,
+            'cancelled_at' => null,
+            'cancellation_reason_id' => null,
+            'created_at' => '2026-08-24 10:00:00',
+            'updated_at' => '2026-08-24 10:00:00',
+        ];
+    }
+
+    // ─── sales_order_items ─────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertSalesOrderItem(
+        int $tenantId,
+        int $salesOrderId,
+        int $productId,
+        int $unitId,
+        array $overrides = []
+    ): int {
+        return DB::table('sales_order_items')
+            ->insertGetId($this->salesOrderItemAttributes($tenantId, $salesOrderId, $productId, $unitId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function salesOrderItemAttributes(
+        int $tenantId,
+        int $salesOrderId,
+        int $productId,
+        int $unitId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'sales_order_id' => $salesOrderId,
+            'product_id' => $productId,
+            'variant_id' => null,
+            'description' => null,
+            'quantity' => '10.0000',
+            'unit_id' => $unitId,
+            'unit_price' => '20.0000',
+            'discount_percentage' => '0.0000',
+            'discount_amount' => '0.0000',
+            'tax_profile_id' => null,
+            'tax_amount' => '10.0000',
+            'line_total' => '210.0000',
+            'delivered_quantity' => '0.0000',
+            'returned_quantity' => '0.0000',
+            'batch_code' => null,
+            'stock_reservation_id' => null,
+            'sort_order' => 0,
+            'created_at' => '2026-08-24 10:00:00',
+            'updated_at' => '2026-08-24 10:00:00',
+        ];
+    }
+
+    // ─── invoice_templates ─────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertInvoiceTemplate(
+        int $tenantId,
+        array $overrides = []
+    ): int {
+        return DB::table('invoice_templates')
+            ->insertGetId($this->invoiceTemplateAttributes($tenantId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function invoiceTemplateAttributes(
+        int $tenantId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'company_id' => null,
+            'name' => 'Standard Invoice Template '.$counter,
+            'type' => 'invoice',
+            'paper_size' => 'a4',
+            'orientation' => 'portrait',
+            'definition' => json_encode(['elements' => []], JSON_THROW_ON_ERROR),
+            'is_default' => 0,
+            'is_active' => 1,
+            'version' => 1,
+            'created_at' => '2026-08-24 10:00:00',
+            'updated_at' => '2026-08-24 10:00:00',
+        ];
+    }
+
+    // ─── invoices ──────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertInvoice(
+        int $tenantId,
+        array $overrides = []
+    ): int {
+        return DB::table('invoices')
+            ->insertGetId($this->invoiceAttributes($tenantId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function invoiceAttributes(
+        int $tenantId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'invoice_number' => 'INV-'.$counter,
+            'sales_order_id' => null,
+            'company_id' => null,
+            'branch_id' => null,
+            'party_id' => null,
+            'invoice_date' => '2026-08-24',
+            'due_date' => '2026-09-24',
+            'subtotal' => '200.0000',
+            'discount_amount' => '0.0000',
+            'tax_amount' => '10.0000',
+            'shipping_amount' => '0.0000',
+            'round_off' => '0.0000',
+            'total_amount' => '210.0000',
+            'paid_amount' => '0.0000',
+            'status' => 'draft',
+            'invoice_template_id' => null,
+            'printed_count' => 0,
+            'posted_by' => null,
+            'posted_at' => null,
+            'voided_by' => null,
+            'voided_at' => null,
+            'void_reason' => null,
+            'created_at' => '2026-08-24 10:00:00',
+            'updated_at' => '2026-08-24 10:00:00',
+        ];
+    }
+
+    // ─── invoice_items ─────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertInvoiceItem(
+        int $tenantId,
+        int $invoiceId,
+        array $overrides = []
+    ): int {
+        return DB::table('invoice_items')
+            ->insertGetId($this->invoiceItemAttributes($tenantId, $invoiceId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function invoiceItemAttributes(
+        int $tenantId,
+        int $invoiceId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'invoice_id' => $invoiceId,
+            'sales_order_item_id' => null,
+            'product_id' => null,
+            'description' => 'Custom line item',
+            'quantity' => '1.0000',
+            'unit_id' => null,
+            'unit_price' => '200.0000',
+            'discount_amount' => '0.0000',
+            'tax_profile_id' => null,
+            'tax_amount' => '10.0000',
+            'line_total' => '210.0000',
+            'sort_order' => 0,
+            'created_at' => '2026-08-24 10:00:00',
+            'updated_at' => '2026-08-24 10:00:00',
+        ];
+    }
+
+    // ─── sales_returns ─────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertSalesReturn(
+        int $tenantId,
+        int $warehouseId,
+        int $reasonCodeId,
+        array $overrides = []
+    ): int {
+        return DB::table('sales_returns')
+            ->insertGetId($this->salesReturnAttributes($tenantId, $warehouseId, $reasonCodeId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function salesReturnAttributes(
+        int $tenantId,
+        int $warehouseId,
+        int $reasonCodeId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'return_number' => 'SRTN-'.$counter,
+            'invoice_id' => null,
+            'sales_order_id' => null,
+            'party_id' => null,
+            'warehouse_id' => $warehouseId,
+            'return_date' => '2026-08-24',
+            'reason_code_id' => $reasonCodeId,
+            'restock' => 1,
+            'subtotal' => '100.0000',
+            'tax_amount' => '5.0000',
+            'total_amount' => '105.0000',
+            'refund_method' => 'credit_note',
+            'credit_note_number' => 'CN-'.$counter,
+            'status' => 'draft',
+            'approved_by' => null,
+            'approved_at' => null,
+            'created_at' => '2026-08-24 10:00:00',
+            'updated_at' => '2026-08-24 10:00:00',
+        ];
+    }
+
+    // ─── sales_return_items ────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertSalesReturnItem(
+        int $tenantId,
+        int $salesReturnId,
+        int $productId,
+        int $unitId,
+        array $overrides = []
+    ): int {
+        return DB::table('sales_return_items')
+            ->insertGetId($this->salesReturnItemAttributes($tenantId, $salesReturnId, $productId, $unitId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function salesReturnItemAttributes(
+        int $tenantId,
+        int $salesReturnId,
+        int $productId,
+        int $unitId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'sales_return_id' => $salesReturnId,
+            'invoice_item_id' => null,
+            'product_id' => $productId,
+            'variant_id' => null,
+            'batch_code' => null,
+            'quantity' => '5.0000',
+            'unit_id' => $unitId,
+            'unit_price' => '20.0000',
+            'line_total' => '100.0000',
+            'condition' => 'good',
+            'stock_movement_id' => null,
+            'created_at' => '2026-08-24 10:00:00',
+            'updated_at' => '2026-08-24 10:00:00',
+        ];
+    }
+
     /**
      * SQLite and MySQL word the same violation differently, and the suite runs
      * on SQLite while production runs on MySQL.
