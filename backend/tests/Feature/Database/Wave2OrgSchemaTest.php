@@ -281,26 +281,37 @@ final class Wave2OrgSchemaTest extends SchemaTestCase
         $this->assertSame(1250.75, (float) $capacity);
     }
 
-    public function test_the_deferred_capacity_unit_foreign_key_is_still_owed(): void
+    public function test_a_production_line_capacity_unit_cannot_reference_a_unit_in_another_tenant(): void
     {
-        // §16.1 rule 2 — `capacity_unit_id` points at `units`, which Wave 5
-        // creates, so the key cannot be declared in Wave 2. The column is
-        // unconstrained until then, and this test states that plainly so the
-        // gap is visible in the suite rather than only in a docblock. When Wave
-        // 5 adds the key this test must be replaced by one proving the key
-        // rejects a foreign unit.
-        $this->assertFalse(
-            Schema::hasTable('units'),
-            '`units` now exists, so the deferred `production_lines.capacity_unit_id` '
-            .'foreign key is due — see DATABASE_DESIGN §16 and replace this test.'
+        // Wave 5 closure of the deferred forward reference documented in
+        // DATABASE_DESIGN §16.1 (the deferred-forward-reference table) and
+        // originally pinned in this file as
+        // `test_the_deferred_capacity_unit_foreign_key_is_still_owed`.
+        //
+        // That test asserted `units` did not yet exist and accepted a
+        // `capacity_unit_id` pointing at a phantom row. Now that migration 103100
+        // has closed the FK, this replaces it: the composite
+        // `(tenant_id, capacity_unit_id) → units(tenant_id, id)` must reject a
+        // unit that exists but belongs to a different tenant.
+        $plan = $this->insertPlan();
+        $owner = $this->insertTenant($plan['id'], 'tenant-one');
+        $rogue = $this->insertTenant($plan['id'], 'tenant-two');
+
+        // A real unit owned by tenant "owner".
+        $unit = $this->insertUnit($owner, ['code' => 'KG', 'type' => 'weight']);
+
+        $factory = $this->insertFactory($rogue, $this->insertCompany($rogue));
+
+        // The composite FK should reject this: the unit belongs to "owner" but
+        // the production line sits in "rogue". A single-column FK would accept it.
+        $this->assertInsertRejected(
+            'production_lines',
+            $this->productionLineAttributes($rogue, $factory, ['capacity_unit_id' => $unit]),
+            'A production line was allowed to reference a capacity unit that belongs to '
+            .'another tenant. The composite FK (tenant_id, capacity_unit_id) → units is '
+            .'not active, so DATABASE_DESIGN §16.1 is violated.',
+            'foreign',
         );
-
-        $tenant = $this->insertTenantWithPlan();
-        $factory = $this->insertFactory($tenant, $this->insertCompany($tenant));
-
-        $this->insertProductionLine($tenant, $factory, ['capacity_unit_id' => 4242]);
-
-        $this->assertSame(4242, (int) $this->columnValue('production_lines', 'capacity_unit_id'));
     }
 
     public function test_the_default_sentinels_are_derived_and_never_written(): void

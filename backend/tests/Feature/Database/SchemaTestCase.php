@@ -434,6 +434,160 @@ abstract class SchemaTestCase extends TestCase
     }
 
     /**
+     * A measurement unit (Wave 5). `type` must be one of: weight | volume |
+     * length | piece | time.
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertUnit(int $tenantId, array $overrides = []): int
+    {
+        return DB::table('units')->insertGetId($this->unitAttributes($tenantId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function unitAttributes(int $tenantId, array $overrides = []): array
+    {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'code' => 'KG',
+            'name' => 'Kilogram',
+            'type' => 'weight',
+            'is_base' => true,
+        ];
+    }
+
+    /**
+     * A conversion between two tenant-scoped units (Wave 5).
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertUnitConversion(int $tenantId, int $fromUnitId, int $toUnitId, array $overrides = []): int
+    {
+        return DB::table('unit_conversions')
+            ->insertGetId($this->unitConversionAttributes($tenantId, $fromUnitId, $toUnitId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function unitConversionAttributes(int $tenantId, int $fromUnitId, int $toUnitId, array $overrides = []): array
+    {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'from_unit_id' => $fromUnitId,
+            'to_unit_id' => $toUnitId,
+            'factor' => '1000.00000000',
+        ];
+    }
+
+    /**
+     * A product category (Wave 5). `parent_id => null` makes a root category.
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertCategory(int $tenantId, array $overrides = []): int
+    {
+        return DB::table('categories')->insertGetId($this->categoryAttributes($tenantId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function categoryAttributes(int $tenantId, array $overrides = []): array
+    {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'parent_id' => null,
+            'code' => 'RAW',
+            'name' => 'Raw Materials',
+        ];
+    }
+
+    /**
+     * A brand (Wave 5).
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertBrand(int $tenantId, array $overrides = []): int
+    {
+        return DB::table('brands')->insertGetId($this->brandAttributes($tenantId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function brandAttributes(int $tenantId, array $overrides = []): array
+    {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'code' => 'SM',
+            'name' => 'Slice Mart Brand',
+        ];
+    }
+
+    /**
+     * A tax profile (Wave 5). `type` is `inclusive` or `exclusive`.
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertTaxProfile(int $tenantId, array $overrides = []): int
+    {
+        return DB::table('tax_profiles')->insertGetId($this->taxProfileAttributes($tenantId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function taxProfileAttributes(int $tenantId, array $overrides = []): array
+    {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'code' => 'VAT15',
+            'name' => 'VAT 15%',
+            'rate' => '15.0000',
+            'type' => 'exclusive',
+        ];
+    }
+
+    /**
+     * A reason code (Wave 5). `context` must be one of: qc_defect | wastage |
+     * stock_adjustment | sales_return | purchase_return | cancellation | rework.
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertReasonCode(int $tenantId, array $overrides = []): int
+    {
+        return DB::table('reason_codes')->insertGetId($this->reasonCodeAttributes($tenantId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function reasonCodeAttributes(int $tenantId, array $overrides = []): array
+    {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'context' => 'stock_adjustment',
+            'code' => 'ADJ-01',
+            'name' => 'Counting Error',
+        ];
+    }
+
+    /**
      * Read one column from one row, narrowed to a string.
      *
      * `value()` returns `mixed`, and casting `mixed` is a static analysis error

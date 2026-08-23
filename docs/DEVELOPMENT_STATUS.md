@@ -236,8 +236,9 @@ migrations, `routes/web.php`, `routes/console.php`.
 `EnsureTenantActive` middleware, `app/Core/Http/Responses/ErrorResponse.php`, and
 `routes/api_public.php` · `routes/api_platform.php` · `routes/api_tenant.php` wired
 through `bootstrap/app.php`. Migrations are present too — the six Wave 1 platform
-tables (§4.6), four Wave 2 org tables (§4.7), seven Wave 3 identity tables (§4.8)
-and seven Wave 4 infrastructure tables (§4.9) exist and are verified.
+tables (§4.6), four Wave 2 org tables (§4.7), seven Wave 3 identity tables (§4.8),
+seven Wave 4 infrastructure tables (§4.9), and six Wave 5 master data A tables
+plus the deferred FK closure (§4.10) exist and are verified.
 
 **Absent — the rest of Phase 1:** `app/Modules`, `app/Support`, and every model,
 Action and endpoint over the twenty-four tables. The three route files exist but
@@ -245,7 +246,7 @@ register no routes yet.
 
 ### 4.5 Test coverage
 
-128 frontend tests over 7 files; 80 backend tests / 324 assertions. Frontend
+128 frontend tests over 7 files; **103 backend tests / 456 assertions**. Frontend
 tests sit beside the code they cover (`vitest.config.ts`
 `include: ['src/**/*.{test,spec}.{ts,tsx}']`); backend schema contracts live in
 `tests/Feature/Database/` and the tenancy-runtime contract in
@@ -270,6 +271,7 @@ bans in the UI. If this repository ever has no tests, the gate should go red.
 | `tests/Feature/Database/Wave2OrgSchemaTest.php` | 17 | Wave 2's tenant isolation as a *schema* promise: cross-tenant references refused by composite FKs, the default sentinels derived and read-only, the deferred FK still owed (§4.7). |
 | `tests/Feature/Database/Wave3IdentitySchemaTest.php` | 20 | Wave 3's identity contract, where a schema defect is a privilege escalation rather than a reporting error: email unique per tenant and reusable across tenants, role slugs scoped, grants cascading, tokens pruning down their rotation chain — and one test that pins a **hole** rather than a guarantee (§4.8). |
 | `tests/Feature/Database/Wave4InfraSchemaTest.php` | 27 | Wave 4's infrastructure contract, and the first wave whose decisions live in **omitted** columns: an audit row outliving its actor, one idempotency key legitimately reused across routes and users, the document-sequence sentinel, and a queued notification distinguishable from a failed one without a `status` column (§4.9). |
+| `tests/Feature/Database/Wave5MasterDataASchemaTest.php` | 23 | Wave 5's Group C master data contract: all six catalogue tables, composite FK isolation for `unit_conversions` and `categories`, the self-referential category tree, DECIMAL precision for factors and rates, and the full `reason_codes` context vocabulary (§4.10). |
 | `tests/Feature/Tenancy/TenancyRuntimeTest.php` | 3 | The tenancy runtime as a *behavioural* contract, not a schema one: layer-5 isolation between two bound tenants, `withoutTenantScope()` emitting its mandatory audit `Log::warning`, and `TenantContext::current()` throwing when nothing is bound (a queue job with no request context). The first assertion over live application code rather than migration metadata (§7 item 29). |
 
 What is **not** covered, and why: there is no feature code, no route, no store
@@ -601,6 +603,49 @@ migration.
 
 ---
 
+### 4.10 Migrations — Wave 5 (master data A) complete
+
+Seven migrations closing this wave:
+`2026_08_23_102500` … `102900` (the six catalogue tables) plus `103100` (deferred
+FK closure on `production_lines.capacity_unit_id`).
+
+| Table / Migration | Notes |
+|---|---|
+| `units` | Tenant-scoped unit catalogue: `type` (weight \| volume \| length \| piece \| time), `code`, `is_base`. Unique `(tenant_id, code)`. Carries `unique (tenant_id, id)` so child tables can declare composite FKs. Soft-deletable master data. Adding `units` also closes the forward reference from `production_lines.capacity_unit_id` (Wave 2 finding 2). |
+| `unit_conversions` | Ordered pair `(tenant_id, from_unit_id, to_unit_id)` with composite FKs on both sides. Factor is `DECIMAL(18,8)` — eight decimal places for compound conversions that lose precision at fewer. No soft-delete (a conversion is changed by inserting a correcting row, not by editing). Unique `(tenant_id, from_unit_id, to_unit_id)`. |
+| `categories` | Self-referential tree: composite FK `(tenant_id, parent_id) → categories(tenant_id, id)`. `parent_id = NULL` is a root (MATCH SIMPLE does not check a NULL FK column, which is the correct semantics). Code unique per tenant. |
+| `brands` | Simple tenant-scoped catalogue. Code unique per tenant. Soft-deletable master data. |
+| `tax_profiles` | Rate `DECIMAL(8,4)`, type `VARCHAR(32)` (not ENUM). Both `inclusive` and `exclusive` must insert so Q2's answer is not pre-empted — verified by a test. Code unique per tenant. Soft-deletable master data. |
+| `reason_codes` | Context-partitioned catalogue (`qc_defect` \| `wastage` \| `stock_adjustment` \| `sales_return` \| `purchase_return` \| `cancellation` \| `rework`). Unique `(tenant_id, context, code)` — two contexts in the same tenant may share a code string; two reason codes in the same context may not. `requires_note` tells the Action whether to demand a free-text field. `sort_order UNSIGNED SMALLINT`. Soft-deletable master data. |
+| `103100` (FK closure) | `ADD FOREIGN KEY fk_production_lines_tenant_capacity_unit` referencing `units(tenant_id, id)`, `RESTRICT`. No column is altered — the index `ix_production_lines_tenant_capacity_unit` was pre-created in Wave 2 (§16.1 rule 5). The Wave 2 test `test_the_deferred_capacity_unit_foreign_key_is_still_owed` is replaced in `Wave2OrgSchemaTest` by `test_a_production_line_capacity_unit_cannot_reference_a_unit_in_another_tenant`, which proves the FK is active by inserting a cross-tenant unit and requiring rejection. |
+
+**No new findings requiring a doc correction in this wave.** The schema as
+documented in `DATABASE_DESIGN.md` §4 Group C was implementable without
+amendment. `reason_codes` was initially misclassified as a leaf table in the test
+(omitting `softDeletes()`) — corrected before the suite was green.
+
+`Wave5MasterDataASchemaTest` — **23 tests** covering: table existence, structural
+`tenant_id` placement and soft-delete presence, no float/double/enum, uniqueness
+enforcement for all six catalogues, composite FK isolation for `unit_conversions`
+and `categories`, the self-referential category tree, the cascade refuse-on-child
+delete for `categories` and `units`, DECIMAL precision for conversion factors and
+tax rates, and the full context vocabulary for `reason_codes`. The deferred FK
+closure test lives in `Wave2OrgSchemaTest` (replacing the placeholder) rather
+than here, so it sits beside the original obligation.
+
+`SchemaTestCase` gained six fixture builder pairs (insert + attributes for units,
+unit_conversions, categories, brands, tax_profiles, reason_codes).
+
+Verified: `migrate:fresh` — all **34 migrations** green ✅ · `pint lint:fix` **PASS**
+(binary operator spacing, one unused import, class attribute separation fixed)
+· `phpstan` level 9 (`--memory-limit=1G`) **[OK] No errors** · `artisan test`
+**103 passed / 456 assertions**, none risky. Per-suite measured:
+Wave 1 **11 tests** (assertion count now reflects 34 migration files × 3 tokens =
+102 assertions from the scanner alone — **re-measure before quoting**), Wave 2 **17**,
+Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Tenancy runtime **3**, Unit+Example **2**.
+
+---
+
 ## 5. Dependency state — reconciled
 
 All 13 gaps recorded on 2026-08-22 are closed. Installed at `frontend/package.json`:
@@ -700,7 +745,7 @@ Q3, it stops and asks (`TASK_PROTOCOL.md` §3.2).
 | 27 | Phase 1 **Wave 3 — identity**: `users` finalise (`tenant_id`, `perm_version`, and the **global `email` unique** reconciled with §1.1 tenant scoping), `permissions`, `roles`, `role_permission`, `role_user`, `user_scopes`, `refresh_tokens`, plus `Wave3IdentitySchemaTest`. Five findings, one of them a hole with no schema fix — see §4.8 | ✅ |
 | 28 | Phase 1 **Wave 4 — infrastructure**: `audit_logs`, `idempotency_keys`, `attachments`, `notifications`, `notification_preferences`, `document_sequences`, `activity_snapshots`, plus `Wave4InfraSchemaTest`. Four findings, one of them a precedence-rank-4 tie escalated and resolved against `DATABASE_DESIGN.md` §3 — see §4.9. `document_sequences` scope resolution remains open question **Q3**, which blocks the Phase 5 allocator but not the table | ✅ |
 | 29 | **Tenancy runtime** — `app/Core` (`TenantContext`, tenancy exceptions, the `Action` base contract), the `BelongsToTenant` trait (global scope + `creating` hook stamping the guarded `tenant_id` + logged `withoutTenantScope`), `ResolveTenant`, `CorrelationId`, `EnsureTenantActive`, centralized error mapping, JWT `api` guard, and `routes/api_platform.php` · `api_tenant.php` · `api_public.php` wired through `bootstrap/app.php`. Tests: `TenancyRuntimeTest` (3 tests / 8 assertions). | ✅ |
-| 30 | Phase 1 **Wave 5 — master data A**, per `DATABASE_DESIGN.md` §16: `units`, `unit_conversions`, `categories`, `brands`, `tax_profiles`, `reason_codes`. Note `units` is the deferred forward reference `production_lines.capacity_unit_id` waits on (§16.1 rule 2, closed in **Wave 5** — the index is already pre-created, so the closure is an `ADD` composite FK, not an `ALTER` of the column) | `DATABASE_DESIGN.md` §16 |
+| 30 | Phase 1 **Wave 5 — master data A**, per `DATABASE_DESIGN.md` §16: `units`, `unit_conversions`, `categories`, `brands`, `tax_profiles`, `reason_codes`. Note `units` is the deferred forward reference `production_lines.capacity_unit_id` waits on (§16.1 rule 2, closed in **Wave 5** — the index is already pre-created, so the closure is an `ADD` composite FK, not an `ALTER` of the column) | ✅ |
 
 ---
 
@@ -711,17 +756,12 @@ Read, in precedence order: `DECISIONS.md` · `PROJECT_CONTEXT.md` ·
 this file. Phase 0 is complete and Phase 1 is under way: Wave 0 needed no work,
 **Wave 1 (platform) is done** (§4.6), **Wave 2 (org) is done** (§4.7),
 **Wave 3 (identity) is done** (§4.8), **Wave 4 (infrastructure) is done**
-(§4.9) and **the tenancy runtime (§7 item 29) is done** — its delivery is
-recorded in the 2026-08-23 tenancy-runtime change-log entry below. Start at
-**§7 item 30 — migration Wave 5 (master data A)**, per `DATABASE_DESIGN.md` §16:
-`units`, `unit_conversions`, `categories`, `brands`, `tax_profiles`,
-`reason_codes`. `units` closes the deferred `production_lines.capacity_unit_id`
-forward reference (§16.1 rule 2); the index is already pre-created, so the
-closure is a new migration adding the composite FK, never an `ALTER` of the
-Wave 2 column. Do not rewrite the Wave 1–4 migrations or the tenancy runtime;
-extend them only through a new migration. **Do not answer open question Q2** (the
-`tax_profiles` shape) in a migration — all documented shapes must still insert, or
-the schema has pre-empted a decision that belongs in `DECISIONS.md`.
+(§4.9), **the tenancy runtime (§7 item 29) is done**, and **Wave 5 (master
+data A) is done** (§4.10) — `units`, `unit_conversions`, `categories`, `brands`,
+`tax_profiles`, `reason_codes`, plus the deferred `production_lines.capacity_unit_id`
+FK closure. Start at **§7 item 31 — Wave 6 (master data B)**, per
+`DATABASE_DESIGN.md` §16.
+
 
 These constraints are already settled. Do not re-derive them, and do not
 contradict them:
@@ -780,4 +820,5 @@ contradict them:
 | 2026-08-23 | **Tenancy runtime (§7 item 29) — contract confirmed and build order fixed; no code written yet.** This session was specification-reading and starting-point verification only, so the ledger records a plan, not a delivery. **Starting point, verified by inspection not memory:** `backend/app/` contains only `Http/Controllers/Controller.php`, `Models/User.php`, `Providers/AppServiceProvider.php` — `app/Core`, `app/Modules`, `app/Support` **do not exist**; `backend/routes/` has only `console.php` and `web.php` — none of the three ARCHITECTURE §2 route files exist; `bootstrap/app.php`'s `withRouting()` has **no `api:` argument and no `then:` closure**, so even if the route files existed they would not load; `withMiddleware()` is an empty closure, so none of the §5.1 chain exists; `withExceptions()` already forces JSON for `api/*` but has **no `render` mapping**, so nothing yet emits the §2.3 envelope; `config/auth.php` defines only a **session** guard, so ADR-007's JWT `api` guard must be created before `Authenticate` can bind. `app/Models/User.php` still declares none of the 16 tenancy columns Wave 3 added, which `checkModelProperties` will flag the moment it is used in typed code — it needs `BelongsToTenant`, `SoftDeletes` and a full `@property` block. |
 | 2026-08-23 | **Tenancy runtime (§7 item 29) written, verified, and passing all quality gates.** All 7 steps in the fixed build order delivered: (1) `app/Core/Tenancy/TenantContext.php` (request-scoped singleton with explicit `bind`, `current`, `isBound`, `flush`, and whole-tenant vs branch/factory/warehouse scope checks), `app/Core/Tenancy/Exceptions/` (`TenantSuspended`, `OutOfScope`, `TenantMismatch`), and `app/Core/Actions/Action.php` base contract wrapping logic in `DB::transaction()`; (2) `app/Core/Tenancy/Concerns/BelongsToTenant.php` trait with global `tenant` scope, `creating` hook stamping guarded `tenant_id`, and `scopeWithoutTenantScope` with mandatory `Log::warning` audit emission; (3) middleware runtime `CorrelationId`, `ResolveTenant` (resolving JWT claim, loading tenant row & scopes, rejecting body tenant_id mismatch with 403 & security log), `EnsureTenantActive` (read-only allowed for `past_due`/`suspended`, mutation rejected with 402 `TENANT_INACTIVE`); (4) centralized exception mapping in `bootstrap/app.php` via `ErrorResponse` formatting into §2.3 envelope for AuthenticationException, ValidationException, ModelNotFoundException, AuthorizationException, tenancy exceptions, and 500 fallback with debug stack gating; (5) `config/auth.php` JWT `api` guard stub; (6) route files `routes/api_public.php`, `routes/api_tenant.php`, `routes/api_platform.php` wired into `bootstrap/app.php`; (7) tests in `tests/Feature/Tenancy/TenancyRuntimeTest.php` proving (a) layer-5 schema isolation between two tenants, (b) `withoutTenantScope()` warning log emission, (c) `TenantContext::current()` unbound throws `RuntimeException`. Verified: `pint --test` **PASS**, `phpstan` level 9 **0 errors**, `artisan test` **80 passed / 324 assertions** (3 new tests / 8 new assertions). §7 item 29 complete. Next: §7 item 30 — Wave 5 Master Data A. |
 | 2026-08-23 | **Truth-up for the tenancy-runtime delivery, and a stale forward-reference wave corrected.** The 2026-08-23 tenancy-runtime delivery entry above had updated §1's phase rows, §2 and the change log, but several surfaces still described the runtime as the *outstanding* next action and still quoted the pre-runtime count. Reconciled to reality against a clean tree at commit `781e4da` with `artisan test` re-run to **80 passed / 324 assertions**: §1 `Current phase` (runtime now listed complete, not outstanding), `Next phase` (now §7 item 30 — Wave 5) and `Backend` (`app/Core`, `BelongsToTenant`, `ResolveTenant` and the three route files listed present; only `app/Modules`/`app/Support` and all feature code absent); §4.4's "Absent — all of Phase 1" list split into a present-runtime block and a narrowed absent block; §4.5's header count `77/316 → 80/324`, a `TenancyRuntimeTest` row (3 tests) added to the suite table, and its closing paragraph de-gated from item 29; §8's resume paragraph re-pointed from item 29 to item 30 with Wave 5's six tables and the Q2 do-not-pre-empt caution. The table count stays **24** — Wave 5 is **not** started, the git tree carries no `1025xx` migration and no `Wave5*` test, so item 30 stays ⬜. One latent error fixed while here: §7 item 30 said `units` closes the `production_lines.capacity_unit_id` forward reference "in Wave 9", but `DATABASE_DESIGN.md` §16.1 rule 2 (and §4's own Wave 2 finding) put the closure in **Wave 5** — Waves 9/25 are for *circular* pairs, and a plain forward reference has no separate closure wave. Corrected to Wave 5, noting the index is already pre-created so the closure is a new `ADD` composite-FK migration, not an `ALTER`. No code changed; docs only. |
+| 2026-08-24 | **Phase 1 Wave 5 (master data A) written and verified — the first wave where the schema as documented was implementable without amendment.** Seven migrations: `units`, `unit_conversions`, `categories`, `brands`, `tax_profiles`, `reason_codes` (migrations `102500`–`103000`), and `103100` closing the deferred `production_lines.capacity_unit_id` FK from Wave 2. Detailed per-table in **§4.10**. All six tables are tenant-scoped leaf catalogues (`unique (tenant_id, id)` on each so child tables can declare composite FKs) with `RESTRICT` deletes. `unit_conversions` has composite FKs on **both** `from_unit_id` and `to_unit_id` — a test proves each side independently rejects a cross-tenant unit, because a one-sided test would pass on a table that only checks one column. `categories` is self-referential: `(tenant_id, parent_id) → categories(tenant_id, id)` with `RESTRICT`, and MATCH SIMPLE means a `NULL parent_id` root is not checked (correct semantics). `tax_profiles.rate` is `DECIMAL(8,4)`, type is `VARCHAR(32)` (not ENUM) — open question Q2 is still open and both `inclusive` and `exclusive` must insert, proved by test. `reason_codes` context vocabulary (`qc_defect` \| `wastage` \| `stock_adjustment` \| `sales_return` \| `purchase_return` \| `cancellation` \| `rework`) is similarly left as `VARCHAR(32)` rather than locked by an ENUM. The deferred FK closure (`103100`) required no column `ALTER` because the index `ix_production_lines_tenant_capacity_unit` was pre-created in Wave 2; only the `ADD FOREIGN KEY` was needed. The Wave 2 placeholder test `test_the_deferred_capacity_unit_foreign_key_is_still_owed` was replaced in `Wave2OrgSchemaTest` by a live enforcement test proving a cross-tenant `capacity_unit_id` is rejected. **One defect in the test, caught before green:** `reason_codes` was initially classified as a leaf table (no `softDeletes`) when it is in fact tenant-configurable catalogue data that must be deactivatable without breaking historical references. Corrected before the suite was declared green. `SchemaTestCase` gained twelve new methods (six insert/attributes pairs). `Wave5MasterDataASchemaTest` — **23 tests**. Verified: `migrate:fresh` ✅ (34 migrations) · `pint lint:fix` **PASS** · `phpstan` level 9 **[OK] No errors** · `artisan test` **103 passed / 456 assertions**, none risky. §7 item 30 complete. Next: §7 item 31 — Wave 6 (master data B). |
 
