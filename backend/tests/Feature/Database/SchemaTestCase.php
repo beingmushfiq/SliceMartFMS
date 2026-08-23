@@ -1921,6 +1921,151 @@ abstract class SchemaTestCase extends TestCase
         ];
     }
 
+    // ─── stock_movements ───────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertStockMovement(
+        int $tenantId,
+        int $productId,
+        int $warehouseId,
+        int $unitId,
+        array $overrides = []
+    ): int {
+        return DB::table('stock_movements')
+            ->insertGetId($this->stockMovementAttributes($tenantId, $productId, $warehouseId, $unitId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function stockMovementAttributes(
+        int $tenantId,
+        int $productId,
+        int $warehouseId,
+        int $unitId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'movement_number' => 'STK-'.Str::upper(Str::random(8)),
+            'product_id' => $productId,
+            'variant_id' => null,
+            'warehouse_id' => $warehouseId,
+            'warehouse_location_id' => null,
+            'batch_code' => null,
+            'serial_number' => null,
+            'expiry_date' => null,
+            'movement_type' => 'opening_stock',
+            'direction' => 'in',
+            'stock_state' => 'available',
+            'quantity' => '100.0000',
+            'unit_id' => $unitId,
+            'unit_cost' => '15.0000',
+            'total_cost' => '1500.0000',
+            'balance_after' => '100.0000',
+            'reference_type' => null,
+            'reference_id' => null,
+            'related_movement_id' => null,
+            'reason_code_id' => null,
+            'moved_at' => '2026-08-24 10:00:00',
+            'created_by' => null,
+            'created_at' => '2026-08-24 10:00:00',
+        ];
+    }
+
+    // ─── stock_balances ────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertStockBalance(
+        int $tenantId,
+        int $productId,
+        int $warehouseId,
+        array $overrides = []
+    ): int {
+        return DB::table('stock_balances')
+            ->insertGetId($this->stockBalanceAttributes($tenantId, $productId, $warehouseId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function stockBalanceAttributes(
+        int $tenantId,
+        int $productId,
+        int $warehouseId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'product_id' => $productId,
+            'variant_id' => null,
+            'warehouse_id' => $warehouseId,
+            'warehouse_location_id' => null,
+            'batch_code' => null,
+            'stock_state' => 'available',
+            'quantity' => '100.0000',
+            'average_cost' => '15.0000',
+            'total_value' => '1500.0000',
+            'last_movement_id' => null,
+            'last_movement_at' => '2026-08-24 10:00:00',
+            'created_at' => '2026-08-24 10:00:00',
+            'updated_at' => '2026-08-24 10:00:00',
+        ];
+    }
+
+    // ─── stock_reservations ────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertStockReservation(
+        int $tenantId,
+        int $productId,
+        int $warehouseId,
+        int $unitId,
+        array $overrides = []
+    ): int {
+        return DB::table('stock_reservations')
+            ->insertGetId($this->stockReservationAttributes($tenantId, $productId, $warehouseId, $unitId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function stockReservationAttributes(
+        int $tenantId,
+        int $productId,
+        int $warehouseId,
+        int $unitId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'product_id' => $productId,
+            'variant_id' => null,
+            'warehouse_id' => $warehouseId,
+            'quantity' => '20.0000',
+            'unit_id' => $unitId,
+            'reference_type' => 'sales_order',
+            'reference_id' => 1,
+            'expires_at' => null,
+            'status' => 'active',
+            'created_by' => null,
+            'created_at' => '2026-08-24 10:00:00',
+            'updated_at' => '2026-08-24 10:00:00',
+        ];
+    }
+
     /**
      * SQLite and MySQL word the same violation differently, and the suite runs
      * on SQLite while production runs on MySQL.
