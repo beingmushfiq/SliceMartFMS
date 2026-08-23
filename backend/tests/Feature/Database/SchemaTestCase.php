@@ -3381,6 +3381,149 @@ abstract class SchemaTestCase extends TestCase
         ];
     }
 
+    // ─── pos_terminals ─────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertPosTerminal(
+        int $tenantId,
+        int $branchId,
+        array $overrides = []
+    ): int {
+        return DB::table('pos_terminals')
+            ->insertGetId($this->posTerminalAttributes($tenantId, $branchId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function posTerminalAttributes(
+        int $tenantId,
+        int $branchId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'branch_id' => $branchId,
+            'code' => 'TERM-'.$counter,
+            'name' => 'Counter Terminal '.$counter,
+            'default_warehouse_id' => null,
+            'printer_config' => json_encode(['paper_size' => '80mm', 'auto_cut' => true]),
+            'is_active' => true,
+            'created_at' => '2026-08-24 10:00:00',
+            'updated_at' => '2026-08-24 10:00:00',
+        ];
+    }
+
+    // ─── pos_sessions ──────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertPosSession(
+        int $tenantId,
+        int $branchId,
+        int $warehouseId,
+        int $terminalId,
+        int $userId,
+        array $overrides = []
+    ): int {
+        return DB::table('pos_sessions')
+            ->insertGetId($this->posSessionAttributes($tenantId, $branchId, $warehouseId, $terminalId, $userId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function posSessionAttributes(
+        int $tenantId,
+        int $branchId,
+        int $warehouseId,
+        int $terminalId,
+        int $userId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'session_number' => 'SESS-'.$counter,
+            'branch_id' => $branchId,
+            'warehouse_id' => $warehouseId,
+            'terminal_id' => $terminalId,
+            'user_id' => $userId,
+            'opened_at' => '2026-08-24 08:00:00',
+            'closed_at' => null,
+            'opening_cash' => '100.0000',
+            'expected_cash' => '100.0000',
+            'counted_cash' => null,
+            'cash_variance' => null,
+            'card_total' => '0.0000',
+            'mobile_total' => '0.0000',
+            'credit_total' => '0.0000',
+            'sales_count' => 0,
+            'refund_total' => '0.0000',
+            'status' => 'open',
+            'closed_by' => null,
+            'notes' => null,
+            'created_at' => '2026-08-24 08:00:00',
+            'updated_at' => '2026-08-24 08:00:00',
+        ];
+    }
+
+    // ─── pos_offline_queue ─────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertPosOfflineQueue(
+        int $tenantId,
+        int $terminalId,
+        int $userId,
+        array $overrides = []
+    ): int {
+        return DB::table('pos_offline_queue')
+            ->insertGetId($this->posOfflineQueueAttributes($tenantId, $terminalId, $userId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function posOfflineQueueAttributes(
+        int $tenantId,
+        int $terminalId,
+        int $userId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'terminal_id' => $terminalId,
+            'user_id' => $userId,
+            'idempotency_key' => 'IDEMP-POS-'.$counter,
+            'payload' => json_encode(['action' => 'checkout', 'total' => '150.0000']),
+            'client_created_at' => '2026-08-24 10:30:00',
+            'synced_at' => null,
+            'status' => 'pending',
+            'rejection_reason' => null,
+            'created_at' => '2026-08-24 10:30:00',
+            'updated_at' => '2026-08-24 10:30:00',
+        ];
+    }
+
     /**
      * SQLite and MySQL word the same violation differently, and the suite runs
      * on SQLite while production runs on MySQL.

@@ -31,18 +31,18 @@ artefacts (`MODULE_MAP.md` §6), not a follow-up.
 
 | | |
 |---|---|
-| **Current phase** | Phase 1 — 🔄 **in progress.** Migration Waves 1–16 and the tenancy runtime (§7 item 29) complete; Waves 17+, auth and RBAC outstanding. |
+| **Current phase** | Phase 1 — 🔄 **in progress.** Migration Waves 1–17 and the tenancy runtime (§7 item 29) complete; Waves 18+, auth and RBAC outstanding. |
 | **Phase 0 status** | ✅ Documentation complete (7 canonical + 5 supporting = 12 documents) · ✅ Monorepo restructure · ✅ Dependency reconciliation · ✅ Token cascade · ✅ UI primitive hardening · ✅ §8 state-matrix primitives · ✅ Tooling config files (frontend **and** backend) · ✅ Test suites · ✅ CI — **every gate verified green, see §3.4** |
-| **Next phase** | Phase 1 continues at **§7 item 41 — migration Wave 17 (POS)**, per `DATABASE_DESIGN.md` §16. |
-| **Backend** | 🔄 Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–16 migrations written and verified, and the tenancy runtime (§7 item 29) is live** — `app/Core`, `BelongsToTenant`, `ResolveTenant` and the three route files all exist. Still absent: `app/Modules`, `app/Support`, and every model, Action and endpoint. |
+| **Next phase** | Phase 1 continues at **§7 item 42 — migration Wave 18 (Delivery & Logistics)**, per `DATABASE_DESIGN.md` §16. |
+| **Backend** | 🔄 Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–17 migrations written and verified, and the tenancy runtime (§7 item 29) is live** — `app/Core`, `BelongsToTenant`, `ResolveTenant` and the three route files all exist. Still absent: `app/Modules`, `app/Support`, and every model, Action and endpoint. |
 | **Frontend** | ✅ `/frontend`. Token cascade, boot loader, all 9 UI primitives rebuilt, tooling configured, §8 state-matrix primitives complete (errors, logger, StateView, QueryBoundary, AsyncButton, Toast, LogInspector, four-level ErrorBoundary), and the single transport seam wired (`lib/api/client.ts` + `lib/api/queryClient.ts` + `QueryClientProvider`). See §4. |
-| **Database** | 🔄 Designed (159 tables). **98 of them exist** — Waves 1–16: platform (§4.6), org (§4.7), identity (§4.8), infrastructure (§4.9), master data A (§4.10), master data B (§4.11), master data C (§4.12), HR identity (§4.13), production (§4.14), QC & wastage (§4.15), ledger & stock inventory (§4.16), stock operations (§4.17), purchasing (§4.18), sales & invoicing (§4.19), payments & allocations (§4.20). Waves 17–25 unwritten. |
-| **Tests** | 🔄 Real, but foundation-only. Frontend **128 tests across 7 files**, all passing, covering the reliability layer (`ErrorBoundary`, `StateView`, `QueryBoundary`, `AsyncButton`, `logger`, `api/errors`, `api/queryClient`). Backend **348 tests / 1605 assertions** — the PHP-floor guard, Wave 1–16 schema contracts, and Tenancy runtime contracts. |
+| **Database** | 🔄 Designed (159 tables). **101 of them exist** — Waves 1–17: platform (§4.6), org (§4.7), identity (§4.8), infrastructure (§4.9), master data A (§4.10), master data B (§4.11), master data C (§4.12), HR identity (§4.13), production (§4.14), QC & wastage (§4.15), ledger & stock inventory (§4.16), stock operations (§4.17), purchasing (§4.18), sales & invoicing (§4.19), payments & allocations (§4.20), POS (§4.21). Waves 18–25 unwritten. |
+| **Tests** | 🔄 Real, but foundation-only. Frontend **128 tests across 7 files**, all passing, covering the reliability layer (`ErrorBoundary`, `StateView`, `QueryBoundary`, `AsyncButton`, `logger`, `api/errors`, `api/queryClient`). Backend **362 tests / 1658 assertions** — the PHP-floor guard, Wave 1–17 schema contracts, and Tenancy runtime contracts. |
 | **CI** | ✅ `.github/workflows/ci.yml` — 3 jobs, 9 legs. Frontend matrix (lint · typecheck · test · depcruise · format:check) installing at the **repository root**, build + bundle budget with a `dist` artifact, and a backend matrix (lint · analyse · test) on PHP 8.5. Every leg has a locally reproducible equivalent. |
 
 **The most important thing to know:** this project still has **no feature code and
 no business logic**. What exists is a design-system foundation, two framework
-skeletons, and ninety-eight tables with no models, no Actions and no endpoints over
+skeletons, and one hundred and one tables with no models, no Actions and no endpoints over
 them. No route, no screen. Any statement that a feature "works" is false.
 
 ---
@@ -52,7 +52,7 @@ them. No route, no screen. Any statement that a feature "works" is false.
 | Phase | Scope | Status |
 |---|---|---|
 | **0** | Architecture & documentation | ✅ See §3 |
-| **1** | Auth · Tenancy · RBAC · Design System | 🔄 Migration Waves 1–16 and Tenancy Runtime (§7 item 29) done. Wave 17+, auth, RBAC outstanding |
+| **1** | Auth · Tenancy · RBAC · Design System | 🔄 Migration Waves 1–17 and Tenancy Runtime (§7 item 29) done. Wave 18+, auth, RBAC outstanding |
 | **2** | Master data · Products · Warehouses | ⬜ Not started |
 | **3** | Production · Worker Production · QC | ⬜ Not started |
 | **4** | Purchase · Inventory | ⬜ Not started |
@@ -247,16 +247,17 @@ three Wave 12 ledger & stock tables (§4.16),
 six Wave 13 stock operations tables (§4.17),
 ten Wave 14 purchasing tables (§4.18),
 nine Wave 15 sales & invoicing tables (§4.19),
-and three Wave 16 payments & allocations tables (§4.20)
+three Wave 16 payments & allocations tables (§4.20),
+and three Wave 17 POS tables (§4.21)
 exist and are verified.
 
 **Absent — the rest of Phase 1:** `app/Modules`, `app/Support`, and every model,
-Action and endpoint over the ninety-eight tables. The three route files exist but
+Action and endpoint over the one hundred and one tables. The three route files exist but
 register no routes yet.
 
 ### 4.5 Test coverage
 
-128 frontend tests over 7 files; **348 backend tests / 1605 assertions**. Frontend
+128 frontend tests over 7 files; **362 backend tests / 1658 assertions**. Frontend
 tests sit beside the code they cover (`vitest.config.ts`
 `include: ['src/**/*.{test,spec}.{ts,tsx}']`); backend schema contracts live in
 `tests/Feature/Database/` and the tenancy-runtime contract in
@@ -1093,6 +1094,40 @@ Verified: `migrate:fresh` — all **98 migrations** green ✅ · `pint lint:fix`
 Wave 1 **11 tests** (229 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**,
 Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Tenancy runtime **3**, Unit+Example **2**.
 
+
+---
+
+### 4.21 Migrations — Wave 17 (POS) complete
+
+Three Wave 17 migrations:
+`2026_08_24_112000` … `112200` — pos_terminals, pos_sessions, pos_offline_queue.
+
+| Table / Migration | Notes |
+|---|---|
+| `pos_terminals` | Counter/hardware station registration. Composite FKs on `branches` and `warehouses` (nullable default warehouse). JSON `printer_config` (e.g. paper size, auto-cut). Unique `(tenant_id, code)`. |
+| `pos_sessions` | Shift / cash-drawer session. Composite FKs on `branches`, `warehouses`, `pos_terminals`. User tracking on `user_id` and `closed_by`. Status: `open \| closing \| closed \| reconciled`. Financial counters: `opening_cash`, `expected_cash`, `counted_cash`, `cash_variance`, `card_total`, `mobile_total`, `credit_total`, `sales_count`, `refund_total` (`DECIMAL(18,4)`). Unique `(tenant_id, session_number)`. |
+| `pos_offline_queue` | Server-side record of queued offline device transactions (ARCHITECTURE §6.8). Tracks `terminal_id`, `user_id`, `idempotency_key`, `payload` (JSON), `client_created_at`, `synced_at`, `status` (`pending \| synced \| rejected`), `rejection_reason`. Unique `(tenant_id, idempotency_key)`. |
+
+**Invariants and rules enforced:**
+- Session-gated POS sales: Architecture requirement that every point-of-sale checkout references an open session with full cash-drawer reconciliation audit.
+- Offline resilience: Dedicated offline transaction sync buffer with idempotency key enforcement and client creation timestamp tracking.
+- Financial integrity: Cash variance and multiple payment method totals tracked at high precision `DECIMAL(18,4)`.
+
+`Wave17PosSchemaTest` — **14 tests / 44 assertions** covering all 3 tables,
+`tenant_id` placement, soft-delete compliance, no float/double/enum in migrations,
+terminal code uniqueness, session number uniqueness, offline queue idempotency uniqueness,
+cross-tenant composite FK rejections (branch, warehouse, terminal),
+and DECIMAL(18,4) precision round-trip.
+
+`SchemaTestCase` gained three fixture builder pairs: `insertPosTerminal` / `posTerminalAttributes`,
+`insertPosSession` / `posSessionAttributes`, `insertPosOfflineQueue` / `posOfflineQueueAttributes`.
+
+Verified: `migrate:fresh` — all **101 migrations** green ✅ · `pint lint:fix` **PASS** ·
+`phpstan analyse` level 9 **[OK] No errors** · `artisan test`
+**362 passed / 1658 assertions**, none risky. Per-suite re-measured:
+Wave 1 **11 tests** (238 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**,
+Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Wave 17 **14**, Tenancy runtime **3**, Unit+Example **2**.
+
 ---
 
 ## 5. Dependency state — reconciled
@@ -1205,7 +1240,8 @@ Q3, it stops and asks (`TASK_PROTOCOL.md` §3.2).
 | 38 | Phase 1 **Wave 14 — Purchasing**, per `DATABASE_DESIGN.md` §16: `purchase_requisitions`, `purchase_requisition_items`, `purchase_orders`, `purchase_order_items`, `goods_receipts`, `goods_receipt_items`, `purchase_bills`, `purchase_bill_items`, `purchase_returns`, `purchase_return_items`. See §4.18. | ✅ |
 | 39 | Phase 1 **Wave 15 — Sales & Invoicing**, per `DATABASE_DESIGN.md` §16: `crm_leads`, `crm_activities`, `sales_orders`, `sales_order_items`, `invoice_templates`, `invoices`, `invoice_items`, `sales_returns`, `sales_return_items`. See §4.19. | ✅ |
 | 40 | Phase 1 **Wave 16 — Payments & Collections**, per `DATABASE_DESIGN.md` §16: `payments`, `payment_allocations`, `sales_order_payments`. See §4.20. | ✅ |
-| 41 | Phase 1 **Wave 17 — POS**, per `DATABASE_DESIGN.md` §16: `pos_terminals`, `pos_sessions`, `pos_offline_queue`. | ⬜ |
+| 41 | Phase 1 **Wave 17 — POS**, per `DATABASE_DESIGN.md` §16: `pos_terminals`, `pos_sessions`, `pos_offline_queue`. See §4.21. | ✅ |
+| 42 | Phase 1 **Wave 18 — Delivery & Logistics**, per `DATABASE_DESIGN.md` §16: `delivery_orders`, `delivery_order_items`, `delivery_status_events`, `run_sheets`, `courier_providers`, `courier_shipments`, `courier_webhook_events`, `cod_reconciliations`. | ⬜ |
 
 ---
 
@@ -1223,9 +1259,9 @@ Wave 9 (HR FK closure) are done** (§4.13), **Wave 10 (production) is done**
 (§4.14), **Wave 11 (QC & wastage) is done** (§4.15), **Wave 12 (ledger &
 stock inventory) is done** (§4.16), **Wave 13 (stock operations) is done**
 (§4.17), **Wave 14 (purchasing) is done** (§4.18), **Wave 15 (sales & invoicing) is done**
-(§4.19), and **Wave 16 (payments & collections) is done** (§4.20) — `payments`,
-`payment_allocations`, `sales_order_payments`.
-Start at **§7 item 41 — Wave 17 (POS)**, per `DATABASE_DESIGN.md` §16.
+(§4.19), **Wave 16 (payments & collections) is done** (§4.20), and
+**Wave 17 (POS) is done** (§4.21) — `pos_terminals`, `pos_sessions`, `pos_offline_queue`.
+Start at **§7 item 42 — Wave 18 (Delivery & Logistics)**, per `DATABASE_DESIGN.md` §16.
 
 
 These constraints are already settled. Do not re-derive them, and do not
