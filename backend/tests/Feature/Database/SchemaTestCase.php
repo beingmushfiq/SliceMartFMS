@@ -6541,6 +6541,134 @@ abstract class SchemaTestCase extends TestCase
         ];
     }
 
+    // ─── webhook_endpoints ───────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertWebhookEndpoint(
+        int $tenantId,
+        string $url = 'https://api.example.com/webhooks',
+        array $overrides = []
+    ): int {
+        return DB::table('webhook_endpoints')
+            ->insertGetId($this->webhookEndpointAttributes($tenantId, $url, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function webhookEndpointAttributes(
+        int $tenantId,
+        string $url = 'https://api.example.com/webhooks',
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'url' => $url,
+            'secret' => 'whsec_'.Str::random(32),
+            'events' => json_encode(['sales_order.created', 'stock.low']),
+            'is_active' => true,
+            'last_success_at' => null,
+            'last_failure_at' => null,
+            'consecutive_failures' => 0,
+            'disabled_reason' => null,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── webhook_deliveries ──────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertWebhookDelivery(
+        int $tenantId,
+        int $webhookEndpointId,
+        string $eventType = 'sales_order.created',
+        array $overrides = []
+    ): int {
+        return DB::table('webhook_deliveries')
+            ->insertGetId($this->webhookDeliveryAttributes($tenantId, $webhookEndpointId, $eventType, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function webhookDeliveryAttributes(
+        int $tenantId,
+        int $webhookEndpointId,
+        string $eventType = 'sales_order.created',
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'webhook_endpoint_id' => $webhookEndpointId,
+            'event_type' => $eventType,
+            'payload' => json_encode(['event' => $eventType, 'order_id' => 123]),
+            'attempt_count' => 1,
+            'response_status' => 200,
+            'response_body' => '{"ok":true}',
+            'status' => 'delivered',
+            'next_retry_at' => null,
+            'delivered_at' => '2026-08-24 18:00:00',
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
+    // ─── imports ─────────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertImport(
+        int $tenantId,
+        int $requestedByUserId,
+        string $importType = 'products',
+        array $overrides = []
+    ): int {
+        return DB::table('imports')
+            ->insertGetId($this->importAttributes($tenantId, $requestedByUserId, $importType, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function importAttributes(
+        int $tenantId,
+        int $requestedByUserId,
+        string $importType = 'products',
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'import_type' => $importType,
+            'file_path' => 'imports/sample_products.xlsx',
+            'original_filename' => 'products_upload.xlsx',
+            'total_rows' => 100,
+            'processed_rows' => 100,
+            'success_rows' => 98,
+            'failed_rows' => 2,
+            'status' => 'completed_with_errors',
+            'error_report_path' => 'reports/import_errors_101.xlsx',
+            'mapping' => json_encode(['col_a' => 'name', 'col_b' => 'sku']),
+            'dry_run' => false,
+            'requested_by' => $requestedByUserId,
+            'started_at' => '2026-08-24 18:00:00',
+            'finished_at' => '2026-08-24 18:01:00',
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:01:00',
+        ];
+    }
+
     /**
      * SQLite and MySQL word the same violation differently, and the suite runs
      * on SQLite while production runs on MySQL.
