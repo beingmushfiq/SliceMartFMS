@@ -29,7 +29,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class RefreshToken extends Model
 {
-
     /**
      * @var list<string>
      */
