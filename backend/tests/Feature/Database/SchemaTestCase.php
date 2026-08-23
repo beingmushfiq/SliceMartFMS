@@ -3524,6 +3524,387 @@ abstract class SchemaTestCase extends TestCase
         ];
     }
 
+    // ─── courier_providers ─────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertCourierProvider(
+        ?int $tenantId = null,
+        array $overrides = []
+    ): int {
+        return DB::table('courier_providers')
+            ->insertGetId($this->courierProviderAttributes($tenantId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function courierProviderAttributes(
+        ?int $tenantId = null,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'code' => 'provider_'.$counter,
+            'name' => 'Courier Provider '.$counter,
+            'adapter_class' => 'App\\Services\\Couriers\\CustomAdapter',
+            'is_active' => true,
+            'credentials' => json_encode(['api_key' => 'secret_'.$counter]),
+            'capabilities' => json_encode(['create_shipment' => true, 'get_status' => true]),
+            'webhook_secret' => 'whsec_'.$counter,
+            'default_charge' => '50.0000',
+            'settings' => null,
+            'created_at' => '2026-08-24 10:00:00',
+            'updated_at' => '2026-08-24 10:00:00',
+        ];
+    }
+
+    // ─── run_sheets ────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertRunSheet(
+        int $tenantId,
+        int $branchId,
+        array $overrides = []
+    ): int {
+        return DB::table('run_sheets')
+            ->insertGetId($this->runSheetAttributes($tenantId, $branchId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function runSheetAttributes(
+        int $tenantId,
+        int $branchId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'run_sheet_number' => 'RS-'.$counter,
+            'branch_id' => $branchId,
+            'rider_id' => null,
+            'vehicle_id' => null,
+            'run_date' => '2026-08-24',
+            'status' => 'draft',
+            'total_stops' => 0,
+            'completed_stops' => 0,
+            'total_cod_expected' => '0.0000',
+            'total_cod_collected' => '0.0000',
+            'dispatched_at' => null,
+            'returned_at' => null,
+            'reconciled_by' => null,
+            'reconciled_at' => null,
+            'created_at' => '2026-08-24 08:00:00',
+            'updated_at' => '2026-08-24 08:00:00',
+        ];
+    }
+
+    // ─── delivery_orders ───────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertDeliveryOrder(
+        int $tenantId,
+        int $salesOrderId,
+        int $warehouseId,
+        array $overrides = []
+    ): int {
+        return DB::table('delivery_orders')
+            ->insertGetId($this->deliveryOrderAttributes($tenantId, $salesOrderId, $warehouseId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function deliveryOrderAttributes(
+        int $tenantId,
+        int $salesOrderId,
+        int $warehouseId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'delivery_number' => 'DO-'.$counter,
+            'sales_order_id' => $salesOrderId,
+            'invoice_id' => null,
+            'party_id' => null,
+            'warehouse_id' => $warehouseId,
+            'delivery_address_id' => null,
+            'recipient_name' => 'Recipient '.$counter,
+            'recipient_phone' => '+880171100000'.$counter,
+            'delivery_type' => 'own_delivery',
+            'courier_provider_id' => null,
+            'courier_shipment_id' => null,
+            'run_sheet_id' => null,
+            'rider_id' => null,
+            'scheduled_date' => '2026-08-24',
+            'delivered_at' => null,
+            'status' => 'pending',
+            'cod_amount' => '0.0000',
+            'cod_collected_amount' => '0.0000',
+            'cod_status' => 'not_applicable',
+            'delivery_charge' => '60.0000',
+            'weight' => '1.5000',
+            'package_count' => 1,
+            'special_instructions' => null,
+            'attempt_count' => 0,
+            'failure_reason_id' => null,
+            'pod_signature_path' => null,
+            'pod_photo_path' => null,
+            'pod_received_by' => null,
+            'stock_movement_id' => null,
+            'created_at' => '2026-08-24 10:00:00',
+            'updated_at' => '2026-08-24 10:00:00',
+        ];
+    }
+
+    // ─── delivery_order_items ──────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertDeliveryOrderItem(
+        int $tenantId,
+        int $deliveryOrderId,
+        int $productId,
+        int $unitId,
+        array $overrides = []
+    ): int {
+        return DB::table('delivery_order_items')
+            ->insertGetId($this->deliveryOrderItemAttributes($tenantId, $deliveryOrderId, $productId, $unitId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function deliveryOrderItemAttributes(
+        int $tenantId,
+        int $deliveryOrderId,
+        int $productId,
+        int $unitId,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'delivery_order_id' => $deliveryOrderId,
+            'sales_order_item_id' => null,
+            'product_id' => $productId,
+            'variant_id' => null,
+            'batch_code' => null,
+            'quantity' => '10.0000',
+            'delivered_quantity' => '0.0000',
+            'returned_quantity' => '0.0000',
+            'unit_id' => $unitId,
+            'created_at' => '2026-08-24 10:00:00',
+            'updated_at' => '2026-08-24 10:00:00',
+        ];
+    }
+
+    // ─── delivery_status_events ────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertDeliveryStatusEvent(
+        int $tenantId,
+        int $deliveryOrderId,
+        string $status,
+        array $overrides = []
+    ): int {
+        return DB::table('delivery_status_events')
+            ->insertGetId($this->deliveryStatusEventAttributes($tenantId, $deliveryOrderId, $status, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function deliveryStatusEventAttributes(
+        int $tenantId,
+        int $deliveryOrderId,
+        string $status,
+        array $overrides = []
+    ): array {
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'delivery_order_id' => $deliveryOrderId,
+            'status' => $status,
+            'source' => 'system',
+            'courier_event_id' => null,
+            'occurred_at' => '2026-08-24 11:00:00',
+            'location' => 'Central Hub',
+            'latitude' => null,
+            'longitude' => null,
+            'notes' => 'Status transition to '.$status,
+            'raw_payload' => null,
+            'created_by' => null,
+            'created_at' => '2026-08-24 11:00:00',
+        ];
+    }
+
+    // ─── courier_shipments ─────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertCourierShipment(
+        int $tenantId,
+        int $deliveryOrderId,
+        int $courierProviderId,
+        array $overrides = []
+    ): int {
+        return DB::table('courier_shipments')
+            ->insertGetId($this->courierShipmentAttributes($tenantId, $deliveryOrderId, $courierProviderId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function courierShipmentAttributes(
+        int $tenantId,
+        int $deliveryOrderId,
+        int $courierProviderId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'delivery_order_id' => $deliveryOrderId,
+            'courier_provider_id' => $courierProviderId,
+            'consignment_id' => 'CS-'.$counter,
+            'awb_number' => 'AWB-'.$counter,
+            'label_path' => null,
+            'tracking_url' => null,
+            'status' => 'draft',
+            'provider_status_raw' => 'in_review',
+            'charge_amount' => '60.0000',
+            'cod_amount' => '0.0000',
+            'requested_at' => '2026-08-24 10:00:00',
+            'confirmed_at' => null,
+            'last_synced_at' => null,
+            'request_payload' => null,
+            'response_payload' => null,
+            'error_message' => null,
+            'retry_count' => 0,
+            'created_at' => '2026-08-24 10:00:00',
+            'updated_at' => '2026-08-24 10:00:00',
+        ];
+    }
+
+    // ─── courier_webhook_events ────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertCourierWebhookEvent(
+        int $courierProviderId,
+        array $overrides = []
+    ): int {
+        return DB::table('courier_webhook_events')
+            ->insertGetId($this->courierWebhookEventAttributes($courierProviderId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function courierWebhookEventAttributes(
+        int $courierProviderId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'tenant_id' => null,
+            'courier_provider_id' => $courierProviderId,
+            'provider_event_id' => 'EVT-WH-'.$counter,
+            'signature_valid' => true,
+            'payload' => json_encode(['event' => 'order.delivered', 'consignment_id' => 'CS-'.$counter]),
+            'processed_at' => null,
+            'status' => 'received',
+            'error_message' => null,
+            'created_at' => '2026-08-24 11:30:00',
+            'updated_at' => '2026-08-24 11:30:00',
+        ];
+    }
+
+    // ─── cod_reconciliations ───────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    protected function insertCodReconciliation(
+        int $tenantId,
+        string $sourceType,
+        int $sourceId,
+        array $overrides = []
+    ): int {
+        return DB::table('cod_reconciliations')
+            ->insertGetId($this->codReconciliationAttributes($tenantId, $sourceType, $sourceId, $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function codReconciliationAttributes(
+        int $tenantId,
+        string $sourceType,
+        int $sourceId,
+        array $overrides = []
+    ): array {
+        static $counter = 0;
+        $counter++;
+
+        return $overrides + [
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'reconciliation_number' => 'RECON-'.$counter,
+            'source_type' => $sourceType,
+            'source_id' => $sourceId,
+            'period_start' => '2026-08-24',
+            'period_end' => '2026-08-24',
+            'expected_amount' => '1000.0000',
+            'received_amount' => '1000.0000',
+            'variance_amount' => '0.0000',
+            'bank_account_id' => null,
+            'status' => 'draft',
+            'reconciled_by' => null,
+            'reconciled_at' => null,
+            'notes' => null,
+            'created_at' => '2026-08-24 18:00:00',
+            'updated_at' => '2026-08-24 18:00:00',
+        ];
+    }
+
     /**
      * SQLite and MySQL word the same violation differently, and the suite runs
      * on SQLite while production runs on MySQL.
