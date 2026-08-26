@@ -15,7 +15,7 @@ final class DeleteBillOfMaterialAction extends Action
     public function __construct(private readonly AuditLogger $auditLogger) {}
 
     /**
-     * @param array<string, mixed> $input
+     * @param  array<string, mixed>  $input
      * @return array{deleted: bool}
      */
     public function execute(array $input): array
@@ -29,6 +29,7 @@ final class DeleteBillOfMaterialAction extends Action
             $bom->update(['status' => 'archived', 'updated_by' => $actor->getKey()]);
             $this->auditLogger->record(action: AuditAction::Deleted, auditable: $bom, before: $before, after: $bom->toArray(), actor: $actor, context: ['module' => 'catalogue', 'resource' => 'bill_of_material']);
         });
+
         return ['deleted' => true];
     }
 }

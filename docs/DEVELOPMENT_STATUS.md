@@ -267,7 +267,7 @@ reporting, e-commerce). No tenant CRUD endpoints are registered yet — the next
 
 ### 4.5 Test coverage
 
-128 frontend tests over 7 files; **496 backend tests / 2941 assertions**. Frontend
+128 frontend tests over 7 files; **546 backend tests / 3133 assertions**. Frontend
 tests sit beside the code they cover (`vitest.config.ts`
 `include: ['src/**/*.{test,spec}.{ts,tsx}']`); backend schema contracts live in
 `tests/Feature/Database/` and the tenancy-runtime contract in
@@ -1558,6 +1558,7 @@ Q3, it stops and asks (`TASK_PROTOCOL.md` §3.2).
 | 52 | Phase 2 **Master-data module pipeline** — backend-first for `units`/`categories`/`brands` per ADR-029 build order and the **Pragmatic DoD (ADR-032)**: Form Requests · API Resources · Actions (audit inside the transaction) · controllers · routes · feature tests (cross-tenant isolation + permission matrix + envelope), authorised by `catalog.<resource>.{view,manage}` middleware (ADR-008), plus canonical `frontend/src/types/api/catalog.ts` and the spatie transformer path (ADR-033). UI paused for review afterwards. | ✅ |
 | 53 | Phase 2 **Product CRUD vertical** — Product API contract (§15.4.4), UUID relation resolution, transactional Actions, Form Requests, API Resource, controller, options endpoint, tenant-safe routes, factory, and feature coverage for envelope, duplicate SKU, UUID serialization, cross-tenant isolation, and permissions. | ✅ |
 | 54 | Phase 2 **Bill of materials CRUD vertical** — versioned recipes with nested component items, UUID relation resolution, atomic item replacement, archive lifecycle, transactional Actions, Form Requests, API Resource, controller, routes, factory, and isolation/duplicate/archive feature coverage. | ✅ |
+| 55 | Phase 2 **Warehouse CRUD vertical** — Warehouse contract, tenant-safe CRUD Actions, validation, resource, controller, options endpoint, permissioned routes, factory, and focused envelope/duplicate/isolation/permission coverage. Location CRUD and the complete live stock/transaction reference guard remain the next Warehouse slice. | 🔄 |
 
 ---
 
@@ -1589,11 +1590,12 @@ stock inventory) is done** (§4.16), **Wave 13 (stock operations) is done**
 the `AuthenticateJwt`/`AuthorizePermission` middleware, `AuthController` with all 12
 Actions, and the `tests/Feature/Auth/` suite. The **first tranche of 19 master-data
 Eloquent models is done** (§7 item 51), verified by `tests/Feature/Models/MasterDataModelTest.php`.
-Backend is green at **535 tests / 3082 assertions**, PHPStan level 9 clean.
+Backend is green at **546 tests / 3133 assertions**, PHPStan level 9 clean.
 §7 item 52 — the master-data module pipeline — is complete for Units, Categories and
 Brands. §7 item 53 — the Product CRUD vertical — is also complete, as is §7 item 54,
-the versioned BOM vertical. Continue with the next Phase 2 module in roadmap order
-before beginning UI work. Per the newly recorded
+the versioned BOM vertical. Warehouse CRUD is in progress as §7 item 55; its
+location sub-resource and complete live-reference guard remain. The catalogue UI
+workspace is now API-backed, but broader UI workflows remain in progress. Per the newly recorded
 **ADR-032 (Pragmatic DoD)** the backend template is Form Requests → API Resources →
 Actions (audit row written inside the same DB transaction) → controller → routes →
 feature tests (cross-tenant isolation + permission matrix + envelope), authorised by the
@@ -1650,6 +1652,7 @@ contradict them:
 | 2026-08-26 | **Phase 2 catalogue master-data pipeline complete.** Added Category and Brand CRUD beside the existing Unit vertical: tenant-safe Actions with transactional audit logging, Form Requests, UUID resources, guarded controllers, options endpoints, permissioned routes, factories, materialised Category paths with subtree re-parenting and cycle protection, Product reference delete guards, and focused feature coverage. Added canonical frontend Category and Brand API types. Verification: 535 tests / 3082 assertions, PHPStan level 9 clean, Pint applied. UI remains paused for review. |
 | 2026-08-26 | **Product CRUD vertical complete.** Added the §15.4.4 Product contract and two-action permission entry, UUID relation resolution across catalogue references, transactional create/update/delete Actions, full validation/resource/controller/routes, options endpoint, factory, and feature coverage. Verification: 539 tests / 3095 assertions, PHPStan level 9 clean, Pint applied. Next: the next Phase 2 master-data module in roadmap order. |
 | 2026-08-26 | **Bill of materials CRUD vertical complete.** Added the §15.4.5 contract and versioned recipe API with nested item creation/replacement, UUID relation resolution, archive lifecycle, transactional audit logging, permissioned routes, factory, and focused feature coverage. Verification: 543 tests / 3117 assertions, PHPStan level 9 clean. Next: Warehouses. |
+| 2026-08-26 | **Warehouse CRUD and catalogue UI started.** Added the §15.4.6 Warehouse contract, tenant-safe Warehouse CRUD API with options, validation, permissions, factory and feature tests; replaced the Phase 0 bootstrap screen with an API-backed Products/Categories/Brands workspace using TanStack Query and the shared API client. Verification: focused Warehouse 3 tests / 16 assertions, frontend 128 tests passing, strict TypeScript passing. Location CRUD, broader warehouse references and full UI mutation workflows remain. |
 | 2026-08-22 | Consistency pass: document count stated as 7 canonical + 5 supporting; §5 renumbered to Phase 0 item 5; the Phase 1 gate now requires items **1–5** (dependency reconciliation is a hard gate, since the Phase 1 exit criteria cannot be verified without the missing test, mock and Storybook tooling). |
 | 2026-08-23 | **Truth-up.** The file had drifted: it still described the prototype as living at the repository root, the backend as non-existent, and thirteen dependencies as absent — all three untrue. Records the monorepo restructure, the Laravel 13.26.1 skeleton, the six-file token cascade, the rebuilt `index.html` and boot loader, the closed dependency reconciliation, and per-file state for all eight UI primitives. Former §3.2 (outstanding) split into §3.2 complete / §3.3 outstanding, renumbered 1–6. Added §4.2 (the twelve Modal defects) and §8 (a settled-constraints table so a new session resumes without re-deriving them). |
 | 2026-08-23 | **Phase 0 code items closed.** §3.3 items 1–6 marked complete. All 9 `ui/` files rebuilt (Modal, Feedback, Navigation (new), Tabs, FormElements, KPICard, PWAInstallBanner, Button, Badge) — each token-only, lucide v1-correct, no dynamic classes, no primitive colours. Modal: all 12 defects resolved (useId, focus trap + restore, inert, m.* motion, token classes, isDirty, hideHeader for ConfirmDialog). Motion provider installed in `main.tsx` (`LazyMotion` + `MotionConfig` + `reducedMotion`). `useGsap.ts` created (lazy-loaded, `gsap.context()` + `ctx.revert()`). `ErrorBoundary.tsx` rewritten to four-level model, de-tenanted. `registerSW.ts` de-tenanted. `lib/utils.ts` delocalised to `cn()` only. New file: `Navigation.tsx` (Pagination extracted from Feedback). Tooling configs added: `eslint.config.js` (flat config — typescript-eslint + react-hooks + react-refresh + jsx-a11y; this entry originally named it `.eslintrc.js`, which never existed), `.dependency-cruiser.cjs`, `vitest.config.ts`, `.storybook/main.ts` + `preview.ts`, `.prettierrc`. TS strict flags added to `tsconfig.app.json`. CI skeleton: `.github/workflows/ci.yml` (lint, typecheck, test, build & bundle budget, depcruise). §7 items 1–8 complete. |

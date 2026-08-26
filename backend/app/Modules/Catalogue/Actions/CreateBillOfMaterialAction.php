@@ -9,7 +9,6 @@ use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
 use App\Core\Http\Exceptions\DuplicateResourceException;
 use App\Models\BillOfMaterial;
-use App\Models\BillOfMaterialItem;
 use App\Models\Product;
 use App\Models\Unit;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +20,7 @@ final class CreateBillOfMaterialAction extends Action
     public function __construct(private readonly AuditLogger $auditLogger) {}
 
     /**
-     * @param array<string, mixed> $input
+     * @param  array<string, mixed>  $input
      * @return array{billOfMaterial: BillOfMaterial}
      */
     public function execute(array $input): array
@@ -39,8 +38,10 @@ final class CreateBillOfMaterialAction extends Action
             $items = $input['items'];
             $this->replaceItems($bom, $items, (int) $actor->tenant_id, $actor->id);
             $this->auditLogger->record(action: AuditAction::Created, auditable: $bom, after: $bom->load('items')->toArray(), actor: $actor, context: ['module' => 'catalogue', 'resource' => 'bill_of_material']);
+
             return $bom;
         });
+
         return ['billOfMaterial' => $bom->load(['product', 'outputUnit', 'items.product', 'items.unit'])];
     }
 
@@ -49,7 +50,7 @@ final class CreateBillOfMaterialAction extends Action
     {
         $bom->items()->delete();
         foreach ($items as $index => $item) {
-            if (!is_array($item)) {
+            if (! is_array($item)) {
                 throw ValidationException::withMessages(['items' => 'Each item must be an object.']);
             }
             $bom->items()->create(['product_id' => $this->id(Product::class, $item['product_id'] ?? null, $tenantId, "items.{$index}.product_id"), 'quantity' => $item['quantity'] ?? null, 'unit_id' => $this->id(Unit::class, $item['unit_id'] ?? null, $tenantId, "items.{$index}.unit_id"), 'wastage_allowance_percentage' => $item['wastage_allowance_percentage'] ?? '0.0000', 'is_optional' => $item['is_optional'] ?? false, 'sort_order' => $item['sort_order'] ?? $index, 'created_by' => $actorId]);
@@ -62,6 +63,7 @@ final class CreateBillOfMaterialAction extends Action
         if ($row === null) {
             throw ValidationException::withMessages([$field => 'The selected reference is invalid.']);
         }
+
         return (int) $row->getKey();
     }
 }

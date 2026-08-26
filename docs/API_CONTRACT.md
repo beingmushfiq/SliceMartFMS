@@ -1021,6 +1021,25 @@ are JSON strings with four fractional places; item and relation IDs are UUIDs.
 Create and update require `product_id`, `version`, `name`, `output_quantity`,
 `output_unit_id`, and an `items` array; item quantities must be positive.
 
+#### 15.4.6 `warehouses`
+
+Warehouses are tenant-scoped storage locations. Reads require
+`inventory.warehouse.view`; create, update and delete require
+`inventory.warehouse.manage`.
+
+| Endpoint | Permission | Notes |
+|---|---|---|
+| `GET /api/v1/warehouses` | `inventory.warehouse.view` | Paginated/filtered/sorted by type, active state and search |
+| `GET /api/v1/warehouses/{id}` | `inventory.warehouse.view` | Single warehouse; optional `include=locations` |
+| `GET /api/v1/warehouses/options` | `inventory.warehouse.view` | Active warehouses as `{id,label}` |
+| `POST /api/v1/warehouses` | `inventory.warehouse.manage` | 201 + `Location`; code is unique within a tenant including soft-deleted rows |
+| `PATCH /api/v1/warehouses/{id}` | `inventory.warehouse.manage` | Partial update |
+| `DELETE /api/v1/warehouses/{id}` | `inventory.warehouse.manage` | Soft delete; 409 `IN_USE` when locations or live stock/transaction references exist |
+
+**Resource shape** — `id` (uuid), `code`, `name`, `type`, `address`,
+`company_id`, `branch_id`, `factory_id` (UUIDs or null), `is_default`,
+`allows_negative_stock`, `is_active`, `locations` when included, and timestamps.
+
 ---
 
 ## 16. Frontend consumption rules (binding)

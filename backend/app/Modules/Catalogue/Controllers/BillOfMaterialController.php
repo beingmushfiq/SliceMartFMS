@@ -62,6 +62,7 @@ final class BillOfMaterialController extends Controller
         /** @phpstan-ignore cast.int */
         $page = is_int($pageRaw) ? $pageRaw : (int) $pageRaw;
         $paginated = $query->paginate($perPage, ['*'], 'page', $page);
+
         return response()->json(['success' => true, 'data' => BillOfMaterialResource::collection($paginated->items()), 'meta' => [
             'correlation_id' => (string) $request->header('X-Correlation-Id', ''),
             'pagination' => ['page' => $paginated->currentPage(), 'per_page' => $paginated->perPage(), 'total' => $paginated->total(), 'total_pages' => $paginated->lastPage(), 'has_more' => $paginated->hasMorePages()],
@@ -75,6 +76,7 @@ final class BillOfMaterialController extends Controller
             return ErrorResponse::make(request: $request, code: 'NOT_FOUND', message: 'The requested resource was not found.', httpStatus: 404, retryable: false);
         }
         $billOfMaterial->load(['product', 'outputUnit', 'items.product', 'items.unit']);
+
         return response()->json(['success' => true, 'data' => new BillOfMaterialResource($billOfMaterial), 'meta' => ['correlation_id' => (string) $request->header('X-Correlation-Id', '')]]);
     }
 
@@ -83,6 +85,7 @@ final class BillOfMaterialController extends Controller
         /** @var \App\Models\User $user */
         $user = $request->user();
         $result = $action->execute(['user' => $user, ...$request->validated()]);
+
         return response()->json(['success' => true, 'data' => new BillOfMaterialResource($result['billOfMaterial']), 'meta' => ['correlation_id' => (string) $request->header('X-Correlation-Id', '')]], 201)->header('Location', '/v1/bill-of-materials/'.$result['billOfMaterial']->uuid);
     }
 
@@ -94,6 +97,7 @@ final class BillOfMaterialController extends Controller
         /** @var \App\Models\User $user */
         $user = $request->user();
         $result = $action->execute(['user' => $user, 'billOfMaterial' => $billOfMaterial, ...$request->validated()]);
+
         return response()->json(['success' => true, 'data' => new BillOfMaterialResource($result['billOfMaterial']), 'meta' => ['correlation_id' => (string) $request->header('X-Correlation-Id', '')]]);
     }
 
@@ -105,6 +109,7 @@ final class BillOfMaterialController extends Controller
         /** @var \App\Models\User $user */
         $user = $request->user();
         $action->execute(['user' => $user, 'billOfMaterial' => $billOfMaterial]);
+
         return response()->json(['success' => true, 'data' => null, 'meta' => ['correlation_id' => (string) $request->header('X-Correlation-Id', '')]]);
     }
 }

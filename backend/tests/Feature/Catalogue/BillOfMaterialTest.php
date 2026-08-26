@@ -7,7 +7,6 @@ namespace Tests\Feature\Catalogue;
 use App\Core\Auth\JwtService;
 use App\Core\Tenancy\TenantContext;
 use App\Models\BillOfMaterial;
-use App\Models\Brand;
 use App\Models\Permission;
 use App\Models\Product;
 use App\Models\Role;
@@ -25,7 +24,9 @@ final class BillOfMaterialTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private User $user;
+
     private string $jwt;
 
     protected function setUp(): void
@@ -102,6 +103,7 @@ final class BillOfMaterialTest extends TestCase
         $response = $this->json('POST', route('tenant.bill-of-materials.store'), $this->payload($product->uuid, $unit->uuid, $version), $this->headers())->assertCreated();
         $uuid = $response->json('data.id');
         self::assertIsString($uuid);
+
         return BillOfMaterial::where('uuid', $uuid)->firstOrFail();
     }
 
@@ -111,6 +113,7 @@ final class BillOfMaterialTest extends TestCase
         TenantContext::bind($this->tenant->toArray());
         $product = Product::factory()->create(['sku' => $sku, 'base_unit_id' => $unit->id]);
         TenantContext::flush();
+
         return $product;
     }
 
@@ -119,11 +122,15 @@ final class BillOfMaterialTest extends TestCase
         TenantContext::bind($this->tenant->toArray());
         $unit = Unit::factory()->create();
         TenantContext::flush();
+
         return $unit;
     }
 
     /** @return array<string, string> */
-    private function headers(): array { return ['Authorization' => 'Bearer '.$this->jwt]; }
+    private function headers(): array
+    {
+        return ['Authorization' => 'Bearer '.$this->jwt];
+    }
 
     private function assignOnly(string ...$permissions): void
     {

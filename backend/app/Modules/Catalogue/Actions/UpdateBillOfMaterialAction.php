@@ -19,7 +19,7 @@ final class UpdateBillOfMaterialAction extends Action
     public function __construct(private readonly AuditLogger $auditLogger) {}
 
     /**
-     * @param array<string, mixed> $input
+     * @param  array<string, mixed>  $input
      * @return array{billOfMaterial: BillOfMaterial}
      */
     public function execute(array $input): array
@@ -49,6 +49,7 @@ final class UpdateBillOfMaterialAction extends Action
             }
             $this->auditLogger->record(action: AuditAction::Updated, auditable: $bom, before: $before, after: $bom->load('items')->toArray(), actor: $actor, context: ['module' => 'catalogue', 'resource' => 'bill_of_material']);
         });
+
         return ['billOfMaterial' => $bom->load(['product', 'outputUnit', 'items.product', 'items.unit'])];
     }
 
@@ -58,6 +59,7 @@ final class UpdateBillOfMaterialAction extends Action
         if ($row === null) {
             throw ValidationException::withMessages([$field => 'The selected reference is invalid.']);
         }
+
         return (int) $row->getKey();
     }
 }

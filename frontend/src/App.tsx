@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { bootDone, bootStep } from './app/boot';
+import CataloguePage from './pages/CataloguePage';
 
 /**
  * APPLICATION ROOT — Phase 0 state.
@@ -17,35 +18,10 @@ import { bootDone, bootStep } from './app/boot';
  */
 export default function App() {
   useEffect(() => {
-    /* The shell has painted. Two real milestones, then the loader retires. */
     bootStep('route');
     const id = requestAnimationFrame(() => bootDone());
     return () => cancelAnimationFrame(id);
   }, []);
 
-  return (
-    <main className="bg-base text-default flex min-h-dvh items-center justify-center p-6">
-      <div className="animate-rise-in bg-surface border-default w-full max-w-md rounded-xl border p-6 shadow-md">
-        <p className="text-muted text-2xs font-semibold tracking-[0.075em] uppercase">
-          Phase 0 · Architecture
-        </p>
-
-        <h1 className="mt-2 text-xl font-bold">Platform bootstrapped</h1>
-
-        <p className="text-muted mt-2 text-sm">
-          The monorepo, design tokens and tooling baseline are in place. No product module has been
-          built yet — Phase 1 (auth, tenancy, RBAC, design system) has not started.
-        </p>
-
-        <dl className="border-default mt-5 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 border-t pt-4 text-sm">
-          <dt className="text-subtle">Frontend</dt>
-          <dd className="font-medium">React · Vite · Tailwind v4</dd>
-          <dt className="text-subtle">Backend</dt>
-          <dd className="font-medium">Laravel · modular monolith</dd>
-          <dt className="text-subtle">Modules built</dt>
-          <dd className="tabular font-medium">0 of 41</dd>
-        </dl>
-      </div>
-    </main>
-  );
+  return <CataloguePage />;
 }

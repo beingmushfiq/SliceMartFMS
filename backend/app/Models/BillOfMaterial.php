@@ -47,9 +47,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 final class BillOfMaterial extends Model
 {
+    use BelongsToTenant;
+
     /** @use HasFactory<\Database\Factories\BillOfMaterialFactory> */
     use HasFactory;
-    use BelongsToTenant;
 
     /**
      * The inflector would derive `bill_of_materials` from this class name, but
