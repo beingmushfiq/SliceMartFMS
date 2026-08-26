@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Core\Tenancy\Concerns\BelongsToTenant;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -38,6 +39,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 final class PriceListItem extends Model
 {
     use BelongsToTenant;
+
+    /** @use HasFactory<\Database\Factories\PriceListItemFactory> */
+    use HasFactory;
 
     /**
      * `tenant_id` is deliberately absent: it is stamped by BelongsToTenant and

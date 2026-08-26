@@ -1040,6 +1040,110 @@ Warehouses are tenant-scoped storage locations. Reads require
 `company_id`, `branch_id`, `factory_id` (UUIDs or null), `is_default`,
 `allows_negative_stock`, `is_active`, `locations` when included, and timestamps.
 
+#### 15.5 `parties`
+
+Parties are the external actors a tenant transacts with — suppliers, customers,
+dealers and agents. The four role flags are independent, so one party may be
+several at once (`PROJECT_CONTEXT` §5.2). Reads require `parties.party.view`;
+create, update and delete require `parties.party.manage`. A party is an
+aggregate: its `addresses` and `contacts` are managed as nested collections
+inside the party payload (atomic replace, following the `bill-of-materials` item
+precedent in §15.4.5), not as independent endpoints.
+
+| Endpoint | Permission | Notes |
+|---|---|---|
+| `GET /api/v1/parties` | `parties.party.view` | Paginated/filtered/sorted (§5). Filters: `is_supplier`, `is_customer`, `is_dealer`, `is_agent`, `type`, `status`, `assigned_to`, `q` (code/name/phone/email) |
+| `GET /api/v1/parties/{id}` | `parties.party.view` | Single party; `include=addresses,contacts` |
+| `GET /api/v1/parties/options` | `parties.party.view` | Active parties as `{id,label}` where label is `name (code)`; `?role=supplier\|customer\|dealer\|agent` narrows by flag |
+| `POST /api/v1/parties` | `parties.party.manage` | 201 + `Location`. 409 `DUPLICATE` on `(tenant_id, code)`, soft-deleted rows included. Nested `addresses`/`contacts` are created in the same transaction |
+| `PATCH /api/v1/parties/{id}` | `parties.party.manage` | Partial; omitted ≠ null (§1.5). A supplied `addresses` or `contacts` array replaces that collection atomically |
+| `DELETE /api/v1/parties/{id}` | `parties.party.manage` | Soft delete; 409 `IN_USE` when orders, invoices or ledger rows reference the party |
+
+**Party resource shape** — `id` (uuid), `code`, `name`, `legal_name`,
+`is_supplier`, `is_customer`, `is_dealer`, `is_agent`, `type`
+(`individual\|business`), `tax_identifier`, `phone`, `email`, `credit_limit`,
+`credit_days`, `price_list_id` (uuid or null), `tax_profile_id` (uuid or null),
+`opening_balance`, `current_balance`, `assigned_to` (uuid or null), `status`
+(`active\|inactive`), `addresses` and `contacts` when included, `created_at`,
+`updated_at`. `current_balance` is a ledger-maintained cache and is read-only on
+this resource. Money values (`credit_limit`, `opening_balance`,
+`current_balance`) are JSON strings with four fractional places; all relation
+identifiers are UUIDs.
+
+**Party address shape** — `id` (uuid), `label`, `type` (`billing\|shipping`),
+`contact_name`, `phone`, `line1`, `line2`, `area`, `city`, `district`,
+`postal_code`, `country_code`, `latitude`, `longitude`, `is_default`. The
+structured fields are mandatory groundwork for courier integration (Phase 6); a
+single free-text address is not accepted.
+
+**Party contact shape** — `id` (uuid), `name`, `designation`, `phone`, `email`,
+`is_primary`.
+
+#### 15.6 `pricing`
+
+Pricing master data: price lists (with quantity-break line items), discount
+rules and tax profiles. Each resource follows the two-action model: reads require
+`pricing.<resource>.view`, mutations require `pricing.<resource>.manage`, where
+`<resource>` is `price-list`, `discount-rule` or `tax-profile`.
+
+> **Scope boundary (ADR-029, open question Q2).** This section covers **CRUD over
+> pricing master data only**. The price *resolution* algorithm
+> (`PriceResolver::resolve(product, party, qty, date)`, `MODULE_MAP` §4) and tax
+> *application* to invoice totals belong to Phase 5 and depend on Q2 (the tax
+> model). They are deliberately absent here and must not be invented
+> (`TASK_PROTOCOL` §3.2).
+
+##### `price-lists`
+
+| Endpoint | Permission | Notes |
+|---|---|---|
+| `GET /api/v1/price-lists` | `pricing.price-list.view` | Paginated/filtered/sorted (§5). Filters: `applies_to`, `channel`, `is_active`, `q` (code/name) |
+| `GET /api/v1/price-lists/{id}` | `pricing.price-list.view` | Single list; `include=items` |
+| `GET /api/v1/price-lists/options` | `pricing.price-list.view` | Active lists as `{id,label}` |
+| `POST /api/v1/price-lists` | `pricing.price-list.manage` | 201 + `Location`. 409 `DUPLICATE` on `(tenant_id, code)`. A supplied `items` array is created in the same transaction |
+| `PATCH /api/v1/price-lists/{id}` | `pricing.price-list.manage` | Partial header update; a supplied `items` array replaces the full item set atomically |
+| `DELETE /api/v1/price-lists/{id}` | `pricing.price-list.manage` | Soft delete; 409 `IN_USE` when a party or transaction references the list |
+
+**Price list resource shape** — `id` (uuid), `code`, `name`, `currency_code`,
+`applies_to` (`all\|customer_group\|channel`), `channel` (nullable), `priority`,
+`valid_from`, `valid_to` (dates or null), `is_active`, `items` when included,
+timestamps. Each item: `id` (uuid), `product_id` (uuid), `variant_id` (uuid or
+null), `min_quantity`, `unit_price`, `discount_percentage`. Uniqueness is
+`(tenant_id, price_list_id, product_id, variant_id, min_quantity)`. Prices and
+percentages are strings with four fractional places.
+
+##### `discount-rules`
+
+| Endpoint | Permission | Notes |
+|---|---|---|
+| `GET /api/v1/discount-rules` | `pricing.discount-rule.view` | Paginated/filtered/sorted (§5). Filters: `scope`, `discount_type`, `is_active`, `q` (name) |
+| `GET /api/v1/discount-rules/{id}` | `pricing.discount-rule.view` | Single rule |
+| `POST /api/v1/discount-rules` | `pricing.discount-rule.manage` | 201 + `Location` |
+| `PATCH /api/v1/discount-rules/{id}` | `pricing.discount-rule.manage` | Partial |
+| `DELETE /api/v1/discount-rules/{id}` | `pricing.discount-rule.manage` | Soft delete |
+
+**Discount rule resource shape** — `id` (uuid), `name`, `scope`
+(`product\|category\|party\|order`), `scope_id` (uuid or null, resolved against
+the scope type), `condition` (json object), `discount_type`
+(`percentage\|fixed`), `value` (string, four places), `valid_from`, `valid_to`
+(dates or null), `priority`, `is_active`, timestamps.
+
+##### `tax-profiles`
+
+| Endpoint | Permission | Notes |
+|---|---|---|
+| `GET /api/v1/tax-profiles` | `pricing.tax-profile.view` | Paginated/filtered/sorted (§5). Filters: `type`, `is_active`, `q` (code/name) |
+| `GET /api/v1/tax-profiles/{id}` | `pricing.tax-profile.view` | Single profile |
+| `GET /api/v1/tax-profiles/options` | `pricing.tax-profile.view` | Active profiles as `{id,label}` |
+| `POST /api/v1/tax-profiles` | `pricing.tax-profile.manage` | 201 + `Location`. 409 `DUPLICATE` on `(tenant_id, code)` |
+| `PATCH /api/v1/tax-profiles/{id}` | `pricing.tax-profile.manage` | Partial |
+| `DELETE /api/v1/tax-profiles/{id}` | `pricing.tax-profile.manage` | Soft delete; 409 `IN_USE` when a party or product references the profile |
+
+**Tax profile resource shape** — `id` (uuid), `code`, `name`, `rate` (string,
+four places), `type` (`inclusive\|exclusive`), `is_compound`, `is_active`,
+timestamps. Storing a profile does not define how it is *applied* to a total —
+that calculation is Phase 5 (Q2).
+
 ---
 
 ## 16. Frontend consumption rules (binding)

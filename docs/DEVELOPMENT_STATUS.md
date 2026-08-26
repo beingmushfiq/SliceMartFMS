@@ -31,13 +31,13 @@ artefacts (`MODULE_MAP.md` §6), not a follow-up.
 
 | | |
 |---|---|
-| **Current phase** | Phase 1 — ✅ **Auth, RBAC, Tenancy Runtime, and Waves 1–25 Database Migrations 100% complete.** |
+| **Current phase** | Phase 2 (🔄 in progress). **Phase 1 is closed** — Auth, RBAC, Tenancy Runtime, and Waves 1–25 migrations 100% complete. Phase 2 master-data catalogue CRUD is underway: the `units`/`categories`/`brands`, Product, versioned BOM, **and Warehouse (incl. Location sub-resource + reference guard)** verticals are ✅ complete; the **Parties** and **Pricing** (price-lists/discount-rules/tax-profiles) verticals are the remaining backend slices, and the Phase-1 authenticated frontend shell is not yet built (see §7 items 52–55, §10 wave plan, and the §9 change log). |
 | **Phase 0 status** | ✅ Documentation complete (7 canonical + 5 supporting = 12 documents) · ✅ Monorepo restructure · ✅ Dependency reconciliation · ✅ Token cascade · ✅ UI primitive hardening · ✅ §8 state-matrix primitives · ✅ Tooling config files (frontend **and** backend) · ✅ Test suites · ✅ CI — **every gate verified green, see §3.4** |
-| **Next phase** | Phase 2 — **Master data · Products · Warehouses**, per `MODULE_MAP.md` & `ARCHITECTURE.md`. |
-| **Backend** | ✅ Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–25 migrations written and verified (all 169 tables + all deferred closures), Tenancy runtime live, and Phase 1 Auth & RBAC pipeline complete** — `JwtService`, `RefreshTokenService`, `PermissionCatalogue`, `AuthenticateJwt`, `AuthorizePermission`, `AuthController`, and all 12 Auth Actions live. First tranche of **19 master-data Eloquent models** (`Unit`, `UnitConversion`, `Category`, `Brand`, `TaxProfile`, `ReasonCode`, `Product`, `ProductVariant`, `ProductImage`, `BillOfMaterial`, `BillOfMaterialItem`, `Warehouse`, `WarehouseLocation`, `Party`, `PartyAddress`, `PartyContact`, `PriceList`, `PriceListItem`, `DiscountRule`) authored on `BelongsToTenant` with composite-key relations, verified by `tests/Feature/Models/MasterDataModelTest.php`. Passing **496 tests** with PHPStan Level 9. |
+| **Next action** | Build the remaining Phase 2 backend master-data verticals — **Parties** (`parties.party.{view,manage}`, API_CONTRACT §15.5) and **Pricing** (`pricing.{price-list,discount-rule,tax-profile}.{view,manage}`, §15.6 — CRUD only; `PriceResolver` + tax application deferred to Phase 5/Q2) — plus demo seeders/factories and the Phase-1 authenticated FE shell, per the §10 wave plan, `MODULE_MAP.md` & ADR-029 build order. |
+| **Backend** | ✅ Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–25 migrations written and verified (all 169 tables + all deferred closures), Tenancy runtime live, and Phase 1 Auth & RBAC pipeline complete** — `JwtService`, `RefreshTokenService`, `PermissionCatalogue`, `AuthenticateJwt`, `AuthorizePermission`, `AuthController`, and all 12 Auth Actions live. First tranche of **19 master-data Eloquent models** (`Unit`, `UnitConversion`, `Category`, `Brand`, `TaxProfile`, `ReasonCode`, `Product`, `ProductVariant`, `ProductImage`, `BillOfMaterial`, `BillOfMaterialItem`, `Warehouse`, `WarehouseLocation`, `Party`, `PartyAddress`, `PartyContact`, `PriceList`, `PriceListItem`, `DiscountRule`) authored on `BelongsToTenant` with composite-key relations, verified by `tests/Feature/Models/MasterDataModelTest.php`. The Catalogue CRUD verticals (Units, Categories, Brands, Products, versioned BOMs, and the in-progress Warehouse slice) are wired end-to-end — 7 controllers, 21 Actions, 14 Form Requests, 7 API Resources, live tenant routes. Passing **549 tests / 3148 assertions** with PHPStan Level 9. |
 | **Frontend** | ✅ `/frontend`. Token cascade, boot loader, all 9 UI primitives rebuilt, tooling configured, §8 state-matrix primitives complete (errors, logger, StateView, QueryBoundary, AsyncButton, Toast, LogInspector, four-level ErrorBoundary), and the single transport seam wired (`lib/api/client.ts` + `lib/api/queryClient.ts` + `QueryClientProvider`). See §4. |
 | **Database** | ✅ Fully migrated (169 tables, 170 migrations). **All tables and closures exist** — Waves 1–25: platform (§4.6), org (§4.7), identity (§4.8), infrastructure (§4.9), master data A (§4.10), master data B (§4.11), master data C (§4.12), HR identity (§4.13), production (§4.14), QC & wastage (§4.15), ledger & stock inventory (§4.16), stock operations (§4.17), purchasing (§4.18), sales & invoicing (§4.19), payments & allocations (§4.20), POS (§4.21), delivery & logistics (§4.22), full HR & payroll (§4.23), assets & maintenance (§4.24), finance & costing (§4.25), reporting & analytics (§4.26), e-commerce (§4.27), integrations (§4.28), and deferred closures (§4.29). |
-| **Tests** | ✅ Frontend **128 tests across 7 files**, all passing. Backend **496 tests / 2941 assertions** across schema contracts, tenancy runtime contracts, the full Auth/RBAC pipeline, and the 19 master-data model relations — 100% green. |
+| **Tests** | ✅ Frontend **128 tests across 7 files**, all passing. Backend **549 tests / 3148 assertions** across schema contracts, tenancy runtime contracts, the full Auth/RBAC pipeline, the 19 master-data model relations, and the Catalogue CRUD verticals — 100% green (re-measured live 2026-08-26). |
 | **CI** | ✅ `.github/workflows/ci.yml` — 3 jobs, 9 legs. Frontend matrix (lint · typecheck · test · depcruise · format:check) installing at the **repository root**, build + bundle budget with a `dist` artifact, and a backend matrix (lint · analyse · test) on PHP 8.5. Every leg has a locally reproducible equivalent. |
 
 ---
@@ -48,7 +48,7 @@ artefacts (`MODULE_MAP.md` §6), not a follow-up.
 |---|---|---|
 | **0** | Architecture & documentation | ✅ See §3 |
 | **1** | Auth · Tenancy · RBAC · Design System | ✅ Migration Waves 1–25, Tenancy Runtime, and Auth/RBAC Pipeline 100% Complete |
-| **2** | Master data · Products · Warehouses | ⬜ Ready for implementation |
+| **2** | Master data · Products · Warehouses | 🔄 Catalogue CRUD in progress — Units/Categories/Brands, Products, versioned BOMs, Warehouse (incl. Location + reference guard) ✅; Parties ⬜, Pricing (Price Lists/Discount Rules/Tax Profiles) ⬜; Phase-1 FE auth shell ⬜ (§7 items 52–55, §10 wave plan) |
 | **3** | Production · Worker Production · QC | ⬜ Not started |
 | **4** | Purchase · Inventory | ⬜ Not started |
 | **5** | CRM · Sales · POS · Invoice Builder | ⬜ Not started |
@@ -58,9 +58,13 @@ artefacts (`MODULE_MAP.md` §6), not a follow-up.
 | **9** | E-commerce | ⬜ Not started |
 | **10** | SaaS hardening · Testing · Deployment | ⬜ Not started |
 
-All 41 modules in `MODULE_MAP.md` §2 are ⬜ **not started** as modules — the
-Wave 1–4 tables exist, but `platform`, `tenancy`, `audit` and `notifications` have
-none of the thirteen Definition of Done artefacts, and a schema is not a module.
+Of the 41 modules in `MODULE_MAP.md` §2, two are underway as **modules** (not just
+schema): **Auth/RBAC/Tenancy** is ✅ complete (Phase 1, §7 item 50) and the **Catalogue**
+module is 🔄 in progress (Phase 2 — Units/Categories/Brands/Products/BOMs/Warehouse ✅,
+Parties + Pricing verticals remaining).
+The remaining 39 are ⬜ **not started** as modules — their Wave 1–25 tables exist, but
+`platform`, `tenancy`, `audit`, `notifications` and the rest still lack the Definition
+of Done artefacts, and a schema is not a module.
 
 ---
 
@@ -259,15 +263,25 @@ the 19 master-data Eloquent models over Waves 5–7. Auth routes **are** registe
 and `routes/api_tenant.php` (me, permissions, logout-all, switch-branch, preferences,
 change-password); `routes/api_platform.php` is an empty group awaiting platform modules.
 
-**Absent — the rest of the application:** `app/Support`, and every module's CRUD
-controllers, actions, policies, form requests and API resources over the master-data
-tables and all downstream modules (production, inventory, sales, delivery, HR, finance,
-reporting, e-commerce). No tenant CRUD endpoints are registered yet — the next action is
-§7 item 52, the master-data module pipeline.
+**Present — the Catalogue CRUD verticals (§7 items 52–55):** `app/Modules/Catalogue/`
+with 7 controllers (`Unit`, `Brand`, `Category`, `Product`, `BillOfMaterial`, `Warehouse`,
+`WarehouseLocation`), 21 Actions (Create/Update/Delete × 7), 14 Form Requests, 7 API
+Resources, and the `UnitType` enum — all following the ADR-032 pragmatic template
+(Form Request → API Resource → Action with audit-in-transaction → controller → route)
+and authorized by `permission:catalog.<resource>.<action>` middleware. The tenant CRUD
+routes **are** registered in `routes/api_tenant.php` and covered by the
+`tests/Feature/Catalogue/` suites (isolation + permission + envelope).
+
+**Absent — the rest of the application:** `app/Support`, and every **downstream** module's
+CRUD controllers, actions, form requests and API resources — the remaining Phase 2
+master-data slices (Parties, Price Lists, Discount Rules) plus all later modules
+(production, inventory, sales, delivery, HR, finance, reporting, e-commerce). The next
+action is finishing the Warehouse vertical (Location CRUD + live-reference guard), then
+the remaining §7 master-data slices.
 
 ### 4.5 Test coverage
 
-128 frontend tests over 7 files; **546 backend tests / 3133 assertions**. Frontend
+128 frontend tests over 7 files; **549 backend tests / 3148 assertions**. Frontend
 tests sit beside the code they cover (`vitest.config.ts`
 `include: ['src/**/*.{test,spec}.{ts,tsx}']`); backend schema contracts live in
 `tests/Feature/Database/` and the tenancy-runtime contract in
@@ -298,10 +312,12 @@ bans in the UI. If this repository ever has no tests, the gate should go red.
 
 The per-suite table above pins down the Phase 0 frontend reliability layer, the
 Wave 1–2 schema contracts and the tenancy runtime. Since then the suite has grown
-to **496 backend tests / 2941 assertions**: the Wave 3–25 schema contracts, the
+to **549 backend tests / 3148 assertions**: the Wave 3–25 schema contracts, the
 `tests/Feature/Auth/` pipeline (Login, AuthMe, RefreshToken, Logout, Preferences,
 RbacMiddleware), the `tests/Unit/Auth/` unit tests (JwtService, PermissionCatalogue),
-and `tests/Feature/Models/MasterDataModelTest.php` over the 19 master-data models.
+`tests/Feature/Models/MasterDataModelTest.php` over the 19 master-data models, and the
+`tests/Feature/Catalogue/` CRUD verticals (Unit, Category, Brand, Product, BillOfMaterial,
+Warehouse — isolation + permission + envelope contracts).
 
 What is **not** covered, and why: there is no per-module CRUD Action, controller or
 endpoint over the master-data tables yet, and therefore no store or MSW handler for
@@ -1558,7 +1574,9 @@ Q3, it stops and asks (`TASK_PROTOCOL.md` §3.2).
 | 52 | Phase 2 **Master-data module pipeline** — backend-first for `units`/`categories`/`brands` per ADR-029 build order and the **Pragmatic DoD (ADR-032)**: Form Requests · API Resources · Actions (audit inside the transaction) · controllers · routes · feature tests (cross-tenant isolation + permission matrix + envelope), authorised by `catalog.<resource>.{view,manage}` middleware (ADR-008), plus canonical `frontend/src/types/api/catalog.ts` and the spatie transformer path (ADR-033). UI paused for review afterwards. | ✅ |
 | 53 | Phase 2 **Product CRUD vertical** — Product API contract (§15.4.4), UUID relation resolution, transactional Actions, Form Requests, API Resource, controller, options endpoint, tenant-safe routes, factory, and feature coverage for envelope, duplicate SKU, UUID serialization, cross-tenant isolation, and permissions. | ✅ |
 | 54 | Phase 2 **Bill of materials CRUD vertical** — versioned recipes with nested component items, UUID relation resolution, atomic item replacement, archive lifecycle, transactional Actions, Form Requests, API Resource, controller, routes, factory, and isolation/duplicate/archive feature coverage. | ✅ |
-| 55 | Phase 2 **Warehouse CRUD vertical** — Warehouse contract, tenant-safe CRUD Actions, validation, resource, controller, options endpoint, permissioned routes, factory, and focused envelope/duplicate/isolation/permission coverage. Location CRUD and the complete live stock/transaction reference guard remain the next Warehouse slice. | 🔄 |
+| 55 | Phase 2 **Warehouse CRUD vertical** — Warehouse contract, tenant-safe CRUD Actions, validation, resource, controller, options endpoint, permissioned routes (`inventory.warehouse.{view,manage}`), factory, and focused envelope/duplicate/isolation/permission coverage. **Location sub-resource complete** — `Create`/`Update`/`DeleteWarehouseLocationAction`, `WarehouseLocationController`, nested `{warehouse:uuid}/locations` routes, and `WarehouseLocationTest`; `DeleteWarehouseAction` carries the live stock/transaction reference guard. | ✅ |
+| 56 | Phase 2 **Parties CRUD vertical** — aggregate over `Party` + nested `PartyAddress`/`PartyContact` (atomic replace, BOM §15.4.5 precedent), per API_CONTRACT §15.5: transactional Actions (audit inside the transaction), Form Requests, API Resource, controller, `options` endpoint (`?role=supplier\|customer\|dealer\|agent`), tenant-safe routes authorised by `parties.party.{view,manage}` (ADR-008), factories, and feature coverage (envelope · duplicate `(tenant_id, code)` incl. soft-deleted · nested replace · cross-tenant isolation · permission matrix · 409 IN_USE guard). | ⬜ |
+| 57 | Phase 2 **Pricing CRUD verticals** — `price-lists` (nested items, atomic replace, uniqueness `(tenant_id, price_list_id, product_id, variant_id, min_quantity)`), `discount-rules` (scope product/category/party/order; polymorphic `scope_id`), and `tax-profiles` (type inclusive/exclusive — storing, not applying), per API_CONTRACT §15.6: transactional Actions, Form Requests, API Resources, controllers, `options` endpoints, routes authorised by `pricing.{price-list,discount-rule,tax-profile}.{view,manage}`, factories, and feature coverage. **`PriceResolver::resolve()` and tax application to invoice totals are DEFERRED to Phase 5 (blocked on Q2) and must not be invented (TASK_PROTOCOL §3.2).** | ⬜ |
 
 ---
 
@@ -1590,11 +1608,14 @@ stock inventory) is done** (§4.16), **Wave 13 (stock operations) is done**
 the `AuthenticateJwt`/`AuthorizePermission` middleware, `AuthController` with all 12
 Actions, and the `tests/Feature/Auth/` suite. The **first tranche of 19 master-data
 Eloquent models is done** (§7 item 51), verified by `tests/Feature/Models/MasterDataModelTest.php`.
-Backend is green at **546 tests / 3133 assertions**, PHPStan level 9 clean.
+Backend is green at **549 tests / 3148 assertions**, PHPStan level 9 clean.
 §7 item 52 — the master-data module pipeline — is complete for Units, Categories and
 Brands. §7 item 53 — the Product CRUD vertical — is also complete, as is §7 item 54,
-the versioned BOM vertical. Warehouse CRUD is in progress as §7 item 55; its
-location sub-resource and complete live-reference guard remain. The catalogue UI
+the versioned BOM vertical, **and §7 item 55, the Warehouse vertical including its
+Location sub-resource and the live-reference delete guard**. The next backend slices are
+**§7 item 56 (Parties)** and **§7 item 57 (Pricing — CRUD only; `PriceResolver` + tax
+application deferred to Phase 5/Q2)**, followed by demo seeders/factories and the Phase-1
+authenticated FE shell — see the **§10 swarm wave plan**. The catalogue UI
 workspace is now API-backed, but broader UI workflows remain in progress. Per the newly recorded
 **ADR-032 (Pragmatic DoD)** the backend template is Form Requests → API Resources →
 Actions (audit row written inside the same DB transaction) → controller → routes →
@@ -1653,6 +1674,7 @@ contradict them:
 | 2026-08-26 | **Product CRUD vertical complete.** Added the §15.4.4 Product contract and two-action permission entry, UUID relation resolution across catalogue references, transactional create/update/delete Actions, full validation/resource/controller/routes, options endpoint, factory, and feature coverage. Verification: 539 tests / 3095 assertions, PHPStan level 9 clean, Pint applied. Next: the next Phase 2 master-data module in roadmap order. |
 | 2026-08-26 | **Bill of materials CRUD vertical complete.** Added the §15.4.5 contract and versioned recipe API with nested item creation/replacement, UUID relation resolution, archive lifecycle, transactional audit logging, permissioned routes, factory, and focused feature coverage. Verification: 543 tests / 3117 assertions, PHPStan level 9 clean. Next: Warehouses. |
 | 2026-08-26 | **Warehouse CRUD and catalogue UI started.** Added the §15.4.6 Warehouse contract, tenant-safe Warehouse CRUD API with options, validation, permissions, factory and feature tests; replaced the Phase 0 bootstrap screen with an API-backed Products/Categories/Brands workspace using TanStack Query and the shared API client. Verification: focused Warehouse 3 tests / 16 assertions, frontend 128 tests passing, strict TypeScript passing. Location CRUD, broader warehouse references and full UI mutation workflows remain. |
+| 2026-08-26 | **Status reconciliation (no code change).** Resolved an internal contradiction in this ledger: §1 (Backend/Tests rows), §2 (Phase 2 row + the "all 41 modules not started" note) and §4.4/§4.5 still described Phase 2 as not started and quoted stale/divergent backend counts (496/2941 in §1, 546/3133 in §4.5/§8) while §7 items 50–55 and the entries above correctly recorded the built Auth and Catalogue verticals. Re-measured the backend suite live (`php vendor/bin/phpunit --no-coverage`) → **549 tests / 3148 assertions**, PHPStan level 9 clean; every stale count updated to that figure per the "re-measure, never carry forward" rule (§4.5/§8). §2 Phase 2 set to 🔄 with the per-slice breakdown; the §4.4 "Absent" block corrected to list the present Catalogue verticals and narrow "absent" to the remaining Phase 2 slices + downstream modules. Frontend stays at 128 (root `node_modules` not installed, suite not runnable locally). Docs only. |
 | 2026-08-22 | Consistency pass: document count stated as 7 canonical + 5 supporting; §5 renumbered to Phase 0 item 5; the Phase 1 gate now requires items **1–5** (dependency reconciliation is a hard gate, since the Phase 1 exit criteria cannot be verified without the missing test, mock and Storybook tooling). |
 | 2026-08-23 | **Truth-up.** The file had drifted: it still described the prototype as living at the repository root, the backend as non-existent, and thirteen dependencies as absent — all three untrue. Records the monorepo restructure, the Laravel 13.26.1 skeleton, the six-file token cascade, the rebuilt `index.html` and boot loader, the closed dependency reconciliation, and per-file state for all eight UI primitives. Former §3.2 (outstanding) split into §3.2 complete / §3.3 outstanding, renumbered 1–6. Added §4.2 (the twelve Modal defects) and §8 (a settled-constraints table so a new session resumes without re-deriving them). |
 | 2026-08-23 | **Phase 0 code items closed.** §3.3 items 1–6 marked complete. All 9 `ui/` files rebuilt (Modal, Feedback, Navigation (new), Tabs, FormElements, KPICard, PWAInstallBanner, Button, Badge) — each token-only, lucide v1-correct, no dynamic classes, no primitive colours. Modal: all 12 defects resolved (useId, focus trap + restore, inert, m.* motion, token classes, isDirty, hideHeader for ConfirmDialog). Motion provider installed in `main.tsx` (`LazyMotion` + `MotionConfig` + `reducedMotion`). `useGsap.ts` created (lazy-loaded, `gsap.context()` + `ctx.revert()`). `ErrorBoundary.tsx` rewritten to four-level model, de-tenanted. `registerSW.ts` de-tenanted. `lib/utils.ts` delocalised to `cn()` only. New file: `Navigation.tsx` (Pagination extracted from Feedback). Tooling configs added: `eslint.config.js` (flat config — typescript-eslint + react-hooks + react-refresh + jsx-a11y; this entry originally named it `.eslintrc.js`, which never existed), `.dependency-cruiser.cjs`, `vitest.config.ts`, `.storybook/main.ts` + `preview.ts`, `.prettierrc`. TS strict flags added to `tsconfig.app.json`. CI skeleton: `.github/workflows/ci.yml` (lint, typecheck, test, build & bundle budget, depcruise). §7 items 1–8 complete. |
@@ -1688,6 +1710,71 @@ contradict them:
 | 2026-08-24 | **Phase 1 Wave 25 (Deferred Cross-Group FK Closures) written and verified — All 25 Migration Waves 100% complete!** One migration: `wave25_deferred_fk_closure` (`122000`). Detailed in **§4.29**. Closed all 9 cross-group and forward-referenced foreign keys: `employees.salary_structure_id`, `material_issue_items.stock_movement_id`, `production_outputs.stock_movement_id`, `qc_inspections.goods_receipt_id`, `wastage_records.stock_movement_id`, `worker_production_entries.payroll_period_id`, `run_sheets.vehicle_id`, `cod_reconciliations.bank_account_id`, `asset_depreciation_entries.journal_entry_id`. `Wave25DeferredClosureSchemaTest` — **9 tests / 18 assertions** confirming composite `(tenant_id, parent_id)` foreign keys are strictly enforced and cross-tenant references rejected across all 9 domain boundaries. Verified: `migrate:fresh` — all **170 migrations** green ✅ · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **467 passed / 2465 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (547 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Wave 17 **14**, Wave 18 **18**, Wave 19 **18**, Wave 20 **12**, Wave 21 **14**, Wave 22 **14**, Wave 23 **14**, Wave 24 **6**, Wave 25 **9**, Tenancy runtime **3**, Unit+Example **2**. §7 item 49 complete. The **entire database schema (169 tables, 170 migrations)** is fully built, migrated, and verified. Next: §7 item 50 — Auth & RBAC Implementation. |
 | 2026-08-24 | **Ledger truth-up: Phase 1 Auth & RBAC (§7 item 50) and the first master-data model tranche (§7 item 51) recorded as complete, and the backend count re-measured.** The ledger's §1/§2 already carried the Auth pipeline as done, but §7 item 50 still read ⬜ and §8 still said "Start at item 50" — a live-code / ledger disagreement of exactly the kind §0 forbids. Verified against disk before editing (no claim written from memory): `app/Modules/Auth/Controllers/AuthController.php` + all **12 Auth Actions** (`Login`, `SelectTenant`, `SwitchBranch`, `RefreshToken`, `Logout`, `LogoutAll`, `ChangePassword`, `ForgotPassword`, `ResetPassword`, `UpdatePreferences`, `GetAuthMe`, `GetPermissionsCatalogue`), the `app/Core/Auth/` service layer (`JwtService`, `RefreshTokenService`, `PermissionCatalogue`, and five JWT/refresh exception types), and the two middleware (`AuthenticateJwt`, `AuthorizePermission`) all present; `tests/Feature/Auth/` carries Login, AuthMe, RefreshToken, Logout, Preferences and RbacMiddleware suites. A first tranche of **19 master-data Eloquent models** over Waves 5–7 is also present (`Unit`, `UnitConversion`, `Category`, `Brand`, `TaxProfile`, `ReasonCode`, `Product`, `ProductVariant`, `ProductImage`, `BillOfMaterial`, `BillOfMaterialItem`, `Warehouse`, `WarehouseLocation`, `Party`, `PartyAddress`, `PartyContact`, `PriceList`, `PriceListItem`, `DiscountRule`) on `BelongsToTenant` with string decimal casts and composite-key relations, verified by `tests/Feature/Models/MasterDataModelTest.php`. Count **re-measured, not carried forward** (§8 rule): `php artisan test` reports **496 passed / 2941 assertions** (the ledger's stale 492/2575 corrected in §1's Backend and Tests rows). Reconciled: §7 item 50 → ✅ with its file inventory; new §7 items 51 (models, ✅) and 52 (the master-data module pipeline, ⬜); §8 resume paragraph re-pointed from item 50 to **item 52**. Docs only — no code changed this entry. Next: §7 item 52 — the master-data module pipeline per ADR-029 build order. |
 | 2026-08-24 | **Docs-first pass for the master-data module pipeline (§7 item 52) — two build decisions recorded, contract endpoints written, ledger re-pointed; no code yet.** Per the standing "update the docs first, then continue documented development" rule, the rank-1 authority `DECISIONS.md` gained **ADR-032 (Pragmatic Definition of Done for standard CRUD modules — Amends ADR-030)** and **ADR-033 (Generated TypeScript types: one canonical file, one directory — Clarifies ADR-029)**, the §1 range was bumped to "ADR-001 through ADR-033", and DECISIONS' own change log updated. ADR-032 makes ADR-030's Policy class and event/listener indirection **conditional** for plain CRUD: the reference template is Form Requests (validation) + API Resources (serialization) + Actions with the audit row written **inside** the mutation's `DB::transaction()`, authorised by the existing `permission:catalog.<resource>.<action>` middleware — no per-model Policy unless a row-level rule a permission string cannot express is needed; the cross-tenant isolation test, permission-matrix test, and envelope test stay mandatory. ADR-033 installs `spatie/laravel-typescript-transformer` emitting into `frontend/src/types/api/`, with CI re-running generation and failing on diff; until the generator is green, `types/api/catalog.ts` is hand-authored to the contract as a bootstrap (never a parallel copy), and legacy `types/index.ts` demo shapes are not contract. `API_CONTRACT.md` §15 gained a concrete **§15.4 Master-data catalogue** block specifying the `units`/`categories`/`brands` CRUD endpoints, mapping reads to `catalog.<resource>.view` and every mutation incl. delete to `catalog.<resource>.manage` (ADR-008's 2-action model), diverging deliberately from §15.1's generic create/edit/delete template. `DEVELOPMENT_STATUS.md` §7 item 52 moved ⬜ → 🔄 with the Pragmatic-DoD artefact list, and the §8 resume paragraph re-pointed to the ADR-032/ADR-033 template. Baseline unchanged and to be preserved: **496 tests / 2941 assertions**, PHPStan level 9 clean — counts to be **re-measured**, never carried forward, once backend code lands. Next: build the shared foundation (409 exception classes + `bootstrap/app.php` render mappings for `DUPLICATE`/`IN_USE`, `AuditLog` model + in-transaction helper), then the `units` reference vertical, then `categories`/`brands` in parallel; pause for review before any UI. |
+| 2026-08-26 | **Phase 2 completion wave planned; Warehouse vertical reconciled to ✅ complete.** Codebase-first verification confirmed the Warehouse vertical is fully built — `Create`/`Update`/`DeleteWarehouseLocationAction`, `WarehouseLocationController`, nested `{warehouse:uuid}/locations` routes (`routes/api_tenant.php` L131–142), `WarehouseLocationTest` + `WarehouseTest`, and the `DeleteWarehouseAction` live-reference guard — so the stale 🔄 in §1/§2/§7-item-55/§8 was corrected to ✅ (docs only, no code). Contract-first prerequisites verified: `API_CONTRACT.md` §15.5 (Parties) and §15.6 (Pricing) are present and precedence-correct, with §15.6's scope-boundary deferring `PriceResolver` + tax application to Phase 5/Q2. `MODULE_MAP.md` §7 needs **no** edit — the permission-namespace registry reserves "one segment per module ID", and `parties`/`pricing` are already registered module IDs (§2.2), so adding explicit rows would contradict the registry's own design. Recorded the Phase-3 gap matrix and the swarm wave plan (Phases 6–10) in the new **§10**: backend Parties (§7 item 56) and Pricing (§7 item 57) verticals, demo seeders/factories, and the Phase-1 authenticated FE shell, with per-agent file-ownership boundaries so no two agents touch one file and `routes/api_tenant.php` stays a single-writer surface. Baseline to preserve and **re-measure, never carry forward**: backend 549/3148, frontend 128, PHPStan level 9 clean. |
+
+---
+
+## 10. Phase 2 completion — gap matrix & swarm wave plan
+
+Recorded per the "Finish Phase 2 fully" decision. This section is the Phase-3 gap
+analysis and the Phases 6–10 swarm plan for the remaining Phase-2 slices. The
+existing catalogue verticals are the reference template (ADR-029 build order, ADR-032
+Pragmatic DoD); nothing already ✅ is rebuilt.
+
+### 10.1 Requirement → codebase gap matrix (Phase 3)
+
+| Requirement | Existing implementation | Gap | Action | Priority | Dependencies |
+|---|---|---|---|---|---|
+| Units / Categories / Brands CRUD | Exists — §7 item 52 | None | Reuse | — | — |
+| Product CRUD | Exists — §7 item 53 | None | Reuse | — | — |
+| Versioned BOM CRUD | Exists — §7 item 54 | None | Reuse | — | — |
+| Warehouse + Location CRUD | Exists — §7 item 55 | None | Reuse | — | — |
+| **Parties** CRUD (supplier/customer/dealer/agent + addresses/contacts) | Models only (`Party`, `PartyAddress`, `PartyContact`) | **PARTIALLY IMPLEMENTED** — no API layer | Build API vertical | High | rbac ✅, catalogue ✅ |
+| **Pricing** — price-lists / discount-rules / tax-profiles CRUD | Models only (`PriceList`, `PriceListItem`, `DiscountRule`, `TaxProfile`) | **PARTIALLY IMPLEMENTED** — no API layer | Build API vertical | High | catalogue ✅, parties |
+| Price resolution (`PriceResolver::resolve`) + tax application to totals | Missing | **DEFERRED** | Do not build (Phase 5) | — | **Q2** (open) |
+| Demo seeders (tenant/plan/role/demo data) | 1-user stub (`DatabaseSeeder`) | **PARTIALLY IMPLEMENTED** | Build | Medium | all models |
+| Factories for parties/pricing models | Missing (7 catalogue factories exist) | **MISSING** | Build | Medium | models ✅ |
+| Phase-1 authenticated FE shell (login/session/refresh/router/RBAC nav) | Missing — `App.tsx` renders `CataloguePage` directly | **MISSING** | Build | High | auth API ✅, transport seam ✅ |
+| FE pages: catalogue/parties/pricing/warehouse | `CataloguePage` exists (API-backed) | **PARTIALLY IMPLEMENTED** | Migrate + add | Medium | FE shell, generated types |
+
+### 10.2 Dependency graph (Phase 6)
+
+```text
+Contract §15.5/§15.6 (✅ done) ─┬─→ w1 Parties (BE)  ─┐
+                                └─→ w2 Pricing (BE)  ─┤
+                                                      ├─→ w-routes (single writer) ─→ w3 Data (seeders/factories)
+Auth API (✅) ──────────────────────→ w4 FE shell ───┘                                        │
+                                                    w1/w2 generated types ─→ w5 FE pages ──────┤
+                                                                                               ↓
+                                                                                          w6 Verify
+```
+
+### 10.3 Swarm waves, ownership & acceptance (Phases 7–10)
+
+Ownership is by directory so no two agents ever write the same file.
+`routes/api_tenant.php` is a **single-writer** surface: parties/pricing routes are
+appended in one sequential step after w1+w2, never by the build agents in parallel.
+
+| Wave | Agent | Owns (create/modify) | Parallel? | Depends on | Acceptance criteria |
+|---|---|---|---|---|---|
+| **w1 Parties BE** | Backend-A | `app/Modules/Parties/**` (Actions/Requests/Resources/Controllers), `tests/Feature/Parties/**`, `database/factories/{Party,PartyAddress,PartyContact}Factory.php`, `frontend/src/types/api/parties.ts` | YES (w2, w4) | contract §15.5 ✅ | CRUD + `options?role=` green; audit inside transaction; tests for envelope · dup `(tenant_id,code)` incl. soft-deleted · nested address/contact atomic replace · cross-tenant isolation · permission matrix (`parties.party.{view,manage}`) · 409 IN_USE; PHPStan L9 clean |
+| **w2 Pricing BE** | Backend-B | `app/Modules/Pricing/**`, `tests/Feature/Pricing/**`, `database/factories/{PriceList,PriceListItem,DiscountRule,TaxProfile}Factory.php`, `frontend/src/types/api/pricing.ts` | YES (w1, w4) | contract §15.6 ✅ | 3 sub-resource CRUD green (`pricing.{price-list,discount-rule,tax-profile}.{view,manage}`); price-list items atomic replace + uniqueness `(tenant_id,price_list_id,product_id,variant_id,min_quantity)`; **`PriceResolver` + tax application NOT built**; PHPStan L9 clean |
+| **w-routes** | (sequential, I own) | `routes/api_tenant.php` | **NO** | w1, w2 | parties + pricing resources wired with correct permission middleware; no route-name collisions |
+| **w3 Data** | Backend-C | `database/seeders/**` | after w1+w2 factories | w1, w2 | demo tenant/plan/role + master data seeds; cross-tenant isolation exit gate satisfied |
+| **w4 FE shell** | Frontend-D | `frontend/src/app/**`, router, auth store/context, `frontend/src/modules/` scaffold, `App.tsx` | YES (w1, w2) | auth API ✅, transport seam ✅ | login → in-memory access token → refresh rotation → tenant+branch context → protected router → RBAC-gated nav; no raw `fetch`; server state only in TanStack Query |
+| **w5 FE pages** | Frontend-E | `frontend/src/modules/{catalogue,parties,pricing,warehouses}/**` | after w4 | w4, w1, w2 types | migrate `CataloguePage`; add parties/pricing/warehouse pages with query hooks + Zod + §8 state matrix (loading/skeleton/empty/error/etc.) |
+| **w6 Verify** | (final, read-only) | — | **NO** | all | `composer analyse` [OK]; backend suite **re-measured** (not carried); FE `format:check`/lint/typecheck/`vite build` green |
+
+### 10.4 Coordination rules (Phase 8/9 agent contract)
+
+- **Inspect once** — the models, routes, DATABASE_DESIGN schema, and contract were read
+  in full this session; agents follow the recorded `$fillable`/casts/relations/uniqueness
+  and do **not** re-inspect or re-derive them.
+- **Single-writer routes** — only the sequential `w-routes` step edits `api_tenant.php`.
+- **No invented behaviour** — pricing resolution and tax application are Phase 5 / Q2 and
+  are out of scope (TASK_PROTOCOL §3.2); an open question is never resolved by a default.
+- **Preserve working code** — nothing marked ✅ in §10.1 is modified; extend, never rebuild.
+- **Re-measure** — backend counts are re-run at w6, never carried forward.
 
 
 
