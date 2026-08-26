@@ -51,7 +51,7 @@ created, so no precedence rule, module map, API contract, UI token spec, or ADR
 existed. The implemented code diverged from both generations.
 
 **All 14 legacy files are now archived under `docs/_legacy/` and are
-non-authoritative.** ADR-001 through ADR-031 below resolve every contradiction.
+non-authoritative.** ADR-001 through ADR-033 below resolve every contradiction.
 
 ---
 
@@ -946,6 +946,80 @@ verified.
 
 ---
 
+### ADR-032 — Pragmatic Definition of Done for standard CRUD modules
+**Status:** Accepted · **Amends:** ADR-030 · **Owner:** 2026-08-24
+
+**Context.** ADR-030 lists a per-model **Policy** class and domain
+**event/listener audit hooks** among the thirteen Definition-of-Done artefacts.
+The only module shipped so far — Auth (§7 item 50 of `DEVELOPMENT_STATUS.md`) —
+uses **neither**: authorisation is enforced by the `permission:` route
+middleware (`AuthorizePermission`, ADR-008) and there is no event/listener
+indirection. Instantiating ~40 CRUD modules each with a Policy class that only
+re-checks the same permission string, plus an event + listener whose sole job is
+to write one audit row, is ceremony that duplicates guarantees the middleware
+and the transaction already give.
+
+**Decision.** For a **standard CRUD module** — one that follows the
+`API_CONTRACT.md` §15.1 shape, i.e. the master-data catalogue (`units`,
+`categories`, `brands`, and the resources that mirror them) — the Definition of
+Done is read as:
+
+- **Form Request** classes for validation — **kept**. Real value, testable,
+  PHPStan-typed request shapes.
+- **API Resource** classes for serialisation — **kept**. The envelope's `data`
+  shape is defined in exactly one place per resource.
+- **Action** class for every mutation — **kept**, and each wraps its work in
+  `DB::transaction()` and writes the audit row **inside the same transaction**
+  (ADR-027 append-only, ADR-028 boundaries). No event/listener indirection.
+- **Authorisation** stays on the route as
+  `permission:catalog.<resource>.<action>` middleware. **No per-model Policy
+  class** is created unless a resource needs a row-level rule a permission
+  string cannot express (e.g. "only the record's owner may edit"); a Policy is
+  added *only* when that need is real, never pre-emptively.
+- The **cross-tenant isolation test**, the **permission matrix test**
+  (authorised **and** forbidden) and the **envelope test** remain **mandatory
+  and unchanged**.
+
+**Consequence.** ADR-030's artefact list stands, but **Policy** and
+**event/listener** become **conditional** rather than unconditional for CRUD
+modules. Audit is not weakened — moving it from a listener into the transaction
+is strictly safer, because the audit row and the mutation now commit or roll
+back together (ADR-028). This is the reference template every catalogue module
+copies; a deviation from it is a documented exception, not a default.
+
+---
+
+### ADR-033 — Generated TypeScript types: one canonical file, one directory
+**Status:** Accepted · **Clarifies:** ADR-029 · **Owner:** 2026-08-24
+
+**Context.** ADR-029 requires request/response types to be **generated** from
+the backend into `frontend/src/types/api/**` and forbids hand-written
+duplicates. No generator is installed yet, and ADR-029 also gates the frontend
+build behind those types existing. `frontend/src/types/index.ts` is a legacy
+demo file whose shapes are UI mocks, **not** contract types.
+
+**Decision.** Adopt **both**, aimed at the **same** directory so there is
+exactly one source per type:
+
+1. Install **`spatie/laravel-typescript-transformer`** and configure it to emit
+   into `frontend/src/types/api/`. Backend DTO / API-Resource shapes are
+   annotated so the generator owns them going forward; CI re-runs generation and
+   a diff **fails the build** (`API_CONTRACT.md` §17 "Generated types").
+2. Until the generator is wired and green, the canonical
+   `frontend/src/types/api/catalog.ts` is **authored to the contract by hand**
+   and is the single source of truth for the catalogue module. When the
+   generator emits into that same path, its output **replaces** the hand-authored
+   file — the hand file is a **bootstrap, not a parallel copy**.
+3. The legacy `types/index.ts` demo shapes are **not** the contract and are
+   **not** imported by new module code. Contract types live only under
+   `types/api/**`.
+
+**Consequence.** The frontend is never blocked waiting for the generator, and
+ADR-029's "no hand-written duplicates" holds because the hand-authored file and
+the generated file occupy the **same path** — one strictly supersedes the other.
+
+---
+
 ## 6. Scope resolutions (contradiction ledger)
 
 Every contradiction found in the legacy documentation, and where it is resolved:
@@ -1020,6 +1094,7 @@ the question is escalated.
 | 2026-08-21 | ADR-001 … ADR-030 accepted. Legacy docs archived to `docs/_legacy/`. Canonical documentation set created. |
 | 2026-08-22 | **ADR-031 accepted** — motion, craft and the two-library motion stack (Framer Motion + GSAP), motion tokens, the three-tier loading model with a custom brand loader, and the required/permitted/forbidden motion matrix. Supersedes the "restrained Framer Motion" line in ADR-024 and updates the frontend stack table in §2. |
 | 2026-08-22 | Consistency pass (no decision changed): §1 now reads "ADR-001 through ADR-031"; the C4 resolution now names the actual outcome — **41 modules** in `MODULE_MAP.md`, not "35 domains". |
+| 2026-08-24 | **ADR-032 and ADR-033 accepted.** ADR-032 makes ADR-030's per-model **Policy** and **event/listener** artefacts *conditional* for standard CRUD modules: validation via Form Requests, serialisation via API Resources, mutations via Actions that write the audit row **inside** the transaction (ADR-027/028), and authorisation via the existing `permission:` middleware (ADR-008) — a Policy is added only for a row-level rule a permission string cannot express. ADR-033 resolves the generated-types bootstrap: install `spatie/laravel-typescript-transformer` emitting into `frontend/src/types/api/`, while the canonical `types/api/catalog.ts` is hand-authored to the contract until the generator is green, then replaced by generated output — one path, never a duplicate (ADR-029 upheld). §1 updated to "ADR-001 through ADR-033". No prior decision reversed. |
 
 
 

@@ -250,13 +250,24 @@ eleven Wave 21 finance & costing tables (§4.25),
 and fourteen Wave 22 reporting & analytics tables (§4.26)
 exist and are verified.
 
-**Absent — the rest of Phase 1:** `app/Modules`, `app/Support`, and every model,
-Action and endpoint over the one hundred and fifty-six tables. The three route files exist but
-register no routes yet.
+**Present — the Auth module and master-data models (§7 items 50–51):**
+`app/Modules/Auth/Controllers/AuthController.php` and all 12 Auth Actions,
+`app/Core/Auth/{JwtService, RefreshTokenService, PermissionCatalogue}` + the JWT/refresh
+exception types, `app/Core/Http/Middleware/{AuthenticateJwt, AuthorizePermission}`, and
+the 19 master-data Eloquent models over Waves 5–7. Auth routes **are** registered in
+`routes/api_public.php` (login, refresh, select-tenant, logout, forgot/reset-password)
+and `routes/api_tenant.php` (me, permissions, logout-all, switch-branch, preferences,
+change-password); `routes/api_platform.php` is an empty group awaiting platform modules.
+
+**Absent — the rest of the application:** `app/Support`, and every module's CRUD
+controllers, actions, policies, form requests and API resources over the master-data
+tables and all downstream modules (production, inventory, sales, delivery, HR, finance,
+reporting, e-commerce). No tenant CRUD endpoints are registered yet — the next action is
+§7 item 52, the master-data module pipeline.
 
 ### 4.5 Test coverage
 
-128 frontend tests over 7 files; **438 backend tests / 2290 assertions**. Frontend
+128 frontend tests over 7 files; **496 backend tests / 2941 assertions**. Frontend
 tests sit beside the code they cover (`vitest.config.ts`
 `include: ['src/**/*.{test,spec}.{ts,tsx}']`); backend schema contracts live in
 `tests/Feature/Database/` and the tenancy-runtime contract in
@@ -285,12 +296,18 @@ bans in the UI. If this repository ever has no tests, the gate should go red.
 | `tests/Feature/Database/Wave6MasterDataBSchemaTest.php` | 28 | Wave 6's product catalogue contract: five tables, SKU and barcode uniqueness, composite FK isolation on every reference (base unit, category, brand, tax profile, variant→product, image→product/variant, BoM→product/unit, BoM item→BoM/input-product/unit), BoM versioning unique `(tenant_id, product_id, version)`, CASCADE on BoM items, RESTRICT on raw-material products, and DECIMAL(18,4)/DECIMAL(8,4) precision (§4.11). |
 | `tests/Feature/Tenancy/TenancyRuntimeTest.php` | 3 | The tenancy runtime as a *behavioural* contract, not a schema one: layer-5 isolation between two bound tenants, `withoutTenantScope()` emitting its mandatory audit `Log::warning`, and `TenantContext::current()` throwing when nothing is bound (a queue job with no request context). The first assertion over live application code rather than migration metadata (§7 item 29). |
 
-What is **not** covered, and why: there is no feature code, no route, no store
-and no MSW handler to test. The backend suites are schema contracts plus the
-tenancy-runtime contract — there is no model, Action or endpoint over those
-twenty-four tables yet. Contract-level testing against `API_CONTRACT.md` begins
-with the first real endpoint, which builds on the now-complete tenancy runtime
-(§7 item 29).
+The per-suite table above pins down the Phase 0 frontend reliability layer, the
+Wave 1–2 schema contracts and the tenancy runtime. Since then the suite has grown
+to **496 backend tests / 2941 assertions**: the Wave 3–25 schema contracts, the
+`tests/Feature/Auth/` pipeline (Login, AuthMe, RefreshToken, Logout, Preferences,
+RbacMiddleware), the `tests/Unit/Auth/` unit tests (JwtService, PermissionCatalogue),
+and `tests/Feature/Models/MasterDataModelTest.php` over the 19 master-data models.
+
+What is **not** covered, and why: there is no per-module CRUD Action, controller or
+endpoint over the master-data tables yet, and therefore no store or MSW handler for
+them. Contract-level testing against `API_CONTRACT.md` for the master-data families
+begins with the first real CRUD endpoint (§7 item 52), which builds on the
+now-complete tenancy runtime (§7 item 29) and Auth pipeline (§7 item 50).
 
 ### 4.6 Migrations — Wave 1 (platform) complete
 
@@ -1538,7 +1555,7 @@ Q3, it stops and asks (`TASK_PROTOCOL.md` §3.2).
 | 49 | Phase 1 **Wave 25 — Deferred Closures**, per `DATABASE_DESIGN.md` §16: closed all 9 cross-group foreign keys. See §4.29. | ✅ |
 | 50 | Phase 1 **Auth & RBAC Implementation**, per `ROADMAP.md` & `MODULE_MAP.md`: Token Service (ADR-004 / ADR-007), Password hashing (Argon2id), RBAC middleware & permission enforcement. `app/Core/Auth/{JwtService, RefreshTokenService, PermissionCatalogue}` + JWT/refresh exception types, `app/Core/Http/Middleware/{AuthenticateJwt, AuthorizePermission}`, `app/Modules/Auth/Controllers/AuthController` + all 12 Auth Actions, wired through `config/auth.php` and the three route files. Tests in `tests/Feature/Auth/` (Login, AuthMe, RefreshToken, Logout, Preferences, RbacMiddleware). | ✅ |
 | 51 | Phase 2 **Master-data Eloquent models (tranche 1)**: 19 models over Waves 5–7 (`Unit`, `UnitConversion`, `Category`, `Brand`, `TaxProfile`, `ReasonCode`, `Product`, `ProductVariant`, `ProductImage`, `BillOfMaterial`, `BillOfMaterialItem`, `Warehouse`, `WarehouseLocation`, `Party`, `PartyAddress`, `PartyContact`, `PriceList`, `PriceListItem`, `DiscountRule`) on `BelongsToTenant`, string decimal casts per §1, composite-key relations. Verified by `tests/Feature/Models/MasterDataModelTest.php`. | ✅ |
-| 52 | Phase 2 **Master-data module pipeline** (controllers · actions · policies · form requests · API resources · routes · feature tests · TS types · query hooks · UI), per ADR-029 build order, starting with `units`/`categories`/`brands`. | ⬜ |
+| 52 | Phase 2 **Master-data module pipeline** — backend-first for `units`/`categories`/`brands` per ADR-029 build order and the **Pragmatic DoD (ADR-032)**: Form Requests · API Resources · Actions (audit inside the transaction) · controllers · routes · feature tests (cross-tenant isolation + permission matrix + envelope), authorised by `catalog.<resource>.{view,manage}` middleware (ADR-008), plus canonical `frontend/src/types/api/catalog.ts` and the spatie transformer path (ADR-033). UI paused for review afterwards. | 🔄 |
 
 ---
 
@@ -1571,9 +1588,15 @@ the `AuthenticateJwt`/`AuthorizePermission` middleware, `AuthController` with al
 Actions, and the `tests/Feature/Auth/` suite. The **first tranche of 19 master-data
 Eloquent models is done** (§7 item 51), verified by `tests/Feature/Models/MasterDataModelTest.php`.
 Backend is green at **496 tests / 2941 assertions**, PHPStan level 9 clean.
-Start at **§7 item 52 — the master-data module pipeline** (controllers → actions →
-policies → form requests → API resources → routes → feature tests → TS types → query
-hooks → UI), per ADR-029's build order and `MODULE_MAP.md`.
+Start at **§7 item 52 — the master-data module pipeline**. Per the newly recorded
+**ADR-032 (Pragmatic DoD)** the backend template is Form Requests → API Resources →
+Actions (audit row written inside the same DB transaction) → controller → routes →
+feature tests (cross-tenant isolation + permission matrix + envelope), authorised by the
+existing `catalog.<resource>.{view,manage}` middleware (ADR-008) — **no per-model Policy
+class** unless a row-level rule needs one. Types are the canonical
+`frontend/src/types/api/catalog.ts` wired to the spatie transformer path (**ADR-033**).
+Backend-first for `units`/`categories`/`brands` in parallel, verify green, then **pause for
+review before any UI**, per ADR-029's build order and `MODULE_MAP.md`.
 
 
 These constraints are already settled. Do not re-derive them, and do not
@@ -1653,6 +1676,7 @@ contradict them:
 | 2026-08-24 | **Phase 1 Wave 24 (Integrations) written and verified.** Three migrations: `webhook_endpoints`, `webhook_deliveries`, `imports` (`121000`–`121200`). Detailed per-table in **§4.28**. Outbound event webhooks with automatic circuit breaker on consecutive failures, immutable append-only webhook delivery attempt logs with async retry queue indexing, and bulk import jobs supporting simulation dry runs and error report spreadsheet paths. `SchemaTestCase` gained three fixture builder pairs. `Wave24IntegrationsSchemaTest` — **6 tests / 31 assertions**. Verified: `migrate:fresh` ✅ (169 migrations) · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **458 passed / 2444 assertions**, none risky. §7 item 48 complete. Next: §7 item 49 — Wave 25 (Deferred Closures). |
 | 2026-08-24 | **Phase 1 Wave 25 (Deferred Cross-Group FK Closures) written and verified — All 25 Migration Waves 100% complete!** One migration: `wave25_deferred_fk_closure` (`122000`). Detailed in **§4.29**. Closed all 9 cross-group and forward-referenced foreign keys: `employees.salary_structure_id`, `material_issue_items.stock_movement_id`, `production_outputs.stock_movement_id`, `qc_inspections.goods_receipt_id`, `wastage_records.stock_movement_id`, `worker_production_entries.payroll_period_id`, `run_sheets.vehicle_id`, `cod_reconciliations.bank_account_id`, `asset_depreciation_entries.journal_entry_id`. `Wave25DeferredClosureSchemaTest` — **9 tests / 18 assertions** confirming composite `(tenant_id, parent_id)` foreign keys are strictly enforced and cross-tenant references rejected across all 9 domain boundaries. Verified: `migrate:fresh` — all **170 migrations** green ✅ · `pint lint:fix` **PASS** · `phpstan analyse` level 9 **[OK] No errors** · `artisan test` **467 passed / 2465 assertions**, none risky. Per-suite re-measured: Wave 1 **11 tests** (547 assertions), Wave 2 **17**, Wave 3 **20**, Wave 4 **27**, Wave 5 **23**, Wave 6 **28**, Wave 7 **30**, Wave 8 **26**, Wave 10 **24**, Wave 11 **24**, Wave 12 **18**, Wave 13 **26**, Wave 14 **24**, Wave 15 **27**, Wave 16 **13**, Wave 17 **14**, Wave 18 **18**, Wave 19 **18**, Wave 20 **12**, Wave 21 **14**, Wave 22 **14**, Wave 23 **14**, Wave 24 **6**, Wave 25 **9**, Tenancy runtime **3**, Unit+Example **2**. §7 item 49 complete. The **entire database schema (169 tables, 170 migrations)** is fully built, migrated, and verified. Next: §7 item 50 — Auth & RBAC Implementation. |
 | 2026-08-24 | **Ledger truth-up: Phase 1 Auth & RBAC (§7 item 50) and the first master-data model tranche (§7 item 51) recorded as complete, and the backend count re-measured.** The ledger's §1/§2 already carried the Auth pipeline as done, but §7 item 50 still read ⬜ and §8 still said "Start at item 50" — a live-code / ledger disagreement of exactly the kind §0 forbids. Verified against disk before editing (no claim written from memory): `app/Modules/Auth/Controllers/AuthController.php` + all **12 Auth Actions** (`Login`, `SelectTenant`, `SwitchBranch`, `RefreshToken`, `Logout`, `LogoutAll`, `ChangePassword`, `ForgotPassword`, `ResetPassword`, `UpdatePreferences`, `GetAuthMe`, `GetPermissionsCatalogue`), the `app/Core/Auth/` service layer (`JwtService`, `RefreshTokenService`, `PermissionCatalogue`, and five JWT/refresh exception types), and the two middleware (`AuthenticateJwt`, `AuthorizePermission`) all present; `tests/Feature/Auth/` carries Login, AuthMe, RefreshToken, Logout, Preferences and RbacMiddleware suites. A first tranche of **19 master-data Eloquent models** over Waves 5–7 is also present (`Unit`, `UnitConversion`, `Category`, `Brand`, `TaxProfile`, `ReasonCode`, `Product`, `ProductVariant`, `ProductImage`, `BillOfMaterial`, `BillOfMaterialItem`, `Warehouse`, `WarehouseLocation`, `Party`, `PartyAddress`, `PartyContact`, `PriceList`, `PriceListItem`, `DiscountRule`) on `BelongsToTenant` with string decimal casts and composite-key relations, verified by `tests/Feature/Models/MasterDataModelTest.php`. Count **re-measured, not carried forward** (§8 rule): `php artisan test` reports **496 passed / 2941 assertions** (the ledger's stale 492/2575 corrected in §1's Backend and Tests rows). Reconciled: §7 item 50 → ✅ with its file inventory; new §7 items 51 (models, ✅) and 52 (the master-data module pipeline, ⬜); §8 resume paragraph re-pointed from item 50 to **item 52**. Docs only — no code changed this entry. Next: §7 item 52 — the master-data module pipeline per ADR-029 build order. |
+| 2026-08-24 | **Docs-first pass for the master-data module pipeline (§7 item 52) — two build decisions recorded, contract endpoints written, ledger re-pointed; no code yet.** Per the standing "update the docs first, then continue documented development" rule, the rank-1 authority `DECISIONS.md` gained **ADR-032 (Pragmatic Definition of Done for standard CRUD modules — Amends ADR-030)** and **ADR-033 (Generated TypeScript types: one canonical file, one directory — Clarifies ADR-029)**, the §1 range was bumped to "ADR-001 through ADR-033", and DECISIONS' own change log updated. ADR-032 makes ADR-030's Policy class and event/listener indirection **conditional** for plain CRUD: the reference template is Form Requests (validation) + API Resources (serialization) + Actions with the audit row written **inside** the mutation's `DB::transaction()`, authorised by the existing `permission:catalog.<resource>.<action>` middleware — no per-model Policy unless a row-level rule a permission string cannot express is needed; the cross-tenant isolation test, permission-matrix test, and envelope test stay mandatory. ADR-033 installs `spatie/laravel-typescript-transformer` emitting into `frontend/src/types/api/`, with CI re-running generation and failing on diff; until the generator is green, `types/api/catalog.ts` is hand-authored to the contract as a bootstrap (never a parallel copy), and legacy `types/index.ts` demo shapes are not contract. `API_CONTRACT.md` §15 gained a concrete **§15.4 Master-data catalogue** block specifying the `units`/`categories`/`brands` CRUD endpoints, mapping reads to `catalog.<resource>.view` and every mutation incl. delete to `catalog.<resource>.manage` (ADR-008's 2-action model), diverging deliberately from §15.1's generic create/edit/delete template. `DEVELOPMENT_STATUS.md` §7 item 52 moved ⬜ → 🔄 with the Pragmatic-DoD artefact list, and the §8 resume paragraph re-pointed to the ADR-032/ADR-033 template. Baseline unchanged and to be preserved: **496 tests / 2941 assertions**, PHPStan level 9 clean — counts to be **re-measured**, never carried forward, once backend code lands. Next: build the shared foundation (409 exception classes + `bootstrap/app.php` render mappings for `DUPLICATE`/`IN_USE`, `AuditLog` model + in-transaction helper), then the `units` reference vertical, then `categories`/`brands` in parallel; pause for review before any UI. |
 
 
 

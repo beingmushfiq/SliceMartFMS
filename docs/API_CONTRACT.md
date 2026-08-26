@@ -906,6 +906,69 @@ GET /api/v1/dashboards/{code}                    widgets the user may see
 
 ---
 
+### 15.4 Master-data catalogue — units · categories · brands
+
+The first concrete instance of the §15.1 template (Phase 2, §7 item 52). These three
+resources follow ADR-008's **2-action permission model**, so the generic
+`create`/`edit`/`delete` names in §15.1 **do not apply**: every read requires
+`catalog.<resource>.view` and every mutation — create, update, delete, restore, bulk —
+requires `catalog.<resource>.manage`. All endpoints sit under the authenticated,
+tenant-scoped `v1` group (`auth.jwt` + `tenant.active`), return the §2 envelope, and treat
+another tenant's `id` as **404, never 403** (§17). Delete is a soft delete and returns
+**409 `IN_USE`** (§3.5) when the row is still referenced; a duplicate `(tenant_id, code)`
+returns **409 `DUPLICATE`** with `{ field, value, existing_id }`.
+
+#### 15.4.1 `units`
+
+| Endpoint | Permission | Notes |
+|---|---|---|
+| `GET /api/v1/units` | `catalog.unit.view` | Paginated, filtered, sorted (§5). Filters: `type`, `is_base`, `is_active`, `q` (code/name) |
+| `GET /api/v1/units/{id}` | `catalog.unit.view` | Single resource |
+| `GET /api/v1/units/options` | `catalog.unit.view` | Lightweight `{id,label}` list for select boxes; honours `is_active` |
+| `POST /api/v1/units` | `catalog.unit.manage` | 201 + `Location`. 409 `DUPLICATE` on `(tenant_id, code)` |
+| `PATCH /api/v1/units/{id}` | `catalog.unit.manage` | Partial; omitted ≠ null (§1.5). `is_active` is toggled here, not via a status verb |
+| `DELETE /api/v1/units/{id}` | `catalog.unit.manage` | Soft delete; 409 `IN_USE` if referenced by products/conversions/BOM |
+| `POST /api/v1/units/bulk` | `catalog.unit.manage` | `{ action, ids[], payload }`; per-id results, never all-or-nothing (§15.1) |
+
+**Resource shape** — `id` (uuid), `code` (≤32), `name` (≤191), `type`
+(`weight|volume|length|piece|time`), `is_base` (bool), `precision` (int 0–9 = decimal
+places), `is_active` (bool), `created_at`, `updated_at`. **Create/patch body**: `code`,
+`name`, `type`, `is_base`, `precision`, `is_active`.
+
+#### 15.4.2 `categories`
+
+| Endpoint | Permission | Notes |
+|---|---|---|
+| `GET /api/v1/categories` | `catalog.category.view` | Paginated/filtered/sorted (§5). Filters: `parent_id`, `is_active`, `q`. `?include=parent` supported |
+| `GET /api/v1/categories/{id}` | `catalog.category.view` | Single resource; `include=parent,children` |
+| `GET /api/v1/categories/options` | `catalog.category.view` | `{id,label}` list; `label` is the materialised `path` for disambiguation |
+| `POST /api/v1/categories` | `catalog.category.manage` | 201 + `Location`. `parent_id` null = root. `path` is server-materialised, never client-set. 409 `DUPLICATE` on `(tenant_id, code)` |
+| `PATCH /api/v1/categories/{id}` | `catalog.category.manage` | Partial. Re-parenting recomputes `path` for the subtree; a cycle (new parent is the node itself or one of its descendants) is rejected `422 VALIDATION_FAILED` on `parent_id` |
+| `DELETE /api/v1/categories/{id}` | `catalog.category.manage` | Soft delete; 409 `IN_USE` if it has children or is referenced by products |
+| `POST /api/v1/categories/bulk` | `catalog.category.manage` | `{ action, ids[], payload }`; per-id results |
+
+**Resource shape** — `id` (uuid), `parent_id` (uuid\|null), `code` (≤32), `name` (≤191),
+`path` (≤512, **read-only**), `is_active`, `created_at`, `updated_at`. **Create/patch
+body**: `parent_id`, `code`, `name`, `is_active` (never `path`).
+
+#### 15.4.3 `brands`
+
+| Endpoint | Permission | Notes |
+|---|---|---|
+| `GET /api/v1/brands` | `catalog.brand.view` | Paginated/filtered/sorted (§5). Filters: `is_active`, `q` |
+| `GET /api/v1/brands/{id}` | `catalog.brand.view` | Single resource |
+| `GET /api/v1/brands/options` | `catalog.brand.view` | `{id,label}` list; honours `is_active` |
+| `POST /api/v1/brands` | `catalog.brand.manage` | 201 + `Location`. 409 `DUPLICATE` on `(tenant_id, code)` |
+| `PATCH /api/v1/brands/{id}` | `catalog.brand.manage` | Partial; omitted ≠ null |
+| `DELETE /api/v1/brands/{id}` | `catalog.brand.manage` | Soft delete; 409 `IN_USE` if referenced by products |
+| `POST /api/v1/brands/bulk` | `catalog.brand.manage` | `{ action, ids[], payload }`; per-id results |
+
+**Resource shape** — `id` (uuid), `code` (≤32), `name` (≤191), `logo_path` (≤255,
+nullable; a **disk path** not a URL, ADR-020), `is_active`, `created_at`, `updated_at`.
+**Create/patch body**: `code`, `name`, `logo_path`, `is_active`.
+
+---
+
 ## 16. Frontend consumption rules (binding)
 
 | # | Rule | Source |

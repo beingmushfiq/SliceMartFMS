@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Route;
  * Endpoints are registered here as modules are built. At this stage the file
  * exists and is valid PHP — no endpoints are defined until Wave 5+ modules ship.
  */
-Route::middleware(['auth.jwt', 'tenant.active'])
+Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
     ->prefix('v1')
     ->name('tenant.')
     ->group(static function (): void {
@@ -32,5 +32,27 @@ Route::middleware(['auth.jwt', 'tenant.active'])
             Route::post('switch-branch', [App\Modules\Auth\Controllers\AuthController::class, 'switchBranch'])->name('switch-branch');
             Route::patch('preferences', [App\Modules\Auth\Controllers\AuthController::class, 'updatePreferences'])->name('preferences');
             Route::patch('change-password', [App\Modules\Auth\Controllers\AuthController::class, 'changePassword'])->name('change-password');
+        });
+
+        // ── Catalogue: Units ──────────────────────────────────────────
+        Route::prefix('units')->name('units.')->group(static function (): void {
+            Route::get('options', [App\Modules\Catalogue\Controllers\UnitController::class, 'options'])
+                ->middleware('permission:catalog.unit.view')
+                ->name('options');
+            Route::get('/', [App\Modules\Catalogue\Controllers\UnitController::class, 'index'])
+                ->middleware('permission:catalog.unit.view')
+                ->name('index');
+            Route::post('/', [App\Modules\Catalogue\Controllers\UnitController::class, 'store'])
+                ->middleware('permission:catalog.unit.manage')
+                ->name('store');
+            Route::get('{unit:uuid}', [App\Modules\Catalogue\Controllers\UnitController::class, 'show'])
+                ->middleware('permission:catalog.unit.view')
+                ->name('show');
+            Route::patch('{unit:uuid}', [App\Modules\Catalogue\Controllers\UnitController::class, 'update'])
+                ->middleware('permission:catalog.unit.manage')
+                ->name('update');
+            Route::delete('{unit:uuid}', [App\Modules\Catalogue\Controllers\UnitController::class, 'destroy'])
+                ->middleware('permission:catalog.unit.manage')
+                ->name('destroy');
         });
     });

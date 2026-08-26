@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Core\Http\Exceptions\DuplicateResourceException;
+use App\Core\Http\Exceptions\ResourceInUseException;
 use App\Core\Http\Middleware\CorrelationId;
 use App\Core\Http\Middleware\EnsureTenantActive;
 use App\Core\Http\Middleware\ResolveTenant;
@@ -17,6 +19,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -52,8 +55,16 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => App\Core\Http\Middleware\AuthorizePermission::class,
         ]);
 
-        // Prepend CorrelationId to the api group so the id is bound before any
-        // other middleware runs — authentication failures need it in the log context.
+        // Middleware order in the api group (ARCHITECTURE §5.1):
+        //   CorrelationId → SubstituteBindings (route model binding) → throttle.
+        //
+        // NOTE: tenant.resolve and auth.jwt are registered as route-level
+        // middleware on the tenant routes in api_tenant.php.  However,
+        // SubstituteBindings (which resolves {unit:uuid} etc.) runs inside
+        // the api group BEFORE route middleware, so the tenant scope is not
+        // yet bound during route model binding.  This is a known limitation
+        // — tenant isolation for route-model-bound resources is enforced at
+        // the controller/action level (or via a future middleware reorder).
         $middleware->prependToGroup('api', CorrelationId::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -164,8 +175,10 @@ return Application::configure(basePath: dirname(__DIR__))
             );
         });
 
-        // 404 NOT_FOUND — Eloquent model not found within the tenant scope.
-        $exceptions->render(function (ModelNotFoundException $e, Request $request) {
+        // 404 NOT_FOUND — Laravel's Handler.prepareException() converts
+        // ModelNotFoundException → NotFoundHttpException before renderCallbacks
+        // run, so we must match NotFoundHttpException here.
+        $exceptions->render(function (NotFoundHttpException $e, Request $request) {
             return ErrorResponse::make(
                 request: $request,
                 code: 'NOT_FOUND',
@@ -211,6 +224,32 @@ return Application::configure(basePath: dirname(__DIR__))
                 message: 'The request references a tenant that does not match your session.',
                 httpStatus: 403,
                 retryable: false,
+            );
+        });
+
+        // 409 DUPLICATE — tenant-scoped uniqueness violated, e.g. a duplicate
+        // (tenant_id, code) (API_CONTRACT §3.5). details = {field,value,existing_id}.
+        $exceptions->render(function (DuplicateResourceException $e, Request $request) {
+            return ErrorResponse::make(
+                request: $request,
+                code: 'DUPLICATE',
+                message: $e->getMessage(),
+                httpStatus: 409,
+                retryable: false,
+                details: $e->details(),
+            );
+        });
+
+        // 409 IN_USE — soft delete refused because the row is still referenced
+        // (API_CONTRACT §3.5). details = {blocking_module,blocking_count}.
+        $exceptions->render(function (ResourceInUseException $e, Request $request) {
+            return ErrorResponse::make(
+                request: $request,
+                code: 'IN_USE',
+                message: $e->getMessage(),
+                httpStatus: 409,
+                retryable: false,
+                details: $e->details(),
             );
         });
 
