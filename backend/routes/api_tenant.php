@@ -100,4 +100,17 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             Route::delete('{product:uuid}', [App\Modules\Catalogue\Controllers\ProductController::class, 'destroy'])
                 ->middleware('permission:catalog.product.manage')->name('destroy');
         });
+
+        Route::prefix('bill-of-materials')->name('bill-of-materials.')->group(static function (): void {
+            Route::get('/', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'index'])
+                ->middleware('permission:catalog.bom.view')->name('index');
+            Route::post('/', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'store'])
+                ->middleware('permission:catalog.bom.manage')->name('store');
+            Route::get('{billOfMaterial:uuid}', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'show'])
+                ->middleware('permission:catalog.bom.view')->name('show');
+            Route::patch('{billOfMaterial:uuid}', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'update'])
+                ->middleware('permission:catalog.bom.manage')->name('update');
+            Route::delete('{billOfMaterial:uuid}', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'destroy'])
+                ->middleware('permission:catalog.bom.manage')->name('destroy');
+        });
     });

@@ -998,6 +998,29 @@ exposed. Decimal values are strings with four fractional places. `online_slug`
 and `online_meta` are accepted for forward compatibility but are not required for
 the Phase 2 catalogue workflow.
 
+#### 15.4.5 `bill-of-materials`
+
+Bill of materials are versioned recipes for products. They are tenant-scoped and
+follow the two-action permission model: reads require `catalog.bom.view`; create,
+update and lifecycle changes require `catalog.bom.manage`.
+
+| Endpoint | Permission | Notes |
+|---|---|---|
+| `GET /api/v1/bill-of-materials` | `catalog.bom.view` | Paginated/filtered/sorted by product, status and effective date |
+| `GET /api/v1/bill-of-materials/{id}` | `catalog.bom.view` | Includes component `items` by default; all public references are UUIDs |
+| `POST /api/v1/bill-of-materials` | `catalog.bom.manage` | Creates the recipe and nested items in one transaction; 201 + `Location` |
+| `PATCH /api/v1/bill-of-materials/{id}` | `catalog.bom.manage` | Partial header update; supplied `items` replaces the complete item set atomically |
+| `DELETE /api/v1/bill-of-materials/{id}` | `catalog.bom.manage` | Archives the version by setting `status=archived`; historical rows remain resolvable |
+
+**Resource shape** — `id` (uuid), `product_id`, `version`, `name`,
+`output_quantity`, `output_unit_id`, `expected_yield_percentage`, `status`,
+`effective_from`, `effective_to`, `items`, `created_at`, `updated_at`.
+Each item contains `product_id`, `quantity`, `unit_id`,
+`wastage_allowance_percentage`, `is_optional`, and `sort_order`. Decimal values
+are JSON strings with four fractional places; item and relation IDs are UUIDs.
+Create and update require `product_id`, `version`, `name`, `output_quantity`,
+`output_unit_id`, and an `items` array; item quantities must be positive.
+
 ---
 
 ## 16. Frontend consumption rules (binding)
