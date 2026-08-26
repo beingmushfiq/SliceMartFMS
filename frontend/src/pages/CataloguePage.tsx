@@ -1,22 +1,27 @@
-import { useQuery } from '@tanstack/react-query';
-import { Boxes, ChevronRight, Package, Search, Tags } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Boxes, ChevronRight, Package, Plus, Search, Tags, Warehouse as WarehouseIcon } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '../lib/api/client';
 import { QueryBoundary } from '../components/patterns/QueryBoundary';
-import { Input } from '../components/ui/FormElements';
-import type { Brand, Category, Product } from '../types/api/catalog';
+import { AsyncButton } from '../components/ui/AsyncButton';
+import { Button } from '../components/ui/Button';
+import { FormGroup, Input, Select } from '../components/ui/FormElements';
+import { Modal } from '../components/ui/Modal';
+import { isApiError } from '../lib/api/errors';
+import type { Brand, Category, Product, Warehouse } from '../types/api/catalog';
 
-type Section = 'products' | 'categories' | 'brands';
-type Row = Product | Category | Brand;
+type Section = 'products' | 'categories' | 'brands' | 'warehouses';
+type Row = Product | Category | Brand | Warehouse;
 
 const sections: Array<{ id: Section; label: string; icon: typeof Package }> = [
   { id: 'products', label: 'Products', icon: Package },
   { id: 'categories', label: 'Categories', icon: Tags },
   { id: 'brands', label: 'Brands', icon: Boxes },
+  { id: 'warehouses', label: 'Warehouses', icon: WarehouseIcon },
 ];
 
 function endpoint(section: Section): string {
-  return section === 'products' ? '/products' : `/${section}`;
+  return `/${section}`;
 }
 
 function useCatalogue(section: Section, search: string) {
@@ -32,20 +37,49 @@ function useCatalogue(section: Section, search: string) {
 
 function rowLabel(section: Section, row: Row): string {
   if (section === 'products') return `${(row as Product).name} · ${(row as Product).sku}`;
-  const item = row as Category | Brand;
+  const item = row as Category | Brand | Warehouse;
   return `${item.name} · ${item.code}`;
 }
 
 function rowMeta(section: Section, row: Row): string {
   if (section === 'products') return (row as Product).status;
-  return (row as Category | Brand).is_active ? 'Active' : 'Inactive';
+  const item = row as Category | Brand | Warehouse;
+  return item.is_active ? 'Active' : 'Inactive';
+}
+
+interface WarehouseDraft {
+  code: string;
+  name: string;
+  type: string;
+}
+
+function mutationErrorMessage(error: unknown): string {
+  if (isApiError(error)) {
+    if (error.code === 'DUPLICATE') return 'That warehouse code is already in use.';
+    if (error.code === 'VALIDATION_FAILED') return 'Check the required fields and try again.';
+    if (error.code === 'FORBIDDEN') return 'You do not have permission to create warehouses.';
+  }
+  return 'The warehouse could not be created. Try again.';
 }
 
 export default function CataloguePage() {
   const [section, setSection] = useState<Section>('products');
   const [search, setSearch] = useState('');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [draft, setDraft] = useState<WarehouseDraft>({ code: '', name: '', type: 'general' });
+  const queryClient = useQueryClient();
   const query = useCatalogue(section, search.trim());
   const rows = query.data?.data ?? [];
+  const createWarehouse = useMutation({
+    mutationFn: () => api.post<Warehouse>('/warehouses', draft),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['catalogue', 'warehouses'] });
+      setDraft({ code: '', name: '', type: 'general' });
+      setIsCreateOpen(false);
+    },
+  });
+
+  const canCreateWarehouse = draft.code.trim().length > 0 && draft.name.trim().length > 0;
 
   return (
     <main className="bg-base text-default min-h-dvh">
@@ -75,7 +109,10 @@ export default function CataloguePage() {
         <section className="flex flex-col gap-5" aria-labelledby="records-heading">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 id="records-heading" className="text-lg font-semibold">{sections.find((item) => item.id === section)?.label}</h2>
-            <Input aria-label="Search catalogue" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name or code" leftElement={<Search size={16} />} className="max-w-sm" />
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <Input aria-label="Search catalogue" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name or code" leftElement={<Search size={16} />} className="max-w-sm" />
+              {section === 'warehouses' && <Button type="button" size="sm" leftIcon={<Plus />} onClick={() => setIsCreateOpen(true)}>Add warehouse</Button>}
+            </div>
           </div>
           <QueryBoundary status={query.status} error={query.error} data={rows} isFetching={query.isFetching} hasActiveFilters={search.trim().length >= 2}>
             <div className="border-default overflow-hidden rounded-(--card-radius) border bg-surface">
@@ -84,6 +121,49 @@ export default function CataloguePage() {
           </QueryBoundary>
         </section>
       </div>
+      <Modal
+        open={isCreateOpen}
+        onClose={() => {
+          if (!createWarehouse.isPending) setIsCreateOpen(false);
+        }}
+        title="Add warehouse"
+        isDirty={draft.code !== '' || draft.name !== ''}
+        footer={
+          <>
+            <Button type="button" variant="secondary" onClick={() => setIsCreateOpen(false)} disabled={createWarehouse.isPending}>Cancel</Button>
+            <AsyncButton
+              type="button"
+              onClick={async () => {
+                await createWarehouse.mutateAsync();
+              }}
+              disabled={!canCreateWarehouse}
+              errorMessage={mutationErrorMessage(createWarehouse.error)}
+            >
+              Create warehouse
+            </AsyncButton>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <FormGroup label="Code" required id="warehouse-code">
+            <Input id="warehouse-code" value={draft.code} onChange={(event) => setDraft((current) => ({ ...current, code: event.target.value }))} maxLength={32} autoFocus />
+          </FormGroup>
+          <FormGroup label="Name" required id="warehouse-name">
+            <Input id="warehouse-name" value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} maxLength={191} />
+          </FormGroup>
+          <FormGroup label="Type" id="warehouse-type">
+            <Select id="warehouse-type" value={draft.type} onChange={(event) => setDraft((current) => ({ ...current, type: event.target.value }))}>
+              <option value="general">General</option>
+              <option value="raw_material">Raw material</option>
+              <option value="finished_goods">Finished goods</option>
+              <option value="packaging">Packaging</option>
+              <option value="quarantine">Quarantine</option>
+              <option value="scrap">Scrap</option>
+              <option value="transit">Transit</option>
+            </Select>
+          </FormGroup>
+        </div>
+      </Modal>
     </main>
   );
 }

@@ -53,3 +53,29 @@ export interface Product extends CatalogTimestamped {
   online_meta: Record<string, unknown> | null
   status: string
 }
+
+export interface WarehouseLocation extends CatalogTimestamped {
+  id: string
+  warehouse_id: string
+  parent_id: string | null
+  code: string
+  name: string
+  type: string
+  is_active: boolean
+  parent?: WarehouseLocation | null
+}
+
+export interface Warehouse extends CatalogTimestamped {
+  id: string
+  code: string
+  name: string
+  type: string
+  address: string | null
+  company_id: string | null
+  branch_id: string | null
+  factory_id: string | null
+  is_default: boolean
+  allows_negative_stock: boolean
+  is_active: boolean
+  locations?: WarehouseLocation[] | null
+}

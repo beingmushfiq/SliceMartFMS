@@ -127,5 +127,18 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 ->middleware('permission:inventory.warehouse.manage')->name('update');
             Route::delete('{warehouse:uuid}', [App\Modules\Catalogue\Controllers\WarehouseController::class, 'destroy'])
                 ->middleware('permission:inventory.warehouse.manage')->name('destroy');
+
+            Route::prefix('{warehouse:uuid}/locations')->name('locations.')->group(static function (): void {
+                Route::get('/', [App\Modules\Catalogue\Controllers\WarehouseLocationController::class, 'index'])
+                    ->middleware('permission:inventory.warehouse.view')->name('index');
+                Route::post('/', [App\Modules\Catalogue\Controllers\WarehouseLocationController::class, 'store'])
+                    ->middleware('permission:inventory.warehouse.manage')->name('store');
+                Route::get('{location:uuid}', [App\Modules\Catalogue\Controllers\WarehouseLocationController::class, 'show'])
+                    ->middleware('permission:inventory.warehouse.view')->name('show');
+                Route::patch('{location:uuid}', [App\Modules\Catalogue\Controllers\WarehouseLocationController::class, 'update'])
+                    ->middleware('permission:inventory.warehouse.manage')->name('update');
+                Route::delete('{location:uuid}', [App\Modules\Catalogue\Controllers\WarehouseLocationController::class, 'destroy'])
+                    ->middleware('permission:inventory.warehouse.manage')->name('destroy');
+            });
         });
     });
