@@ -85,4 +85,19 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             Route::delete('{category:uuid}', [App\Modules\Catalogue\Controllers\CategoryController::class, 'destroy'])
                 ->middleware('permission:catalog.category.manage')->name('destroy');
         });
+
+        Route::prefix('products')->name('products.')->group(static function (): void {
+            Route::get('options', [App\Modules\Catalogue\Controllers\ProductController::class, 'options'])
+                ->middleware('permission:catalog.product.view')->name('options');
+            Route::get('/', [App\Modules\Catalogue\Controllers\ProductController::class, 'index'])
+                ->middleware('permission:catalog.product.view')->name('index');
+            Route::post('/', [App\Modules\Catalogue\Controllers\ProductController::class, 'store'])
+                ->middleware('permission:catalog.product.manage')->name('store');
+            Route::get('{product:uuid}', [App\Modules\Catalogue\Controllers\ProductController::class, 'show'])
+                ->middleware('permission:catalog.product.view')->name('show');
+            Route::patch('{product:uuid}', [App\Modules\Catalogue\Controllers\ProductController::class, 'update'])
+                ->middleware('permission:catalog.product.manage')->name('update');
+            Route::delete('{product:uuid}', [App\Modules\Catalogue\Controllers\ProductController::class, 'destroy'])
+                ->middleware('permission:catalog.product.manage')->name('destroy');
+        });
     });

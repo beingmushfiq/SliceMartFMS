@@ -967,6 +967,37 @@ body**: `parent_id`, `code`, `name`, `is_active` (never `path`).
 nullable; a **disk path** not a URL, ADR-020), `is_active`, `created_at`, `updated_at`.
 **Create/patch body**: `code`, `name`, `logo_path`, `is_active`.
 
+#### 15.4.4 `products`
+
+Products are the central tenant-scoped catalogue records used by production,
+purchasing, sales and POS (ADR-016). Product CRUD follows ADR-032's two-action
+permission model: reads require `catalog.product.view`; create, update and delete
+require `catalog.product.manage`.
+
+| Endpoint | Permission | Notes |
+|---|---|---|
+| `GET /api/v1/products` | `catalog.product.view` | Paginated/filtered/sorted (§5). Filters: `type`, `status`, `category_id`, `brand_id`, `is_online`, `q` (sku/name/barcode) |
+| `GET /api/v1/products/{id}` | `catalog.product.view` | Single resource; `include=category,brand,units` supports shallow relations |
+| `GET /api/v1/products/options` | `catalog.product.view` | Active products as `{id,label}` where label is `name (sku)` |
+| `POST /api/v1/products` | `catalog.product.manage` | 201 + `Location`. `sku` is unique within a tenant, including soft-deleted rows |
+| `PATCH /api/v1/products/{id}` | `catalog.product.manage` | Partial; omitted fields are unchanged and `null` clears nullable fields |
+| `DELETE /api/v1/products/{id}` | `catalog.product.manage` | Soft delete; 409 `IN_USE` if variants, images, BOMs or other live references exist |
+
+**Resource shape** — `id` (uuid), `sku`, `barcode`, `name`, `description`, `type`
+(`raw_material|semi_finished|finished|packaging|consumable|service|asset_part`),
+`category_id` and `brand_id` (uuid or null), `base_unit_id`, `purchase_unit_id`,
+`sales_unit_id` (uuid or null), capability flags `is_produced`, `is_purchased`,
+`is_sold`, `is_stock_tracked`, `has_variants`, `tracking_mode`
+(`none|batch|serial|batch_and_serial`), `shelf_life_days`, `reorder_level`,
+`reorder_quantity`, `standard_cost`, `default_sale_price`, `tax_profile_id`
+(uuid or null), `weight`, `dimensions`, `is_online`, `online_slug`, `online_meta`,
+`status` (`active|discontinued|draft`), `created_at`, `updated_at`.
+
+Public relation identifiers are UUIDs; internal integer foreign keys are never
+exposed. Decimal values are strings with four fractional places. `online_slug`
+and `online_meta` are accepted for forward compatibility but are not required for
+the Phase 2 catalogue workflow.
+
 ---
 
 ## 16. Frontend consumption rules (binding)

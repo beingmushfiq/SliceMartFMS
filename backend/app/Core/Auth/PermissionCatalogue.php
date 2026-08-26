@@ -80,6 +80,7 @@ class PermissionCatalogue
         'catalog.brand.view',
         'catalog.brand.manage',
         'catalog.product.view',
+        'catalog.product.manage',
         'catalog.product.create',
         'catalog.product.update',
         'catalog.product.delete',
