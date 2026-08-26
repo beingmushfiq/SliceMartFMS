@@ -3,7 +3,6 @@ import { Boxes, ChevronRight, Package, Search, Tags } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '../lib/api/client';
 import { QueryBoundary } from '../components/patterns/QueryBoundary';
-import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/FormElements';
 import type { Brand, Category, Product } from '../types/api/catalog';
 
@@ -57,7 +56,6 @@ export default function CataloguePage() {
             <h1 className="mt-2 text-3xl font-bold tracking-tight">Catalogue workspace</h1>
             <p className="text-muted mt-2 max-w-xl text-sm">Keep the records that production, purchasing, and sales depend on in one quiet place.</p>
           </div>
-          <Button variant="primary" size="md">Add {section.slice(0, -1)}</Button>
         </header>
 
         <nav className="border-default flex gap-1 border-b" aria-label="Catalogue sections">
