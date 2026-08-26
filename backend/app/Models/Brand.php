@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Core\Tenancy\Concerns\BelongsToTenant;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -34,6 +35,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 final class Brand extends Model
 {
     use BelongsToTenant;
+
+    /** @use HasFactory<\Database\Factories\BrandFactory> */
+    use HasFactory;
     use SoftDeletes;
 
     /**

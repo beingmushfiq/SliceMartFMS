@@ -55,4 +55,34 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 ->middleware('permission:catalog.unit.manage')
                 ->name('destroy');
         });
+
+        Route::prefix('brands')->name('brands.')->group(static function (): void {
+            Route::get('options', [App\Modules\Catalogue\Controllers\BrandController::class, 'options'])
+                ->middleware('permission:catalog.brand.view')->name('options');
+            Route::get('/', [App\Modules\Catalogue\Controllers\BrandController::class, 'index'])
+                ->middleware('permission:catalog.brand.view')->name('index');
+            Route::post('/', [App\Modules\Catalogue\Controllers\BrandController::class, 'store'])
+                ->middleware('permission:catalog.brand.manage')->name('store');
+            Route::get('{brand:uuid}', [App\Modules\Catalogue\Controllers\BrandController::class, 'show'])
+                ->middleware('permission:catalog.brand.view')->name('show');
+            Route::patch('{brand:uuid}', [App\Modules\Catalogue\Controllers\BrandController::class, 'update'])
+                ->middleware('permission:catalog.brand.manage')->name('update');
+            Route::delete('{brand:uuid}', [App\Modules\Catalogue\Controllers\BrandController::class, 'destroy'])
+                ->middleware('permission:catalog.brand.manage')->name('destroy');
+        });
+
+        Route::prefix('categories')->name('categories.')->group(static function (): void {
+            Route::get('options', [App\Modules\Catalogue\Controllers\CategoryController::class, 'options'])
+                ->middleware('permission:catalog.category.view')->name('options');
+            Route::get('/', [App\Modules\Catalogue\Controllers\CategoryController::class, 'index'])
+                ->middleware('permission:catalog.category.view')->name('index');
+            Route::post('/', [App\Modules\Catalogue\Controllers\CategoryController::class, 'store'])
+                ->middleware('permission:catalog.category.manage')->name('store');
+            Route::get('{category:uuid}', [App\Modules\Catalogue\Controllers\CategoryController::class, 'show'])
+                ->middleware('permission:catalog.category.view')->name('show');
+            Route::patch('{category:uuid}', [App\Modules\Catalogue\Controllers\CategoryController::class, 'update'])
+                ->middleware('permission:catalog.category.manage')->name('update');
+            Route::delete('{category:uuid}', [App\Modules\Catalogue\Controllers\CategoryController::class, 'destroy'])
+                ->middleware('permission:catalog.category.manage')->name('destroy');
+        });
     });
