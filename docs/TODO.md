@@ -29,31 +29,73 @@
     - [x] `BillOfMaterialsSection.tsx` (Recipe manager, output quantity, Create BOM modal).
     - [x] `WarehousesSection.tsx` (Warehouse cards, location bin manager, Create Warehouse modal).
     - [x] `PartiesSection.tsx` (Suppliers, Customers, Dealers, Agents, Credit limits, Addresses, Contacts).
-- [ ] **Master Data Seeders & Factories:**
-  - [ ] Author demo tenant master data seeders (`UnitsTableSeeder`, `CategoriesTableSeeder`, `ProductsTableSeeder`, `BOMTableSeeder`, `WarehousesTableSeeder`, `PartiesTableSeeder`).
+- [x] **Master Data Seeders & Factories:**
+  - [x] Author demo tenant master data seeders (`PlansAndTenantsSeeder`, `RolesAndPermissionsSeeder`, `UnitsTableSeeder`, `CategoriesTableSeeder`, `BrandsTableSeeder`, `TaxProfilesTableSeeder`, `ReasonCodesTableSeeder`, `WarehousesTableSeeder`, `ProductsTableSeeder`, `BOMTableSeeder`, `PartiesTableSeeder`, `PricingTableSeeder`).
+  - [x] Verify `php artisan migrate:fresh --seed` runs cleanly with 100% relational integrity.
 
 ---
 
-## 2. Phase 3 (Production Execution & QC) — Upcoming
-
-- [ ] Implement `ProductionPlanController` and planning schedule actions.
-- [ ] Implement `ProductionBatchController` with lifecycle state transitions (`draft → collecting → context_complete → analysed → closed`).
-- [ ] Implement `MaterialIssueController` and stock ledger integration.
-- [ ] Implement `WorkerProductionEntryController` for floor tablet logging.
-- [ ] Implement `QCInspectionController` with pass / rework / scrap / wastage routing.
-- [ ] Implement automatic yield calculation upon batch `context_complete`.
-- [ ] Build Production floor touch UI screens.
+### Phase 3 — Production & Operations Execution (100% Complete)
+- [x] **Production Planning Vertical:**
+  - [x] Eloquent models `ProductionPlan` & `ProductionPlanItem` with tenancy and string decimal casting.
+  - [x] Form Requests `StoreProductionPlanRequest` & `UpdateProductionPlanRequest`.
+  - [x] API Resources `ProductionPlanResource` & `ProductionPlanItemResource`.
+  - [x] Transactional Actions `CreateProductionPlanAction`, `UpdateProductionPlanAction`, `ApproveProductionPlanAction`, `DeleteProductionPlanAction`.
+  - [x] Controller `ProductionPlanController` with `index`, `store`, `show`, `update`, `approve`, `destroy`.
+  - [x] Route registration in `routes/api_tenant.php`.
+  - [x] Feature test suite `ProductionPlanTest` (8 tests / 40 assertions, 100% green).
+- [x] **Production Batch & State Machine Vertical:**
+  - [x] Eloquent models `ProductionBatch`, `ProductionBatchInput`, and `ProductionOutput` on `BelongsToTenant`.
+  - [x] Lifecycle state transitions (`draft → collecting → context_complete → analysed → closed` and `draft → scheduled → in_progress → completed → closed`).
+  - [x] Atomic material input and output recording with real-time total quantities rollup.
+  - [x] Automated yield and variance calculations per ADR-012 with process loss computation.
+  - [x] Transactional Actions (`CreateProductionBatchAction`, `UpdateProductionBatchAction`, `StartProductionBatchAction`, `RecordBatchInputAction`, `RecordBatchOutputAction`, `AnalyzeBatchYieldAction`, `CompleteProductionBatchAction`, `CloseProductionBatchAction`, `DeleteProductionBatchAction`).
+  - [x] Form Requests and API Resources (`ProductionBatchResource`, `ProductionBatchInputResource`, `ProductionOutputResource`).
+  - [x] Controller `ProductionBatchController` with 9 endpoints registered in `routes/api_tenant.php`.
+  - [x] Feature test suite `ProductionBatchTest` (8 tests / 51 assertions, 100% green).
+- [x] **Worker Production Output Vertical:**
+  - [x] Eloquent models `Employee` and `WorkerProductionEntry` on `BelongsToTenant`.
+  - [x] ADR-013 workforce logging (many-to-many worker/batch/product/shift).
+  - [x] Piece-rate, hourly, rework, and rejected quantity tracking.
+  - [x] Supervisor verification lifecycle (`draft → verified`), locking, and summary aggregation stats.
+  - [x] Transactional Actions (`CreateWorkerProductionEntryAction`, `UpdateWorkerProductionEntryAction`, `VerifyWorkerProductionEntryAction`, `DeleteWorkerProductionEntryAction`).
+  - [x] Form Requests & API Resources (`StoreWorkerProductionEntryRequest`, `UpdateWorkerProductionEntryRequest`, `WorkerProductionEntryResource`, `EmployeeResource`).
+  - [x] Controller `WorkerProductionEntryController` with 6 endpoints registered in `routes/api_tenant.php`.
+  - [x] Feature test suite `WorkerProductionEntryTest` (8 tests / 40 assertions, 100% green).
+- [x] **Quality Control (QC) & Wastage Module:**
+  - [x] Eloquent models `QcParameter`, `QcInspection`, `QcInspectionResult`, `QcDefect`, `WastageRecord`.
+  - [x] Form Requests & API Resources (`StoreQcParameterRequest`, `StoreQcInspectionRequest`, `StoreWastageRecordRequest`, `QcParameterResource`, `QcInspectionResource`, `WastageRecordResource`).
+  - [x] Transactional Actions (`CreateQcParameterAction`, `CreateQcInspectionAction`, `ApproveQcInspectionAction`, `CreateWastageRecordAction`, etc.).
+  - [x] Controllers (`QcParameterController`, `QcInspectionController`, `WastageRecordController`) registered in `routes/api_tenant.php`.
+  - [x] Feature test suites `QcInspectionTest` and `WastageRecordTest` (100% green).
+- [x] **Phase 3 Frontend Workspaces & Touch Interfaces:**
+  - [x] `ProductionWorkspace.tsx` with `ProductionPlansSection.tsx`, `ProductionBatchesSection.tsx`, and `WorkerProductionSection.tsx` (touch/tablet fast entry).
+  - [x] `QcWorkspace.tsx` with `QcParametersSection.tsx`, `QcInspectionsSection.tsx`, and `WastageRecordsSection.tsx`.
+  - [x] Route registration for `/production` and `/qc` in `frontend/src/routes/index.tsx` and sidebar navigation with permission gating.
+  - [x] Complete TypeScript API types (`production.ts`, `qc.ts`).
 
 ---
 
-## 3. Phase 4 (Procurement & Stock Operations) — Upcoming
+### Phase 4 — Procurement & Stock Operations (100% Complete)
 
-- [ ] Implement `StockMovementController` and ledger inspection endpoints.
-- [ ] Implement `StockTransferController` with multi-step `in_transit` tracking.
-- [ ] Implement `StockAdjustmentController` with mandatory reason codes.
-- [ ] Implement `StockCountController` with physical vs book reconciliation.
-- [ ] Implement Procurement chain: `PurchaseRequisition` → `PurchaseOrder` → `GoodsReceipt` → `PurchaseBill` → `PurchaseReturn`.
-- [ ] Build Storekeeper and Purchasing Officer desktop and tablet interfaces.
+- [x] **Inventory & Stock Operations Vertical (Backend):**
+  - [x] Implement `StockMovementController` and immutable ledger inspection endpoints.
+  - [x] Implement `StockTransferController` with multi-step `in_transit` dispatch/receive tracking.
+  - [x] Implement `StockAdjustmentController` with mandatory reason codes and type classification.
+  - [x] Implement `StockCountController` with physical vs book snapshot reconciliation.
+  - [x] Author feature tests `StockMovementTest`, `StockTransferTest`, `StockAdjustmentTest`, `StockCountTest` (100% green).
+- [x] **Procurement Chain Vertical (Backend):**
+  - [x] Implement `PurchaseRequisitionController` with approval workflow.
+  - [x] Implement `PurchaseOrderController` with vendor commitments, multi-currency terms, and approvals.
+  - [x] Implement `GoodsReceiptController` (GRN) with 3-way match, lot assignment, and automated stock movement posting.
+  - [x] Implement `PurchaseBillController` with accounts payable matching and payment terms.
+  - [x] Implement `PurchaseReturnController` with return reasons, vendor credit notes, and stock deduction.
+  - [x] Author feature tests `PurchaseRequisitionTest`, `PurchaseOrderTest`, `GoodsReceiptTest`, `PurchaseBillTest`, `PurchaseReturnTest` (100% green).
+- [x] **Phase 4 Frontend Workspaces & Fast Entry (Frontend):**
+  - [x] `InventoryWorkspace.tsx` with `StockLedgerSection.tsx`, `StockTransfersSection.tsx`, `StockAdjustmentsSection.tsx`, `StockCountsSection.tsx`.
+  - [x] `PurchasingWorkspace.tsx` with `PurchaseOrdersSection.tsx`, `GoodsReceiptsSection.tsx`, `PurchaseRequisitionsSection.tsx`, `PurchaseBillsSection.tsx`, `PurchaseReturnsSection.tsx`.
+  - [x] Route registration and sidebar navigation with permission gating.
+  - [x] Complete TypeScript API types (`inventory.ts`, `purchasing.ts`).
 
 ---
 

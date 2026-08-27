@@ -1,0 +1,100 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Purchasing\Controllers;
+
+use App\Http\Controllers\Controller;
+use App\Modules\Purchasing\Actions\ApprovePurchaseOrderAction;
+use App\Modules\Purchasing\Actions\CreatePurchaseOrderAction;
+use App\Modules\Purchasing\Models\PurchaseOrder;
+use App\Modules\Purchasing\Requests\StorePurchaseOrderRequest;
+use App\Modules\Purchasing\Resources\PurchaseOrderResource;
+use App\Core\Tenancy\TenantContext;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+
+final class PurchaseOrderController extends Controller
+{
+    public function __construct(
+        private readonly CreatePurchaseOrderAction $createOrder,
+        private readonly ApprovePurchaseOrderAction $approveOrder
+    ) {}
+
+    public function index(Request $request): AnonymousResourceCollection
+    {
+        $tenantId = TenantContext::current()->tenantId();
+
+        $query = PurchaseOrder::with(['supplier', 'warehouse', 'items.product', 'items.unit'])
+            ->where('tenant_id', $tenantId);
+
+        if ($request->filled('status')) {
+            $query->where('status', (string) $request->query('status'));
+        }
+
+        if ($request->filled('party_id')) {
+            $query->where('party_id', (int) $request->query('party_id'));
+        }
+
+        if ($request->filled('warehouse_id')) {
+            $query->where('warehouse_id', (int) $request->query('warehouse_id'));
+        }
+
+        if ($request->filled('q')) {
+            $search = (string) $request->query('q');
+            $query->where('po_number', 'like', "%{$search}%");
+        }
+
+        $orders = $query->orderByDesc('order_date')
+            ->orderByDesc('id')
+            ->paginate((int) $request->query('per_page', 25));
+
+        return PurchaseOrderResource::collection($orders);
+    }
+
+    public function store(StorePurchaseOrderRequest $request): JsonResponse
+    {
+        $tenantId = TenantContext::current()->tenantId();
+        $validated = $request->validated();
+
+        /** @var array{party_id: int, warehouse_id: int, order_date: string, po_number?: string, expected_delivery_date?: string|null, currency_code?: string, exchange_rate?: string, notes?: string|null, terms_and_conditions?: string|null, items: list<array{product_id: int, quantity: string, unit_id: int, unit_price: string, variant_id?: int|null, discount_amount?: string, tax_profile_id?: int|null, tax_rate?: string, expected_date?: string|null, notes?: string|null}>} $validated */
+        $order = $this->createOrder->execute([
+            ...$validated,
+            'tenant_id' => $tenantId,
+            'created_by' => (int) $request->user()?->id,
+        ]);
+
+        return (new PurchaseOrderResource($order))
+            ->response()
+            ->setStatusCode(201);
+    }
+
+    public function show(int $id): PurchaseOrderResource
+    {
+        $tenantId = TenantContext::current()->tenantId();
+
+        $order = PurchaseOrder::with(['supplier', 'warehouse', 'items.product', 'items.unit'])
+            ->where('tenant_id', $tenantId)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        return new PurchaseOrderResource($order);
+    }
+
+    public function approve(int $id, Request $request): PurchaseOrderResource
+    {
+        $tenantId = TenantContext::current()->tenantId();
+
+        $order = PurchaseOrder::where('tenant_id', $tenantId)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $approved = $this->approveOrder->execute(
+            $order,
+            (int) $request->user()?->id
+        );
+
+        return new PurchaseOrderResource($approved);
+    }
+}

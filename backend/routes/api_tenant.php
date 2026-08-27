@@ -86,6 +86,13 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 ->middleware('permission:catalog.category.manage')->name('destroy');
         });
 
+        Route::prefix('reason-codes')->name('reason-codes.')->group(static function (): void {
+            Route::get('options', [App\Modules\Catalogue\Controllers\ReasonCodeController::class, 'options'])
+                ->middleware('permission:inventory.stock.view')->name('options');
+            Route::get('/', [App\Modules\Catalogue\Controllers\ReasonCodeController::class, 'index'])
+                ->middleware('permission:inventory.stock.view')->name('index');
+        });
+
         Route::prefix('products')->name('products.')->group(static function (): void {
             Route::get('options', [App\Modules\Catalogue\Controllers\ProductController::class, 'options'])
                 ->middleware('permission:catalog.product.view')->name('options');
@@ -202,5 +209,298 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::delete('{taxProfile:uuid}', [App\Modules\Pricing\Controllers\TaxProfileController::class, 'destroy'])
                     ->middleware('permission:pricing.tax_profile.manage')->name('destroy');
             });
+        });
+
+        // ── Production ────────────────────────────────────────────────
+        Route::prefix('production')->name('production.')->group(static function (): void {
+            Route::prefix('plans')->name('plans.')->group(static function (): void {
+                Route::get('/', [App\Modules\Production\Controllers\ProductionPlanController::class, 'index'])
+                    ->middleware('permission:production.plan.view')->name('index');
+                Route::post('/', [App\Modules\Production\Controllers\ProductionPlanController::class, 'store'])
+                    ->middleware('permission:production.plan.create')->name('store');
+                Route::get('{productionPlan:uuid}', [App\Modules\Production\Controllers\ProductionPlanController::class, 'show'])
+                    ->middleware('permission:production.plan.view')->name('show');
+                Route::patch('{productionPlan:uuid}', [App\Modules\Production\Controllers\ProductionPlanController::class, 'update'])
+                    ->middleware('permission:production.plan.create')->name('update');
+                Route::post('{productionPlan:uuid}/approve', [App\Modules\Production\Controllers\ProductionPlanController::class, 'approve'])
+                    ->middleware('permission:production.plan.approve')->name('approve');
+                Route::delete('{productionPlan:uuid}', [App\Modules\Production\Controllers\ProductionPlanController::class, 'destroy'])
+                    ->middleware('permission:production.plan.delete')->name('destroy');
+            });
+
+            Route::prefix('batches')->name('batches.')->group(static function (): void {
+                Route::get('/', [App\Modules\Production\Controllers\ProductionBatchController::class, 'index'])
+                    ->middleware('permission:production.batch.view')->name('index');
+                Route::post('/', [App\Modules\Production\Controllers\ProductionBatchController::class, 'store'])
+                    ->middleware('permission:production.batch.create')->name('store');
+                Route::get('{productionBatch:uuid}', [App\Modules\Production\Controllers\ProductionBatchController::class, 'show'])
+                    ->middleware('permission:production.batch.view')->name('show');
+                Route::patch('{productionBatch:uuid}', [App\Modules\Production\Controllers\ProductionBatchController::class, 'update'])
+                    ->middleware('permission:production.batch.update')->name('update');
+                Route::post('{productionBatch:uuid}/start', [App\Modules\Production\Controllers\ProductionBatchController::class, 'start'])
+                    ->middleware('permission:production.batch.update')->name('start');
+                Route::post('{productionBatch:uuid}/inputs', [App\Modules\Production\Controllers\ProductionBatchController::class, 'recordInput'])
+                    ->middleware('permission:production.batch.create')->name('inputs.store');
+                Route::post('{productionBatch:uuid}/outputs', [App\Modules\Production\Controllers\ProductionBatchController::class, 'recordOutput'])
+                    ->middleware('permission:production.batch.create')->name('outputs.store');
+                Route::post('{productionBatch:uuid}/complete', [App\Modules\Production\Controllers\ProductionBatchController::class, 'complete'])
+                    ->middleware('permission:production.batch.approve')->name('complete');
+                Route::post('{productionBatch:uuid}/analyze', [App\Modules\Production\Controllers\ProductionBatchController::class, 'analyze'])
+                    ->middleware('permission:production.batch.view')->name('analyze');
+                Route::post('{productionBatch:uuid}/close', [App\Modules\Production\Controllers\ProductionBatchController::class, 'close'])
+                    ->middleware('permission:production.batch.approve')->name('close');
+                Route::delete('{productionBatch:uuid}', [App\Modules\Production\Controllers\ProductionBatchController::class, 'destroy'])
+                    ->middleware('permission:production.batch.delete')->name('destroy');
+            });
+
+            Route::prefix('worker-entries')->name('worker-entries.')->group(static function (): void {
+                Route::get('/', [App\Modules\Production\Controllers\WorkerProductionEntryController::class, 'index'])
+                    ->middleware('permission:production.worker_entry.view')->name('index');
+                Route::get('/summary', [App\Modules\Production\Controllers\WorkerProductionEntryController::class, 'summary'])
+                    ->middleware('permission:production.worker_entry.view')->name('summary');
+                Route::post('/', [App\Modules\Production\Controllers\WorkerProductionEntryController::class, 'store'])
+                    ->middleware('permission:production.worker_entry.create')->name('store');
+                Route::get('{workerProductionEntry:uuid}', [App\Modules\Production\Controllers\WorkerProductionEntryController::class, 'show'])
+                    ->middleware('permission:production.worker_entry.view')->name('show');
+                Route::patch('{workerProductionEntry:uuid}', [App\Modules\Production\Controllers\WorkerProductionEntryController::class, 'update'])
+                    ->middleware('permission:production.worker_entry.update')->name('update');
+                Route::post('{workerProductionEntry:uuid}/verify', [App\Modules\Production\Controllers\WorkerProductionEntryController::class, 'verify'])
+                    ->middleware('permission:production.worker_entry.approve')->name('verify');
+                Route::delete('{workerProductionEntry:uuid}', [App\Modules\Production\Controllers\WorkerProductionEntryController::class, 'destroy'])
+                    ->middleware('permission:production.worker_entry.delete')->name('destroy');
+            });
+        });
+
+        // ── Quality Control (QC) & Wastage ───────────────────────────
+        Route::prefix('qc')->name('qc.')->group(static function (): void {
+            Route::prefix('parameters')->name('parameters.')->group(static function (): void {
+                Route::get('/', [App\Modules\QC\Controllers\QcParameterController::class, 'index'])
+                    ->middleware('permission:qc.parameter.view')->name('index');
+                Route::post('/', [App\Modules\QC\Controllers\QcParameterController::class, 'store'])
+                    ->middleware('permission:qc.parameter.manage')->name('store');
+                Route::get('{qcParameter:uuid}', [App\Modules\QC\Controllers\QcParameterController::class, 'show'])
+                    ->middleware('permission:qc.parameter.view')->name('show');
+                Route::patch('{qcParameter:uuid}', [App\Modules\QC\Controllers\QcParameterController::class, 'update'])
+                    ->middleware('permission:qc.parameter.manage')->name('update');
+                Route::delete('{qcParameter:uuid}', [App\Modules\QC\Controllers\QcParameterController::class, 'destroy'])
+                    ->middleware('permission:qc.parameter.manage')->name('destroy');
+            });
+
+            Route::prefix('inspections')->name('inspections.')->group(static function (): void {
+                Route::get('/', [App\Modules\QC\Controllers\QcInspectionController::class, 'index'])
+                    ->middleware('permission:qc.inspection.view')->name('index');
+                Route::post('/', [App\Modules\QC\Controllers\QcInspectionController::class, 'store'])
+                    ->middleware('permission:qc.inspection.create')->name('store');
+                Route::get('{qcInspection:uuid}', [App\Modules\QC\Controllers\QcInspectionController::class, 'show'])
+                    ->middleware('permission:qc.inspection.view')->name('show');
+                Route::patch('{qcInspection:uuid}', [App\Modules\QC\Controllers\QcInspectionController::class, 'update'])
+                    ->middleware('permission:qc.inspection.update')->name('update');
+                Route::post('{qcInspection:uuid}/approve', [App\Modules\QC\Controllers\QcInspectionController::class, 'approve'])
+                    ->middleware('permission:qc.inspection.approve')->name('approve');
+                Route::delete('{qcInspection:uuid}', [App\Modules\QC\Controllers\QcInspectionController::class, 'destroy'])
+                    ->middleware('permission:qc.inspection.delete')->name('destroy');
+            });
+
+            Route::prefix('wastage-records')->name('wastage-records.')->group(static function (): void {
+                Route::get('/', [App\Modules\QC\Controllers\WastageRecordController::class, 'index'])
+                    ->middleware('permission:qc.wastage.view')->name('index');
+                Route::post('/', [App\Modules\QC\Controllers\WastageRecordController::class, 'store'])
+                    ->middleware('permission:qc.wastage.create')->name('store');
+                Route::get('{wastageRecord:uuid}', [App\Modules\QC\Controllers\WastageRecordController::class, 'show'])
+                    ->middleware('permission:qc.wastage.view')->name('show');
+                Route::patch('{wastageRecord:uuid}', [App\Modules\QC\Controllers\WastageRecordController::class, 'update'])
+                    ->middleware('permission:qc.wastage.update')->name('update');
+                Route::delete('{wastageRecord:uuid}', [App\Modules\QC\Controllers\WastageRecordController::class, 'destroy'])
+                    ->middleware('permission:qc.wastage.delete')->name('destroy');
+            });
+        });
+
+        // ── Inventory & Stock Operations ──────────────────────────────
+        Route::prefix('inventory')->name('inventory.')->group(static function (): void {
+            Route::get('movements', [App\Modules\Inventory\Controllers\StockMovementController::class, 'index'])
+                ->middleware('permission:inventory.movement.view')->name('movements.index');
+            Route::get('movements/{id}', [App\Modules\Inventory\Controllers\StockMovementController::class, 'show'])
+                ->middleware('permission:inventory.movement.view')->name('movements.show');
+            Route::get('balances', [App\Modules\Inventory\Controllers\StockMovementController::class, 'balances'])
+                ->middleware('permission:inventory.stock.view')->name('balances.index');
+
+            Route::prefix('transfers')->name('transfers.')->group(static function (): void {
+                Route::get('/', [App\Modules\Inventory\Controllers\StockTransferController::class, 'index'])
+                    ->middleware('permission:inventory.transfer.view')->name('index');
+                Route::post('/', [App\Modules\Inventory\Controllers\StockTransferController::class, 'store'])
+                    ->middleware('permission:inventory.transfer.create')->name('store');
+                Route::get('{id}', [App\Modules\Inventory\Controllers\StockTransferController::class, 'show'])
+                    ->middleware('permission:inventory.transfer.view')->name('show');
+                Route::post('{id}/dispatch', [App\Modules\Inventory\Controllers\StockTransferController::class, 'dispatch'])
+                    ->middleware('permission:inventory.transfer.approve')->name('dispatch');
+                Route::post('{id}/receive', [App\Modules\Inventory\Controllers\StockTransferController::class, 'receive'])
+                    ->middleware('permission:inventory.transfer.approve')->name('receive');
+                Route::delete('{id}', [App\Modules\Inventory\Controllers\StockTransferController::class, 'destroy'])
+                    ->middleware('permission:inventory.transfer.create')->name('destroy');
+            });
+
+            Route::prefix('adjustments')->name('adjustments.')->group(static function (): void {
+                Route::get('/', [App\Modules\Inventory\Controllers\StockAdjustmentController::class, 'index'])
+                    ->middleware('permission:inventory.adjustment.view')->name('index');
+                Route::post('/', [App\Modules\Inventory\Controllers\StockAdjustmentController::class, 'store'])
+                    ->middleware('permission:inventory.adjustment.create')->name('store');
+                Route::get('{id}', [App\Modules\Inventory\Controllers\StockAdjustmentController::class, 'show'])
+                    ->middleware('permission:inventory.adjustment.view')->name('show');
+                Route::post('{id}/approve', [App\Modules\Inventory\Controllers\StockAdjustmentController::class, 'approve'])
+                    ->middleware('permission:inventory.adjustment.approve')->name('approve');
+                Route::delete('{id}', [App\Modules\Inventory\Controllers\StockAdjustmentController::class, 'destroy'])
+                    ->middleware('permission:inventory.adjustment.create')->name('destroy');
+            });
+
+            Route::prefix('counts')->name('counts.')->group(static function (): void {
+                Route::get('/', [App\Modules\Inventory\Controllers\StockCountController::class, 'index'])
+                    ->middleware('permission:inventory.count.view')->name('index');
+                Route::post('/', [App\Modules\Inventory\Controllers\StockCountController::class, 'store'])
+                    ->middleware('permission:inventory.count.create')->name('store');
+                Route::get('{id}', [App\Modules\Inventory\Controllers\StockCountController::class, 'show'])
+                    ->middleware('permission:inventory.count.view')->name('show');
+                Route::post('{id}/reconcile', [App\Modules\Inventory\Controllers\StockCountController::class, 'reconcile'])
+                    ->middleware('permission:inventory.count.approve')->name('reconcile');
+                Route::delete('{id}', [App\Modules\Inventory\Controllers\StockCountController::class, 'destroy'])
+                    ->middleware('permission:inventory.count.create')->name('destroy');
+            });
+        });
+
+        // ── Purchasing & Procurement ──────────────────────────────────
+        Route::prefix('purchasing')->name('purchasing.')->group(static function (): void {
+            Route::prefix('requisitions')->name('requisitions.')->group(static function (): void {
+                Route::get('/', [App\Modules\Purchasing\Controllers\PurchaseRequisitionController::class, 'index'])
+                    ->middleware('permission:purchasing.requisition.view')->name('index');
+                Route::post('/', [App\Modules\Purchasing\Controllers\PurchaseRequisitionController::class, 'store'])
+                    ->middleware('permission:purchasing.requisition.create')->name('store');
+                Route::get('{id}', [App\Modules\Purchasing\Controllers\PurchaseRequisitionController::class, 'show'])
+                    ->middleware('permission:purchasing.requisition.view')->name('show');
+                Route::post('{id}/approve', [App\Modules\Purchasing\Controllers\PurchaseRequisitionController::class, 'approve'])
+                    ->middleware('permission:purchasing.requisition.approve')->name('approve');
+                Route::delete('{id}', [App\Modules\Purchasing\Controllers\PurchaseRequisitionController::class, 'destroy'])
+                    ->middleware('permission:purchasing.requisition.create')->name('destroy');
+            });
+
+            Route::prefix('orders')->name('orders.')->group(static function (): void {
+                Route::get('/', [App\Modules\Purchasing\Controllers\PurchaseOrderController::class, 'index'])
+                    ->middleware('permission:purchasing.order.view')->name('index');
+                Route::post('/', [App\Modules\Purchasing\Controllers\PurchaseOrderController::class, 'store'])
+                    ->middleware('permission:purchasing.order.create')->name('store');
+                Route::get('{id}', [App\Modules\Purchasing\Controllers\PurchaseOrderController::class, 'show'])
+                    ->middleware('permission:purchasing.order.view')->name('show');
+                Route::post('{id}/approve', [App\Modules\Purchasing\Controllers\PurchaseOrderController::class, 'approve'])
+                    ->middleware('permission:purchasing.order.approve')->name('approve');
+                Route::delete('{id}', [App\Modules\Purchasing\Controllers\PurchaseOrderController::class, 'destroy'])
+                    ->middleware('permission:purchasing.order.create')->name('destroy');
+            });
+
+            Route::prefix('receipts')->name('receipts.')->group(static function (): void {
+                Route::get('/', [App\Modules\Purchasing\Controllers\GoodsReceiptController::class, 'index'])
+                    ->middleware('permission:purchasing.receipt.view')->name('index');
+                Route::post('/', [App\Modules\Purchasing\Controllers\GoodsReceiptController::class, 'store'])
+                    ->middleware('permission:purchasing.receipt.create')->name('store');
+                Route::get('{id}', [App\Modules\Purchasing\Controllers\GoodsReceiptController::class, 'show'])
+                    ->middleware('permission:purchasing.receipt.view')->name('show');
+            });
+
+            Route::prefix('goods-receipts')->name('goods-receipts.')->group(static function (): void {
+                Route::get('/', [App\Modules\Purchasing\Controllers\GoodsReceiptController::class, 'index'])
+                    ->middleware('permission:purchasing.receipt.view')->name('index');
+                Route::post('/', [App\Modules\Purchasing\Controllers\GoodsReceiptController::class, 'store'])
+                    ->middleware('permission:purchasing.receipt.create')->name('store');
+                Route::get('{id}', [App\Modules\Purchasing\Controllers\GoodsReceiptController::class, 'show'])
+                    ->middleware('permission:purchasing.receipt.view')->name('show');
+            });
+
+            Route::prefix('bills')->name('bills.')->group(static function (): void {
+                Route::get('/', [App\Modules\Purchasing\Controllers\PurchaseBillController::class, 'index'])
+                    ->middleware('permission:purchasing.bill.view')->name('index');
+                Route::post('/', [App\Modules\Purchasing\Controllers\PurchaseBillController::class, 'store'])
+                    ->middleware('permission:purchasing.bill.create')->name('store');
+                Route::get('{id}', [App\Modules\Purchasing\Controllers\PurchaseBillController::class, 'show'])
+                    ->middleware('permission:purchasing.bill.view')->name('show');
+            });
+
+            Route::prefix('returns')->name('returns.')->group(static function (): void {
+                Route::get('/', [App\Modules\Purchasing\Controllers\PurchaseReturnController::class, 'index'])
+                    ->middleware('permission:purchasing.return.view')->name('index');
+                Route::post('/', [App\Modules\Purchasing\Controllers\PurchaseReturnController::class, 'store'])
+                    ->middleware('permission:purchasing.return.create')->name('store');
+                Route::get('{id}', [App\Modules\Purchasing\Controllers\PurchaseReturnController::class, 'show'])
+                    ->middleware('permission:purchasing.return.view')->name('show');
+            });
+        });
+
+        // ── Sales: Orders ─────────────────────────────────────────────
+        Route::prefix('sales')->name('sales.')->group(static function (): void {
+            Route::prefix('orders')->name('orders.')->group(static function (): void {
+                Route::get('/', [App\Modules\Sales\Controllers\SalesOrderController::class, 'index'])
+                    ->middleware('permission:sales.order.view')->name('index');
+                Route::post('/', [App\Modules\Sales\Controllers\SalesOrderController::class, 'store'])
+                    ->middleware('permission:sales.order.create')->name('store');
+                Route::get('{id}', [App\Modules\Sales\Controllers\SalesOrderController::class, 'show'])
+                    ->middleware('permission:sales.order.view')->name('show');
+                Route::post('{id}/approve', [App\Modules\Sales\Controllers\SalesOrderController::class, 'approve'])
+                    ->middleware('permission:sales.order.approve')->name('approve');
+            });
+
+            Route::prefix('invoices')->name('invoices.')->group(static function (): void {
+                Route::get('/', [App\Modules\Sales\Controllers\InvoiceController::class, 'index'])
+                    ->middleware('permission:sales.invoice.view')->name('index');
+                Route::post('/', [App\Modules\Sales\Controllers\InvoiceController::class, 'store'])
+                    ->middleware('permission:sales.invoice.create')->name('store');
+                Route::get('{id}', [App\Modules\Sales\Controllers\InvoiceController::class, 'show'])
+                    ->middleware('permission:sales.invoice.view')->name('show');
+                Route::post('{id}/approve', [App\Modules\Sales\Controllers\InvoiceController::class, 'approve'])
+                    ->middleware('permission:sales.invoice.approve')->name('approve');
+                Route::post('{id}/void', [App\Modules\Sales\Controllers\InvoiceController::class, 'void'])
+                    ->middleware('permission:sales.invoice.void')->name('void');
+            });
+
+            Route::prefix('deliveries')->name('deliveries.')->group(static function (): void {
+                Route::get('/', [App\Modules\Sales\Controllers\DeliveryOrderController::class, 'index'])
+                    ->middleware('permission:sales.delivery.view')->name('index');
+                Route::post('/', [App\Modules\Sales\Controllers\DeliveryOrderController::class, 'store'])
+                    ->middleware('permission:sales.delivery.create')->name('store');
+                Route::get('{id}', [App\Modules\Sales\Controllers\DeliveryOrderController::class, 'show'])
+                    ->middleware('permission:sales.delivery.view')->name('show');
+                Route::post('{id}/dispatch', [App\Modules\Sales\Controllers\DeliveryOrderController::class, 'dispatch'])
+                    ->middleware('permission:sales.delivery.dispatch')->name('dispatch');
+            });
+
+            Route::prefix('payments')->name('payments.')->group(static function (): void {
+                Route::get('/', [App\Modules\Sales\Controllers\PaymentController::class, 'index'])
+                    ->middleware('permission:sales.payment.view')->name('index');
+                Route::post('/', [App\Modules\Sales\Controllers\PaymentController::class, 'store'])
+                    ->middleware('permission:sales.payment.create')->name('store');
+                Route::get('{id}', [App\Modules\Sales\Controllers\PaymentController::class, 'show'])
+                    ->middleware('permission:sales.payment.view')->name('show');
+            });
+        });
+
+        // ── POS ───────────────────────────────────────────────────────
+        Route::prefix('pos')->name('pos.')->group(static function (): void {
+            Route::prefix('terminals')->name('terminals.')->group(static function (): void {
+                Route::get('/', [App\Modules\Pos\Controllers\PosTerminalController::class, 'index'])
+                    ->middleware('permission:pos.terminal.view')->name('index');
+                Route::post('/', [App\Modules\Pos\Controllers\PosTerminalController::class, 'store'])
+                    ->middleware('permission:pos.terminal.create')->name('store');
+                Route::get('{id}', [App\Modules\Pos\Controllers\PosTerminalController::class, 'show'])
+                    ->middleware('permission:pos.terminal.view')->name('show');
+            });
+
+            Route::prefix('sessions')->name('sessions.')->group(static function (): void {
+                Route::get('/', [App\Modules\Pos\Controllers\PosSessionController::class, 'index'])
+                    ->middleware('permission:pos.session.view')->name('index');
+                Route::post('/', [App\Modules\Pos\Controllers\PosSessionController::class, 'open'])
+                    ->middleware('permission:pos.session.open')->name('open');
+                Route::get('{id}', [App\Modules\Pos\Controllers\PosSessionController::class, 'show'])
+                    ->middleware('permission:pos.session.view')->name('show');
+                Route::post('{id}/close', [App\Modules\Pos\Controllers\PosSessionController::class, 'close'])
+                    ->middleware('permission:pos.session.close')->name('close');
+            });
+
+            Route::post('checkout', [App\Modules\Pos\Controllers\PosCheckoutController::class, 'checkout'])
+                ->middleware('permission:pos.checkout')->name('checkout');
         });
     });

@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\QC\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+final class UpdateQcParameterRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    /**
+     * @return array<string, array<int, string>>
+     */
+    public function rules(): array
+    {
+        return [
+            'name' => ['sometimes', 'required', 'string', 'max:128'],
+            'type' => ['sometimes', 'required', 'string', 'in:numeric,boolean,select,text'],
+            'product_id' => ['nullable', 'string', 'uuid'],
+            'unit_id' => ['nullable', 'string', 'uuid'],
+            'min_value' => ['nullable', 'numeric', 'regex:/^-?\d+(\.\d{1,4})?$/'],
+            'max_value' => ['nullable', 'numeric', 'regex:/^-?\d+(\.\d{1,4})?$/'],
+            'options' => ['nullable', 'array'],
+            'is_mandatory' => ['nullable', 'boolean'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+        ];
+    }
+}

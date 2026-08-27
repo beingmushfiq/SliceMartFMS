@@ -5,6 +5,7 @@ import {
   Factory,
   FileSpreadsheet,
   LayoutDashboard,
+  Microscope,
   Package,
   ShoppingBag,
   ShoppingCart,
@@ -42,6 +43,12 @@ const mainNav: NavItem[] = [
     to: '/production',
     icon: Factory,
     permission: ['production.batch.view', 'production.plan.view'],
+  },
+  {
+    label: 'Quality Control (QC)',
+    to: '/qc',
+    icon: Microscope,
+    permission: ['qc.inspection.view', 'qc.parameter.view', 'qc.wastage.view'],
   },
   {
     label: 'Stock & Inventory',
