@@ -49,6 +49,7 @@ final class PriceList extends Model
 
     /** @use HasFactory<\Database\Factories\PriceListFactory> */
     use HasFactory;
+
     use SoftDeletes;
 
     /**

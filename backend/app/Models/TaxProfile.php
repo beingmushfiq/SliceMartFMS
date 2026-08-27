@@ -42,6 +42,7 @@ final class TaxProfile extends Model
 
     /** @use HasFactory<\Database\Factories\TaxProfileFactory> */
     use HasFactory;
+
     use SoftDeletes;
 
     /**

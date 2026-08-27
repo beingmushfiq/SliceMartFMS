@@ -89,9 +89,18 @@ class PermissionCatalogue
         'catalog.price_list.view',
         'catalog.price_list.manage',
         'catalog.party.view',
+        'catalog.party.manage',
         'catalog.party.create',
         'catalog.party.update',
         'catalog.party.delete',
+
+        // Pricing
+        'pricing.price_list.view',
+        'pricing.price_list.manage',
+        'pricing.discount_rule.view',
+        'pricing.discount_rule.manage',
+        'pricing.tax_profile.view',
+        'pricing.tax_profile.manage',
 
         // Production & Worker Output
         'production.plan.view',

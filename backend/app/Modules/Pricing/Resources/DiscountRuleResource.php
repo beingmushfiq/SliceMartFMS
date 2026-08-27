@@ -8,7 +8,6 @@ use App\Models\Category;
 use App\Models\DiscountRule;
 use App\Models\Party;
 use App\Models\Product;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -56,7 +55,7 @@ final class DiscountRuleResource extends JsonResource
         if ($modelClass === null) {
             return null;
         }
-        /** @var Model|null $row */
+        /** @var Category|Party|Product|null $row */
         $row = $modelClass::query()->whereKey($this->scope_id)->first();
         $uuid = $row?->getAttribute('uuid');
 

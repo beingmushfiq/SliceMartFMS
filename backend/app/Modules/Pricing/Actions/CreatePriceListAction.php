@@ -79,15 +79,16 @@ final class CreatePriceListAction extends Action
     }
 
     /**
-     * @param  class-string<\Illuminate\Database\Eloquent\Model>  $modelClass
+     * @param  class-string<Product|ProductVariant>  $modelClass
      */
     private function id(string $modelClass, mixed $uuid, int $tenantId, string $field): int
     {
+        /** @var Product|ProductVariant|null $row */
         $row = $modelClass::withoutGlobalScope('tenant')->where('tenant_id', $tenantId)->where('uuid', $uuid)->first();
         if ($row === null) {
             throw ValidationException::withMessages([$field => 'The selected reference is invalid.']);
         }
 
-        return (int) $row->getKey();
+        return (int) $row->id;
     }
 }

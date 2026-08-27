@@ -50,6 +50,7 @@ final class DiscountRule extends Model
 
     /** @use HasFactory<\Database\Factories\DiscountRuleFactory> */
     use HasFactory;
+
     use SoftDeletes;
 
     /**

@@ -50,6 +50,7 @@ final class Warehouse extends Model
 
     /** @use HasFactory<\Database\Factories\WarehouseFactory> */
     use HasFactory;
+
     use SoftDeletes;
 
     /**

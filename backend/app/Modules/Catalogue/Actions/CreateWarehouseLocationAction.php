@@ -29,15 +29,23 @@ final class CreateWarehouseLocationAction extends Action
         /** @var Warehouse $warehouse */
         $warehouse = $input['warehouse'];
 
-        if (WarehouseLocation::withoutGlobalScope('tenant')->where('tenant_id', $actor->tenant_id)->where('warehouse_id', $warehouse->getKey())->where('code', $input['code'])->exists()) {
+        if (WarehouseLocation::withoutGlobalScope('tenant')->where('tenant_id', $actor->tenant_id)->where('warehouse_id', $warehouse->id)->where('code', $input['code'])->exists()) {
             throw new DuplicateResourceException(field: 'code', value: is_string($input['code']) ? $input['code'] : '');
         }
 
-        $location = DB::transaction(function () use ($input, $actor, $warehouse): WarehouseLocation {
-            $parentId = $this->resolveParentId($input['parent_id'] ?? null, $actor->tenant_id, $warehouse->getKey());
+        $tenantId = (int) ($actor->tenant_id ?? 0);
+        $warehouseId = $warehouse->id;
+
+        $location = DB::transaction(function () use ($input, $actor, $tenantId, $warehouseId): WarehouseLocation {
+            $parentId = $this->resolveParentId(
+                is_string($input['parent_id'] ?? null) ? $input['parent_id'] : null,
+                $tenantId,
+                $warehouseId
+            );
+
             $location = WarehouseLocation::create([
                 'uuid' => (string) Str::uuid(),
-                'warehouse_id' => $warehouse->getKey(),
+                'warehouse_id' => $warehouseId,
                 'parent_id' => $parentId,
                 'code' => $input['code'],
                 'name' => $input['name'],
@@ -71,6 +79,6 @@ final class CreateWarehouseLocationAction extends Action
             throw ValidationException::withMessages(['parent_id' => 'The selected parent location is invalid.']);
         }
 
-        return $parent->getKey();
+        return $parent->id;
     }
 }

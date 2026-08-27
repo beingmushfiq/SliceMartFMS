@@ -20,14 +20,14 @@ final class WarehouseLocationResource extends JsonResource
 
         return [
             'id' => $this->uuid,
-            'warehouse_id' => $this->warehouse?->uuid ?? $this->warehouse_id,
-            'parent_id' => $this->parent?->uuid ?? $this->parent_id,
+            'warehouse_id' => $this->warehouse->uuid,
+            'parent_id' => $this->parent?->uuid,
             'code' => $this->code,
             'name' => $this->name,
             'type' => $this->type,
             'is_active' => $this->is_active,
             'parent' => $includeParent && $this->relationLoaded('parent') && $this->parent !== null
-                ? ['id' => $this->parent->uuid, 'warehouse_id' => $this->parent->warehouse?->uuid ?? $this->parent->warehouse_id, 'code' => $this->parent->code, 'name' => $this->parent->name, 'type' => $this->parent->type, 'is_active' => $this->parent->is_active]
+                ? ['id' => $this->parent->uuid, 'warehouse_id' => $this->parent->warehouse->uuid, 'code' => $this->parent->code, 'name' => $this->parent->name, 'type' => $this->parent->type, 'is_active' => $this->parent->is_active]
                 : null,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),

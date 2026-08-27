@@ -80,6 +80,7 @@ final class Product extends Model
 
     /** @use HasFactory<\Database\Factories\ProductFactory> */
     use HasFactory;
+
     use SoftDeletes;
 
     /**

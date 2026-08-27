@@ -49,6 +49,7 @@ final class UpdateWarehouseLocationAction extends Action
                 $payload['parent_id'] = $parent->id;
             }
 
+            /** @phpstan-ignore argument.type */
             $location->update([...$payload, 'updated_by' => $actor->id]);
             $this->auditLogger->record(action: AuditAction::Updated, auditable: $location, before: $before, after: $location->fresh()?->toArray() ?? $location->toArray(), actor: $actor, context: ['module' => 'catalogue', 'resource' => 'warehouse_location']);
         });

@@ -17,9 +17,12 @@ final class DiscountRuleFactory extends Factory
     /** @return array<model-property<DiscountRule>, mixed> */
     public function definition(): array
     {
+        $words = fake()->unique()->words(2);
+        $name = is_array($words) ? implode(' ', $words) : (string) $words;
+
         return [
             'uuid' => (string) Str::uuid(),
-            'name' => ucfirst(fake()->unique()->words(2, true)),
+            'name' => ucfirst($name),
             'scope' => 'order',
             'scope_id' => null,
             'condition' => null,

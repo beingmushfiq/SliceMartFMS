@@ -17,10 +17,13 @@ final class PriceListFactory extends Factory
     /** @return array<model-property<PriceList>, mixed> */
     public function definition(): array
     {
+        $words = fake()->unique()->words(2);
+        $name = is_array($words) ? implode(' ', $words) : (string) $words;
+
         return [
             'uuid' => (string) Str::uuid(),
             'code' => 'PL'.fake()->unique()->numberBetween(1000, 9999),
-            'name' => ucfirst(fake()->unique()->words(2, true)),
+            'name' => ucfirst($name),
             'currency_code' => 'BDT',
             'applies_to' => 'all',
             'channel' => null,

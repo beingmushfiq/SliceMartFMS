@@ -141,4 +141,66 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                     ->middleware('permission:inventory.warehouse.manage')->name('destroy');
             });
         });
+
+        // ── Catalogue: Parties ─────────────────────────────────────────
+        Route::prefix('parties')->name('parties.')->group(static function (): void {
+            Route::get('options', [App\Modules\Catalogue\Controllers\PartyController::class, 'options'])
+                ->middleware('permission:catalog.party.view')->name('options');
+            Route::get('/', [App\Modules\Catalogue\Controllers\PartyController::class, 'index'])
+                ->middleware('permission:catalog.party.view')->name('index');
+            Route::post('/', [App\Modules\Catalogue\Controllers\PartyController::class, 'store'])
+                ->middleware('permission:catalog.party.manage')->name('store');
+            Route::get('{party:uuid}', [App\Modules\Catalogue\Controllers\PartyController::class, 'show'])
+                ->middleware('permission:catalog.party.view')->name('show');
+            Route::patch('{party:uuid}', [App\Modules\Catalogue\Controllers\PartyController::class, 'update'])
+                ->middleware('permission:catalog.party.manage')->name('update');
+            Route::delete('{party:uuid}', [App\Modules\Catalogue\Controllers\PartyController::class, 'destroy'])
+                ->middleware('permission:catalog.party.manage')->name('destroy');
+        });
+
+        // ── Pricing ───────────────────────────────────────────────────
+        Route::prefix('pricing')->name('pricing.')->group(static function (): void {
+            Route::prefix('price-lists')->name('price-lists.')->group(static function (): void {
+                Route::get('options', [App\Modules\Pricing\Controllers\PriceListController::class, 'options'])
+                    ->middleware('permission:pricing.price_list.view')->name('options');
+                Route::get('/', [App\Modules\Pricing\Controllers\PriceListController::class, 'index'])
+                    ->middleware('permission:pricing.price_list.view')->name('index');
+                Route::post('/', [App\Modules\Pricing\Controllers\PriceListController::class, 'store'])
+                    ->middleware('permission:pricing.price_list.manage')->name('store');
+                Route::get('{priceList:uuid}', [App\Modules\Pricing\Controllers\PriceListController::class, 'show'])
+                    ->middleware('permission:pricing.price_list.view')->name('show');
+                Route::patch('{priceList:uuid}', [App\Modules\Pricing\Controllers\PriceListController::class, 'update'])
+                    ->middleware('permission:pricing.price_list.manage')->name('update');
+                Route::delete('{priceList:uuid}', [App\Modules\Pricing\Controllers\PriceListController::class, 'destroy'])
+                    ->middleware('permission:pricing.price_list.manage')->name('destroy');
+            });
+
+            Route::prefix('discount-rules')->name('discount-rules.')->group(static function (): void {
+                Route::get('/', [App\Modules\Pricing\Controllers\DiscountRuleController::class, 'index'])
+                    ->middleware('permission:pricing.discount_rule.view')->name('index');
+                Route::post('/', [App\Modules\Pricing\Controllers\DiscountRuleController::class, 'store'])
+                    ->middleware('permission:pricing.discount_rule.manage')->name('store');
+                Route::get('{discountRule:uuid}', [App\Modules\Pricing\Controllers\DiscountRuleController::class, 'show'])
+                    ->middleware('permission:pricing.discount_rule.view')->name('show');
+                Route::patch('{discountRule:uuid}', [App\Modules\Pricing\Controllers\DiscountRuleController::class, 'update'])
+                    ->middleware('permission:pricing.discount_rule.manage')->name('update');
+                Route::delete('{discountRule:uuid}', [App\Modules\Pricing\Controllers\DiscountRuleController::class, 'destroy'])
+                    ->middleware('permission:pricing.discount_rule.manage')->name('destroy');
+            });
+
+            Route::prefix('tax-profiles')->name('tax-profiles.')->group(static function (): void {
+                Route::get('options', [App\Modules\Pricing\Controllers\TaxProfileController::class, 'options'])
+                    ->middleware('permission:pricing.tax_profile.view')->name('options');
+                Route::get('/', [App\Modules\Pricing\Controllers\TaxProfileController::class, 'index'])
+                    ->middleware('permission:pricing.tax_profile.view')->name('index');
+                Route::post('/', [App\Modules\Pricing\Controllers\TaxProfileController::class, 'store'])
+                    ->middleware('permission:pricing.tax_profile.manage')->name('store');
+                Route::get('{taxProfile:uuid}', [App\Modules\Pricing\Controllers\TaxProfileController::class, 'show'])
+                    ->middleware('permission:pricing.tax_profile.view')->name('show');
+                Route::patch('{taxProfile:uuid}', [App\Modules\Pricing\Controllers\TaxProfileController::class, 'update'])
+                    ->middleware('permission:pricing.tax_profile.manage')->name('update');
+                Route::delete('{taxProfile:uuid}', [App\Modules\Pricing\Controllers\TaxProfileController::class, 'destroy'])
+                    ->middleware('permission:pricing.tax_profile.manage')->name('destroy');
+            });
+        });
     });

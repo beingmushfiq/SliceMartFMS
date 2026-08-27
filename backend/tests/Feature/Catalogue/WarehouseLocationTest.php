@@ -89,18 +89,22 @@ final class WarehouseLocationTest extends TestCase
             ->assertForbidden();
     }
 
+    /** @param array<string, mixed> $overrides */
     private function createWarehouse(array $overrides = []): Warehouse
     {
         TenantContext::bind($this->tenant->toArray());
+        /** @phpstan-ignore argument.type */
         $warehouse = Warehouse::factory()->create(['code' => 'WH-1', ...$overrides]);
         TenantContext::flush();
 
         return $warehouse;
     }
 
+    /** @param array<string, mixed> $overrides */
     private function createLocation(Warehouse $warehouse, array $overrides = []): WarehouseLocation
     {
         TenantContext::bind($this->tenant->toArray());
+        /** @phpstan-ignore argument.type */
         $location = WarehouseLocation::create(['uuid' => (string) Str::uuid(), 'warehouse_id' => $warehouse->id, 'code' => 'LOC-1', 'name' => 'Location', 'type' => 'bin', 'is_active' => true, 'created_by' => $this->user->id, 'updated_by' => $this->user->id, ...$overrides]);
         TenantContext::flush();
 
