@@ -13,6 +13,8 @@ import DeliveryWorkspace from '../modules/delivery/DeliveryWorkspace';
 import FinanceWorkspace from '../modules/finance/FinanceWorkspace';
 import AssetsWorkspace from '../modules/assets/AssetsWorkspace';
 import HrWorkspace from '../modules/hr/HrWorkspace';
+import { ReportsWorkspace } from '../modules/reports/ReportsWorkspace';
+import { AuditLogWorkspace } from '../modules/audit/AuditLogWorkspace';
 
 export const router = createBrowserRouter([
   {
@@ -91,6 +93,22 @@ export const router = createBrowserRouter([
             element: <Navigate to="/hr" replace />,
           },
           {
+            path: 'reports',
+            element: <ReportsWorkspace />,
+          },
+          {
+            path: 'rms',
+            element: <Navigate to="/reports" replace />,
+          },
+          {
+            path: 'audit-logs',
+            element: <AuditLogWorkspace />,
+          },
+          {
+            path: 'audit',
+            element: <Navigate to="/audit-logs" replace />,
+          },
+          {
             path: '*',
             element: <Navigate to="/production" replace />,
           },
@@ -99,5 +117,3 @@ export const router = createBrowserRouter([
     ],
   },
 ]);
-
-export default router;

@@ -631,4 +631,27 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::get('payslips/{id}', [App\Modules\HR\Controllers\PayrollController::class, 'showPayslip'])->name('payslips.show');
             });
         });
+
+        // ── Reports & RMS Engine ──────────────────────────────────────
+        Route::prefix('reports')->name('reports.')->group(static function (): void {
+            Route::get('/', [App\Modules\Reports\Controllers\ReportRegistryController::class, 'index'])->name('index');
+            Route::get('{code}/schema', [App\Modules\Reports\Controllers\ReportDataController::class, 'schema'])->name('schema');
+            Route::get('{code}/data', [App\Modules\Reports\Controllers\ReportDataController::class, 'data'])->name('data');
+            Route::post('{code}/export', [App\Modules\Reports\Controllers\ReportExportController::class, 'export'])->name('export');
+            Route::get('exports/{uuid}', [App\Modules\Reports\Controllers\ReportExportController::class, 'show'])->name('exports.show');
+            Route::get('{code}/views', [App\Modules\Reports\Controllers\ReportSavedViewController::class, 'index'])->name('views.index');
+            Route::post('{code}/views', [App\Modules\Reports\Controllers\ReportSavedViewController::class, 'store'])->name('views.store');
+        });
+
+        // ── Real-time Notifications ───────────────────────────────────
+        Route::prefix('notifications')->name('notifications.')->group(static function (): void {
+            Route::get('/', [App\Modules\Notifications\Controllers\NotificationController::class, 'index'])->name('index');
+            Route::post('read-all', [App\Modules\Notifications\Controllers\NotificationController::class, 'markAllAsRead'])->name('read-all');
+            Route::post('{id}/read', [App\Modules\Notifications\Controllers\NotificationController::class, 'markAsRead'])->name('read');
+        });
+
+        // ── System Audit Logging ──────────────────────────────────────
+        Route::prefix('audit-logs')->name('audit-logs.')->group(static function (): void {
+            Route::get('/', [App\Modules\Audit\Controllers\AuditLogController::class, 'index'])->name('index');
+        });
     });

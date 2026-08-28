@@ -1,16 +1,79 @@
 import { useState } from 'react';
-import { Building2, ChevronDown, LogOut, Menu, Moon, Sun, User as UserIcon } from 'lucide-react';
+import {
+  Building2,
+  ChevronDown,
+  LogOut,
+  Menu,
+  Moon,
+  Sun,
+  User as UserIcon,
+  Bell,
+  Check,
+  AlertTriangle,
+  Info,
+  CheckCircle2,
+} from 'lucide-react';
 import { useAuthStore } from '../../lib/auth/authStore';
+import type { NotificationItem } from '../../types/api/notifications';
 
 interface AppHeaderProps {
   onToggleSidebar: () => void;
 }
 
+const SAMPLE_NOTIFICATIONS: NotificationItem[] = [
+  {
+    id: 1,
+    uuid: 'notif-1',
+    user_id: 1,
+    type: 'production.batch.qc_passed',
+    channel: 'in_app',
+    title_key: 'QC Inspection Passed',
+    body_key: 'Batch BAT-202608-001 passed final quality audit (98.0% yield).',
+    severity: 'success',
+    action_url: '/production',
+    sent_at: '2026-08-28T10:15:00Z',
+    read_at: null,
+    created_at: '2026-08-28T10:15:00Z',
+  },
+  {
+    id: 2,
+    uuid: 'notif-2',
+    user_id: 1,
+    type: 'inventory.stock.low_reorder',
+    channel: 'in_app',
+    title_key: 'Low Stock Reorder Alert',
+    body_key: 'Cotton Yarn 30s is below safety stock threshold (50 kg remaining).',
+    severity: 'warning',
+    action_url: '/inventory',
+    sent_at: '2026-08-28T09:30:00Z',
+    read_at: null,
+    created_at: '2026-08-28T09:30:00Z',
+  },
+  {
+    id: 3,
+    uuid: 'notif-3',
+    user_id: 1,
+    type: 'finance.period.closing_soon',
+    channel: 'in_app',
+    title_key: 'Fiscal Month Closing Reminder',
+    body_key: 'August 2026 accounting period will lock in 3 business days.',
+    severity: 'info',
+    action_url: '/finance',
+    sent_at: '2026-08-27T16:00:00Z',
+    read_at: '2026-08-27T17:00:00Z',
+    created_at: '2026-08-27T16:00:00Z',
+  },
+];
+
 export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
   const { user, tenant, branches, activeBranch, switchBranch, logout } = useAuthStore();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isBranchMenuOpen, setIsBranchMenuOpen] = useState(false);
+  const [isNotifMenuOpen, setIsNotifMenuOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(SAMPLE_NOTIFICATIONS);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
+  const unreadCount = notifications.filter((n) => !n.read_at).length;
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
@@ -20,6 +83,27 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
+    }
+  };
+
+  const markAllAsRead = () => {
+    const now = new Date().toISOString();
+    setNotifications((prev) => prev.map((n) => ({ ...n, read_at: now })));
+  };
+
+  const markSingleRead = (id: number) => {
+    const now = new Date().toISOString();
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read_at: now } : n)));
+  };
+
+  const getSeverityIcon = (severity: string) => {
+    switch (severity) {
+      case 'success':
+        return <CheckCircle2 className="h-4 w-4 text-emerald-400" />;
+      case 'warning':
+        return <AlertTriangle className="h-4 w-4 text-amber-400" />;
+      default:
+        return <Info className="h-4 w-4 text-sky-400" />;
     }
   };
 
@@ -94,8 +178,83 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
         )}
       </div>
 
-      {/* Right side: Theme toggle + User profile */}
+      {/* Right side: Notifications + Theme toggle + User profile */}
       <div className="flex items-center gap-2 sm:gap-4">
+        {/* Notifications Bell Dropdown */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsNotifMenuOpen(!isNotifMenuOpen)}
+            className="relative rounded-lg p-2 text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-100"
+            aria-label="Notifications"
+          >
+            <Bell className="h-4 w-4" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+              </span>
+            )}
+          </button>
+
+          {isNotifMenuOpen && (
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl border border-zinc-800 bg-zinc-900 shadow-2xl z-50 overflow-hidden">
+              <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-zinc-100">Notifications</span>
+                  {unreadCount > 0 && (
+                    <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold text-rose-400">
+                      {unreadCount} new
+                    </span>
+                  )}
+                </div>
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={markAllAsRead}
+                    className="text-[11px] font-medium text-emerald-400 hover:underline flex items-center gap-1"
+                  >
+                    <Check className="h-3 w-3" />
+                    Mark all read
+                  </button>
+                )}
+              </div>
+
+              <div className="max-h-80 overflow-y-auto divide-y divide-zinc-800/50">
+                {notifications.length === 0 ? (
+                  <div className="p-4 text-center text-xs text-zinc-500">
+                    No active notifications
+                  </div>
+                ) : (
+                  notifications.map((notif) => (
+                    <div
+                      key={notif.id}
+                      onClick={() => markSingleRead(notif.id)}
+                      className={`p-3.5 text-left transition-colors cursor-pointer hover:bg-zinc-800/50 ${
+                        !notif.read_at ? 'bg-zinc-800/20' : 'opacity-70'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <div className="mt-0.5">{getSeverityIcon(notif.severity)}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-zinc-200">{notif.title_key}</p>
+                          <p className="text-[11px] text-zinc-400 mt-0.5 line-clamp-2">
+                            {notif.body_key}
+                          </p>
+                          <span className="text-[10px] text-zinc-500 mt-1 block">
+                            {new Date(notif.created_at).toLocaleTimeString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Theme Toggle */}
         <button
           type="button"
           onClick={toggleTheme}

@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Microscope,
   Package,
+  ShieldCheck,
   ShoppingBag,
   ShoppingCart,
   Truck,
@@ -106,6 +107,12 @@ const mainNav: NavItem[] = [
     to: '/reports',
     icon: FileSpreadsheet,
     permission: ['reports.standard.view'],
+  },
+  {
+    label: 'Audit Trail',
+    to: '/audit-logs',
+    icon: ShieldCheck,
+    permission: ['audit.logs.view'],
   },
 ];
 
