@@ -26,6 +26,7 @@ final class DatabaseSeeder extends Seeder
             BOMTableSeeder::class,
             PartiesTableSeeder::class,
             PricingTableSeeder::class,
+            StorefrontTableSeeder::class,
         ]);
     }
 }

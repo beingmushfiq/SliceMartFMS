@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   ShoppingCart,
+  Store,
   Truck,
   Users,
   Warehouse,
@@ -65,6 +66,12 @@ const mainNav: NavItem[] = [
     icon: ShoppingCart,
     permission: ['pos.sales.view'],
     badge: 'Fast',
+  },
+  {
+    label: 'Storefront CMS',
+    to: '/storefront',
+    icon: Store,
+    badge: 'Live',
   },
   {
     label: 'Sales & Invoices',

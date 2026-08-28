@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ArrowDownLeft, ArrowUpRight, Boxes, Layers, RefreshCw, Search } from 'lucide-react';
 import type { StockMovement, StockBalance } from '../../../types/api/inventory';
 import { api } from '../../../lib/api/client';
@@ -10,7 +10,7 @@ export function StockLedgerSection() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       if (viewMode === 'balances') {
@@ -25,11 +25,11 @@ export function StockLedgerSection() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [viewMode]);
 
   useEffect(() => {
     fetchData();
-  }, [viewMode]);
+  }, [fetchData]);
 
   const filteredBalances = balances.filter(
     (b) =>

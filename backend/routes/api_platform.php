@@ -2,32 +2,47 @@
 
 declare(strict_types=1);
 
+use App\Modules\Platform\Controllers\PlatformAuditController;
+use App\Modules\Platform\Controllers\PlatformAuthController;
+use App\Modules\Platform\Controllers\PlatformDashboardController;
+use App\Modules\Platform\Controllers\PlatformPlanController;
+use App\Modules\Platform\Controllers\PlatformTenantController;
 use Illuminate\Support\Facades\Route;
 
 /**
- * Platform-scope API routes (ARCHITECTURE §3.2, API_CONTRACT §9.1).
+ * Platform-scope API routes (ARCHITECTURE §3.2, SAAS_ARCHITECTURE §1, API_CONTRACT §9.1).
  *
- * Loaded by bootstrap/app.php in the `then:` closure with the `api` middleware
- * group and CorrelationId prepended. These routes are NOT behind `tenant.resolve`
- * or `tenant.active` — they operate across tenants.
- *
- * Platform-only surfaces:
- *   - Tenant provisioning / suspension / cancellation.
- *   - Plan management, billing.
- *   - Platform super-admin impersonation (requires JWT + X-Tenant header,
- *     audited on every request — API_CONTRACT §1.6).
- *   - Feature flag overrides.
- *
- * Access requires a JWT belonging to a user whose `is_platform_user` generated
- * column is `1` (DATABASE_DESIGN §3). Any tenant user reaching this group
- * receives 403 PLATFORM_ONLY.
- *
- * Endpoints are registered here as the platform admin module is built.
- * At this stage the file exists and is valid PHP — no endpoints are defined.
+ * Dedicated to DevCenterPoint Master SaaS Administrators.
+ * Protected by `auth.jwt` and `platform.admin` middleware.
  */
-Route::middleware(['auth:api'])
-    ->prefix('v1/platform')
+Route::prefix('v1/platform')
     ->name('platform.')
     ->group(static function (): void {
-        // Future: tenant CRUD, plan management, impersonation, feature flags.
+        // Public Platform Login endpoint
+        Route::post('auth/login', [PlatformAuthController::class, 'login'])->name('auth.login');
+
+        // Authenticated Platform Super Admin routes
+        Route::middleware(['auth.jwt', 'platform.admin'])->group(static function (): void {
+            Route::get('auth/me', [PlatformAuthController::class, 'me'])->name('auth.me');
+
+            // Operational SaaS Dashboard
+            Route::get('dashboard/kpis', [PlatformDashboardController::class, 'kpis'])->name('dashboard.kpis');
+
+            // Tenant Lifecycle & Management
+            Route::get('tenants', [PlatformTenantController::class, 'index'])->name('tenants.index');
+            Route::post('tenants', [PlatformTenantController::class, 'store'])->name('tenants.store');
+            Route::get('tenants/{id}', [PlatformTenantController::class, 'show'])->name('tenants.show');
+            Route::patch('tenants/{id}', [PlatformTenantController::class, 'update'])->name('tenants.update');
+            Route::post('tenants/{id}/status', [PlatformTenantController::class, 'updateStatus'])->name('tenants.status');
+            Route::post('tenants/{id}/manage-subscription', [PlatformTenantController::class, 'manageSubscription'])->name('tenants.manage-subscription');
+            Route::post('tenants/{id}/impersonate', [\App\Modules\Platform\Controllers\PlatformImpersonationController::class, 'impersonate'])->name('tenants.impersonate');
+
+            // Subscription Plan Management
+            Route::get('plans', [PlatformPlanController::class, 'index'])->name('plans.index');
+            Route::post('plans', [PlatformPlanController::class, 'store'])->name('plans.store');
+            Route::patch('plans/{id}', [PlatformPlanController::class, 'update'])->name('plans.update');
+
+            // Platform-wide System Audit Logs
+            Route::get('audit-logs', [PlatformAuditController::class, 'index'])->name('audit-logs.index');
+        });
     });

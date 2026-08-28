@@ -22,5 +22,6 @@ enum AuditAction: string
     case Locked = 'locked';
     case Exported = 'exported';
     case LoggedIn = 'logged_in';
+    case Impersonated = 'impersonated';
     case PermissionDenied = 'permission_denied';
 }

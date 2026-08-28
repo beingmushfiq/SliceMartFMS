@@ -66,7 +66,7 @@ class AuthenticateJwt
         /** @var User|null $user */
         $user = User::withoutTenantScope()->find($userId);
 
-        if ($user === null || ! $user->is_active) {
+        if ($user === null || $user->status !== 'active') {
             return ErrorResponse::make(
                 request: $request,
                 code: 'USER_INACTIVE',
@@ -93,15 +93,19 @@ class AuthenticateJwt
         Auth::setUser($user);
         $request->setUserResolver(fn () => $user);
 
-        // Bind TenantContext if tenant_id is present and not already bound
+        // Bind TenantContext if tenant_id is present, or flush if platform user
         $rawTenantId = $claims['tenant_id'] ?? null;
         $tenantId = is_numeric($rawTenantId) ? (int) $rawTenantId : null;
-        if ($tenantId !== null && ! TenantContext::isBound()) {
-            /** @var Tenant|null $tenant */
-            $tenant = Tenant::query()->find($tenantId);
-            if ($tenant !== null) {
-                TenantContext::bind($tenant->toArray());
+        if ($tenantId !== null) {
+            if (! TenantContext::isBound() || TenantContext::current()->tenantId() !== $tenantId) {
+                /** @var Tenant|null $tenant */
+                $tenant = Tenant::query()->find($tenantId);
+                if ($tenant !== null) {
+                    TenantContext::bind($tenant->toArray());
+                }
             }
+        } else {
+            TenantContext::flush();
         }
 
         return $next($request);

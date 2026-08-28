@@ -40,19 +40,22 @@ return Application::configure(basePath: dirname(__DIR__))
             Illuminate\Support\Facades\Route::middleware(['api', 'correlation.id'])
                 ->prefix('api')
                 ->group(base_path('routes/api_public.php'));
+
+            Illuminate\Support\Facades\Route::middleware(['api', 'correlation.id', 'storefront.tenant'])
+                ->prefix('api')
+                ->group(base_path('routes/api_storefront.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Register the three tenancy middleware with short aliases.
-        // The full pipeline order is documented in ARCHITECTURE §5.1:
-        //   EnsureHttps → CorrelationId → Authenticate → ResolveTenant
-        //   → EnsureTenantActive → Authorize → RateLimit → Idempotency …
+        // Register the tenancy middleware with short aliases.
         $middleware->alias([
             'correlation.id' => CorrelationId::class,
             'tenant.resolve' => ResolveTenant::class,
             'tenant.active' => EnsureTenantActive::class,
             'auth.jwt' => App\Core\Http\Middleware\AuthenticateJwt::class,
             'permission' => App\Core\Http\Middleware\AuthorizePermission::class,
+            'platform.admin' => App\Core\Http\Middleware\EnsurePlatformAdmin::class,
+            'storefront.tenant' => App\Core\Http\Middleware\ResolveStorefrontTenant::class,
         ]);
 
         // Middleware order in the api group (ARCHITECTURE §5.1):

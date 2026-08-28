@@ -194,5 +194,20 @@ final class RolesAndPermissionsSeeder extends Seeder
             'perm_version' => 1,
         ]);
         $salesUser->roles()->attach($salesRole);
+
+        // 8. Seed Platform Super Administrator (DevCenterPoint Staff - tenant_id = null)
+        $platformAdmin = new User([
+            'uuid' => (string) Str::uuid(),
+            'name' => 'Platform Super Admin',
+            'email' => 'admin@devcenterpoint.com',
+            'password' => Hash::make('PlatformAdmin123!'),
+            'phone' => '+18005550199',
+            'status' => 'active',
+            'locale' => 'en',
+            'token_version' => 1,
+            'perm_version' => 1,
+        ]);
+        $platformAdmin->tenant_id = null;
+        $platformAdmin->save();
     }
 }

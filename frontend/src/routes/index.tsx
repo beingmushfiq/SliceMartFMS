@@ -16,7 +16,101 @@ import HrWorkspace from '../modules/hr/HrWorkspace';
 import { ReportsWorkspace } from '../modules/reports/ReportsWorkspace';
 import { AuditLogWorkspace } from '../modules/audit/AuditLogWorkspace';
 
+// Master SaaS Platform Admin imports
+import { PlatformProtectedRoute } from '../components/platform/PlatformProtectedRoute';
+import { PlatformShell } from '../components/platform/PlatformShell';
+import PlatformLoginPage from '../pages/platform/PlatformLoginPage';
+import PlatformDashboardWorkspace from '../modules/platform/PlatformDashboardWorkspace';
+import TenantDirectoryWorkspace from '../modules/platform/TenantDirectoryWorkspace';
+import TenantRegistrationWizard from '../modules/platform/TenantRegistrationWizard';
+import TenantDetailWorkspace from '../modules/platform/TenantDetailWorkspace';
+import PlanManagerWorkspace from '../modules/platform/PlanManagerWorkspace';
+import PlatformAuditWorkspace from '../modules/platform/PlatformAuditWorkspace';
+
+// Public Headless E-Commerce Storefront imports
+import { StorefrontShell } from '../components/storefront/StorefrontShell';
+import { StorefrontHomePage } from '../pages/storefront/StorefrontHomePage';
+import { StorefrontProductDetailPage } from '../pages/storefront/StorefrontProductDetailPage';
+import { StorefrontCheckoutPage } from '../pages/storefront/StorefrontCheckoutPage';
+import { StorefrontOrderConfirmationPage } from '../pages/storefront/StorefrontOrderConfirmationPage';
+import { StorefrontOrderTrackingPage } from '../pages/storefront/StorefrontOrderTrackingPage';
+import { StorefrontSettingsWorkspace } from '../modules/storefront/StorefrontSettingsWorkspace';
+
 export const router = createBrowserRouter([
+  // Public Headless Storefront Routes
+  {
+    path: '/store',
+    element: <Navigate to="/store/slicemart" replace />,
+  },
+  {
+    path: '/store/:subdomain',
+    element: <StorefrontShell />,
+    children: [
+      {
+        index: true,
+        element: <StorefrontHomePage />,
+      },
+      {
+        path: 'products/:idOrSku',
+        element: <StorefrontProductDetailPage />,
+      },
+      {
+        path: 'checkout',
+        element: <StorefrontCheckoutPage />,
+      },
+      {
+        path: 'order-confirmed',
+        element: <StorefrontOrderConfirmationPage />,
+      },
+      {
+        path: 'track',
+        element: <StorefrontOrderTrackingPage />,
+      },
+    ],
+  },
+
+  // Master SaaS Admin Platform Routes
+  {
+    path: '/platform/login',
+    element: <PlatformLoginPage />,
+  },
+  {
+    path: '/platform',
+    element: <PlatformProtectedRoute />,
+    children: [
+      {
+        element: <PlatformShell />,
+        children: [
+          {
+            index: true,
+            element: <PlatformDashboardWorkspace />,
+          },
+          {
+            path: 'tenants',
+            element: <TenantDirectoryWorkspace />,
+          },
+          {
+            path: 'tenants/new',
+            element: <TenantRegistrationWizard />,
+          },
+          {
+            path: 'tenants/:id',
+            element: <TenantDetailWorkspace />,
+          },
+          {
+            path: 'plans',
+            element: <PlanManagerWorkspace />,
+          },
+          {
+            path: 'audit-logs',
+            element: <PlatformAuditWorkspace />,
+          },
+        ],
+      },
+    ],
+  },
+
+  // Tenant Application Routes (Slice Mart as Tenant #1)
   {
     path: '/login',
     element: <LoginPage />,
@@ -99,6 +193,10 @@ export const router = createBrowserRouter([
           {
             path: 'rms',
             element: <Navigate to="/reports" replace />,
+          },
+          {
+            path: 'storefront',
+            element: <StorefrontSettingsWorkspace />,
           },
           {
             path: 'audit-logs',

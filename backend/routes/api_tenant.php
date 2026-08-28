@@ -650,6 +650,14 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             Route::post('{id}/read', [App\Modules\Notifications\Controllers\NotificationController::class, 'markAsRead'])->name('read');
         });
 
+        // ── Storefront CMS & Customizer ─────────────────────────────
+        Route::prefix('storefront')->name('storefront.')->group(static function (): void {
+            Route::get('settings', [\App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'getSettings'])->name('settings.get');
+            Route::put('settings', [\App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'updateSettings'])->name('settings.update');
+            Route::get('products', [\App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'getPublishedProducts'])->name('products.index');
+            Route::post('products/toggle-publish', [\App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'togglePublishProduct'])->name('products.toggle');
+        });
+
         // ── System Audit Logging ──────────────────────────────────────
         Route::prefix('audit-logs')->name('audit-logs.')->group(static function (): void {
             Route::get('/', [App\Modules\Audit\Controllers\AuditLogController::class, 'index'])->name('index');

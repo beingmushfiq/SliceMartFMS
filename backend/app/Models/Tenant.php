@@ -82,6 +82,7 @@ class Tenant extends Model
     protected function casts(): array
     {
         return [
+            'settings' => 'array',
             'branding' => 'array',
             'trial_ends_at' => 'datetime',
             'grace_period_ends_at' => 'datetime',
