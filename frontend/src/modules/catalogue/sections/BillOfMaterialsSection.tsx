@@ -1,29 +1,29 @@
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileCode, Plus, Search } from 'lucide-react'
-import { api } from '../../../lib/api/client'
-import { Modal } from '../../../components/ui/Modal'
-import { Button } from '../../../components/ui/Button'
-import { QueryBoundary } from '../../../components/patterns/QueryBoundary'
-import { isApiError } from '../../../lib/api/errors'
-import type { BillOfMaterial } from '../../../types/api/bom'
-import type { Product } from '../../../types/api/catalog'
-import type { Unit } from '../../../types/api/unit'
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { FileCode, Plus, Search } from 'lucide-react';
+import { api } from '../../../lib/api/client';
+import { Modal } from '../../../components/ui/Modal';
+import { Button } from '../../../components/ui/Button';
+import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
+import { isApiError } from '../../../lib/api/errors';
+import type { BillOfMaterial } from '../../../types/api/bom';
+import type { Product } from '../../../types/api/catalog';
+import type { Unit } from '../../../types/api/unit';
 
 interface CreateBOMForm {
-  product_id: string
-  code: string
-  name: string
-  version: number
-  output_quantity: string
-  output_unit_id: string
-  is_default: boolean
+  product_id: string;
+  code: string;
+  name: string;
+  version: number;
+  output_quantity: string;
+  output_unit_id: string;
+  is_default: boolean;
 }
 
 export function BillOfMaterialsSection() {
-  const [search, setSearch] = useState('')
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [search, setSearch] = useState('');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [draft, setDraft] = useState<CreateBOMForm>({
     product_id: '',
     code: '',
@@ -32,9 +32,9 @@ export function BillOfMaterialsSection() {
     output_quantity: '1.0000',
     output_unit_id: '',
     is_default: true,
-  })
+  });
 
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   const bomsQuery = useQuery({
     queryKey: ['catalogue', 'boms', search],
@@ -43,23 +43,24 @@ export function BillOfMaterialsSection() {
         signal,
         params: search.trim().length >= 2 ? { q: search.trim() } : {},
       }),
-  })
+  });
 
   const productsQuery = useQuery({
     queryKey: ['catalogue', 'products', 'finished-options'],
-    queryFn: ({ signal }) => api.get<Product[]>('/products', { signal, params: { type: 'finished' } }),
-  })
+    queryFn: ({ signal }) =>
+      api.get<Product[]>('/products', { signal, params: { type: 'finished' } }),
+  });
 
   const unitsQuery = useQuery({
     queryKey: ['catalogue', 'units', 'options'],
     queryFn: ({ signal }) => api.get<Unit[]>('/units', { signal }),
-  })
+  });
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateBOMForm) => api.post<BillOfMaterial>('/boms', payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['catalogue', 'boms'] })
-      setIsCreateOpen(false)
+      await queryClient.invalidateQueries({ queryKey: ['catalogue', 'boms'] });
+      setIsCreateOpen(false);
       setDraft({
         product_id: '',
         code: '',
@@ -68,22 +69,22 @@ export function BillOfMaterialsSection() {
         output_quantity: '1.0000',
         output_unit_id: '',
         is_default: true,
-      })
-      setErrorMsg(null)
+      });
+      setErrorMsg(null);
     },
     onError: (err) => {
       if (isApiError(err)) {
-        if (err.code === 'DUPLICATE') setErrorMsg('BOM code already exists.')
-        else setErrorMsg(err.message ?? 'Failed to create BOM.')
+        if (err.code === 'DUPLICATE') setErrorMsg('BOM code already exists.');
+        else setErrorMsg(err.message ?? 'Failed to create BOM.');
       } else {
-        setErrorMsg('Error creating BOM.')
+        setErrorMsg('Error creating BOM.');
       }
     },
-  })
+  });
 
-  const boms = bomsQuery.data?.data ?? []
-  const products = productsQuery.data?.data ?? []
-  const units = unitsQuery.data?.data ?? []
+  const boms = bomsQuery.data?.data ?? [];
+  const products = productsQuery.data?.data ?? [];
+  const units = unitsQuery.data?.data ?? [];
 
   return (
     <div className="space-y-6">
@@ -102,15 +103,15 @@ export function BillOfMaterialsSection() {
         <Button
           variant="primary"
           onClick={() => {
-            setErrorMsg(null)
+            setErrorMsg(null);
             if (products.length > 0 && !draft.product_id) {
               setDraft((d) => ({
                 ...d,
                 product_id: products[0]?.id ?? '',
                 output_unit_id: units[0]?.id ?? '',
-              }))
+              }));
             }
-            setIsCreateOpen(true)
+            setIsCreateOpen(true);
           }}
           className="flex items-center gap-1.5"
         >
@@ -159,7 +160,9 @@ export function BillOfMaterialsSection() {
                     <td className="py-3.5 px-3">
                       <span
                         className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                          b.is_default ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-400'
+                          b.is_default
+                            ? 'bg-emerald-500/10 text-emerald-400'
+                            : 'bg-zinc-800 text-zinc-400'
                         }`}
                       >
                         {b.is_default ? 'Primary' : 'Alternative'}
@@ -168,7 +171,9 @@ export function BillOfMaterialsSection() {
                     <td className="py-3.5 px-3">
                       <span
                         className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
-                          b.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-500'
+                          b.is_active
+                            ? 'bg-emerald-500/10 text-emerald-400'
+                            : 'bg-zinc-800 text-zinc-500'
                         }`}
                       >
                         {b.is_active ? 'Active' : 'Inactive'}
@@ -183,11 +188,15 @@ export function BillOfMaterialsSection() {
       </QueryBoundary>
 
       {/* Create Modal */}
-      <Modal open={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create Bill of Material (Recipe)">
+      <Modal
+        open={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        title="Create Bill of Material (Recipe)"
+      >
         <form
           onSubmit={(e) => {
-            e.preventDefault()
-            createMutation.mutate(draft)
+            e.preventDefault();
+            createMutation.mutate(draft);
           }}
           className="space-y-4"
         >
@@ -198,7 +207,9 @@ export function BillOfMaterialsSection() {
           )}
 
           <div>
-            <label className="block text-xs font-medium text-zinc-300 mb-1">Finished Product *</label>
+            <label className="block text-xs font-medium text-zinc-300 mb-1">
+              Finished Product *
+            </label>
             <select
               required
               value={draft.product_id}
@@ -241,7 +252,9 @@ export function BillOfMaterialsSection() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-zinc-300 mb-1">Output Quantity *</label>
+              <label className="block text-xs font-medium text-zinc-300 mb-1">
+                Output Quantity *
+              </label>
               <input
                 required
                 type="number"
@@ -281,5 +294,5 @@ export function BillOfMaterialsSection() {
         </form>
       </Modal>
     </div>
-  )
+  );
 }

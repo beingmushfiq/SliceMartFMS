@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react';
 import {
   CheckCircle2,
   Clock,
@@ -7,43 +7,43 @@ import {
   Search,
   ShieldCheck,
   XCircle,
-} from 'lucide-react'
-import type { PurchaseRequisition } from '../../../types/api/purchasing'
-import { api } from '../../../lib/api/client'
+} from 'lucide-react';
+import type { PurchaseRequisition } from '../../../types/api/purchasing';
+import { api } from '../../../lib/api/client';
 
 export function PurchaseRequisitionsSection() {
-  const [requisitions, setRequisitions] = useState<PurchaseRequisition[]>([])
-  const [loading, setLoading] = useState(false)
-  const [search, setSearch] = useState('')
-  const [actionLoading, setActionLoading] = useState<number | null>(null)
+  const [requisitions, setRequisitions] = useState<PurchaseRequisition[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
 
   const fetchRequisitions = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const res = await api.get<PurchaseRequisition[]>('/purchasing/requisitions')
-      setRequisitions(res.data ?? [])
+      const res = await api.get<PurchaseRequisition[]>('/purchasing/requisitions');
+      setRequisitions(res.data ?? []);
     } catch (err) {
-      console.error('Failed to load purchase requisitions', err)
+      console.error('Failed to load purchase requisitions', err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchRequisitions()
-  }, [])
+    fetchRequisitions();
+  }, []);
 
   const handleApprove = async (reqId: number) => {
-    setActionLoading(reqId)
+    setActionLoading(reqId);
     try {
-      await api.post(`/purchasing/requisitions/${reqId}/approve`, {})
-      await fetchRequisitions()
+      await api.post(`/purchasing/requisitions/${reqId}/approve`, {});
+      await fetchRequisitions();
     } catch (err) {
-      console.error('Failed to approve PR', err)
+      console.error('Failed to approve PR', err);
     } finally {
-      setActionLoading(null)
+      setActionLoading(null);
     }
-  }
+  };
 
   const filteredRequisitions = requisitions.filter(
     (r) =>
@@ -51,7 +51,7 @@ export function PurchaseRequisitionsSection() {
       r.warehouse_name?.toLowerCase().includes(search.toLowerCase()) ||
       r.department?.toLowerCase().includes(search.toLowerCase()) ||
       r.requester_name?.toLowerCase().includes(search.toLowerCase())
-  )
+  );
 
   const getStatusBadge = (status: PurchaseRequisition['status']) => {
     switch (status) {
@@ -60,27 +60,27 @@ export function PurchaseRequisitionsSection() {
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-zinc-800 text-zinc-300 border border-zinc-700">
             <Clock className="h-3 w-3 text-zinc-400" /> Draft
           </span>
-        )
+        );
       case 'approved':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Approved
           </span>
-        )
+        );
       case 'converted':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-purple-500/10 text-purple-400 border border-purple-500/20">
             <FileSpreadsheet className="h-3 w-3 text-purple-400" /> Converted to PO
           </span>
-        )
+        );
       case 'rejected':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/20">
             <XCircle className="h-3 w-3 text-rose-400" /> Rejected
           </span>
-        )
+        );
     }
-  }
+  };
 
   return (
     <div className="space-y-4">
@@ -140,7 +140,9 @@ export function PurchaseRequisitionsSection() {
                     <td className="px-4 py-3 text-zinc-200">{r.department ?? '—'}</td>
                     <td className="px-4 py-3 text-zinc-300">{r.warehouse_name ?? '—'}</td>
                     <td className="px-4 py-3 font-mono text-zinc-400">{r.requisition_date}</td>
-                    <td className="px-4 py-3 font-mono text-zinc-400">{r.required_by_date ?? '—'}</td>
+                    <td className="px-4 py-3 font-mono text-zinc-400">
+                      {r.required_by_date ?? '—'}
+                    </td>
                     <td className="px-4 py-3">{getStatusBadge(r.status)}</td>
                     <td className="px-4 py-3 text-right">
                       {r.status === 'draft' && (
@@ -162,5 +164,5 @@ export function PurchaseRequisitionsSection() {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Models;
 use App\Core\Tenancy\Concerns\BelongsToTenant;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\Unit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -40,6 +41,7 @@ use Illuminate\Support\Str;
  * @property \Illuminate\Support\Carbon|null $deleted_at
  * @property-read SalesOrder $salesOrder
  * @property-read Product $product
+ * @property-read Unit|null $unit
  * @property-read ProductVariant|null $variant
  */
 final class SalesOrderItem extends Model
@@ -118,6 +120,14 @@ final class SalesOrderItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'product_id');
+    }
+
+    /**
+     * @return BelongsTo<Unit, $this>
+     */
+    public function unit(): BelongsTo
+    {
+        return $this->belongsTo(Unit::class, 'unit_id');
     }
 
     /**

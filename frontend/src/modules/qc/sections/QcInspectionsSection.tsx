@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2,
   Eye,
@@ -9,48 +9,48 @@ import {
   ShieldAlert,
   ShieldCheck,
   XCircle,
-} from 'lucide-react'
-import { api } from '../../../lib/api/client'
-import { Modal } from '../../../components/ui/Modal'
-import { Button } from '../../../components/ui/Button'
-import { Badge, StatusBadge } from '../../../components/ui/Badge'
-import { QueryBoundary } from '../../../components/patterns/QueryBoundary'
-import { isApiError } from '../../../lib/api/errors'
-import type { QcInspection, QcParameter } from '../../../types/api/qc'
-import type { ProductionBatch } from '../../../types/api/production'
-import type { Product } from '../../../types/api/catalog'
+} from 'lucide-react';
+import { api } from '../../../lib/api/client';
+import { Modal } from '../../../components/ui/Modal';
+import { Button } from '../../../components/ui/Button';
+import { Badge, StatusBadge } from '../../../components/ui/Badge';
+import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
+import { isApiError } from '../../../lib/api/errors';
+import type { QcInspection, QcParameter } from '../../../types/api/qc';
+import type { ProductionBatch } from '../../../types/api/production';
+import type { Product } from '../../../types/api/catalog';
 
 interface CreateInspectionDraft {
-  batch_id?: string | undefined
-  product_id: string
-  inspection_type: 'incoming' | 'in_process' | 'final'
-  sample_size: string
-  inspected_quantity: string
-  passed_quantity: string
-  rejected_quantity: string
-  inspection_date: string
-  notes?: string
+  batch_id?: string | undefined;
+  product_id: string;
+  inspection_type: 'incoming' | 'in_process' | 'final';
+  sample_size: string;
+  inspected_quantity: string;
+  passed_quantity: string;
+  rejected_quantity: string;
+  inspection_date: string;
+  notes?: string;
   results: {
-    qc_parameter_id: string
-    measured_value?: string
-    is_passed: boolean
-    remarks?: string
-  }[]
+    qc_parameter_id: string;
+    measured_value?: string;
+    is_passed: boolean;
+    remarks?: string;
+  }[];
   defects: {
-    defect_type: string
-    severity: 'minor' | 'major' | 'critical'
-    quantity: string
-    description?: string
-  }[]
+    defect_type: string;
+    severity: 'minor' | 'major' | 'critical';
+    quantity: string;
+    description?: string;
+  }[];
 }
 
 export function QcInspectionsSection() {
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [typeFilter, setTypeFilter] = useState<string>('all')
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [selectedInspection, setSelectedInspection] = useState<QcInspection | null>(null)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [selectedInspection, setSelectedInspection] = useState<QcInspection | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [draft, setDraft] = useState<CreateInspectionDraft>({
     product_id: '',
@@ -62,9 +62,9 @@ export function QcInspectionsSection() {
     inspection_date: new Date().toISOString().slice(0, 10),
     results: [],
     defects: [],
-  })
+  });
 
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   // Queries
   const inspectionsQuery = useQuery({
@@ -78,52 +78,52 @@ export function QcInspectionsSection() {
           ...(typeFilter !== 'all' ? { inspection_type: typeFilter } : {}),
         },
       }),
-  })
+  });
 
   const batchesQuery = useQuery({
     queryKey: ['production', 'batches', 'options'],
     queryFn: ({ signal }) => api.get<ProductionBatch[]>('/production/batches', { signal }),
-  })
+  });
 
   const productsQuery = useQuery({
     queryKey: ['catalogue', 'products', 'options'],
     queryFn: ({ signal }) => api.get<Product[]>('/products', { signal }),
-  })
+  });
 
   const paramsQuery = useQuery({
     queryKey: ['qc', 'parameters', 'options'],
     queryFn: ({ signal }) => api.get<QcParameter[]>('/qc/parameters', { signal }),
-  })
+  });
 
   // Mutations
   const createMutation = useMutation({
     mutationFn: (payload: CreateInspectionDraft) =>
       api.post<QcInspection>('/qc/inspections', payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['qc', 'inspections'] })
-      setIsCreateOpen(false)
-      setErrorMsg(null)
+      await queryClient.invalidateQueries({ queryKey: ['qc', 'inspections'] });
+      setIsCreateOpen(false);
+      setErrorMsg(null);
     },
     onError: (err) => {
-      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to log QC inspection.')
-      else setErrorMsg('Error logging QC inspection.')
+      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to log QC inspection.');
+      else setErrorMsg('Error logging QC inspection.');
     },
-  })
+  });
 
   const approveMutation = useMutation({
     mutationFn: (id: string) => api.post<QcInspection>(`/qc/inspections/${id}/approve`),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['qc', 'inspections'] })
+      await queryClient.invalidateQueries({ queryKey: ['qc', 'inspections'] });
       if (selectedInspection) {
-        setSelectedInspection((insp) => (insp ? { ...insp, status: 'passed' } : null))
+        setSelectedInspection((insp) => (insp ? { ...insp, status: 'passed' } : null));
       }
     },
-  })
+  });
 
-  const inspections = inspectionsQuery.data?.data ?? []
-  const batches = batchesQuery.data?.data ?? []
-  const products = productsQuery.data?.data ?? []
-  const parameters = paramsQuery.data?.data ?? []
+  const inspections = inspectionsQuery.data?.data ?? [];
+  const batches = batchesQuery.data?.data ?? [];
+  const products = productsQuery.data?.data ?? [];
+  const parameters = paramsQuery.data?.data ?? [];
 
   return (
     <div className="space-y-6">
@@ -169,7 +169,7 @@ export function QcInspectionsSection() {
         <Button
           variant="primary"
           onClick={() => {
-            setErrorMsg(null)
+            setErrorMsg(null);
             if (products.length > 0) {
               setDraft({
                 ...(batches[0]?.id ? { batch_id: batches[0].id } : {}),
@@ -186,9 +186,9 @@ export function QcInspectionsSection() {
                   is_passed: true,
                 })),
                 defects: [],
-              })
+              });
             }
-            setIsCreateOpen(true)
+            setIsCreateOpen(true);
           }}
           className="flex items-center gap-1.5"
         >
@@ -251,7 +251,8 @@ export function QcInspectionsSection() {
                       )}
                     </td>
                     <td className="py-3 px-3 font-mono text-zinc-300">
-                      {insp.sample_size} <span className="text-zinc-600">/</span> {insp.inspected_quantity}
+                      {insp.sample_size} <span className="text-zinc-600">/</span>{' '}
+                      {insp.inspected_quantity}
                     </td>
                     <td className="py-3 px-3 font-mono">
                       <span className="text-emerald-400 font-semibold">{insp.passed_quantity}</span>
@@ -452,7 +453,8 @@ export function QcInspectionsSection() {
                   {selectedInspection.product_name ?? selectedInspection.product_id}
                 </div>
                 <div className="text-xs text-zinc-400 mt-0.5">
-                  Type: {selectedInspection.inspection_type} · Date: {selectedInspection.inspection_date}
+                  Type: {selectedInspection.inspection_type} · Date:{' '}
+                  {selectedInspection.inspection_date}
                 </div>
               </div>
               <div>
@@ -548,5 +550,5 @@ export function QcInspectionsSection() {
         </Modal>
       )}
     </div>
-  )
+  );
 }

@@ -1,34 +1,34 @@
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Ruler, Search } from 'lucide-react'
-import { api } from '../../../lib/api/client'
-import { Modal } from '../../../components/ui/Modal'
-import { Button } from '../../../components/ui/Button'
-import { QueryBoundary } from '../../../components/patterns/QueryBoundary'
-import { isApiError } from '../../../lib/api/errors'
-import type { Unit } from '../../../types/api/unit'
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus, Ruler, Search } from 'lucide-react';
+import { api } from '../../../lib/api/client';
+import { Modal } from '../../../components/ui/Modal';
+import { Button } from '../../../components/ui/Button';
+import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
+import { isApiError } from '../../../lib/api/errors';
+import type { Unit } from '../../../types/api/unit';
 
 interface CreateUnitForm {
-  code: string
-  name: string
-  type: string
-  is_base: boolean
-  precision: number
+  code: string;
+  name: string;
+  type: string;
+  is_base: boolean;
+  precision: number;
 }
 
 export function UnitsSection() {
-  const [search, setSearch] = useState('')
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [search, setSearch] = useState('');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [draft, setDraft] = useState<CreateUnitForm>({
     code: '',
     name: '',
     type: 'piece',
     is_base: true,
     precision: 2,
-  })
+  });
 
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   const unitsQuery = useQuery({
     queryKey: ['catalogue', 'units', search],
@@ -37,27 +37,27 @@ export function UnitsSection() {
         signal,
         params: search.trim().length >= 2 ? { q: search.trim() } : {},
       }),
-  })
+  });
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateUnitForm) => api.post<Unit>('/units', payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['catalogue', 'units'] })
-      setIsCreateOpen(false)
-      setDraft({ code: '', name: '', type: 'piece', is_base: true, precision: 2 })
-      setErrorMsg(null)
+      await queryClient.invalidateQueries({ queryKey: ['catalogue', 'units'] });
+      setIsCreateOpen(false);
+      setDraft({ code: '', name: '', type: 'piece', is_base: true, precision: 2 });
+      setErrorMsg(null);
     },
     onError: (err) => {
       if (isApiError(err)) {
-        if (err.code === 'DUPLICATE') setErrorMsg('Unit code already exists.')
-        else setErrorMsg(err.message ?? 'Failed to create unit.')
+        if (err.code === 'DUPLICATE') setErrorMsg('Unit code already exists.');
+        else setErrorMsg(err.message ?? 'Failed to create unit.');
       } else {
-        setErrorMsg('Error creating unit.')
+        setErrorMsg('Error creating unit.');
       }
     },
-  })
+  });
 
-  const units = unitsQuery.data?.data ?? []
+  const units = unitsQuery.data?.data ?? [];
 
   return (
     <div className="space-y-6">
@@ -76,8 +76,8 @@ export function UnitsSection() {
         <Button
           variant="primary"
           onClick={() => {
-            setErrorMsg(null)
-            setIsCreateOpen(true)
+            setErrorMsg(null);
+            setIsCreateOpen(true);
           }}
           className="flex items-center gap-1.5"
         >
@@ -127,7 +127,9 @@ export function UnitsSection() {
                     <td className="py-3.5 px-3">
                       <span
                         className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                          u.is_base ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-400'
+                          u.is_base
+                            ? 'bg-emerald-500/10 text-emerald-400'
+                            : 'bg-zinc-800 text-zinc-400'
                         }`}
                       >
                         {u.is_base ? 'Base Unit' : 'Derived'}
@@ -137,7 +139,9 @@ export function UnitsSection() {
                     <td className="py-3.5 px-3">
                       <span
                         className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
-                          u.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-500'
+                          u.is_active
+                            ? 'bg-emerald-500/10 text-emerald-400'
+                            : 'bg-zinc-800 text-zinc-500'
                         }`}
                       >
                         {u.is_active ? 'Active' : 'Inactive'}
@@ -152,11 +156,15 @@ export function UnitsSection() {
       </QueryBoundary>
 
       {/* Create Modal */}
-      <Modal open={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create Unit of Measurement">
+      <Modal
+        open={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        title="Create Unit of Measurement"
+      >
         <form
           onSubmit={(e) => {
-            e.preventDefault()
-            createMutation.mutate(draft)
+            e.preventDefault();
+            createMutation.mutate(draft);
           }}
           className="space-y-4"
         >
@@ -209,13 +217,17 @@ export function UnitsSection() {
 
           <div className="grid grid-cols-2 gap-4 items-center">
             <div>
-              <label className="block text-xs font-medium text-zinc-300 mb-1">Decimal Precision</label>
+              <label className="block text-xs font-medium text-zinc-300 mb-1">
+                Decimal Precision
+              </label>
               <input
                 type="number"
                 min="0"
                 max="4"
                 value={draft.precision}
-                onChange={(e) => setDraft({ ...draft, precision: parseInt(e.target.value, 10) || 0 })}
+                onChange={(e) =>
+                  setDraft({ ...draft, precision: parseInt(e.target.value, 10) || 0 })
+                }
                 className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
               />
             </div>
@@ -244,5 +256,5 @@ export function UnitsSection() {
         </form>
       </Modal>
     </div>
-  )
+  );
 }

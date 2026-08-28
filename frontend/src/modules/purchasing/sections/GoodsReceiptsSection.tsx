@@ -1,42 +1,37 @@
-import { useState, useEffect } from 'react'
-import {
-  CheckCircle2,
-  Clock,
-  RefreshCw,
-  Search,
-  XCircle,
-} from 'lucide-react'
-import type { GoodsReceipt } from '../../../types/api/purchasing'
-import { api } from '../../../lib/api/client'
+import { useState, useEffect } from 'react';
+import { CheckCircle2, Clock, RefreshCw, Search, XCircle } from 'lucide-react';
+import type { GoodsReceipt } from '../../../types/api/purchasing';
+import { api } from '../../../lib/api/client';
 
 export function GoodsReceiptsSection() {
-  const [receipts, setReceipts] = useState<GoodsReceipt[]>([])
-  const [loading, setLoading] = useState(false)
-  const [search, setSearch] = useState('')
+  const [receipts, setReceipts] = useState<GoodsReceipt[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
 
   const fetchReceipts = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const res = await api.get<GoodsReceipt[]>('/purchasing/receipts')
-      setReceipts(res.data ?? [])
+      const res = await api.get<GoodsReceipt[]>('/purchasing/receipts');
+      setReceipts(res.data ?? []);
     } catch (err) {
-      console.error('Failed to load goods receipts', err)
+      console.error('Failed to load goods receipts', err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchReceipts()
-  }, [])
+    fetchReceipts();
+  }, []);
 
   const filteredReceipts = receipts.filter(
     (r) =>
       r.grn_number?.toLowerCase().includes(search.toLowerCase()) ||
       r.supplier_name?.toLowerCase().includes(search.toLowerCase()) ||
       r.po_number?.toLowerCase().includes(search.toLowerCase()) ||
-      (r.supplier_document_number && r.supplier_document_number.toLowerCase().includes(search.toLowerCase()))
-  )
+      (r.supplier_document_number &&
+        r.supplier_document_number.toLowerCase().includes(search.toLowerCase()))
+  );
 
   const getStatusBadge = (status: GoodsReceipt['status']) => {
     switch (status) {
@@ -45,21 +40,21 @@ export function GoodsReceiptsSection() {
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-zinc-800 text-zinc-300 border border-zinc-700">
             <Clock className="h-3 w-3 text-zinc-400" /> Draft
           </span>
-        )
+        );
       case 'completed':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Received
           </span>
-        )
+        );
       case 'cancelled':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/20">
             <XCircle className="h-3 w-3 text-rose-400" /> Cancelled
           </span>
-        )
+        );
     }
-  }
+  };
 
   return (
     <div className="space-y-4">
@@ -116,9 +111,7 @@ export function GoodsReceiptsSection() {
                     <td className="px-4 py-3 font-mono font-medium text-zinc-100">
                       {r.grn_number}
                     </td>
-                    <td className="px-4 py-3 font-mono text-zinc-300">
-                      {r.po_number ?? '—'}
-                    </td>
+                    <td className="px-4 py-3 font-mono text-zinc-300">{r.po_number ?? '—'}</td>
                     <td className="px-4 py-3 text-zinc-200">{r.supplier_name ?? '—'}</td>
                     <td className="px-4 py-3 font-mono text-zinc-400">
                       {r.supplier_document_number ?? '—'}
@@ -136,5 +129,5 @@ export function GoodsReceiptsSection() {
         </div>
       </div>
     </div>
-  )
+  );
 }

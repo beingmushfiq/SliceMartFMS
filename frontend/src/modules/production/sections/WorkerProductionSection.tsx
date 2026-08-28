@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2,
   DollarSign,
@@ -8,41 +8,41 @@ import {
   ShieldCheck,
   UserCheck,
   Users,
-} from 'lucide-react'
-import { api } from '../../../lib/api/client'
-import { Modal } from '../../../components/ui/Modal'
-import { Button } from '../../../components/ui/Button'
-import { StatusBadge } from '../../../components/ui/Badge'
-import { QueryBoundary } from '../../../components/patterns/QueryBoundary'
-import { isApiError } from '../../../lib/api/errors'
+} from 'lucide-react';
+import { api } from '../../../lib/api/client';
+import { Modal } from '../../../components/ui/Modal';
+import { Button } from '../../../components/ui/Button';
+import { StatusBadge } from '../../../components/ui/Badge';
+import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
+import { isApiError } from '../../../lib/api/errors';
 import type {
   WorkerProductionEntry,
   WorkerOutputSummary,
   Employee,
   ProductionBatch,
-} from '../../../types/api/production'
-import type { Product } from '../../../types/api/catalog'
+} from '../../../types/api/production';
+import type { Product } from '../../../types/api/catalog';
 
 interface CreateEntryDraft {
-  batch_id: string
-  employee_id: string
-  product_id: string
-  work_date: string
-  shift: 'morning' | 'evening' | 'night' | 'general'
-  wage_type: 'piece_rate' | 'hourly'
-  good_quantity: string
-  rework_quantity: string
-  rejected_quantity: string
-  hours_worked?: string
-  piece_rate?: string
-  notes?: string
+  batch_id: string;
+  employee_id: string;
+  product_id: string;
+  work_date: string;
+  shift: 'morning' | 'evening' | 'night' | 'general';
+  wage_type: 'piece_rate' | 'hourly';
+  good_quantity: string;
+  rework_quantity: string;
+  rejected_quantity: string;
+  hours_worked?: string;
+  piece_rate?: string;
+  notes?: string;
 }
 
 export function WorkerProductionSection() {
-  const [search, setSearch] = useState('')
-  const [shiftFilter, setShiftFilter] = useState<string>('all')
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [search, setSearch] = useState('');
+  const [shiftFilter, setShiftFilter] = useState<string>('all');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [draft, setDraft] = useState<CreateEntryDraft>({
     batch_id: '',
@@ -55,9 +55,9 @@ export function WorkerProductionSection() {
     rework_quantity: '0.0000',
     rejected_quantity: '0.0000',
     piece_rate: '2.5000',
-  })
+  });
 
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   // Queries
   const entriesQuery = useQuery({
@@ -70,30 +70,30 @@ export function WorkerProductionSection() {
           ...(shiftFilter !== 'all' ? { shift: shiftFilter } : {}),
         },
       }),
-  })
+  });
 
   const summaryQuery = useQuery({
     queryKey: ['production', 'worker-entries', 'summary'],
     queryFn: ({ signal }) =>
       api.get<WorkerOutputSummary>('/production/worker-entries/summary', { signal }),
-  })
+  });
 
   const batchesQuery = useQuery({
     queryKey: ['production', 'batches', 'options'],
     queryFn: ({ signal }) => api.get<ProductionBatch[]>('/production/batches', { signal }),
-  })
+  });
 
   const productsQuery = useQuery({
     queryKey: ['catalogue', 'products', 'options'],
     queryFn: ({ signal }) => api.get<Product[]>('/products', { signal }),
-  })
+  });
 
   const employeesQuery = useQuery({
     queryKey: ['production', 'employees', 'options'],
     queryFn: async ({ signal }) => {
       try {
-        const res = await api.get<Employee[]>('/workforce/employees', { signal })
-        return res
+        const res = await api.get<Employee[]>('/workforce/employees', { signal });
+        return res;
       } catch {
         return {
           data: [
@@ -114,39 +114,39 @@ export function WorkerProductionSection() {
               status: 'active' as const,
             },
           ],
-        }
+        };
       }
     },
-  })
+  });
 
   // Mutations
   const createMutation = useMutation({
     mutationFn: (payload: CreateEntryDraft) =>
       api.post<WorkerProductionEntry>('/production/worker-entries', payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['production', 'worker-entries'] })
-      setIsCreateOpen(false)
-      setErrorMsg(null)
+      await queryClient.invalidateQueries({ queryKey: ['production', 'worker-entries'] });
+      setIsCreateOpen(false);
+      setErrorMsg(null);
     },
     onError: (err) => {
-      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to log worker output.')
-      else setErrorMsg('Error logging worker output.')
+      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to log worker output.');
+      else setErrorMsg('Error logging worker output.');
     },
-  })
+  });
 
   const verifyMutation = useMutation({
     mutationFn: (id: string) =>
       api.post<WorkerProductionEntry>(`/production/worker-entries/${id}/verify`),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['production', 'worker-entries'] })
+      await queryClient.invalidateQueries({ queryKey: ['production', 'worker-entries'] });
     },
-  })
+  });
 
-  const entries = entriesQuery.data?.data ?? []
-  const summary = summaryQuery.data?.data
-  const batches = batchesQuery.data?.data ?? []
-  const products = productsQuery.data?.data ?? []
-  const employees = employeesQuery.data?.data ?? []
+  const entries = entriesQuery.data?.data ?? [];
+  const summary = summaryQuery.data?.data;
+  const batches = batchesQuery.data?.data ?? [];
+  const products = productsQuery.data?.data ?? [];
+  const employees = employeesQuery.data?.data ?? [];
 
   return (
     <div className="space-y-6">
@@ -219,7 +219,7 @@ export function WorkerProductionSection() {
         <Button
           variant="primary"
           onClick={() => {
-            setErrorMsg(null)
+            setErrorMsg(null);
             if (batches.length > 0 && products.length > 0 && employees.length > 0) {
               setDraft({
                 batch_id: batches[0]?.id ?? '',
@@ -232,9 +232,9 @@ export function WorkerProductionSection() {
                 rework_quantity: '0.0000',
                 rejected_quantity: '0.0000',
                 piece_rate: '2.5000',
-              })
+              });
             }
-            setIsCreateOpen(true)
+            setIsCreateOpen(true);
           }}
           className="flex items-center gap-1.5 min-h-[44px]"
         >
@@ -270,7 +270,9 @@ export function WorkerProductionSection() {
                     <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800/50 mb-2">
                       <Users className="h-5 w-5 text-zinc-400" />
                     </div>
-                    <div className="text-sm font-medium text-zinc-400">No worker production entries found</div>
+                    <div className="text-sm font-medium text-zinc-400">
+                      No worker production entries found
+                    </div>
                     <div className="text-xs text-zinc-500 mt-1">
                       Log daily worker unit output on the shop floor.
                     </div>
@@ -289,12 +291,18 @@ export function WorkerProductionSection() {
                       )}
                     </td>
                     <td className="py-3 px-3">
-                      <div className="font-mono text-zinc-300">{entry.batch_number ?? entry.batch_id}</div>
-                      <div className="text-[10px] text-zinc-500">{entry.product_name ?? entry.product_id}</div>
+                      <div className="font-mono text-zinc-300">
+                        {entry.batch_number ?? entry.batch_id}
+                      </div>
+                      <div className="text-[10px] text-zinc-500">
+                        {entry.product_name ?? entry.product_id}
+                      </div>
                     </td>
                     <td className="py-3 px-3 text-zinc-400">
                       <div>{entry.work_date}</div>
-                      <div className="text-[10px] uppercase font-semibold text-zinc-500">{entry.shift}</div>
+                      <div className="text-[10px] uppercase font-semibold text-zinc-500">
+                        {entry.shift}
+                      </div>
                     </td>
                     <td className="py-3 px-3 font-mono">
                       <span className="text-emerald-400 font-medium">{entry.good_quantity}</span>
@@ -496,5 +504,5 @@ export function WorkerProductionSection() {
         </div>
       </Modal>
     </div>
-  )
+  );
 }

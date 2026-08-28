@@ -1,36 +1,36 @@
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { AlertCircle, Eye, EyeOff, Lock, Mail, Package } from 'lucide-react'
-import { useAuthStore } from '../../lib/auth/authStore'
-import { isApiError } from '../../lib/api/errors'
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { AlertCircle, Eye, EyeOff, Lock, Mail, Package } from 'lucide-react';
+import { useAuthStore } from '../../lib/auth/authStore';
+import { isApiError } from '../../lib/api/errors';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-})
+});
 
-type LoginFormValues = z.infer<typeof loginSchema>
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const [showPassword, setShowPassword] = useState(false)
-  const [serverError, setServerError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const login = useAuthStore((state) => state.login)
-  const navigate = useNavigate()
-  const location = useLocation()
+  const login = useAuthStore((state) => state.login);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   interface LocationState {
     from?: {
-      pathname?: string
-    }
+      pathname?: string;
+    };
   }
 
-  const state = location.state as LocationState | null
-  const from = state?.from?.pathname ?? '/catalogue'
+  const state = location.state as LocationState | null;
+  const from = state?.from?.pathname ?? '/catalogue';
 
   const {
     register,
@@ -42,37 +42,37 @@ export default function LoginPage() {
       email: '',
       password: '',
     },
-  })
+  });
 
   const onSubmit = async (values: LoginFormValues) => {
-    setServerError(null)
-    setIsLoading(true)
+    setServerError(null);
+    setIsLoading(true);
     try {
       await login({
         email: values.email,
         password: values.password,
-      })
-      navigate(from, { replace: true })
+      });
+      navigate(from, { replace: true });
     } catch (err: unknown) {
       if (isApiError(err)) {
         if (err.code === 'UNAUTHENTICATED') {
-          setServerError('Invalid email or password. Please check your credentials.')
+          setServerError('Invalid email or password. Please check your credentials.');
         } else if (err.code === 'ACCOUNT_INACTIVE') {
-          setServerError('Your user account has been deactivated. Contact your administrator.')
+          setServerError('Your user account has been deactivated. Contact your administrator.');
         } else if (err.code === 'TENANT_INACTIVE') {
-          setServerError('Your organization account is suspended.')
+          setServerError('Your organization account is suspended.');
         } else {
-          setServerError(err.message ?? 'Authentication failed. Please try again.')
+          setServerError(err.message ?? 'Authentication failed. Please try again.');
         }
       } else if (err instanceof Error) {
-        setServerError(err.message)
+        setServerError(err.message);
       } else {
-        setServerError('Unable to sign in. Please verify your connection.')
+        setServerError('Unable to sign in. Please verify your connection.');
       }
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="flex min-h-dvh w-full items-center justify-center bg-zinc-950 px-4 py-12 text-zinc-100 sm:px-6 lg:px-8">
@@ -89,9 +89,7 @@ export default function LoginPage() {
           <h2 className="mt-4 text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">
             SliceMart FMS
           </h2>
-          <p className="mt-1 text-xs text-zinc-400">
-            Sign in to access your tenant workspace
-          </p>
+          <p className="mt-1 text-xs text-zinc-400">Sign in to access your tenant workspace</p>
         </div>
 
         {/* Server error alert banner */}
@@ -106,9 +104,7 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           {/* Email field */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-zinc-300">
-              Email Address
-            </label>
+            <label className="block text-xs font-semibold text-zinc-300">Email Address</label>
             <div className="relative rounded-xl shadow-sm">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-zinc-500">
                 <Mail className="h-4 w-4" />
@@ -125,17 +121,13 @@ export default function LoginPage() {
                 }`}
               />
             </div>
-            {errors.email && (
-              <p className="text-[11px] text-rose-400">{errors.email.message}</p>
-            )}
+            {errors.email && <p className="text-[11px] text-rose-400">{errors.email.message}</p>}
           </div>
 
           {/* Password field */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-semibold text-zinc-300">
-                Password
-              </label>
+              <label className="block text-xs font-semibold text-zinc-300">Password</label>
             </div>
             <div className="relative rounded-xl shadow-sm">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-zinc-500">
@@ -190,5 +182,5 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

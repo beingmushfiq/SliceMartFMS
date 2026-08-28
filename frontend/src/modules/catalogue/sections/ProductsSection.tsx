@@ -1,28 +1,28 @@
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Search, Tag } from 'lucide-react'
-import { api } from '../../../lib/api/client'
-import { Modal } from '../../../components/ui/Modal'
-import { Button } from '../../../components/ui/Button'
-import { QueryBoundary } from '../../../components/patterns/QueryBoundary'
-import { isApiError } from '../../../lib/api/errors'
-import type { Product } from '../../../types/api/catalog'
-import type { Unit } from '../../../types/api/unit'
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus, Search, Tag } from 'lucide-react';
+import { api } from '../../../lib/api/client';
+import { Modal } from '../../../components/ui/Modal';
+import { Button } from '../../../components/ui/Button';
+import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
+import { isApiError } from '../../../lib/api/errors';
+import type { Product } from '../../../types/api/catalog';
+import type { Unit } from '../../../types/api/unit';
 
 interface CreateProductForm {
-  sku: string
-  name: string
-  type: string
-  base_unit_id: string
-  standard_cost: string
-  default_sale_price: string
+  sku: string;
+  name: string;
+  type: string;
+  base_unit_id: string;
+  standard_cost: string;
+  default_sale_price: string;
 }
 
 export function ProductsSection() {
-  const [search, setSearch] = useState('')
-  const [typeFilter, setTypeFilter] = useState<string>('all')
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [draft, setDraft] = useState<CreateProductForm>({
     sku: '',
     name: '',
@@ -30,9 +30,9 @@ export function ProductsSection() {
     base_unit_id: '',
     standard_cost: '0.0000',
     default_sale_price: '0.0000',
-  })
+  });
 
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   // Fetch Products
   const productsQuery = useQuery({
@@ -45,19 +45,19 @@ export function ProductsSection() {
           ...(typeFilter !== 'all' ? { type: typeFilter } : {}),
         },
       }),
-  })
+  });
 
   // Fetch Units options for dropdown
   const unitsQuery = useQuery({
     queryKey: ['catalogue', 'units', 'options'],
     queryFn: ({ signal }) => api.get<Unit[]>('/units', { signal }),
-  })
+  });
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateProductForm) => api.post<Product>('/products', payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['catalogue', 'products'] })
-      setIsCreateOpen(false)
+      await queryClient.invalidateQueries({ queryKey: ['catalogue', 'products'] });
+      setIsCreateOpen(false);
       setDraft({
         sku: '',
         name: '',
@@ -65,21 +65,21 @@ export function ProductsSection() {
         base_unit_id: '',
         standard_cost: '0.0000',
         default_sale_price: '0.0000',
-      })
-      setErrorMsg(null)
+      });
+      setErrorMsg(null);
     },
     onError: (err) => {
       if (isApiError(err)) {
-        if (err.code === 'DUPLICATE') setErrorMsg('SKU is already in use by another product.')
-        else setErrorMsg(err.message ?? 'Failed to create product.')
+        if (err.code === 'DUPLICATE') setErrorMsg('SKU is already in use by another product.');
+        else setErrorMsg(err.message ?? 'Failed to create product.');
       } else {
-        setErrorMsg('Error creating product. Please try again.')
+        setErrorMsg('Error creating product. Please try again.');
       }
     },
-  })
+  });
 
-  const products = productsQuery.data?.data ?? []
-  const units = unitsQuery.data?.data ?? []
+  const products = productsQuery.data?.data ?? [];
+  const units = unitsQuery.data?.data ?? [];
 
   return (
     <div className="space-y-6">
@@ -114,11 +114,11 @@ export function ProductsSection() {
         <Button
           variant="primary"
           onClick={() => {
-            setErrorMsg(null)
+            setErrorMsg(null);
             if (units.length > 0 && !draft.base_unit_id) {
-              setDraft((d) => ({ ...d, base_unit_id: units[0]?.id ?? '' }))
+              setDraft((d) => ({ ...d, base_unit_id: units[0]?.id ?? '' }));
             }
-            setIsCreateOpen(true)
+            setIsCreateOpen(true);
           }}
           className="flex items-center gap-1.5"
         >
@@ -167,9 +167,13 @@ export function ProductsSection() {
                       </span>
                     </td>
                     <td className="py-3.5 px-3 font-mono">{p.standard_cost}</td>
-                    <td className="py-3.5 px-3 font-mono text-emerald-400">{p.default_sale_price}</td>
+                    <td className="py-3.5 px-3 font-mono text-emerald-400">
+                      {p.default_sale_price}
+                    </td>
                     <td className="py-3.5 px-3">
-                      <span className={`inline-block h-2 w-2 rounded-full ${p.is_stock_tracked ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+                      <span
+                        className={`inline-block h-2 w-2 rounded-full ${p.is_stock_tracked ? 'bg-emerald-400' : 'bg-zinc-600'}`}
+                      />
                       <span className="ml-2 text-xs">{p.is_stock_tracked ? 'Yes' : 'No'}</span>
                     </td>
                     <td className="py-3.5 px-3">
@@ -192,15 +196,11 @@ export function ProductsSection() {
       </QueryBoundary>
 
       {/* Create Product Modal */}
-      <Modal
-        open={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        title="Create New Product"
-      >
+      <Modal open={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create New Product">
         <form
           onSubmit={(e) => {
-            e.preventDefault()
-            createMutation.mutate(draft)
+            e.preventDefault();
+            createMutation.mutate(draft);
           }}
           className="space-y-4"
         >
@@ -279,7 +279,9 @@ export function ProductsSection() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-zinc-300 mb-1">Default Sale Price</label>
+              <label className="block text-xs font-medium text-zinc-300 mb-1">
+                Default Sale Price
+              </label>
               <input
                 type="number"
                 step="0.0001"
@@ -301,5 +303,5 @@ export function ProductsSection() {
         </form>
       </Modal>
     </div>
-  )
+  );
 }

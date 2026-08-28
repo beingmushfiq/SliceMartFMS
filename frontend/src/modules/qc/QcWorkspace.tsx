@@ -1,16 +1,16 @@
-import { useState } from 'react'
-import { AlertOctagon, Microscope, Sliders } from 'lucide-react'
-import { QcInspectionsSection } from './sections/QcInspectionsSection'
-import { QcParametersSection } from './sections/QcParametersSection'
-import { WastageRecordsSection } from './sections/WastageRecordsSection'
+import { useState } from 'react';
+import { AlertOctagon, Microscope, Sliders } from 'lucide-react';
+import { QcInspectionsSection } from './sections/QcInspectionsSection';
+import { QcParametersSection } from './sections/QcParametersSection';
+import { WastageRecordsSection } from './sections/WastageRecordsSection';
 
-export type QcTab = 'inspections' | 'parameters' | 'wastage'
+export type QcTab = 'inspections' | 'parameters' | 'wastage';
 
 interface TabConfig {
-  id: QcTab
-  label: string
-  icon: typeof Microscope
-  description: string
+  id: QcTab;
+  label: string;
+  icon: typeof Microscope;
+  description: string;
 }
 
 const tabs: TabConfig[] = [
@@ -18,7 +18,8 @@ const tabs: TabConfig[] = [
     id: 'inspections',
     label: 'QC Inspections & QA',
     icon: Microscope,
-    description: 'Incoming, in-process, and final inspection runs with multi-defect severity logging',
+    description:
+      'Incoming, in-process, and final inspection runs with multi-defect severity logging',
   },
   {
     id: 'parameters',
@@ -32,12 +33,12 @@ const tabs: TabConfig[] = [
     icon: AlertOctagon,
     description: 'Process loss logging with reason codes, financial valuation and scrap tracking',
   },
-]
+];
 
 export default function QcWorkspace() {
-  const [activeTab, setActiveTab] = useState<QcTab>('inspections')
+  const [activeTab, setActiveTab] = useState<QcTab>('inspections');
 
-  const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[0]
+  const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[0];
 
   return (
     <div className="space-y-6">
@@ -50,9 +51,7 @@ export default function QcWorkspace() {
           <h1 className="text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">
             {currentTab?.label}
           </h1>
-          <p className="mt-1 text-xs text-zinc-400">
-            {currentTab?.description}
-          </p>
+          <p className="mt-1 text-xs text-zinc-400">{currentTab?.description}</p>
         </div>
       </div>
 
@@ -60,8 +59,8 @@ export default function QcWorkspace() {
       <div className="flex overflow-x-auto border-b border-zinc-800 pb-px scrollbar-none">
         <div className="flex gap-2">
           {tabs.map((tab) => {
-            const Icon = tab.icon
-            const isActive = activeTab === tab.id
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
@@ -75,7 +74,7 @@ export default function QcWorkspace() {
                 <Icon className="h-4 w-4" />
                 <span>{tab.label}</span>
               </button>
-            )
+            );
           })}
         </div>
       </div>
@@ -87,5 +86,5 @@ export default function QcWorkspace() {
         {activeTab === 'wastage' && <WastageRecordsSection />}
       </div>
     </div>
-  )
+  );
 }

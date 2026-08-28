@@ -1,7 +1,9 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink } from 'react-router-dom';
 import {
   Boxes,
+  Building2,
   ClipboardList,
+  Coins,
   Factory,
   FileSpreadsheet,
   LayoutDashboard,
@@ -12,15 +14,15 @@ import {
   Truck,
   Users,
   Warehouse,
-} from 'lucide-react'
-import { useAuthStore } from '../../lib/auth/authStore'
+} from 'lucide-react';
+import { useAuthStore } from '../../lib/auth/authStore';
 
 interface NavItem {
-  label: string
-  to: string
-  icon: typeof LayoutDashboard
-  permission?: string | string[]
-  badge?: string
+  label: string;
+  to: string;
+  icon: typeof LayoutDashboard;
+  permission?: string | string[];
+  badge?: string;
 }
 
 const mainNav: NavItem[] = [
@@ -82,8 +84,20 @@ const mainNav: NavItem[] = [
     permission: ['logistics.delivery.view'],
   },
   {
+    label: 'Finance & Accounts',
+    to: '/finance',
+    icon: Coins,
+    permission: ['finance.gl.view'],
+  },
+  {
+    label: 'Fixed Assets',
+    to: '/assets',
+    icon: Building2,
+    permission: ['assets.register.view'],
+  },
+  {
     label: 'Workforce & HR',
-    to: '/workforce',
+    to: '/hr',
     icon: Users,
     permission: ['workforce.employee.view'],
   },
@@ -93,19 +107,17 @@ const mainNav: NavItem[] = [
     icon: FileSpreadsheet,
     permission: ['reports.standard.view'],
   },
-]
+];
 
 interface SidebarProps {
-  isOpen: boolean
-  onClose: () => void
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const hasPermission = useAuthStore((state) => state.hasPermission)
+  const hasPermission = useAuthStore((state) => state.hasPermission);
 
-  const visibleNav = mainNav.filter(
-    (item) => !item.permission || hasPermission(item.permission)
-  )
+  const visibleNav = mainNav.filter((item) => !item.permission || hasPermission(item.permission));
 
   return (
     <>
@@ -131,7 +143,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
           <div>
             <div className="font-bold tracking-tight text-zinc-100">SliceMart FMS</div>
-            <div className="text-[10px] font-semibold text-emerald-400 uppercase tracking-widest">Enterprise</div>
+            <div className="text-[10px] font-semibold text-emerald-400 uppercase tracking-widest">
+              Enterprise
+            </div>
           </div>
         </div>
 
@@ -142,7 +156,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
 
           {visibleNav.map((item) => {
-            const Icon = item.icon
+            const Icon = item.icon;
             return (
               <NavLink
                 key={item.to}
@@ -166,7 +180,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   </span>
                 )}
               </NavLink>
-            )
+            );
           })}
         </nav>
 
@@ -179,5 +193,5 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
       </aside>
     </>
-  )
+  );
 }

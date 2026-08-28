@@ -1,56 +1,48 @@
-import { useState, useEffect } from 'react'
-import {
-  CheckCircle2,
-  Clock,
-  RefreshCw,
-  Search,
-  ShieldCheck,
-  Truck,
-  XCircle,
-} from 'lucide-react'
-import type { PurchaseOrder } from '../../../types/api/purchasing'
-import { api } from '../../../lib/api/client'
+import { useState, useEffect } from 'react';
+import { CheckCircle2, Clock, RefreshCw, Search, ShieldCheck, Truck, XCircle } from 'lucide-react';
+import type { PurchaseOrder } from '../../../types/api/purchasing';
+import { api } from '../../../lib/api/client';
 
 export function PurchaseOrdersSection() {
-  const [orders, setOrders] = useState<PurchaseOrder[]>([])
-  const [loading, setLoading] = useState(false)
-  const [search, setSearch] = useState('')
-  const [actionLoading, setActionLoading] = useState<number | null>(null)
+  const [orders, setOrders] = useState<PurchaseOrder[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
 
   const fetchOrders = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const res = await api.get<PurchaseOrder[]>('/purchasing/orders')
-      setOrders(res.data ?? [])
+      const res = await api.get<PurchaseOrder[]>('/purchasing/orders');
+      setOrders(res.data ?? []);
     } catch (err) {
-      console.error('Failed to load purchase orders', err)
+      console.error('Failed to load purchase orders', err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchOrders()
-  }, [])
+    fetchOrders();
+  }, []);
 
   const handleApprove = async (orderId: number) => {
-    setActionLoading(orderId)
+    setActionLoading(orderId);
     try {
-      await api.post(`/purchasing/orders/${orderId}/approve`, {})
-      await fetchOrders()
+      await api.post(`/purchasing/orders/${orderId}/approve`, {});
+      await fetchOrders();
     } catch (err) {
-      console.error('Failed to approve PO', err)
+      console.error('Failed to approve PO', err);
     } finally {
-      setActionLoading(null)
+      setActionLoading(null);
     }
-  }
+  };
 
   const filteredOrders = orders.filter(
     (o) =>
       o.po_number?.toLowerCase().includes(search.toLowerCase()) ||
       o.supplier_name?.toLowerCase().includes(search.toLowerCase()) ||
       o.warehouse_name?.toLowerCase().includes(search.toLowerCase())
-  )
+  );
 
   const getStatusBadge = (status: PurchaseOrder['status']) => {
     switch (status) {
@@ -59,34 +51,34 @@ export function PurchaseOrdersSection() {
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-zinc-800 text-zinc-300 border border-zinc-700">
             <Clock className="h-3 w-3 text-zinc-400" /> Draft
           </span>
-        )
+        );
       case 'approved':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Approved
           </span>
-        )
+        );
       case 'partially_received':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20">
             <Truck className="h-3 w-3 text-blue-400" /> Partial GRN
           </span>
-        )
+        );
       case 'received':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-purple-500/10 text-purple-400 border border-purple-500/20">
             <CheckCircle2 className="h-3 w-3 text-purple-400" /> Fulfilled
           </span>
-        )
+        );
       case 'cancelled':
       case 'closed':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-zinc-700/20 text-zinc-400 border border-zinc-700/30">
             <XCircle className="h-3 w-3 text-zinc-400" /> {status}
           </span>
-        )
+        );
     }
-  }
+  };
 
   return (
     <div className="space-y-4">
@@ -168,5 +160,5 @@ export function PurchaseOrdersSection() {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,38 +1,38 @@
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, ClipboardList, Plus, Search, Calendar, Eye } from 'lucide-react'
-import { api } from '../../../lib/api/client'
-import { Modal } from '../../../components/ui/Modal'
-import { Button } from '../../../components/ui/Button'
-import { StatusBadge } from '../../../components/ui/Badge'
-import { QueryBoundary } from '../../../components/patterns/QueryBoundary'
-import { isApiError } from '../../../lib/api/errors'
-import type { ProductionPlan } from '../../../types/api/production'
-import type { Product } from '../../../types/api/catalog'
-import type { BillOfMaterial } from '../../../types/api/bom'
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { CheckCircle2, ClipboardList, Plus, Search, Calendar, Eye } from 'lucide-react';
+import { api } from '../../../lib/api/client';
+import { Modal } from '../../../components/ui/Modal';
+import { Button } from '../../../components/ui/Button';
+import { StatusBadge } from '../../../components/ui/Badge';
+import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
+import { isApiError } from '../../../lib/api/errors';
+import type { ProductionPlan } from '../../../types/api/production';
+import type { Product } from '../../../types/api/catalog';
+import type { BillOfMaterial } from '../../../types/api/bom';
 
 interface CreatePlanItemDraft {
-  product_id: string
-  bom_id: string
-  planned_quantity: string
-  notes?: string
+  product_id: string;
+  bom_id: string;
+  planned_quantity: string;
+  notes?: string;
 }
 
 interface CreatePlanDraft {
-  plan_number: string
-  title: string
-  start_date: string
-  end_date: string
-  notes?: string
-  items: CreatePlanItemDraft[]
+  plan_number: string;
+  title: string;
+  start_date: string;
+  end_date: string;
+  notes?: string;
+  items: CreatePlanItemDraft[];
 }
 
 export function ProductionPlansSection() {
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [selectedPlan, setSelectedPlan] = useState<ProductionPlan | null>(null)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<ProductionPlan | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [draft, setDraft] = useState<CreatePlanDraft>({
     plan_number: '',
@@ -41,9 +41,9 @@ export function ProductionPlansSection() {
     end_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
     notes: '',
     items: [{ product_id: '', bom_id: '', planned_quantity: '100.0000' }],
-  })
+  });
 
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   // Queries
   const plansQuery = useQuery({
@@ -56,24 +56,25 @@ export function ProductionPlansSection() {
           ...(statusFilter !== 'all' ? { status: statusFilter } : {}),
         },
       }),
-  })
+  });
 
   const productsQuery = useQuery({
     queryKey: ['catalogue', 'products', 'options'],
     queryFn: ({ signal }) => api.get<Product[]>('/products', { signal }),
-  })
+  });
 
   const bomsQuery = useQuery({
     queryKey: ['catalogue', 'boms', 'options'],
     queryFn: ({ signal }) => api.get<BillOfMaterial[]>('/bill-of-materials', { signal }),
-  })
+  });
 
   // Mutations
   const createMutation = useMutation({
-    mutationFn: (payload: CreatePlanDraft) => api.post<ProductionPlan>('/production/plans', payload),
+    mutationFn: (payload: CreatePlanDraft) =>
+      api.post<ProductionPlan>('/production/plans', payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['production', 'plans'] })
-      setIsCreateOpen(false)
+      await queryClient.invalidateQueries({ queryKey: ['production', 'plans'] });
+      setIsCreateOpen(false);
       setDraft({
         plan_number: '',
         title: '',
@@ -81,31 +82,31 @@ export function ProductionPlansSection() {
         end_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
         notes: '',
         items: [{ product_id: '', bom_id: '', planned_quantity: '100.0000' }],
-      })
-      setErrorMsg(null)
+      });
+      setErrorMsg(null);
     },
     onError: (err) => {
       if (isApiError(err)) {
-        setErrorMsg(err.message ?? 'Failed to create production plan.')
+        setErrorMsg(err.message ?? 'Failed to create production plan.');
       } else {
-        setErrorMsg('Error creating production plan. Please check inputs.')
+        setErrorMsg('Error creating production plan. Please check inputs.');
       }
     },
-  })
+  });
 
   const approveMutation = useMutation({
     mutationFn: (planId: string) => api.post<ProductionPlan>(`/production/plans/${planId}/approve`),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['production', 'plans'] })
+      await queryClient.invalidateQueries({ queryKey: ['production', 'plans'] });
       if (selectedPlan) {
-        setSelectedPlan((p) => (p ? { ...p, status: 'approved' } : null))
+        setSelectedPlan((p) => (p ? { ...p, status: 'approved' } : null));
       }
     },
-  })
+  });
 
-  const plans = plansQuery.data?.data ?? []
-  const products = productsQuery.data?.data ?? []
-  const boms = bomsQuery.data?.data ?? []
+  const plans = plansQuery.data?.data ?? [];
+  const products = productsQuery.data?.data ?? [];
+  const boms = bomsQuery.data?.data ?? [];
 
   return (
     <div className="space-y-6">
@@ -140,7 +141,7 @@ export function ProductionPlansSection() {
         <Button
           variant="primary"
           onClick={() => {
-            setErrorMsg(null)
+            setErrorMsg(null);
             if (products.length > 0 && boms.length > 0) {
               setDraft((d) => ({
                 ...d,
@@ -152,9 +153,9 @@ export function ProductionPlansSection() {
                     planned_quantity: '100.0000',
                   },
                 ],
-              }))
+              }));
             }
-            setIsCreateOpen(true)
+            setIsCreateOpen(true);
           }}
           className="flex items-center gap-1.5"
         >
@@ -189,9 +190,13 @@ export function ProductionPlansSection() {
                     <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800/50 mb-2">
                       <ClipboardList className="h-5 w-5 text-zinc-400" />
                     </div>
-                    <div className="text-sm font-medium text-zinc-400">No production plans found</div>
+                    <div className="text-sm font-medium text-zinc-400">
+                      No production plans found
+                    </div>
                     <div className="text-xs text-zinc-500 mt-1">
-                      {search ? 'Try adjusting search or status filters' : 'Create your first production plan to get started.'}
+                      {search
+                        ? 'Try adjusting search or status filters'
+                        : 'Create your first production plan to get started.'}
                     </div>
                   </td>
                 </tr>
@@ -210,9 +215,7 @@ export function ProductionPlansSection() {
                         <span>{plan.end_date}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-3 text-zinc-400">
-                      {plan.items?.length ?? 0} products
-                    </td>
+                    <td className="py-3 px-3 text-zinc-400">{plan.items?.length ?? 0} products</td>
                     <td className="py-3 px-3">
                       <StatusBadge status={plan.status} />
                     </td>
@@ -345,17 +348,22 @@ export function ProductionPlansSection() {
 
             <div className="space-y-2">
               {draft.items.map((item, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-2 rounded-xl bg-zinc-950 p-2.5 border border-zinc-800">
+                <div
+                  key={idx}
+                  className="grid grid-cols-12 gap-2 rounded-xl bg-zinc-950 p-2.5 border border-zinc-800"
+                >
                   <div className="col-span-5">
                     <label className="text-[10px] text-zinc-500">Product</label>
                     <select
                       value={item.product_id}
                       onChange={(e) => {
-                        const val = e.target.value
+                        const val = e.target.value;
                         setDraft((d) => ({
                           ...d,
-                          items: d.items.map((it, i) => (i === idx ? { ...it, product_id: val } : it)),
-                        }))
+                          items: d.items.map((it, i) =>
+                            i === idx ? { ...it, product_id: val } : it
+                          ),
+                        }));
                       }}
                       className="w-full rounded-lg border border-zinc-800 bg-zinc-900 p-1.5 text-xs text-zinc-200"
                     >
@@ -372,11 +380,11 @@ export function ProductionPlansSection() {
                     <select
                       value={item.bom_id}
                       onChange={(e) => {
-                        const val = e.target.value
+                        const val = e.target.value;
                         setDraft((d) => ({
                           ...d,
                           items: d.items.map((it, i) => (i === idx ? { ...it, bom_id: val } : it)),
-                        }))
+                        }));
                       }}
                       className="w-full rounded-lg border border-zinc-800 bg-zinc-900 p-1.5 text-xs text-zinc-200"
                     >
@@ -395,11 +403,13 @@ export function ProductionPlansSection() {
                       step="0.0001"
                       value={item.planned_quantity}
                       onChange={(e) => {
-                        const val = e.target.value
+                        const val = e.target.value;
                         setDraft((d) => ({
                           ...d,
-                          items: d.items.map((it, i) => (i === idx ? { ...it, planned_quantity: val } : it)),
-                        }))
+                          items: d.items.map((it, i) =>
+                            i === idx ? { ...it, planned_quantity: val } : it
+                          ),
+                        }));
                       }}
                       className="w-full rounded-lg border border-zinc-800 bg-zinc-900 p-1.5 text-xs text-zinc-200"
                     />
@@ -463,7 +473,9 @@ export function ProductionPlansSection() {
                         <td className="p-2.5 text-zinc-200">
                           {item.product_name ?? item.product_id}
                         </td>
-                        <td className="p-2.5 font-mono text-emerald-400">{item.planned_quantity}</td>
+                        <td className="p-2.5 font-mono text-emerald-400">
+                          {item.planned_quantity}
+                        </td>
                         <td className="p-2.5 font-mono text-zinc-400">{item.completed_quantity}</td>
                       </tr>
                     ))}
@@ -481,5 +493,5 @@ export function ProductionPlansSection() {
         </Modal>
       )}
     </div>
-  )
+  );
 }

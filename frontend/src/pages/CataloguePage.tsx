@@ -1,5 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Boxes, ChevronRight, Package, Plus, Search, Tags, Warehouse as WarehouseIcon } from 'lucide-react';
+import {
+  Boxes,
+  ChevronRight,
+  Package,
+  Plus,
+  Search,
+  Tags,
+  Warehouse as WarehouseIcon,
+} from 'lucide-react';
 import { useState } from 'react';
 import { api } from '../lib/api/client';
 import { QueryBoundary } from '../components/patterns/QueryBoundary';
@@ -86,9 +94,13 @@ export default function CataloguePage() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10">
         <header className="flex flex-wrap items-end justify-between gap-5">
           <div>
-            <p className="text-muted text-xs font-semibold tracking-[0.12em] uppercase">Master data</p>
+            <p className="text-muted text-xs font-semibold tracking-[0.12em] uppercase">
+              Master data
+            </p>
             <h1 className="mt-2 text-3xl font-bold tracking-tight">Catalogue workspace</h1>
-            <p className="text-muted mt-2 max-w-xl text-sm">Keep the records that production, purchasing, and sales depend on in one quiet place.</p>
+            <p className="text-muted mt-2 max-w-xl text-sm">
+              Keep the records that production, purchasing, and sales depend on in one quiet place.
+            </p>
           </div>
         </header>
 
@@ -108,15 +120,53 @@ export default function CataloguePage() {
 
         <section className="flex flex-col gap-5" aria-labelledby="records-heading">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 id="records-heading" className="text-lg font-semibold">{sections.find((item) => item.id === section)?.label}</h2>
+            <h2 id="records-heading" className="text-lg font-semibold">
+              {sections.find((item) => item.id === section)?.label}
+            </h2>
             <div className="flex flex-wrap items-center justify-end gap-3">
-              <Input aria-label="Search catalogue" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name or code" leftElement={<Search size={16} />} className="max-w-sm" />
-              {section === 'warehouses' && <Button type="button" size="sm" leftIcon={<Plus />} onClick={() => setIsCreateOpen(true)}>Add warehouse</Button>}
+              <Input
+                aria-label="Search catalogue"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search by name or code"
+                leftElement={<Search size={16} />}
+                className="max-w-sm"
+              />
+              {section === 'warehouses' && (
+                <Button
+                  type="button"
+                  size="sm"
+                  leftIcon={<Plus />}
+                  onClick={() => setIsCreateOpen(true)}
+                >
+                  Add warehouse
+                </Button>
+              )}
             </div>
           </div>
-          <QueryBoundary status={query.status} error={query.error} data={rows} isFetching={query.isFetching} hasActiveFilters={search.trim().length >= 2}>
+          <QueryBoundary
+            status={query.status}
+            error={query.error}
+            data={rows}
+            isFetching={query.isFetching}
+            hasActiveFilters={search.trim().length >= 2}
+          >
             <div className="border-default overflow-hidden rounded-(--card-radius) border bg-surface">
-              {rows.length === 0 ? <p className="text-muted px-6 py-12 text-center text-sm">No records yet.</p> : <ul className="divide-default divide-y">{rows.map((row) => <li key={row.id} className="flex items-center justify-between gap-4 px-5 py-4"><div><p className="font-medium">{rowLabel(section, row)}</p><p className="text-muted mt-1 text-xs">{rowMeta(section, row)}</p></div><ChevronRight className="text-subtle" size={17} aria-hidden="true" /></li>)}</ul>}
+              {rows.length === 0 ? (
+                <p className="text-muted px-6 py-12 text-center text-sm">No records yet.</p>
+              ) : (
+                <ul className="divide-default divide-y">
+                  {rows.map((row) => (
+                    <li key={row.id} className="flex items-center justify-between gap-4 px-5 py-4">
+                      <div>
+                        <p className="font-medium">{rowLabel(section, row)}</p>
+                        <p className="text-muted mt-1 text-xs">{rowMeta(section, row)}</p>
+                      </div>
+                      <ChevronRight className="text-subtle" size={17} aria-hidden="true" />
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </QueryBoundary>
         </section>
@@ -130,7 +180,14 @@ export default function CataloguePage() {
         isDirty={draft.code !== '' || draft.name !== ''}
         footer={
           <>
-            <Button type="button" variant="secondary" onClick={() => setIsCreateOpen(false)} disabled={createWarehouse.isPending}>Cancel</Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsCreateOpen(false)}
+              disabled={createWarehouse.isPending}
+            >
+              Cancel
+            </Button>
             <AsyncButton
               type="button"
               onClick={async () => {
@@ -146,13 +203,34 @@ export default function CataloguePage() {
       >
         <div className="flex flex-col gap-4">
           <FormGroup label="Code" required id="warehouse-code">
-            <Input id="warehouse-code" value={draft.code} onChange={(event) => setDraft((current) => ({ ...current, code: event.target.value }))} maxLength={32} autoFocus />
+            <Input
+              id="warehouse-code"
+              value={draft.code}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, code: event.target.value }))
+              }
+              maxLength={32}
+              autoFocus
+            />
           </FormGroup>
           <FormGroup label="Name" required id="warehouse-name">
-            <Input id="warehouse-name" value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} maxLength={191} />
+            <Input
+              id="warehouse-name"
+              value={draft.name}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, name: event.target.value }))
+              }
+              maxLength={191}
+            />
           </FormGroup>
           <FormGroup label="Type" id="warehouse-type">
-            <Select id="warehouse-type" value={draft.type} onChange={(event) => setDraft((current) => ({ ...current, type: event.target.value }))}>
+            <Select
+              id="warehouse-type"
+              value={draft.type}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, type: event.target.value }))
+              }
+            >
               <option value="general">General</option>
               <option value="raw_material">Raw material</option>
               <option value="finished_goods">Finished goods</option>

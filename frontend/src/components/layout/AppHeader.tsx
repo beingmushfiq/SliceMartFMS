@@ -1,35 +1,27 @@
-import { useState } from 'react'
-import {
-  Building2,
-  ChevronDown,
-  LogOut,
-  Menu,
-  Moon,
-  Sun,
-  User as UserIcon,
-} from 'lucide-react'
-import { useAuthStore } from '../../lib/auth/authStore'
+import { useState } from 'react';
+import { Building2, ChevronDown, LogOut, Menu, Moon, Sun, User as UserIcon } from 'lucide-react';
+import { useAuthStore } from '../../lib/auth/authStore';
 
 interface AppHeaderProps {
-  onToggleSidebar: () => void
+  onToggleSidebar: () => void;
 }
 
 export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
-  const { user, tenant, branches, activeBranch, switchBranch, logout } = useAuthStore()
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
-  const [isBranchMenuOpen, setIsBranchMenuOpen] = useState(false)
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  const { user, tenant, branches, activeBranch, switchBranch, logout } = useAuthStore();
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isBranchMenuOpen, setIsBranchMenuOpen] = useState(false);
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark'
-    setTheme(next)
-    document.documentElement.setAttribute('data-theme', next)
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    document.documentElement.setAttribute('data-theme', next);
     if (next === 'dark') {
-      document.documentElement.classList.add('dark')
+      document.documentElement.classList.add('dark');
     } else {
-      document.documentElement.classList.remove('dark')
+      document.documentElement.classList.remove('dark');
     }
-  }
+  };
 
   return (
     <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-zinc-800 bg-zinc-950/80 px-4 backdrop-blur-md sm:px-6">
@@ -81,8 +73,8 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
                     key={b.id}
                     type="button"
                     onClick={() => {
-                      void switchBranch(b.id)
-                      setIsBranchMenuOpen(false)
+                      void switchBranch(b.id);
+                      setIsBranchMenuOpen(false);
                     }}
                     className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs ${
                       activeBranch?.id === b.id
@@ -141,8 +133,8 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
                 <button
                   type="button"
                   onClick={() => {
-                    setIsUserMenuOpen(false)
-                    void logout()
+                    setIsUserMenuOpen(false);
+                    void logout();
                   }}
                   className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-rose-400 hover:bg-rose-500/10 hover:text-rose-300"
                 >
@@ -155,5 +147,5 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
         </div>
       </div>
     </header>
-  )
+  );
 }

@@ -1,29 +1,29 @@
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { MapPin, Plus, Search, Warehouse as WarehouseIcon } from 'lucide-react'
-import { api } from '../../../lib/api/client'
-import { Modal } from '../../../components/ui/Modal'
-import { Button } from '../../../components/ui/Button'
-import { QueryBoundary } from '../../../components/patterns/QueryBoundary'
-import { isApiError } from '../../../lib/api/errors'
-import type { Warehouse, WarehouseLocation } from '../../../types/api/catalog'
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { MapPin, Plus, Search, Warehouse as WarehouseIcon } from 'lucide-react';
+import { api } from '../../../lib/api/client';
+import { Modal } from '../../../components/ui/Modal';
+import { Button } from '../../../components/ui/Button';
+import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
+import { isApiError } from '../../../lib/api/errors';
+import type { Warehouse, WarehouseLocation } from '../../../types/api/catalog';
 
 interface CreateWarehouseForm {
-  code: string
-  name: string
-  type: string
-  address: string
-  allows_negative_stock: boolean
-  is_default: boolean
+  code: string;
+  name: string;
+  type: string;
+  address: string;
+  allows_negative_stock: boolean;
+  is_default: boolean;
 }
 
 export function WarehousesSection() {
-  const [search, setSearch] = useState('')
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null)
-  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false)
-  const [locationDraft, setLocationDraft] = useState({ code: '', name: '', type: 'bin' })
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [search, setSearch] = useState('');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [locationDraft, setLocationDraft] = useState({ code: '', name: '', type: 'bin' });
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [draft, setDraft] = useState<CreateWarehouseForm>({
     code: '',
     name: '',
@@ -31,9 +31,9 @@ export function WarehousesSection() {
     address: '',
     allows_negative_stock: false,
     is_default: false,
-  })
+  });
 
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   const warehousesQuery = useQuery({
     queryKey: ['catalogue', 'warehouses', search],
@@ -42,13 +42,13 @@ export function WarehousesSection() {
         signal,
         params: search.trim().length >= 2 ? { q: search.trim() } : {},
       }),
-  })
+  });
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateWarehouseForm) => api.post<Warehouse>('/warehouses', payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['catalogue', 'warehouses'] })
-      setIsCreateOpen(false)
+      await queryClient.invalidateQueries({ queryKey: ['catalogue', 'warehouses'] });
+      setIsCreateOpen(false);
       setDraft({
         code: '',
         name: '',
@@ -56,30 +56,30 @@ export function WarehousesSection() {
         address: '',
         allows_negative_stock: false,
         is_default: false,
-      })
-      setErrorMsg(null)
+      });
+      setErrorMsg(null);
     },
     onError: (err) => {
       if (isApiError(err)) {
-        if (err.code === 'DUPLICATE') setErrorMsg('Warehouse code already exists.')
-        else setErrorMsg(err.message ?? 'Failed to create warehouse.')
+        if (err.code === 'DUPLICATE') setErrorMsg('Warehouse code already exists.');
+        else setErrorMsg(err.message ?? 'Failed to create warehouse.');
       } else {
-        setErrorMsg('Error creating warehouse.')
+        setErrorMsg('Error creating warehouse.');
       }
     },
-  })
+  });
 
   const createLocationMutation = useMutation({
     mutationFn: (payload: { code: string; name: string; type: string }) =>
       api.post<WarehouseLocation>(`/warehouses/${selectedWarehouse?.id}/locations`, payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['catalogue', 'warehouses'] })
-      setIsLocationModalOpen(false)
-      setLocationDraft({ code: '', name: '', type: 'bin' })
+      await queryClient.invalidateQueries({ queryKey: ['catalogue', 'warehouses'] });
+      setIsLocationModalOpen(false);
+      setLocationDraft({ code: '', name: '', type: 'bin' });
     },
-  })
+  });
 
-  const warehouses = warehousesQuery.data?.data ?? []
+  const warehouses = warehousesQuery.data?.data ?? [];
 
   return (
     <div className="space-y-6">
@@ -98,8 +98,8 @@ export function WarehousesSection() {
         <Button
           variant="primary"
           onClick={() => {
-            setErrorMsg(null)
-            setIsCreateOpen(true)
+            setErrorMsg(null);
+            setIsCreateOpen(true);
           }}
           className="flex items-center gap-1.5"
         >
@@ -169,8 +169,8 @@ export function WarehousesSection() {
                   <button
                     type="button"
                     onClick={() => {
-                      setSelectedWarehouse(w)
-                      setIsLocationModalOpen(true)
+                      setSelectedWarehouse(w);
+                      setIsLocationModalOpen(true);
                     }}
                     className="text-xs text-emerald-400 hover:text-emerald-300 font-medium flex items-center gap-1 cursor-pointer"
                   >
@@ -185,11 +185,15 @@ export function WarehousesSection() {
       </QueryBoundary>
 
       {/* Create Warehouse Modal */}
-      <Modal open={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create New Warehouse">
+      <Modal
+        open={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        title="Create New Warehouse"
+      >
         <form
           onSubmit={(e) => {
-            e.preventDefault()
-            createMutation.mutate(draft)
+            e.preventDefault();
+            createMutation.mutate(draft);
           }}
           className="space-y-4"
         >
@@ -291,19 +295,23 @@ export function WarehousesSection() {
       >
         <form
           onSubmit={(e) => {
-            e.preventDefault()
-            createLocationMutation.mutate(locationDraft)
+            e.preventDefault();
+            createLocationMutation.mutate(locationDraft);
           }}
           className="space-y-4"
         >
           <div>
-            <label className="block text-xs font-medium text-zinc-300 mb-1">Location / Bin Code *</label>
+            <label className="block text-xs font-medium text-zinc-300 mb-1">
+              Location / Bin Code *
+            </label>
             <input
               required
               type="text"
               placeholder="e.g. AISLE-1-RACK-A"
               value={locationDraft.code}
-              onChange={(e) => setLocationDraft({ ...locationDraft, code: e.target.value.toUpperCase() })}
+              onChange={(e) =>
+                setLocationDraft({ ...locationDraft, code: e.target.value.toUpperCase() })
+              }
               className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none uppercase"
             />
           </div>
@@ -331,5 +339,5 @@ export function WarehousesSection() {
         </form>
       </Modal>
     </div>
-  )
+  );
 }

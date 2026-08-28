@@ -37,4 +37,8 @@ Route::prefix('v1')
             Route::post('forgot-password', [App\Modules\Auth\Controllers\AuthController::class, 'forgotPassword'])->name('forgot-password');
             Route::post('reset-password', [App\Modules\Auth\Controllers\AuthController::class, 'resetPassword'])->name('reset-password');
         });
+
+        Route::prefix('webhooks')->name('webhooks.')->group(static function (): void {
+            Route::post('couriers/{providerCode}', [App\Modules\Delivery\Controllers\CourierWebhookController::class, 'handle'])->name('couriers.handle');
+        });
     });

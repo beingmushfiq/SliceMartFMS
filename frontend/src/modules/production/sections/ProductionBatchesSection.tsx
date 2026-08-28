@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Activity,
   CheckCircle2,
@@ -10,55 +10,55 @@ import {
   Search,
   Sparkles,
   TrendingUp,
-} from 'lucide-react'
-import { api } from '../../../lib/api/client'
-import { Modal } from '../../../components/ui/Modal'
-import { Button } from '../../../components/ui/Button'
-import { Badge, StatusBadge } from '../../../components/ui/Badge'
-import { QueryBoundary } from '../../../components/patterns/QueryBoundary'
-import { isApiError } from '../../../lib/api/errors'
-import type { ProductionBatch } from '../../../types/api/production'
-import type { Product, Warehouse } from '../../../types/api/catalog'
-import type { BillOfMaterial } from '../../../types/api/bom'
+} from 'lucide-react';
+import { api } from '../../../lib/api/client';
+import { Modal } from '../../../components/ui/Modal';
+import { Button } from '../../../components/ui/Button';
+import { Badge, StatusBadge } from '../../../components/ui/Badge';
+import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
+import { isApiError } from '../../../lib/api/errors';
+import type { ProductionBatch } from '../../../types/api/production';
+import type { Product, Warehouse } from '../../../types/api/catalog';
+import type { BillOfMaterial } from '../../../types/api/bom';
 
 interface CreateBatchDraft {
-  batch_number: string
-  plan_id?: string
-  product_id: string
-  bom_id: string
-  target_quantity: string
-  scheduled_start?: string
-  scheduled_end?: string
+  batch_number: string;
+  plan_id?: string;
+  product_id: string;
+  bom_id: string;
+  target_quantity: string;
+  scheduled_start?: string;
+  scheduled_end?: string;
 }
 
 interface RecordInputDraft {
-  product_id: string
-  warehouse_id: string
-  warehouse_location_id?: string
-  planned_quantity: string
-  actual_quantity: string
-  unit_cost: string
+  product_id: string;
+  warehouse_id: string;
+  warehouse_location_id?: string;
+  planned_quantity: string;
+  actual_quantity: string;
+  unit_cost: string;
 }
 
 interface RecordOutputDraft {
-  product_id: string
-  warehouse_id: string
-  warehouse_location_id?: string
-  output_type: 'finished_good' | 'byproduct' | 'co_product'
-  good_quantity: string
-  rejected_quantity: string
-  unit_cost: string
+  product_id: string;
+  warehouse_id: string;
+  warehouse_location_id?: string;
+  output_type: 'finished_good' | 'byproduct' | 'co_product';
+  good_quantity: string;
+  rejected_quantity: string;
+  unit_cost: string;
 }
 
 export function ProductionBatchesSection() {
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [activeBatchModal, setActiveBatchModal] = useState<{
-    batch: ProductionBatch
-    type: 'input' | 'output' | 'details'
-  } | null>(null)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+    batch: ProductionBatch;
+    type: 'input' | 'output' | 'details';
+  } | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [createDraft, setCreateDraft] = useState<CreateBatchDraft>({
     batch_number: '',
@@ -67,7 +67,7 @@ export function ProductionBatchesSection() {
     target_quantity: '100.0000',
     scheduled_start: new Date().toISOString().slice(0, 10),
     scheduled_end: new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10),
-  })
+  });
 
   const [inputDraft, setInputDraft] = useState<RecordInputDraft>({
     product_id: '',
@@ -75,7 +75,7 @@ export function ProductionBatchesSection() {
     planned_quantity: '50.0000',
     actual_quantity: '50.0000',
     unit_cost: '10.0000',
-  })
+  });
 
   const [outputDraft, setOutputDraft] = useState<RecordOutputDraft>({
     product_id: '',
@@ -84,9 +84,9 @@ export function ProductionBatchesSection() {
     good_quantity: '98.0000',
     rejected_quantity: '2.0000',
     unit_cost: '15.0000',
-  })
+  });
 
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   // Queries
   const batchesQuery = useQuery({
@@ -99,104 +99,104 @@ export function ProductionBatchesSection() {
           ...(statusFilter !== 'all' ? { status: statusFilter } : {}),
         },
       }),
-  })
+  });
 
   const productsQuery = useQuery({
     queryKey: ['catalogue', 'products', 'options'],
     queryFn: ({ signal }) => api.get<Product[]>('/products', { signal }),
-  })
+  });
 
   const bomsQuery = useQuery({
     queryKey: ['catalogue', 'boms', 'options'],
     queryFn: ({ signal }) => api.get<BillOfMaterial[]>('/bill-of-materials', { signal }),
-  })
+  });
 
   const warehousesQuery = useQuery({
     queryKey: ['catalogue', 'warehouses', 'options'],
     queryFn: ({ signal }) => api.get<Warehouse[]>('/warehouses', { signal }),
-  })
+  });
 
   // Mutations
   const createMutation = useMutation({
     mutationFn: (payload: CreateBatchDraft) =>
       api.post<ProductionBatch>('/production/batches', payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['production', 'batches'] })
-      setIsCreateOpen(false)
-      setErrorMsg(null)
+      await queryClient.invalidateQueries({ queryKey: ['production', 'batches'] });
+      setIsCreateOpen(false);
+      setErrorMsg(null);
     },
     onError: (err) => {
-      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to create batch.')
-      else setErrorMsg('Error creating batch.')
+      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to create batch.');
+      else setErrorMsg('Error creating batch.');
     },
-  })
+  });
 
   const startMutation = useMutation({
     mutationFn: (batchId: string) =>
       api.post<ProductionBatch>(`/production/batches/${batchId}/start`),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['production', 'batches'] })
+      await queryClient.invalidateQueries({ queryKey: ['production', 'batches'] });
     },
-  })
+  });
 
   const recordInputMutation = useMutation({
     mutationFn: ({ batchId, payload }: { batchId: string; payload: RecordInputDraft }) =>
       api.post(`/production/batches/${batchId}/inputs`, payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['production', 'batches'] })
-      setActiveBatchModal(null)
+      await queryClient.invalidateQueries({ queryKey: ['production', 'batches'] });
+      setActiveBatchModal(null);
     },
     onError: (err) => {
-      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to record material input.')
+      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to record material input.');
     },
-  })
+  });
 
   const recordOutputMutation = useMutation({
     mutationFn: ({ batchId, payload }: { batchId: string; payload: RecordOutputDraft }) =>
       api.post(`/production/batches/${batchId}/outputs`, payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['production', 'batches'] })
-      setActiveBatchModal(null)
+      await queryClient.invalidateQueries({ queryKey: ['production', 'batches'] });
+      setActiveBatchModal(null);
     },
     onError: (err) => {
-      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to record output.')
+      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to record output.');
     },
-  })
+  });
 
   const analyzeMutation = useMutation({
     mutationFn: (batchId: string) =>
       api.post<ProductionBatch>(`/production/batches/${batchId}/analyze`),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['production', 'batches'] })
+      await queryClient.invalidateQueries({ queryKey: ['production', 'batches'] });
     },
-  })
+  });
 
   const completeMutation = useMutation({
     mutationFn: (batchId: string) =>
       api.post<ProductionBatch>(`/production/batches/${batchId}/complete`),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['production', 'batches'] })
+      await queryClient.invalidateQueries({ queryKey: ['production', 'batches'] });
     },
-  })
+  });
 
-  const batches = batchesQuery.data?.data ?? []
-  const products = productsQuery.data?.data ?? []
-  const boms = bomsQuery.data?.data ?? []
-  const warehouses = warehousesQuery.data?.data ?? []
+  const batches = batchesQuery.data?.data ?? [];
+  const products = productsQuery.data?.data ?? [];
+  const boms = bomsQuery.data?.data ?? [];
+  const warehouses = warehousesQuery.data?.data ?? [];
 
   const getCompletenessBadge = (state: ProductionBatch['context_completeness']) => {
     switch (state) {
       case 'context_complete':
       case 'analysed':
-        return <Badge tone="success-subtle">Complete</Badge>
+        return <Badge tone="success-subtle">Complete</Badge>;
       case 'collecting':
-        return <Badge tone="warning-subtle">Collecting</Badge>
+        return <Badge tone="warning-subtle">Collecting</Badge>;
       case 'closed':
-        return <Badge tone="surface-sunken">Closed</Badge>
+        return <Badge tone="surface-sunken">Closed</Badge>;
       default:
-        return <Badge tone="surface-sunken">Draft</Badge>
+        return <Badge tone="surface-sunken">Draft</Badge>;
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -231,7 +231,7 @@ export function ProductionBatchesSection() {
         <Button
           variant="primary"
           onClick={() => {
-            setErrorMsg(null)
+            setErrorMsg(null);
             if (products.length > 0 && boms.length > 0) {
               setCreateDraft({
                 batch_number: `BAT-${Date.now().toString().slice(-6)}`,
@@ -240,9 +240,9 @@ export function ProductionBatchesSection() {
                 target_quantity: '100.0000',
                 scheduled_start: new Date().toISOString().slice(0, 10),
                 scheduled_end: new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10),
-              })
+              });
             }
-            setIsCreateOpen(true)
+            setIsCreateOpen(true);
           }}
           className="flex items-center gap-1.5"
         >
@@ -278,7 +278,9 @@ export function ProductionBatchesSection() {
                     <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800/50 mb-2">
                       <Factory className="h-5 w-5 text-zinc-400" />
                     </div>
-                    <div className="text-sm font-medium text-zinc-400">No production batches found</div>
+                    <div className="text-sm font-medium text-zinc-400">
+                      No production batches found
+                    </div>
                     <div className="text-xs text-zinc-500 mt-1">
                       Create your first batch to start tracking shop floor execution.
                     </div>
@@ -288,20 +290,25 @@ export function ProductionBatchesSection() {
                 batches.map((batch) => (
                   <tr key={batch.id} className="hover:bg-zinc-800/30 transition-colors">
                     <td className="py-3 pl-4 pr-3">
-                      <div className="font-mono font-medium text-emerald-400">{batch.batch_number}</div>
+                      <div className="font-mono font-medium text-emerald-400">
+                        {batch.batch_number}
+                      </div>
                       {batch.bom_name && (
                         <div className="text-[10px] text-zinc-500">BOM: {batch.bom_name}</div>
                       )}
                     </td>
                     <td className="py-3 px-3">
-                      <div className="font-medium text-zinc-200">{batch.product_name ?? batch.product_id}</div>
+                      <div className="font-medium text-zinc-200">
+                        {batch.product_name ?? batch.product_id}
+                      </div>
                       {batch.product_sku && (
                         <div className="text-[10px] text-zinc-500">{batch.product_sku}</div>
                       )}
                     </td>
                     <td className="py-3 px-3">
                       <div className="font-mono text-zinc-200">
-                        {batch.actual_quantity} / <span className="text-zinc-500">{batch.target_quantity}</span>
+                        {batch.actual_quantity} /{' '}
+                        <span className="text-zinc-500">{batch.target_quantity}</span>
                       </div>
                     </td>
                     <td className="py-3 px-3">
@@ -322,7 +329,9 @@ export function ProductionBatchesSection() {
                     <td className="py-3 px-3">
                       <StatusBadge status={batch.status} />
                     </td>
-                    <td className="py-3 px-3">{getCompletenessBadge(batch.context_completeness)}</td>
+                    <td className="py-3 px-3">
+                      {getCompletenessBadge(batch.context_completeness)}
+                    </td>
                     <td className="py-3 pr-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         {(batch.status === 'draft' || batch.status === 'scheduled') && (
@@ -344,15 +353,15 @@ export function ProductionBatchesSection() {
                               variant="secondary"
                               size="sm"
                               onClick={() => {
-                                setErrorMsg(null)
+                                setErrorMsg(null);
                                 setInputDraft({
                                   product_id: batch.product_id,
                                   warehouse_id: warehouses[0]?.id ?? '',
                                   planned_quantity: '50.0000',
                                   actual_quantity: '50.0000',
                                   unit_cost: '10.0000',
-                                })
-                                setActiveBatchModal({ batch, type: 'input' })
+                                });
+                                setActiveBatchModal({ batch, type: 'input' });
                               }}
                               className="text-xs text-blue-400"
                             >
@@ -362,7 +371,7 @@ export function ProductionBatchesSection() {
                               variant="secondary"
                               size="sm"
                               onClick={() => {
-                                setErrorMsg(null)
+                                setErrorMsg(null);
                                 setOutputDraft({
                                   product_id: batch.product_id,
                                   warehouse_id: warehouses[0]?.id ?? '',
@@ -370,8 +379,8 @@ export function ProductionBatchesSection() {
                                   good_quantity: batch.target_quantity,
                                   rejected_quantity: '0.0000',
                                   unit_cost: '15.0000',
-                                })
-                                setActiveBatchModal({ batch, type: 'output' })
+                                });
+                                setActiveBatchModal({ batch, type: 'output' });
                               }}
                               className="text-xs text-emerald-400"
                             >
@@ -564,7 +573,9 @@ export function ProductionBatchesSection() {
                   type="number"
                   step="0.0001"
                   value={inputDraft.actual_quantity}
-                  onChange={(e) => setInputDraft((d) => ({ ...d, actual_quantity: e.target.value }))}
+                  onChange={(e) =>
+                    setInputDraft((d) => ({ ...d, actual_quantity: e.target.value }))
+                  }
                   className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-100"
                 />
               </div>
@@ -718,19 +729,25 @@ export function ProductionBatchesSection() {
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-3">
               <div className="rounded-xl bg-zinc-950 p-3 border border-zinc-800">
-                <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Total Input</div>
+                <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                  Total Input
+                </div>
                 <div className="text-base font-bold font-mono text-zinc-100 mt-1">
                   {activeBatchModal.batch.total_input_quantity}
                 </div>
               </div>
               <div className="rounded-xl bg-zinc-950 p-3 border border-zinc-800">
-                <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Total Output</div>
+                <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                  Total Output
+                </div>
                 <div className="text-base font-bold font-mono text-emerald-400 mt-1">
                   {activeBatchModal.batch.total_output_quantity}
                 </div>
               </div>
               <div className="rounded-xl bg-zinc-950 p-3 border border-zinc-800">
-                <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Process Loss</div>
+                <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                  Process Loss
+                </div>
                 <div className="text-base font-bold font-mono text-amber-400 mt-1">
                   {activeBatchModal.batch.process_loss_quantity}
                 </div>
@@ -773,5 +790,5 @@ export function ProductionBatchesSection() {
         </Modal>
       )}
     </div>
-  )
+  );
 }

@@ -1,41 +1,35 @@
-import { useState, useEffect } from 'react'
-import {
-  Clock,
-  RefreshCw,
-  Search,
-  Undo2,
-  XCircle,
-} from 'lucide-react'
-import type { PurchaseReturn } from '../../../types/api/purchasing'
-import { api } from '../../../lib/api/client'
+import { useState, useEffect } from 'react';
+import { Clock, RefreshCw, Search, Undo2, XCircle } from 'lucide-react';
+import type { PurchaseReturn } from '../../../types/api/purchasing';
+import { api } from '../../../lib/api/client';
 
 export function PurchaseReturnsSection() {
-  const [returns, setReturns] = useState<PurchaseReturn[]>([])
-  const [loading, setLoading] = useState(false)
-  const [search, setSearch] = useState('')
+  const [returns, setReturns] = useState<PurchaseReturn[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
 
   const fetchReturns = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const res = await api.get<PurchaseReturn[]>('/purchasing/returns')
-      setReturns(res.data ?? [])
+      const res = await api.get<PurchaseReturn[]>('/purchasing/returns');
+      setReturns(res.data ?? []);
     } catch (err) {
-      console.error('Failed to load purchase returns', err)
+      console.error('Failed to load purchase returns', err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchReturns()
-  }, [])
+    fetchReturns();
+  }, []);
 
   const filteredReturns = returns.filter(
     (r) =>
       r.return_number?.toLowerCase().includes(search.toLowerCase()) ||
       r.supplier_name?.toLowerCase().includes(search.toLowerCase()) ||
       r.reason?.toLowerCase().includes(search.toLowerCase())
-  )
+  );
 
   const getStatusBadge = (status: PurchaseReturn['status']) => {
     switch (status) {
@@ -44,21 +38,21 @@ export function PurchaseReturnsSection() {
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-zinc-800 text-zinc-300 border border-zinc-700">
             <Clock className="h-3 w-3 text-zinc-400" /> Draft
           </span>
-        )
+        );
       case 'completed':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/20">
             <Undo2 className="h-3 w-3 text-rose-400" /> Returned
           </span>
-        )
+        );
       case 'cancelled':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-zinc-700/20 text-zinc-400 border border-zinc-700/30">
             <XCircle className="h-3 w-3 text-zinc-400" /> Cancelled
           </span>
-        )
+        );
     }
-  }
+  };
 
   return (
     <div className="space-y-4">
@@ -131,5 +125,5 @@ export function PurchaseReturnsSection() {
         </div>
       </div>
     </div>
-  )
+  );
 }

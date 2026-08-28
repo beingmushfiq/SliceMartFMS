@@ -1,42 +1,35 @@
-import { useState, useEffect } from 'react'
-import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  Boxes,
-  Layers,
-  RefreshCw,
-  Search,
-} from 'lucide-react'
-import type { StockMovement, StockBalance } from '../../../types/api/inventory'
-import { api } from '../../../lib/api/client'
+import { useState, useEffect } from 'react';
+import { ArrowDownLeft, ArrowUpRight, Boxes, Layers, RefreshCw, Search } from 'lucide-react';
+import type { StockMovement, StockBalance } from '../../../types/api/inventory';
+import { api } from '../../../lib/api/client';
 
 export function StockLedgerSection() {
-  const [viewMode, setViewMode] = useState<'movements' | 'balances'>('balances')
-  const [movements, setMovements] = useState<StockMovement[]>([])
-  const [balances, setBalances] = useState<StockBalance[]>([])
-  const [loading, setLoading] = useState(false)
-  const [search, setSearch] = useState('')
+  const [viewMode, setViewMode] = useState<'movements' | 'balances'>('balances');
+  const [movements, setMovements] = useState<StockMovement[]>([]);
+  const [balances, setBalances] = useState<StockBalance[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
 
   const fetchData = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       if (viewMode === 'balances') {
-        const res = await api.get<StockBalance[]>('/inventory/balances')
-        setBalances(res.data ?? [])
+        const res = await api.get<StockBalance[]>('/inventory/balances');
+        setBalances(res.data ?? []);
       } else {
-        const res = await api.get<StockMovement[]>('/inventory/movements')
-        setMovements(res.data ?? [])
+        const res = await api.get<StockMovement[]>('/inventory/movements');
+        setMovements(res.data ?? []);
       }
     } catch (err) {
-      console.error('Failed to load stock data', err)
+      console.error('Failed to load stock data', err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchData()
-  }, [viewMode])
+    fetchData();
+  }, [viewMode]);
 
   const filteredBalances = balances.filter(
     (b) =>
@@ -44,7 +37,7 @@ export function StockLedgerSection() {
       b.product_sku?.toLowerCase().includes(search.toLowerCase()) ||
       b.warehouse_name?.toLowerCase().includes(search.toLowerCase()) ||
       (b.batch_code && b.batch_code.toLowerCase().includes(search.toLowerCase()))
-  )
+  );
 
   const filteredMovements = movements.filter(
     (m) =>
@@ -52,7 +45,7 @@ export function StockLedgerSection() {
       m.product_name?.toLowerCase().includes(search.toLowerCase()) ||
       m.warehouse_name?.toLowerCase().includes(search.toLowerCase()) ||
       m.movement_type?.toLowerCase().includes(search.toLowerCase())
-  )
+  );
 
   return (
     <div className="space-y-4">
@@ -134,7 +127,9 @@ export function StockLedgerSection() {
                     <tr key={b.id} className="hover:bg-zinc-800/30 transition-colors">
                       <td className="px-4 py-3">
                         <div className="font-medium text-zinc-100">{b.product_name ?? '—'}</div>
-                        <div className="text-[11px] font-mono text-zinc-400">{b.product_sku ?? '—'}</div>
+                        <div className="text-[11px] font-mono text-zinc-400">
+                          {b.product_sku ?? '—'}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-zinc-300">{b.warehouse_name ?? '—'}</td>
                       <td className="px-4 py-3 font-mono text-zinc-400">{b.batch_code ?? '—'}</td>
@@ -144,10 +139,10 @@ export function StockLedgerSection() {
                             b.stock_state === 'available'
                               ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                               : b.stock_state === 'quarantine'
-                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                              : b.stock_state === 'damaged'
-                              ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                              : 'bg-zinc-700/20 text-zinc-400 border border-zinc-700/30'
+                                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                : b.stock_state === 'damaged'
+                                  ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                  : 'bg-zinc-700/20 text-zinc-400 border border-zinc-700/30'
                           }`}
                         >
                           {b.stock_state}
@@ -208,7 +203,9 @@ export function StockLedgerSection() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="font-medium text-zinc-100">{m.product_name ?? '—'}</div>
-                        <div className="text-[11px] font-mono text-zinc-400">{m.product_sku ?? '—'}</div>
+                        <div className="text-[11px] font-mono text-zinc-400">
+                          {m.product_sku ?? '—'}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-zinc-300">{m.warehouse_name ?? '—'}</td>
                       <td className="px-4 py-3 font-mono text-zinc-400">{m.batch_code ?? '—'}</td>
@@ -235,5 +232,5 @@ export function StockLedgerSection() {
         )}
       </div>
     </div>
-  )
+  );
 }

@@ -1,35 +1,21 @@
-import { useState } from 'react'
-import {
-  Boxes,
-  FileCode,
-  Package,
-  Ruler,
-  Tag,
-  Users,
-  Warehouse,
-} from 'lucide-react'
-import { ProductsSection } from './sections/ProductsSection'
-import { UnitsSection } from './sections/UnitsSection'
-import { CategoriesSection } from './sections/CategoriesSection'
-import { BrandsSection } from './sections/BrandsSection'
-import { BillOfMaterialsSection } from './sections/BillOfMaterialsSection'
-import { WarehousesSection } from './sections/WarehousesSection'
-import { PartiesSection } from './sections/PartiesSection'
+import { useState } from 'react';
+import { Boxes, FileCode, Package, Ruler, Tag, Users, Warehouse } from 'lucide-react';
+import { ProductsSection } from './sections/ProductsSection';
+import { UnitsSection } from './sections/UnitsSection';
+import { CategoriesSection } from './sections/CategoriesSection';
+import { BrandsSection } from './sections/BrandsSection';
+import { BillOfMaterialsSection } from './sections/BillOfMaterialsSection';
+import { WarehousesSection } from './sections/WarehousesSection';
+import { PartiesSection } from './sections/PartiesSection';
 
 export type CatalogueTab =
-  | 'products'
-  | 'units'
-  | 'categories'
-  | 'brands'
-  | 'bom'
-  | 'warehouses'
-  | 'parties'
+  'products' | 'units' | 'categories' | 'brands' | 'bom' | 'warehouses' | 'parties';
 
 interface TabConfig {
-  id: CatalogueTab
-  label: string
-  icon: typeof Package
-  description: string
+  id: CatalogueTab;
+  label: string;
+  icon: typeof Package;
+  description: string;
 }
 
 const tabs: TabConfig[] = [
@@ -75,12 +61,12 @@ const tabs: TabConfig[] = [
     icon: Users,
     description: 'Customers, suppliers, distributors, dealers and agents',
   },
-]
+];
 
 export default function CatalogueWorkspace() {
-  const [activeTab, setActiveTab] = useState<CatalogueTab>('products')
+  const [activeTab, setActiveTab] = useState<CatalogueTab>('products');
 
-  const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[0]
+  const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[0];
 
   return (
     <div className="space-y-6">
@@ -93,9 +79,7 @@ export default function CatalogueWorkspace() {
           <h1 className="text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">
             {currentTab?.label}
           </h1>
-          <p className="mt-1 text-xs text-zinc-400">
-            {currentTab?.description}
-          </p>
+          <p className="mt-1 text-xs text-zinc-400">{currentTab?.description}</p>
         </div>
       </div>
 
@@ -103,8 +87,8 @@ export default function CatalogueWorkspace() {
       <div className="border-b border-zinc-800">
         <nav className="flex space-x-2 overflow-x-auto pb-px" aria-label="Catalogue sections">
           {tabs.map((tab) => {
-            const Icon = tab.icon
-            const isActive = activeTab === tab.id
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
@@ -119,7 +103,7 @@ export default function CatalogueWorkspace() {
                 <Icon className={`h-4 w-4 ${isActive ? 'text-emerald-400' : 'text-zinc-500'}`} />
                 <span>{tab.label}</span>
               </button>
-            )
+            );
           })}
         </nav>
       </div>
@@ -135,5 +119,5 @@ export default function CatalogueWorkspace() {
         {activeTab === 'parties' && <PartiesSection />}
       </div>
     </div>
-  )
+  );
 }

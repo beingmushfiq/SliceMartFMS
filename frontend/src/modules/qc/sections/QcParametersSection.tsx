@@ -1,31 +1,31 @@
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle, Sliders, Plus, Search, XCircle } from 'lucide-react'
-import { api } from '../../../lib/api/client'
-import { Modal } from '../../../components/ui/Modal'
-import { Button } from '../../../components/ui/Button'
-import { Badge } from '../../../components/ui/Badge'
-import { QueryBoundary } from '../../../components/patterns/QueryBoundary'
-import { isApiError } from '../../../lib/api/errors'
-import type { QcParameter } from '../../../types/api/qc'
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { CheckCircle, Sliders, Plus, Search, XCircle } from 'lucide-react';
+import { api } from '../../../lib/api/client';
+import { Modal } from '../../../components/ui/Modal';
+import { Button } from '../../../components/ui/Button';
+import { Badge } from '../../../components/ui/Badge';
+import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
+import { isApiError } from '../../../lib/api/errors';
+import type { QcParameter } from '../../../types/api/qc';
 
 interface CreateParameterDraft {
-  code: string
-  name: string
-  category: string
-  data_type: 'numeric' | 'boolean' | 'options' | 'text'
-  min_value?: string
-  max_value?: string
-  target_value?: string
-  unit_of_measure?: string
-  is_mandatory: boolean
+  code: string;
+  name: string;
+  category: string;
+  data_type: 'numeric' | 'boolean' | 'options' | 'text';
+  min_value?: string;
+  max_value?: string;
+  target_value?: string;
+  unit_of_measure?: string;
+  is_mandatory: boolean;
 }
 
 export function QcParametersSection() {
-  const [search, setSearch] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState<string>('all')
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [draft, setDraft] = useState<CreateParameterDraft>({
     code: '',
@@ -37,9 +37,9 @@ export function QcParametersSection() {
     target_value: '50.0000',
     unit_of_measure: 'mm',
     is_mandatory: true,
-  })
+  });
 
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   const paramsQuery = useQuery({
     queryKey: ['qc', 'parameters', search, categoryFilter],
@@ -51,23 +51,22 @@ export function QcParametersSection() {
           ...(categoryFilter !== 'all' ? { category: categoryFilter } : {}),
         },
       }),
-  })
+  });
 
   const createMutation = useMutation({
-    mutationFn: (payload: CreateParameterDraft) =>
-      api.post<QcParameter>('/qc/parameters', payload),
+    mutationFn: (payload: CreateParameterDraft) => api.post<QcParameter>('/qc/parameters', payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['qc', 'parameters'] })
-      setIsCreateOpen(false)
-      setErrorMsg(null)
+      await queryClient.invalidateQueries({ queryKey: ['qc', 'parameters'] });
+      setIsCreateOpen(false);
+      setErrorMsg(null);
     },
     onError: (err) => {
-      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to create parameter.')
-      else setErrorMsg('Error creating QC parameter.')
+      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to create parameter.');
+      else setErrorMsg('Error creating QC parameter.');
     },
-  })
+  });
 
-  const parameters = paramsQuery.data?.data ?? []
+  const parameters = paramsQuery.data?.data ?? [];
 
   return (
     <div className="space-y-6">
@@ -102,7 +101,7 @@ export function QcParametersSection() {
         <Button
           variant="primary"
           onClick={() => {
-            setErrorMsg(null)
+            setErrorMsg(null);
             setDraft({
               code: `QC-${Date.now().toString().slice(-4)}`,
               name: '',
@@ -113,8 +112,8 @@ export function QcParametersSection() {
               target_value: '50.0000',
               unit_of_measure: 'mm',
               is_mandatory: true,
-            })
-            setIsCreateOpen(true)
+            });
+            setIsCreateOpen(true);
           }}
           className="flex items-center gap-1.5"
         >
@@ -149,7 +148,9 @@ export function QcParametersSection() {
                     <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800/50 mb-2">
                       <Sliders className="h-5 w-5 text-zinc-400" />
                     </div>
-                    <div className="text-sm font-medium text-zinc-400">No QC parameters configured</div>
+                    <div className="text-sm font-medium text-zinc-400">
+                      No QC parameters configured
+                    </div>
                     <div className="text-xs text-zinc-500 mt-1">
                       Configure your standard quality specs and tolerance bands.
                     </div>
@@ -168,13 +169,17 @@ export function QcParametersSection() {
                     <td className="py-3 px-3">
                       <div className="capitalize text-zinc-300">{param.data_type}</div>
                       {param.unit_of_measure && (
-                        <div className="text-[10px] text-zinc-500">Unit: {param.unit_of_measure}</div>
+                        <div className="text-[10px] text-zinc-500">
+                          Unit: {param.unit_of_measure}
+                        </div>
                       )}
                     </td>
                     <td className="py-3 px-3 font-mono text-[11px] text-zinc-400">
                       {param.data_type === 'numeric' ? (
                         <span>
-                          [{param.min_value ?? '-∞'} .. <strong className="text-emerald-400">{param.target_value}</strong> .. {param.max_value ?? '+∞'}]
+                          [{param.min_value ?? '-∞'} ..{' '}
+                          <strong className="text-emerald-400">{param.target_value}</strong> ..{' '}
+                          {param.max_value ?? '+∞'}]
                         </span>
                       ) : (
                         <span className="italic text-zinc-600">Discrete check</span>
@@ -348,5 +353,5 @@ export function QcParametersSection() {
         </div>
       </Modal>
     </div>
-  )
+  );
 }

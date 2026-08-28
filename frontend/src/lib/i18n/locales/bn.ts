@@ -139,7 +139,8 @@ const auth = {
 
   signedOut: 'আপনি সাইন আউট হয়েছেন।',
   sessionExpiredTitle: 'সেশন শেষ হয়েছে',
-  sessionExpiredBody: 'আপনার সেশন শেষ হয়েছে। যেখানে ছিলেন সেখান থেকে চালিয়ে যেতে আবার সাইন ইন করুন।',
+  sessionExpiredBody:
+    'আপনার সেশন শেষ হয়েছে। যেখানে ছিলেন সেখান থেকে চালিয়ে যেতে আবার সাইন ইন করুন।',
 
   validation: {
     emailRequired: 'আপনার ইমেইল দিন।',

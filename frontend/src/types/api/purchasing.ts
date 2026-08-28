@@ -4,12 +4,7 @@
  */
 
 export type PurchaseOrderStatus =
-  | 'draft'
-  | 'approved'
-  | 'partially_received'
-  | 'received'
-  | 'cancelled'
-  | 'closed';
+  'draft' | 'approved' | 'partially_received' | 'received' | 'cancelled' | 'closed';
 
 export type GoodsReceiptStatus = 'draft' | 'completed' | 'cancelled';
 

@@ -1,55 +1,48 @@
-import { useState, useEffect } from 'react'
-import {
-  CheckCircle2,
-  Clock,
-  RefreshCw,
-  Search,
-  ShieldCheck,
-  XCircle,
-} from 'lucide-react'
-import type { StockAdjustment } from '../../../types/api/inventory'
-import { api } from '../../../lib/api/client'
+import { useState, useEffect } from 'react';
+import { CheckCircle2, Clock, RefreshCw, Search, ShieldCheck, XCircle } from 'lucide-react';
+import type { StockAdjustment } from '../../../types/api/inventory';
+import { api } from '../../../lib/api/client';
 
 export function StockAdjustmentsSection() {
-  const [adjustments, setAdjustments] = useState<StockAdjustment[]>([])
-  const [loading, setLoading] = useState(false)
-  const [search, setSearch] = useState('')
-  const [actionLoading, setActionLoading] = useState<number | null>(null)
+  const [adjustments, setAdjustments] = useState<StockAdjustment[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
 
   const fetchAdjustments = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const res = await api.get<StockAdjustment[]>('/inventory/adjustments')
-      setAdjustments(res.data ?? [])
+      const res = await api.get<StockAdjustment[]>('/inventory/adjustments');
+      setAdjustments(res.data ?? []);
     } catch (err) {
-      console.error('Failed to load adjustments', err)
+      console.error('Failed to load adjustments', err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchAdjustments()
-  }, [])
+    fetchAdjustments();
+  }, []);
 
   const handleApprove = async (adjId: number) => {
-    setActionLoading(adjId)
+    setActionLoading(adjId);
     try {
-      await api.post(`/inventory/adjustments/${adjId}/approve`, {})
-      await fetchAdjustments()
+      await api.post(`/inventory/adjustments/${adjId}/approve`, {});
+      await fetchAdjustments();
     } catch (err) {
-      console.error('Failed to approve adjustment', err)
+      console.error('Failed to approve adjustment', err);
     } finally {
-      setActionLoading(null)
+      setActionLoading(null);
     }
-  }
+  };
 
   const filteredAdjustments = adjustments.filter(
     (a) =>
       a.adjustment_number?.toLowerCase().includes(search.toLowerCase()) ||
       a.warehouse_name?.toLowerCase().includes(search.toLowerCase()) ||
       a.reason_name?.toLowerCase().includes(search.toLowerCase())
-  )
+  );
 
   const getStatusBadge = (status: StockAdjustment['status']) => {
     switch (status) {
@@ -58,22 +51,22 @@ export function StockAdjustmentsSection() {
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">
             <Clock className="h-3 w-3 text-amber-400" /> Draft
           </span>
-        )
+        );
       case 'approved':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Approved
           </span>
-        )
+        );
       case 'rejected':
       case 'cancelled':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/20">
             <XCircle className="h-3 w-3 text-rose-400" /> {status}
           </span>
-        )
+        );
     }
-  }
+  };
 
   return (
     <div className="space-y-4">
@@ -159,5 +152,5 @@ export function StockAdjustmentsSection() {
         </div>
       </div>
     </div>
-  )
+  );
 }

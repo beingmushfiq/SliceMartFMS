@@ -1,56 +1,48 @@
-import { useState, useEffect } from 'react'
-import {
-  CheckCircle2,
-  Clock,
-  RefreshCw,
-  Search,
-  Send,
-  Truck,
-  XCircle,
-} from 'lucide-react'
-import type { StockTransfer } from '../../../types/api/inventory'
-import { api } from '../../../lib/api/client'
+import { useState, useEffect } from 'react';
+import { CheckCircle2, Clock, RefreshCw, Search, Send, Truck, XCircle } from 'lucide-react';
+import type { StockTransfer } from '../../../types/api/inventory';
+import { api } from '../../../lib/api/client';
 
 export function StockTransfersSection() {
-  const [transfers, setTransfers] = useState<StockTransfer[]>([])
-  const [loading, setLoading] = useState(false)
-  const [search, setSearch] = useState('')
-  const [actionLoading, setActionLoading] = useState<number | null>(null)
+  const [transfers, setTransfers] = useState<StockTransfer[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
 
   const fetchTransfers = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const res = await api.get<StockTransfer[]>('/inventory/transfers')
-      setTransfers(res.data ?? [])
+      const res = await api.get<StockTransfer[]>('/inventory/transfers');
+      setTransfers(res.data ?? []);
     } catch (err) {
-      console.error('Failed to load transfers', err)
+      console.error('Failed to load transfers', err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchTransfers()
-  }, [])
+    fetchTransfers();
+  }, []);
 
   const handleDispatch = async (transferId: number) => {
-    setActionLoading(transferId)
+    setActionLoading(transferId);
     try {
-      await api.post(`/inventory/transfers/${transferId}/dispatch`, {})
-      await fetchTransfers()
+      await api.post(`/inventory/transfers/${transferId}/dispatch`, {});
+      await fetchTransfers();
     } catch (err) {
-      console.error('Failed to dispatch transfer', err)
+      console.error('Failed to dispatch transfer', err);
     } finally {
-      setActionLoading(null)
+      setActionLoading(null);
     }
-  }
+  };
 
   const filteredTransfers = transfers.filter(
     (t) =>
       t.transfer_number?.toLowerCase().includes(search.toLowerCase()) ||
       t.from_warehouse_name?.toLowerCase().includes(search.toLowerCase()) ||
       t.to_warehouse_name?.toLowerCase().includes(search.toLowerCase())
-  )
+  );
 
   const getStatusBadge = (status: StockTransfer['status']) => {
     switch (status) {
@@ -59,27 +51,27 @@ export function StockTransfersSection() {
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-zinc-800 text-zinc-300 border border-zinc-700">
             <Clock className="h-3 w-3 text-zinc-400" /> Draft
           </span>
-        )
+        );
       case 'in_transit':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20">
             <Truck className="h-3 w-3 text-blue-400" /> In Transit
           </span>
-        )
+        );
       case 'received':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Received
           </span>
-        )
+        );
       case 'cancelled':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/20">
             <XCircle className="h-3 w-3 text-rose-400" /> Cancelled
           </span>
-        )
+        );
     }
-  }
+  };
 
   return (
     <div className="space-y-4">
@@ -163,5 +155,5 @@ export function StockTransfersSection() {
         </div>
       </div>
     </div>
-  )
+  );
 }

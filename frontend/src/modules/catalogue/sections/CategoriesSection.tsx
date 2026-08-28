@@ -1,26 +1,26 @@
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Search, Tag } from 'lucide-react'
-import { api } from '../../../lib/api/client'
-import { Modal } from '../../../components/ui/Modal'
-import { Button } from '../../../components/ui/Button'
-import { QueryBoundary } from '../../../components/patterns/QueryBoundary'
-import { isApiError } from '../../../lib/api/errors'
-import type { Category } from '../../../types/api/catalog'
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus, Search, Tag } from 'lucide-react';
+import { api } from '../../../lib/api/client';
+import { Modal } from '../../../components/ui/Modal';
+import { Button } from '../../../components/ui/Button';
+import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
+import { isApiError } from '../../../lib/api/errors';
+import type { Category } from '../../../types/api/catalog';
 
 interface CreateCategoryForm {
-  code: string
-  name: string
-  parent_id?: string | null
+  code: string;
+  name: string;
+  parent_id?: string | null;
 }
 
 export function CategoriesSection() {
-  const [search, setSearch] = useState('')
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  const [draft, setDraft] = useState<CreateCategoryForm>({ code: '', name: '', parent_id: null })
+  const [search, setSearch] = useState('');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [draft, setDraft] = useState<CreateCategoryForm>({ code: '', name: '', parent_id: null });
 
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   const categoriesQuery = useQuery({
     queryKey: ['catalogue', 'categories', search],
@@ -29,27 +29,27 @@ export function CategoriesSection() {
         signal,
         params: search.trim().length >= 2 ? { q: search.trim() } : {},
       }),
-  })
+  });
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateCategoryForm) => api.post<Category>('/categories', payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['catalogue', 'categories'] })
-      setIsCreateOpen(false)
-      setDraft({ code: '', name: '', parent_id: null })
-      setErrorMsg(null)
+      await queryClient.invalidateQueries({ queryKey: ['catalogue', 'categories'] });
+      setIsCreateOpen(false);
+      setDraft({ code: '', name: '', parent_id: null });
+      setErrorMsg(null);
     },
     onError: (err) => {
       if (isApiError(err)) {
-        if (err.code === 'DUPLICATE') setErrorMsg('Category code already exists.')
-        else setErrorMsg(err.message ?? 'Failed to create category.')
+        if (err.code === 'DUPLICATE') setErrorMsg('Category code already exists.');
+        else setErrorMsg(err.message ?? 'Failed to create category.');
       } else {
-        setErrorMsg('Error creating category.')
+        setErrorMsg('Error creating category.');
       }
     },
-  })
+  });
 
-  const categories = categoriesQuery.data?.data ?? []
+  const categories = categoriesQuery.data?.data ?? [];
 
   return (
     <div className="space-y-6">
@@ -68,8 +68,8 @@ export function CategoriesSection() {
         <Button
           variant="primary"
           onClick={() => {
-            setErrorMsg(null)
-            setIsCreateOpen(true)
+            setErrorMsg(null);
+            setIsCreateOpen(true);
           }}
           className="flex items-center gap-1.5"
         >
@@ -111,11 +111,15 @@ export function CategoriesSection() {
                       <Tag className="h-3.5 w-3.5 text-zinc-500" />
                       <span>{c.name}</span>
                     </td>
-                    <td className="py-3.5 px-3 font-mono text-[11px] text-zinc-500">{c.path ?? '-'}</td>
+                    <td className="py-3.5 px-3 font-mono text-[11px] text-zinc-500">
+                      {c.path ?? '-'}
+                    </td>
                     <td className="py-3.5 px-3">
                       <span
                         className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
-                          c.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-500'
+                          c.is_active
+                            ? 'bg-emerald-500/10 text-emerald-400'
+                            : 'bg-zinc-800 text-zinc-500'
                         }`}
                       >
                         {c.is_active ? 'Active' : 'Inactive'}
@@ -130,11 +134,15 @@ export function CategoriesSection() {
       </QueryBoundary>
 
       {/* Create Modal */}
-      <Modal open={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create Product Category">
+      <Modal
+        open={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        title="Create Product Category"
+      >
         <form
           onSubmit={(e) => {
-            e.preventDefault()
-            createMutation.mutate(draft)
+            e.preventDefault();
+            createMutation.mutate(draft);
           }}
           className="space-y-4"
         >
@@ -169,7 +177,9 @@ export function CategoriesSection() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-zinc-300 mb-1">Parent Category (Optional)</label>
+            <label className="block text-xs font-medium text-zinc-300 mb-1">
+              Parent Category (Optional)
+            </label>
             <select
               value={draft.parent_id ?? ''}
               onChange={(e) => setDraft({ ...draft, parent_id: e.target.value || null })}
@@ -195,5 +205,5 @@ export function CategoriesSection() {
         </form>
       </Modal>
     </div>
-  )
+  );
 }

@@ -131,6 +131,22 @@ final class SalesReturn extends Model
     }
 
     /**
+     * @return BelongsTo<Party, $this>
+     */
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Party::class, 'party_id');
+    }
+
+    /**
+     * @return BelongsTo<\App\Models\ReasonCode, $this>
+     */
+    public function reasonCode(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\ReasonCode::class, 'reason_code_id');
+    }
+
+    /**
      * @return BelongsTo<Warehouse, $this>
      */
     public function warehouse(): BelongsTo

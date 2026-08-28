@@ -476,6 +476,17 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::get('{id}', [App\Modules\Sales\Controllers\PaymentController::class, 'show'])
                     ->middleware('permission:sales.payment.view')->name('show');
             });
+
+            Route::prefix('returns')->name('returns.')->group(static function (): void {
+                Route::get('/', [App\Modules\Sales\Controllers\SalesReturnController::class, 'index'])
+                    ->middleware('permission:sales.return.view')->name('index');
+                Route::post('/', [App\Modules\Sales\Controllers\SalesReturnController::class, 'store'])
+                    ->middleware('permission:sales.return.create')->name('store');
+                Route::get('{id}', [App\Modules\Sales\Controllers\SalesReturnController::class, 'show'])
+                    ->middleware('permission:sales.return.view')->name('show');
+                Route::post('{id}/approve', [App\Modules\Sales\Controllers\SalesReturnController::class, 'approve'])
+                    ->middleware('permission:sales.return.approve')->name('approve');
+            });
         });
 
         // ── POS ───────────────────────────────────────────────────────
@@ -502,5 +513,122 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
 
             Route::post('checkout', [App\Modules\Pos\Controllers\PosCheckoutController::class, 'checkout'])
                 ->middleware('permission:pos.checkout')->name('checkout');
+        });
+
+        // ── Logistics & Courier Dispatch ───────────────────────────────
+        Route::prefix('logistics')->name('logistics.')->group(static function (): void {
+            Route::prefix('couriers')->name('couriers.')->group(static function (): void {
+                Route::get('/', [App\Modules\Delivery\Controllers\CourierProviderController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\Delivery\Controllers\CourierProviderController::class, 'store'])->name('store');
+                Route::get('{courier}', [App\Modules\Delivery\Controllers\CourierProviderController::class, 'show'])->name('show');
+                Route::patch('{courier}', [App\Modules\Delivery\Controllers\CourierProviderController::class, 'update'])->name('update');
+            });
+
+            Route::prefix('shipments')->name('shipments.')->group(static function (): void {
+                Route::get('/', [App\Modules\Delivery\Controllers\CourierShipmentController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\Delivery\Controllers\CourierShipmentController::class, 'store'])->name('store');
+                Route::get('{shipment}', [App\Modules\Delivery\Controllers\CourierShipmentController::class, 'show'])->name('show');
+                Route::post('{shipment}/track', [App\Modules\Delivery\Controllers\CourierShipmentController::class, 'track'])->name('track');
+                Route::post('{shipment}/cancel', [App\Modules\Delivery\Controllers\CourierShipmentController::class, 'cancel'])->name('cancel');
+                Route::get('{shipment}/label', [App\Modules\Delivery\Controllers\CourierShipmentController::class, 'label'])->name('label');
+            });
+
+            Route::prefix('run-sheets')->name('run-sheets.')->group(static function (): void {
+                Route::get('/', [App\Modules\Delivery\Controllers\RunSheetController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\Delivery\Controllers\RunSheetController::class, 'store'])->name('store');
+                Route::get('{runSheet}', [App\Modules\Delivery\Controllers\RunSheetController::class, 'show'])->name('show');
+                Route::post('{runSheet}/complete', [App\Modules\Delivery\Controllers\RunSheetController::class, 'complete'])->name('complete');
+            });
+
+            Route::prefix('cod-reconciliations')->name('cod-reconciliations.')->group(static function (): void {
+                Route::get('/', [App\Modules\Delivery\Controllers\CodReconciliationController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\Delivery\Controllers\CodReconciliationController::class, 'store'])->name('store');
+                Route::get('{reconciliation}', [App\Modules\Delivery\Controllers\CodReconciliationController::class, 'show'])->name('show');
+            });
+        });
+
+        // ── Finance & Accounting ──────────────────────────────────────
+        Route::prefix('finance')->name('finance.')->group(static function (): void {
+            Route::prefix('accounts')->name('accounts.')->group(static function (): void {
+                Route::get('/', [App\Modules\Finance\Controllers\ChartOfAccountController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\Finance\Controllers\ChartOfAccountController::class, 'store'])->name('store');
+                Route::get('{id}', [App\Modules\Finance\Controllers\ChartOfAccountController::class, 'show'])->name('show');
+            });
+
+            Route::prefix('journal-entries')->name('journal-entries.')->group(static function (): void {
+                Route::get('/', [App\Modules\Finance\Controllers\JournalEntryController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\Finance\Controllers\JournalEntryController::class, 'store'])->name('store');
+                Route::get('{id}', [App\Modules\Finance\Controllers\JournalEntryController::class, 'show'])->name('show');
+            });
+
+            Route::prefix('bank-accounts')->name('bank-accounts.')->group(static function (): void {
+                Route::get('/', [App\Modules\Finance\Controllers\BankAccountController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\Finance\Controllers\BankAccountController::class, 'store'])->name('store');
+            });
+
+            Route::prefix('expenses')->name('expenses.')->group(static function (): void {
+                Route::get('categories', [App\Modules\Finance\Controllers\ExpenseController::class, 'categories'])->name('categories');
+                Route::post('categories', [App\Modules\Finance\Controllers\ExpenseController::class, 'storeCategory'])->name('categories.store');
+                Route::get('/', [App\Modules\Finance\Controllers\ExpenseController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\Finance\Controllers\ExpenseController::class, 'store'])->name('store');
+                Route::get('{id}', [App\Modules\Finance\Controllers\ExpenseController::class, 'show'])->name('show');
+            });
+
+            Route::prefix('costing')->name('costing.')->group(static function (): void {
+                Route::get('/', [App\Modules\Finance\Controllers\CostingController::class, 'index'])->name('index');
+                Route::post('rollup', [App\Modules\Finance\Controllers\CostingController::class, 'rollup'])->name('rollup');
+            });
+        });
+
+        // ── Fixed Assets & Maintenance ────────────────────────────────
+        Route::prefix('assets')->name('assets.')->group(static function (): void {
+            Route::get('categories', [App\Modules\Assets\Controllers\AssetController::class, 'categories'])->name('categories');
+            Route::post('categories', [App\Modules\Assets\Controllers\AssetController::class, 'storeCategory'])->name('categories.store');
+            Route::get('/', [App\Modules\Assets\Controllers\AssetController::class, 'index'])->name('index');
+            Route::post('/', [App\Modules\Assets\Controllers\AssetController::class, 'store'])->name('store');
+            Route::get('{id}', [App\Modules\Assets\Controllers\AssetController::class, 'show'])->name('show');
+
+            Route::prefix('depreciation')->name('depreciation.')->group(static function (): void {
+                Route::get('/', [App\Modules\Assets\Controllers\AssetDepreciationController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\Assets\Controllers\AssetDepreciationController::class, 'store'])->name('store');
+            });
+
+            Route::prefix('maintenance-orders')->name('maintenance-orders.')->group(static function (): void {
+                Route::get('/', [App\Modules\Assets\Controllers\MaintenanceOrderController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\Assets\Controllers\MaintenanceOrderController::class, 'store'])->name('store');
+                Route::get('{id}', [App\Modules\Assets\Controllers\MaintenanceOrderController::class, 'show'])->name('show');
+            });
+        });
+
+        // ── Human Resources & Payroll ─────────────────────────────────
+        Route::prefix('hr')->name('hr.')->group(static function (): void {
+            Route::get('departments', [App\Modules\HR\Controllers\EmployeeController::class, 'departments'])->name('departments');
+            Route::get('designations', [App\Modules\HR\Controllers\EmployeeController::class, 'designations'])->name('designations');
+            Route::get('shifts', [App\Modules\HR\Controllers\EmployeeController::class, 'shifts'])->name('shifts');
+
+            Route::prefix('employees')->name('employees.')->group(static function (): void {
+                Route::get('/', [App\Modules\HR\Controllers\EmployeeController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\HR\Controllers\EmployeeController::class, 'store'])->name('store');
+                Route::get('{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'show'])->name('show');
+            });
+
+            Route::prefix('attendances')->name('attendances.')->group(static function (): void {
+                Route::get('/', [App\Modules\HR\Controllers\AttendanceController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\HR\Controllers\AttendanceController::class, 'store'])->name('store');
+            });
+
+            Route::prefix('leaves')->name('leaves.')->group(static function (): void {
+                Route::get('types', [App\Modules\HR\Controllers\LeaveRequestController::class, 'leaveTypes'])->name('types');
+                Route::get('/', [App\Modules\HR\Controllers\LeaveRequestController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\HR\Controllers\LeaveRequestController::class, 'store'])->name('store');
+            });
+
+            Route::prefix('payroll')->name('payroll.')->group(static function (): void {
+                Route::get('periods', [App\Modules\HR\Controllers\PayrollController::class, 'periods'])->name('periods');
+                Route::post('periods', [App\Modules\HR\Controllers\PayrollController::class, 'storePeriod'])->name('periods.store');
+                Route::post('periods/{id}/process', [App\Modules\HR\Controllers\PayrollController::class, 'process'])->name('periods.process');
+                Route::get('payslips', [App\Modules\HR\Controllers\PayrollController::class, 'payslips'])->name('payslips');
+                Route::get('payslips/{id}', [App\Modules\HR\Controllers\PayrollController::class, 'showPayslip'])->name('payslips.show');
+            });
         });
     });

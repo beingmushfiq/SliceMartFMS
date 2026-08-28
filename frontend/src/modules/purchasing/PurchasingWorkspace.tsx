@@ -1,24 +1,18 @@
-import { useState } from 'react'
-import {
-  FileSpreadsheet,
-  PackageCheck,
-  Receipt,
-  ShoppingCart,
-  Undo2,
-} from 'lucide-react'
-import { PurchaseOrdersSection } from './sections/PurchaseOrdersSection'
-import { GoodsReceiptsSection } from './sections/GoodsReceiptsSection'
-import { PurchaseRequisitionsSection } from './sections/PurchaseRequisitionsSection'
-import { PurchaseBillsSection } from './sections/PurchaseBillsSection'
-import { PurchaseReturnsSection } from './sections/PurchaseReturnsSection'
+import { useState } from 'react';
+import { FileSpreadsheet, PackageCheck, Receipt, ShoppingCart, Undo2 } from 'lucide-react';
+import { PurchaseOrdersSection } from './sections/PurchaseOrdersSection';
+import { GoodsReceiptsSection } from './sections/GoodsReceiptsSection';
+import { PurchaseRequisitionsSection } from './sections/PurchaseRequisitionsSection';
+import { PurchaseBillsSection } from './sections/PurchaseBillsSection';
+import { PurchaseReturnsSection } from './sections/PurchaseReturnsSection';
 
-export type PurchasingTab = 'orders' | 'receipts' | 'requisitions' | 'bills' | 'returns'
+export type PurchasingTab = 'orders' | 'receipts' | 'requisitions' | 'bills' | 'returns';
 
 interface TabConfig {
-  id: PurchasingTab
-  label: string
-  icon: typeof ShoppingCart
-  description: string
+  id: PurchasingTab;
+  label: string;
+  icon: typeof ShoppingCart;
+  description: string;
 }
 
 const tabs: TabConfig[] = [
@@ -32,7 +26,8 @@ const tabs: TabConfig[] = [
     id: 'receipts',
     label: 'Goods Receipts (GRN)',
     icon: PackageCheck,
-    description: 'Warehouse gate receiving, 3-way match, lot assignment & instant inventory posting',
+    description:
+      'Warehouse gate receiving, 3-way match, lot assignment & instant inventory posting',
   },
   {
     id: 'requisitions',
@@ -44,20 +39,22 @@ const tabs: TabConfig[] = [
     id: 'bills',
     label: 'Purchase Bills (AP)',
     icon: Receipt,
-    description: 'Supplier invoice verification, payment due tracking & accounts payable settlement',
+    description:
+      'Supplier invoice verification, payment due tracking & accounts payable settlement',
   },
   {
     id: 'returns',
     label: 'Purchase Returns',
     icon: Undo2,
-    description: 'Debit notes and rejected goods return to supplier with automatic inventory deduction',
+    description:
+      'Debit notes and rejected goods return to supplier with automatic inventory deduction',
   },
-]
+];
 
 export default function PurchasingWorkspace() {
-  const [activeTab, setActiveTab] = useState<PurchasingTab>('orders')
+  const [activeTab, setActiveTab] = useState<PurchasingTab>('orders');
 
-  const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[0]
+  const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[0];
 
   return (
     <div className="space-y-6">
@@ -70,9 +67,7 @@ export default function PurchasingWorkspace() {
           <h1 className="text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">
             {currentTab?.label}
           </h1>
-          <p className="mt-1 text-xs text-zinc-400">
-            {currentTab?.description}
-          </p>
+          <p className="mt-1 text-xs text-zinc-400">{currentTab?.description}</p>
         </div>
       </div>
 
@@ -80,8 +75,8 @@ export default function PurchasingWorkspace() {
       <div className="flex overflow-x-auto border-b border-zinc-800 pb-px scrollbar-none">
         <div className="flex gap-2">
           {tabs.map((tab) => {
-            const Icon = tab.icon
-            const isActive = activeTab === tab.id
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
@@ -95,7 +90,7 @@ export default function PurchasingWorkspace() {
                 <Icon className="h-4 w-4" />
                 {tab.label}
               </button>
-            )
+            );
           })}
         </div>
       </div>
@@ -109,5 +104,5 @@ export default function PurchasingWorkspace() {
         {activeTab === 'returns' && <PurchaseReturnsSection />}
       </div>
     </div>
-  )
+  );
 }

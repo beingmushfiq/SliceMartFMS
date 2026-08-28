@@ -1,26 +1,26 @@
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Boxes, Plus, Search } from 'lucide-react'
-import { api } from '../../../lib/api/client'
-import { Modal } from '../../../components/ui/Modal'
-import { Button } from '../../../components/ui/Button'
-import { QueryBoundary } from '../../../components/patterns/QueryBoundary'
-import { isApiError } from '../../../lib/api/errors'
-import type { Brand } from '../../../types/api/catalog'
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Boxes, Plus, Search } from 'lucide-react';
+import { api } from '../../../lib/api/client';
+import { Modal } from '../../../components/ui/Modal';
+import { Button } from '../../../components/ui/Button';
+import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
+import { isApiError } from '../../../lib/api/errors';
+import type { Brand } from '../../../types/api/catalog';
 
 interface CreateBrandForm {
-  code: string
-  name: string
-  logo_path?: string | null
+  code: string;
+  name: string;
+  logo_path?: string | null;
 }
 
 export function BrandsSection() {
-  const [search, setSearch] = useState('')
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  const [draft, setDraft] = useState<CreateBrandForm>({ code: '', name: '', logo_path: null })
+  const [search, setSearch] = useState('');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [draft, setDraft] = useState<CreateBrandForm>({ code: '', name: '', logo_path: null });
 
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   const brandsQuery = useQuery({
     queryKey: ['catalogue', 'brands', search],
@@ -29,27 +29,27 @@ export function BrandsSection() {
         signal,
         params: search.trim().length >= 2 ? { q: search.trim() } : {},
       }),
-  })
+  });
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateBrandForm) => api.post<Brand>('/brands', payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['catalogue', 'brands'] })
-      setIsCreateOpen(false)
-      setDraft({ code: '', name: '', logo_path: null })
-      setErrorMsg(null)
+      await queryClient.invalidateQueries({ queryKey: ['catalogue', 'brands'] });
+      setIsCreateOpen(false);
+      setDraft({ code: '', name: '', logo_path: null });
+      setErrorMsg(null);
     },
     onError: (err) => {
       if (isApiError(err)) {
-        if (err.code === 'DUPLICATE') setErrorMsg('Brand code already exists.')
-        else setErrorMsg(err.message ?? 'Failed to create brand.')
+        if (err.code === 'DUPLICATE') setErrorMsg('Brand code already exists.');
+        else setErrorMsg(err.message ?? 'Failed to create brand.');
       } else {
-        setErrorMsg('Error creating brand.')
+        setErrorMsg('Error creating brand.');
       }
     },
-  })
+  });
 
-  const brands = brandsQuery.data?.data ?? []
+  const brands = brandsQuery.data?.data ?? [];
 
   return (
     <div className="space-y-6">
@@ -68,8 +68,8 @@ export function BrandsSection() {
         <Button
           variant="primary"
           onClick={() => {
-            setErrorMsg(null)
-            setIsCreateOpen(true)
+            setErrorMsg(null);
+            setIsCreateOpen(true);
           }}
           className="flex items-center gap-1.5"
         >
@@ -113,7 +113,9 @@ export function BrandsSection() {
                     <td className="py-3.5 px-3">
                       <span
                         className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
-                          b.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-500'
+                          b.is_active
+                            ? 'bg-emerald-500/10 text-emerald-400'
+                            : 'bg-zinc-800 text-zinc-500'
                         }`}
                       >
                         {b.is_active ? 'Active' : 'Inactive'}
@@ -131,8 +133,8 @@ export function BrandsSection() {
       <Modal open={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create Brand">
         <form
           onSubmit={(e) => {
-            e.preventDefault()
-            createMutation.mutate(draft)
+            e.preventDefault();
+            createMutation.mutate(draft);
           }}
           className="space-y-4"
         >
@@ -177,5 +179,5 @@ export function BrandsSection() {
         </form>
       </Modal>
     </div>
-  )
+  );
 }

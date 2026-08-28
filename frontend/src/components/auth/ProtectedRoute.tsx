@@ -1,16 +1,16 @@
-import { useEffect } from 'react'
-import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { useAuthStore } from '../../lib/auth/authStore'
+import { useEffect } from 'react';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { useAuthStore } from '../../lib/auth/authStore';
 
 export function ProtectedRoute() {
-  const { status, bootstrap } = useAuthStore()
-  const location = useLocation()
+  const { status, bootstrap } = useAuthStore();
+  const location = useLocation();
 
   useEffect(() => {
     if (status === 'idle') {
-      void bootstrap()
+      void bootstrap();
     }
-  }, [status, bootstrap])
+  }, [status, bootstrap]);
 
   if (status === 'idle' || status === 'authenticating') {
     return (
@@ -20,12 +20,12 @@ export function ProtectedRoute() {
           <p className="text-xs font-medium tracking-wide uppercase">Initializing session...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (status === 'unauthenticated') {
-    return <Navigate to="/login" state={{ from: location }} replace />
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  return <Outlet />
+  return <Outlet />;
 }

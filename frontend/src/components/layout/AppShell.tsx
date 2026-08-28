@@ -1,10 +1,10 @@
-import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
-import { AppHeader } from './AppHeader'
-import { Sidebar } from './Sidebar'
+import { useState } from 'react';
+import { Outlet } from 'react-router-dom';
+import { AppHeader } from './AppHeader';
+import { Sidebar } from './Sidebar';
 
 export function AppShell() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
     <div className="flex min-h-dvh bg-zinc-950 text-zinc-100 font-sans antialiased">
@@ -20,5 +20,5 @@ export function AppShell() {
         </main>
       </div>
     </div>
-  )
+  );
 }

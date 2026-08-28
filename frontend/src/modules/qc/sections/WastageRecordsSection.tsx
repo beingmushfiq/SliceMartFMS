@@ -1,45 +1,45 @@
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertOctagon, DollarSign, Plus, Search, Trash2 } from 'lucide-react'
-import { api } from '../../../lib/api/client'
-import { Modal } from '../../../components/ui/Modal'
-import { Button } from '../../../components/ui/Button'
-import { Badge } from '../../../components/ui/Badge'
-import { QueryBoundary } from '../../../components/patterns/QueryBoundary'
-import { isApiError } from '../../../lib/api/errors'
-import type { WastageRecord } from '../../../types/api/qc'
-import type { ProductionBatch } from '../../../types/api/production'
-import type { Product, Warehouse } from '../../../types/api/catalog'
-import type { Unit } from '../../../types/api/unit'
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AlertOctagon, DollarSign, Plus, Search, Trash2 } from 'lucide-react';
+import { api } from '../../../lib/api/client';
+import { Modal } from '../../../components/ui/Modal';
+import { Button } from '../../../components/ui/Button';
+import { Badge } from '../../../components/ui/Badge';
+import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
+import { isApiError } from '../../../lib/api/errors';
+import type { WastageRecord } from '../../../types/api/qc';
+import type { ProductionBatch } from '../../../types/api/production';
+import type { Product, Warehouse } from '../../../types/api/catalog';
+import type { Unit } from '../../../types/api/unit';
 
 interface ReasonCodeOption {
-  id: string
-  label: string
-  code: string
-  name: string
-  context: string
+  id: string;
+  label: string;
+  code: string;
+  name: string;
+  context: string;
 }
 
 interface CreateWastageDraft {
-  wastage_number: string
-  product_id: string
-  production_batch_id?: string | undefined
-  stage: 'input' | 'in_process' | 'output' | 'qc' | 'storage' | 'transit'
-  quantity: string
-  unit_id: string
-  reason_code_id: string
-  estimated_cost: string
-  is_recoverable: boolean
-  recovered_quantity?: string | undefined
-  warehouse_id?: string | undefined
-  notes?: string | undefined
+  wastage_number: string;
+  product_id: string;
+  production_batch_id?: string | undefined;
+  stage: 'input' | 'in_process' | 'output' | 'qc' | 'storage' | 'transit';
+  quantity: string;
+  unit_id: string;
+  reason_code_id: string;
+  estimated_cost: string;
+  is_recoverable: boolean;
+  recovered_quantity?: string | undefined;
+  warehouse_id?: string | undefined;
+  notes?: string | undefined;
 }
 
 export function WastageRecordsSection() {
-  const [search, setSearch] = useState('')
-  const [stageFilter, setStageFilter] = useState<string>('all')
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [search, setSearch] = useState('');
+  const [stageFilter, setStageFilter] = useState<string>('all');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [draft, setDraft] = useState<CreateWastageDraft>({
     wastage_number: '',
@@ -50,9 +50,9 @@ export function WastageRecordsSection() {
     reason_code_id: '',
     estimated_cost: '25.0000',
     is_recoverable: false,
-  })
+  });
 
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   // Queries
   const wastageQuery = useQuery({
@@ -65,54 +65,54 @@ export function WastageRecordsSection() {
           ...(stageFilter !== 'all' ? { stage: stageFilter } : {}),
         },
       }),
-  })
+  });
 
   const productsQuery = useQuery({
     queryKey: ['catalogue', 'products', 'options'],
     queryFn: ({ signal }) => api.get<Product[]>('/products', { signal }),
-  })
+  });
 
   const unitsQuery = useQuery({
     queryKey: ['catalogue', 'units', 'options'],
     queryFn: ({ signal }) => api.get<Unit[]>('/units', { signal }),
-  })
+  });
 
   const batchesQuery = useQuery({
     queryKey: ['production', 'batches', 'options'],
     queryFn: ({ signal }) => api.get<ProductionBatch[]>('/production/batches', { signal }),
-  })
+  });
 
   const warehousesQuery = useQuery({
     queryKey: ['catalogue', 'warehouses', 'options'],
     queryFn: ({ signal }) => api.get<Warehouse[]>('/warehouses', { signal }),
-  })
+  });
 
   const reasonCodesQuery = useQuery({
     queryKey: ['catalogue', 'reason-codes', 'options'],
     queryFn: ({ signal }) => api.get<ReasonCodeOption[]>('/reason-codes/options', { signal }),
-  })
+  });
 
   // Mutations
   const createMutation = useMutation({
     mutationFn: (payload: CreateWastageDraft) =>
       api.post<WastageRecord>('/qc/wastage-records', payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['qc', 'wastage-records'] })
-      setIsCreateOpen(false)
-      setErrorMsg(null)
+      await queryClient.invalidateQueries({ queryKey: ['qc', 'wastage-records'] });
+      setIsCreateOpen(false);
+      setErrorMsg(null);
     },
     onError: (err) => {
-      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to log wastage record.')
-      else setErrorMsg('Error logging wastage record.')
+      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to log wastage record.');
+      else setErrorMsg('Error logging wastage record.');
     },
-  })
+  });
 
-  const records = wastageQuery.data?.data ?? []
-  const products = productsQuery.data?.data ?? []
-  const units = unitsQuery.data?.data ?? []
-  const batches = batchesQuery.data?.data ?? []
-  const warehouses = warehousesQuery.data?.data ?? []
-  const reasonCodes = reasonCodesQuery.data?.data ?? []
+  const records = wastageQuery.data?.data ?? [];
+  const products = productsQuery.data?.data ?? [];
+  const units = unitsQuery.data?.data ?? [];
+  const batches = batchesQuery.data?.data ?? [];
+  const warehouses = warehousesQuery.data?.data ?? [];
+  const reasonCodes = reasonCodesQuery.data?.data ?? [];
 
   return (
     <div className="space-y-6">
@@ -148,7 +148,7 @@ export function WastageRecordsSection() {
         <Button
           variant="primary"
           onClick={() => {
-            setErrorMsg(null)
+            setErrorMsg(null);
             if (products.length > 0 && units.length > 0 && reasonCodes.length > 0) {
               setDraft({
                 wastage_number: `WST-${Date.now().toString().slice(-6)}`,
@@ -160,9 +160,9 @@ export function WastageRecordsSection() {
                 estimated_cost: '25.0000',
                 is_recoverable: false,
                 ...(warehouses[0]?.id ? { warehouse_id: warehouses[0].id } : {}),
-              })
+              });
             }
-            setIsCreateOpen(true)
+            setIsCreateOpen(true);
           }}
           className="flex items-center gap-1.5"
         >
@@ -198,7 +198,9 @@ export function WastageRecordsSection() {
                     <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800/50 mb-2">
                       <Trash2 className="h-5 w-5 text-zinc-400" />
                     </div>
-                    <div className="text-sm font-medium text-zinc-400">No wastage records found</div>
+                    <div className="text-sm font-medium text-zinc-400">
+                      No wastage records found
+                    </div>
                     <div className="text-xs text-zinc-500 mt-1">
                       Track process scrap, damaged materials and manufacturing shrinkage.
                     </div>
@@ -211,7 +213,9 @@ export function WastageRecordsSection() {
                       {rec.record_number}
                     </td>
                     <td className="py-3 px-3">
-                      <div className="text-zinc-200 font-medium">{rec.product_name ?? rec.product_id}</div>
+                      <div className="text-zinc-200 font-medium">
+                        {rec.product_name ?? rec.product_id}
+                      </div>
                       {rec.batch_number && (
                         <div className="text-[10px] font-mono text-zinc-500">
                           Batch: {rec.batch_number}
@@ -325,7 +329,9 @@ export function WastageRecordsSection() {
                 onChange={(e) =>
                   setDraft((d) => ({
                     ...d,
-                    ...(e.target.value ? { production_batch_id: e.target.value } : { production_batch_id: undefined }),
+                    ...(e.target.value
+                      ? { production_batch_id: e.target.value }
+                      : { production_batch_id: undefined }),
                   }))
                 }
                 className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-200"
@@ -412,7 +418,9 @@ export function WastageRecordsSection() {
                 onChange={(e) =>
                   setDraft((d) => ({
                     ...d,
-                    ...(e.target.value ? { warehouse_id: e.target.value } : { warehouse_id: undefined }),
+                    ...(e.target.value
+                      ? { warehouse_id: e.target.value }
+                      : { warehouse_id: undefined }),
                   }))
                 }
                 className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-200"
@@ -441,5 +449,5 @@ export function WastageRecordsSection() {
         </div>
       </Modal>
     </div>
-  )
+  );
 }

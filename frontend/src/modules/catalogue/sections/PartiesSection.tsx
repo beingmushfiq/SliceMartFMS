@@ -1,37 +1,39 @@
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Mail, Phone, Plus, Search } from 'lucide-react'
-import { api } from '../../../lib/api/client'
-import { Modal } from '../../../components/ui/Modal'
-import { Button } from '../../../components/ui/Button'
-import { QueryBoundary } from '../../../components/patterns/QueryBoundary'
-import { isApiError } from '../../../lib/api/errors'
-import type { Party } from '../../../types/api/party'
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Mail, Phone, Plus, Search } from 'lucide-react';
+import { api } from '../../../lib/api/client';
+import { Modal } from '../../../components/ui/Modal';
+import { Button } from '../../../components/ui/Button';
+import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
+import { isApiError } from '../../../lib/api/errors';
+import type { Party } from '../../../types/api/party';
 
 interface CreatePartyForm {
-  code: string
-  name: string
-  legal_name?: string
-  is_customer: boolean
-  is_supplier: boolean
-  is_dealer: boolean
-  is_agent: boolean
-  type: string
-  phone?: string
-  email?: string
-  credit_limit: string
-  credit_days: number
-  line1?: string
-  city?: string
-  contact_name?: string
-  contact_phone?: string
+  code: string;
+  name: string;
+  legal_name?: string;
+  is_customer: boolean;
+  is_supplier: boolean;
+  is_dealer: boolean;
+  is_agent: boolean;
+  type: string;
+  phone?: string;
+  email?: string;
+  credit_limit: string;
+  credit_days: number;
+  line1?: string;
+  city?: string;
+  contact_name?: string;
+  contact_phone?: string;
 }
 
 export function PartiesSection() {
-  const [search, setSearch] = useState('')
-  const [roleFilter, setRoleFilter] = useState<'all' | 'customer' | 'supplier' | 'dealer' | 'agent'>('all')
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState<
+    'all' | 'customer' | 'supplier' | 'dealer' | 'agent'
+  >('all');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [draft, setDraft] = useState<CreatePartyForm>({
     code: '',
     name: '',
@@ -49,23 +51,23 @@ export function PartiesSection() {
     city: 'Dhaka',
     contact_name: '',
     contact_phone: '',
-  })
+  });
 
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   const partiesQuery = useQuery({
     queryKey: ['catalogue', 'parties', search, roleFilter],
     queryFn: ({ signal }) => {
-      const params: Record<string, string> = {}
-      if (search.trim().length >= 2) params['q'] = search.trim()
-      if (roleFilter === 'customer') params['is_customer'] = 'true'
-      if (roleFilter === 'supplier') params['is_supplier'] = 'true'
-      if (roleFilter === 'dealer') params['is_dealer'] = 'true'
-      if (roleFilter === 'agent') params['is_agent'] = 'true'
+      const params: Record<string, string> = {};
+      if (search.trim().length >= 2) params['q'] = search.trim();
+      if (roleFilter === 'customer') params['is_customer'] = 'true';
+      if (roleFilter === 'supplier') params['is_supplier'] = 'true';
+      if (roleFilter === 'dealer') params['is_dealer'] = 'true';
+      if (roleFilter === 'agent') params['is_agent'] = 'true';
 
-      return api.get<Party[]>('/parties', { signal, params })
+      return api.get<Party[]>('/parties', { signal, params });
     },
-  })
+  });
 
   const createMutation = useMutation({
     mutationFn: (form: CreatePartyForm) => {
@@ -82,7 +84,7 @@ export function PartiesSection() {
         email: form.email || null,
         credit_limit: form.credit_limit,
         credit_days: form.credit_days,
-      }
+      };
 
       if (form.line1 && form.city) {
         payload['addresses'] = [
@@ -92,7 +94,7 @@ export function PartiesSection() {
             city: form.city,
             is_default: true,
           },
-        ]
+        ];
       }
 
       if (form.contact_name) {
@@ -102,14 +104,14 @@ export function PartiesSection() {
             phone: form.contact_phone || null,
             is_primary: true,
           },
-        ]
+        ];
       }
 
-      return api.post<Party>('/parties', payload)
+      return api.post<Party>('/parties', payload);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['catalogue', 'parties'] })
-      setIsCreateOpen(false)
+      await queryClient.invalidateQueries({ queryKey: ['catalogue', 'parties'] });
+      setIsCreateOpen(false);
       setDraft({
         code: '',
         name: '',
@@ -127,20 +129,20 @@ export function PartiesSection() {
         city: 'Dhaka',
         contact_name: '',
         contact_phone: '',
-      })
-      setErrorMsg(null)
+      });
+      setErrorMsg(null);
     },
     onError: (err) => {
       if (isApiError(err)) {
-        if (err.code === 'DUPLICATE') setErrorMsg('Party code already exists.')
-        else setErrorMsg(err.message ?? 'Failed to create party.')
+        if (err.code === 'DUPLICATE') setErrorMsg('Party code already exists.');
+        else setErrorMsg(err.message ?? 'Failed to create party.');
       } else {
-        setErrorMsg('Error creating party.')
+        setErrorMsg('Error creating party.');
       }
     },
-  })
+  });
 
-  const parties = partiesQuery.data?.data ?? []
+  const parties = partiesQuery.data?.data ?? [];
 
   return (
     <div className="space-y-6">
@@ -179,8 +181,8 @@ export function PartiesSection() {
         <Button
           variant="primary"
           onClick={() => {
-            setErrorMsg(null)
-            setIsCreateOpen(true)
+            setErrorMsg(null);
+            setIsCreateOpen(true);
           }}
           className="flex items-center gap-1.5"
         >
@@ -288,8 +290,8 @@ export function PartiesSection() {
       <Modal open={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create New Party">
         <form
           onSubmit={(e) => {
-            e.preventDefault()
-            createMutation.mutate(draft)
+            e.preventDefault();
+            createMutation.mutate(draft);
           }}
           className="space-y-4"
         >
@@ -420,7 +422,9 @@ export function PartiesSection() {
                 type="number"
                 min="0"
                 value={draft.credit_days}
-                onChange={(e) => setDraft({ ...draft, credit_days: parseInt(e.target.value, 10) || 0 })}
+                onChange={(e) =>
+                  setDraft({ ...draft, credit_days: parseInt(e.target.value, 10) || 0 })
+                }
                 className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
               />
             </div>
@@ -437,5 +441,5 @@ export function PartiesSection() {
         </form>
       </Modal>
     </div>
-  )
+  );
 }

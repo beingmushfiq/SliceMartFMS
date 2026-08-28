@@ -1,42 +1,35 @@
-import { useState, useEffect } from 'react'
-import {
-  Calculator,
-  CheckCircle2,
-  Clock,
-  RefreshCw,
-  Search,
-  XCircle,
-} from 'lucide-react'
-import type { StockCount } from '../../../types/api/inventory'
-import { api } from '../../../lib/api/client'
+import { useState, useEffect } from 'react';
+import { Calculator, CheckCircle2, Clock, RefreshCw, Search, XCircle } from 'lucide-react';
+import type { StockCount } from '../../../types/api/inventory';
+import { api } from '../../../lib/api/client';
 
 export function StockCountsSection() {
-  const [counts, setCounts] = useState<StockCount[]>([])
-  const [loading, setLoading] = useState(false)
-  const [search, setSearch] = useState('')
+  const [counts, setCounts] = useState<StockCount[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
 
   const fetchCounts = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const res = await api.get<StockCount[]>('/inventory/counts')
-      setCounts(res.data ?? [])
+      const res = await api.get<StockCount[]>('/inventory/counts');
+      setCounts(res.data ?? []);
     } catch (err) {
-      console.error('Failed to load counts', err)
+      console.error('Failed to load counts', err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchCounts()
-  }, [])
+    fetchCounts();
+  }, []);
 
   const filteredCounts = counts.filter(
     (c) =>
       c.count_number?.toLowerCase().includes(search.toLowerCase()) ||
       c.warehouse_name?.toLowerCase().includes(search.toLowerCase()) ||
       c.count_type?.toLowerCase().includes(search.toLowerCase())
-  )
+  );
 
   const getStatusBadge = (status: StockCount['status']) => {
     switch (status) {
@@ -45,27 +38,27 @@ export function StockCountsSection() {
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-zinc-800 text-zinc-300 border border-zinc-700">
             <Clock className="h-3 w-3 text-zinc-400" /> Draft
           </span>
-        )
+        );
       case 'counting':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">
             <Calculator className="h-3 w-3 text-amber-400" /> Counting
           </span>
-        )
+        );
       case 'completed':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Reconciled
           </span>
-        )
+        );
       case 'cancelled':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/20">
             <XCircle className="h-3 w-3 text-rose-400" /> Cancelled
           </span>
-        )
+        );
     }
-  }
+  };
 
   return (
     <div className="space-y-4">
@@ -136,5 +129,5 @@ export function StockCountsSection() {
         </div>
       </div>
     </div>
-  )
+  );
 }

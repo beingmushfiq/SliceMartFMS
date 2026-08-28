@@ -1,16 +1,16 @@
-import { useState } from 'react'
-import { ClipboardList, Factory, Users } from 'lucide-react'
-import { ProductionPlansSection } from './sections/ProductionPlansSection'
-import { ProductionBatchesSection } from './sections/ProductionBatchesSection'
-import { WorkerProductionSection } from './sections/WorkerProductionSection'
+import { useState } from 'react';
+import { ClipboardList, Factory, Users } from 'lucide-react';
+import { ProductionPlansSection } from './sections/ProductionPlansSection';
+import { ProductionBatchesSection } from './sections/ProductionBatchesSection';
+import { WorkerProductionSection } from './sections/WorkerProductionSection';
 
-export type ProductionTab = 'plans' | 'batches' | 'worker-entries'
+export type ProductionTab = 'plans' | 'batches' | 'worker-entries';
 
 interface TabConfig {
-  id: ProductionTab
-  label: string
-  icon: typeof Factory
-  description: string
+  id: ProductionTab;
+  label: string;
+  icon: typeof Factory;
+  description: string;
 }
 
 const tabs: TabConfig[] = [
@@ -30,14 +30,15 @@ const tabs: TabConfig[] = [
     id: 'worker-entries',
     label: 'Worker Output & Wages',
     icon: Users,
-    description: 'Daily touch entry for worker output, piece-rate tracking & supervisor verification',
+    description:
+      'Daily touch entry for worker output, piece-rate tracking & supervisor verification',
   },
-]
+];
 
 export default function ProductionWorkspace() {
-  const [activeTab, setActiveTab] = useState<ProductionTab>('batches')
+  const [activeTab, setActiveTab] = useState<ProductionTab>('batches');
 
-  const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[0]
+  const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[0];
 
   return (
     <div className="space-y-6">
@@ -50,9 +51,7 @@ export default function ProductionWorkspace() {
           <h1 className="text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">
             {currentTab?.label}
           </h1>
-          <p className="mt-1 text-xs text-zinc-400">
-            {currentTab?.description}
-          </p>
+          <p className="mt-1 text-xs text-zinc-400">{currentTab?.description}</p>
         </div>
       </div>
 
@@ -60,8 +59,8 @@ export default function ProductionWorkspace() {
       <div className="flex overflow-x-auto border-b border-zinc-800 pb-px scrollbar-none">
         <div className="flex gap-2">
           {tabs.map((tab) => {
-            const Icon = tab.icon
-            const isActive = activeTab === tab.id
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
@@ -75,7 +74,7 @@ export default function ProductionWorkspace() {
                 <Icon className="h-4 w-4" />
                 <span>{tab.label}</span>
               </button>
-            )
+            );
           })}
         </div>
       </div>
@@ -87,5 +86,5 @@ export default function ProductionWorkspace() {
         {activeTab === 'worker-entries' && <WorkerProductionSection />}
       </div>
     </div>
-  )
+  );
 }
