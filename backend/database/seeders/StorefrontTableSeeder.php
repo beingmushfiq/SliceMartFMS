@@ -54,5 +54,48 @@ final class StorefrontTableSeeder extends Seeder
                 'published_at' => now(),
             ]
         );
+
+        // Seed default couriers for tenant #1
+        $couriers = [
+            [
+                'code' => 'STEADFAST',
+                'name' => 'Steadfast Courier',
+                'adapter_class' => \App\Modules\Delivery\Adapters\SteadfastCourierAdapter::class,
+                'default_charge' => '70.0000',
+                'capabilities' => ['create_shipment', 'cancel_shipment', 'get_status', 'get_label', 'webhooks', 'cod_collection'],
+            ],
+            [
+                'code' => 'PATHAO',
+                'name' => 'Pathao Express',
+                'adapter_class' => \App\Modules\Delivery\Adapters\PathaoCourierAdapter::class,
+                'default_charge' => '60.0000',
+                'capabilities' => ['create_shipment', 'cancel_shipment', 'get_status', 'get_label', 'calculate_rate', 'schedule_pickup', 'webhooks', 'cod_collection'],
+            ],
+            [
+                'code' => 'REDX',
+                'name' => 'REDX Logistics',
+                'adapter_class' => \App\Modules\Delivery\Adapters\RedxCourierAdapter::class,
+                'default_charge' => '60.0000',
+                'capabilities' => ['create_shipment', 'cancel_shipment', 'get_status', 'get_label', 'calculate_rate', 'schedule_pickup', 'webhooks', 'cod_collection'],
+            ],
+        ];
+
+        foreach ($couriers as $courier) {
+            \App\Modules\Delivery\Models\CourierProvider::firstOrCreate(
+                [
+                    'tenant_id' => $tenant->id,
+                    'code' => $courier['code'],
+                ],
+                [
+                    'uuid' => (string) Str::uuid(),
+                    'name' => $courier['name'],
+                    'adapter_class' => $courier['adapter_class'],
+                    'is_active' => true,
+                    'credentials' => ['api_key' => 'live_demo_key'],
+                    'capabilities' => $courier['capabilities'],
+                    'default_charge' => $courier['default_charge'],
+                ]
+            );
+        }
     }
 }

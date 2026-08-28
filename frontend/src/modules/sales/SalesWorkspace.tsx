@@ -66,6 +66,16 @@ export default function SalesWorkspace() {
           </h1>
           <p className="mt-1 text-xs text-zinc-400">{currentTab?.description}</p>
         </div>
+
+        <div className="flex items-center gap-3">
+          <a
+            href="/fraud-verification"
+            className="inline-flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 transition-all shadow-sm"
+          >
+            <span className="flex h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+            <span>Fraud Check & Verification Queue</span>
+          </a>
+        </div>
       </div>
 
       {/* Tabs Navigation */}

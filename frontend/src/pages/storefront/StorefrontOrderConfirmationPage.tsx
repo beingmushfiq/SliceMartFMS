@@ -52,7 +52,22 @@ export const StorefrontOrderConfirmationPage: React.FC = () => {
           </div>
         )}
 
-        <div className="pt-2">
+        <div className="pt-2 space-y-2">
+          {order && (
+            <a
+              href={`https://wa.me/${(config.whatsapp_number || '+8801700000000').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                `Hello ${config.name}, I have just placed order #${order.order_number} for ৳${parseFloat(
+                  order.total_amount
+                ).toFixed(2)}. Please confirm receipt and delivery schedule.`
+              )}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center gap-2 w-full rounded-xl border border-emerald-500/30 bg-emerald-950/40 py-2.5 text-xs font-bold text-emerald-300 hover:bg-emerald-900/40 hover:text-white transition-all shadow-sm"
+            >
+              <span>💬 Chat on WhatsApp for Live Order Updates</span>
+            </a>
+          )}
+
           <Link
             to={`/store/${subdomain}`}
             className="inline-flex items-center justify-center gap-2 w-full rounded-xl bg-emerald-500 py-3 text-xs font-bold text-zinc-950 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400 transition-all cursor-pointer"

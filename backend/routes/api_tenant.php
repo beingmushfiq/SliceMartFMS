@@ -656,6 +656,40 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             Route::put('settings', [\App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'updateSettings'])->name('settings.update');
             Route::get('products', [\App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'getPublishedProducts'])->name('products.index');
             Route::post('products/toggle-publish', [\App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'togglePublishProduct'])->name('products.toggle');
+
+            // Page Builder
+            Route::get('cms/pages', [\App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'index'])->name('cms.pages.index');
+            Route::post('cms/pages', [\App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'store'])->name('cms.pages.store');
+            Route::get('cms/pages/{idOrSlug}', [\App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'show'])->name('cms.pages.show');
+            Route::put('cms/pages/{id}', [\App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'update'])->name('cms.pages.update');
+            Route::delete('cms/pages/{id}', [\App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'destroy'])->name('cms.pages.destroy');
+
+            // Custom Domain & Storefront Domain Management
+            Route::prefix('domains')->name('domains.')->group(static function (): void {
+                Route::get('/', [\App\Modules\Ecommerce\Controllers\TenantDomainController::class, 'index'])->name('index');
+                Route::post('/', [\App\Modules\Ecommerce\Controllers\TenantDomainController::class, 'store'])->name('store');
+                Route::post('{id}/verify', [\App\Modules\Ecommerce\Controllers\TenantDomainController::class, 'verify'])->name('verify');
+                Route::post('{id}/set-primary', [\App\Modules\Ecommerce\Controllers\TenantDomainController::class, 'setPrimary'])->name('set-primary');
+                Route::delete('{id}', [\App\Modules\Ecommerce\Controllers\TenantDomainController::class, 'destroy'])->name('destroy');
+            });
+        });
+
+        // ── Settings & Configuration System ─────────────────────────
+        Route::prefix('settings')->name('settings.')->group(static function (): void {
+            Route::get('schema', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'schema'])->name('schema');
+            Route::get('{group}', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'getGroup'])->name('get');
+            Route::put('{group}', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'updateGroup'])->name('update');
+            Route::post('{group}/test-connection', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'testConnection'])->name('test-connection');
+            Route::post('{group}/reset', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'resetGroup'])->name('reset');
+        });
+
+        // ── E-Commerce Fraud Check & Order Verification ─────────────
+        Route::prefix('fraud-check')->name('fraud-check.')->group(static function (): void {
+            Route::get('queue', [\App\Modules\Ecommerce\Controllers\OrderFraudVerificationController::class, 'index'])->name('queue');
+            Route::get('orders/{orderId}', [\App\Modules\Ecommerce\Controllers\OrderFraudVerificationController::class, 'show'])->name('show');
+            Route::post('orders/{orderId}/verify', [\App\Modules\Ecommerce\Controllers\OrderFraudVerificationController::class, 'verify'])->name('verify');
+            Route::post('orders/{orderId}/hold', [\App\Modules\Ecommerce\Controllers\OrderFraudVerificationController::class, 'hold'])->name('hold');
+            Route::post('orders/{orderId}/reject', [\App\Modules\Ecommerce\Controllers\OrderFraudVerificationController::class, 'reject'])->name('reject');
         });
 
         // ── System Audit Logging ──────────────────────────────────────

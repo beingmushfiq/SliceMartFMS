@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Microscope,
   Package,
+  Settings,
   ShieldCheck,
   ShoppingBag,
   ShoppingCart,
@@ -18,6 +19,7 @@ import {
   Warehouse,
 } from 'lucide-react';
 import { useAuthStore } from '../../lib/auth/authStore';
+import { cn } from '../../lib/utils';
 
 interface NavItem {
   label: string;
@@ -28,6 +30,11 @@ interface NavItem {
 }
 
 const mainNav: NavItem[] = [
+  {
+    label: 'Operations Dashboard',
+    to: '/dashboard',
+    icon: LayoutDashboard,
+  },
   {
     label: 'Catalogue & Master',
     to: '/catalogue',
@@ -121,6 +128,11 @@ const mainNav: NavItem[] = [
     icon: ShieldCheck,
     permission: ['audit.logs.view'],
   },
+  {
+    label: 'Settings Center',
+    to: '/settings',
+    icon: Settings,
+  },
 ];
 
 interface SidebarProps {
@@ -138,7 +150,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Mobile backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-zinc-950/80 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-(--z-overlay) bg-overlay backdrop-blur-xs lg:hidden"
           onClick={onClose}
           aria-hidden="true"
         />
@@ -146,26 +158,37 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* Sidebar container */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 flex w-64 flex-col border-r border-zinc-800 bg-zinc-950 transition-transform duration-200 lg:translate-x-0 ${
+        className={cn(
+          'fixed top-0 bottom-0 left-0 z-50 flex w-64 flex-col border-r transition-transform duration-200 lg:translate-x-0',
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        )}
+        style={{
+          backgroundColor: 'var(--nav-bg)',
+          borderColor: 'var(--nav-border)',
+        }}
       >
         {/* Brand header */}
-        <div className="flex h-16 items-center gap-3 border-b border-zinc-800 px-6">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-teal-600 shadow-md shadow-emerald-500/20">
-            <Package className="h-5 w-5 text-zinc-950 font-bold" />
+        <div
+          className="flex h-16 items-center gap-3 border-b px-6 shrink-0"
+          style={{ borderColor: 'var(--nav-border)' }}
+        >
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-md shadow-blue-500/20 shrink-0">
+            <Package className="h-5 w-5 text-white font-bold" />
           </div>
-          <div>
-            <div className="font-bold tracking-tight text-zinc-100">SliceMart FMS</div>
-            <div className="text-[10px] font-semibold text-emerald-400 uppercase tracking-widest">
+          <div className="min-w-0">
+            <div className="font-bold tracking-tight text-white text-sm truncate">SliceMart FMS</div>
+            <div className="text-[10px] font-semibold text-blue-400 uppercase tracking-widest">
               Enterprise
             </div>
           </div>
         </div>
 
         {/* Navigation items */}
-        <nav className="flex-1 overflow-y-auto p-4 space-y-1.5" aria-label="Main Navigation">
-          <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+        <nav className="flex-1 overflow-y-auto p-3 space-y-1" aria-label="Main Navigation">
+          <div
+            className="px-3 py-2 text-2xs font-bold uppercase tracking-wider"
+            style={{ color: 'var(--nav-section-fg)' }}
+          >
             Operations & Management
           </div>
 
@@ -177,21 +200,47 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 to={item.to}
                 onClick={onClose}
                 className={({ isActive }) =>
-                  `group flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-medium transition-all ${
+                  cn(
+                    'group relative flex items-center justify-between px-(--nav-item-px) rounded-(--nav-item-radius) text-xs font-medium transition-token-colors focus-visible:ring-focus outline-none',
+                    'h-(--nav-item-height)',
                     isActive
-                      ? 'bg-emerald-500/10 text-emerald-400 font-semibold shadow-inner'
-                      : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'
-                  }`
+                      ? 'font-semibold text-white'
+                      : 'hover:text-white'
+                  )
                 }
+                style={({ isActive }) => ({
+                  color: isActive ? 'var(--nav-fg-active)' : 'var(--nav-fg)',
+                  backgroundColor: isActive ? 'var(--nav-active-bg)' : 'transparent',
+                })}
               >
-                <div className="flex items-center gap-3">
-                  <Icon className="h-4 w-4 shrink-0 transition-transform group-hover:scale-110" />
-                  <span>{item.label}</span>
-                </div>
-                {item.badge && (
-                  <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9px] font-bold text-emerald-300">
-                    {item.badge}
-                  </span>
+                {({ isActive }) => (
+                  <>
+                    {/* Active vertical pill indicator */}
+                    {isActive && (
+                      <span
+                        className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full"
+                        style={{ backgroundColor: 'var(--nav-active-marker)' }}
+                        aria-hidden="true"
+                      />
+                    )}
+
+                    <div className="flex items-center gap-(--nav-item-gap) min-w-0">
+                      <Icon
+                        className="size-4 shrink-0 transition-transform group-hover:scale-105"
+                        style={{
+                          color: isActive ? 'var(--nav-icon-active)' : 'var(--nav-icon)',
+                        }}
+                        aria-hidden="true"
+                      />
+                      <span className="truncate">{item.label}</span>
+                    </div>
+
+                    {item.badge && (
+                      <span className="rounded-full px-2 py-0.5 text-2xs font-bold bg-primary-subtle text-primary shrink-0">
+                        {item.badge}
+                      </span>
+                    )}
+                  </>
                 )}
               </NavLink>
             );
@@ -199,10 +248,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </nav>
 
         {/* Footer info */}
-        <div className="border-t border-zinc-800/80 p-4">
-          <div className="rounded-xl bg-zinc-900/60 p-3 text-center border border-zinc-800">
-            <div className="text-xs font-medium text-zinc-300">SliceMart Production</div>
-            <div className="text-[10px] text-zinc-500 mt-0.5">Dual-token isolated tenant</div>
+        <div className="border-t p-3 shrink-0" style={{ borderColor: 'var(--nav-border)' }}>
+          <div
+            className="rounded-(--radius-sm) p-3 text-center border"
+            style={{
+              backgroundColor: 'var(--nav-bg-deep)',
+              borderColor: 'var(--nav-border)',
+            }}
+          >
+            <div className="text-xs font-medium text-slate-200">SliceMart Production</div>
+            <div className="text-2xs text-slate-400 mt-0.5">Dual-token isolated tenant</div>
           </div>
         </div>
       </aside>

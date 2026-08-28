@@ -47,7 +47,25 @@ export const StorefrontFooter: React.FC<StorefrontFooterProps> = ({ config }) =>
       </div>
 
       {/* Footer Details */}
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-4">
+        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 text-xs font-medium text-zinc-400 border-b border-zinc-900 pb-4">
+          <a href={`/store/${config?.subdomain || 'slicemart'}`} className="hover:text-white transition-colors">
+            Catalog Home
+          </a>
+          <a href={`/store/${config?.subdomain || 'slicemart'}/track`} className="hover:text-white transition-colors">
+            Track Order
+          </a>
+          <a href={`/store/${config?.subdomain || 'slicemart'}/pages/about-us`} className="hover:text-white transition-colors">
+            About Our Factory
+          </a>
+          <a href={`/store/${config?.subdomain || 'slicemart'}/pages/faq`} className="hover:text-white transition-colors">
+            Help & FAQ
+          </a>
+          <a href={`/store/${config?.subdomain || 'slicemart'}/pages/privacy-policy`} className="hover:text-white transition-colors">
+            Return & Privacy Policy
+          </a>
+        </div>
+
         <div className="flex flex-col items-center justify-between gap-4 sm:flex-row text-xs">
           <div>
             <span className="font-semibold text-zinc-300">{config?.name}</span>

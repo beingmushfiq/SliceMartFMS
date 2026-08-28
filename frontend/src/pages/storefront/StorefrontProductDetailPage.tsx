@@ -34,7 +34,7 @@ export const StorefrontProductDetailPage: React.FC = () => {
         const prod = response.data.data ?? (response.data as any);
         setProduct(prod);
         if (prod.variants && prod.variants.length > 0) {
-          setSelectedVariant(prod.variants[0]);
+          setSelectedVariant(prod.variants[0] ?? null);
         }
       } catch (err) {
         console.error('Failed to load product', err);
@@ -186,6 +186,41 @@ export const StorefrontProductDetailPage: React.FC = () => {
                 <span>Add to Cart ({currency} {(parseFloat(price) * quantity).toFixed(2)})</span>
               </button>
             </div>
+
+            {/* Direct WhatsApp Ordering */}
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const res = await api.post<{ data: { whatsapp_url: string } }>(
+                    '/storefront/whatsapp/order-link',
+                    {
+                      product_id: product.id,
+                      quantity,
+                    },
+                    {
+                      headers: {
+                        'X-Storefront-Subdomain': subdomain,
+                      },
+                    }
+                  );
+                  if (res.data?.data?.whatsapp_url) {
+                    window.open(res.data.data.whatsapp_url, '_blank');
+                  }
+                } catch {
+                  // Fallback
+                  const text = encodeURIComponent(
+                    `Hello, I would like to order ${quantity}x ${product.name} (৳${(
+                      parseFloat(price) * quantity
+                    ).toFixed(2)}).`
+                  );
+                  window.open(`https://wa.me/8801700000000?text=${text}`, '_blank');
+                }
+              }}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-950/40 py-2.5 text-xs font-bold text-emerald-300 hover:bg-emerald-900/40 hover:text-white transition-all shadow-sm cursor-pointer"
+            >
+              <span>💬 Quick Order via WhatsApp</span>
+            </button>
           </div>
         </div>
       </div>

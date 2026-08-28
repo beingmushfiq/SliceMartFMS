@@ -9,13 +9,28 @@ This document answers *what we are building and why*. It does not describe
 *how* — that belongs to `ARCHITECTURE.md`, `DATABASE_DESIGN.md`,
 `API_CONTRACT.md` and `UI_SYSTEM.md`.
 
----
+## 1. Product Identity & Purpose
+DevCenterPoint is a production-grade, multi-tenant SaaS platform combining:
+1. **Master SaaS Admin Control Plane** (`admin.devcenterpoint.com` / `/platform/*`)
+2. **Tenant Factory & Business Management Software** (`app.devcenterpoint.com` / `/*`)
+3. **Tenant Headless E-Commerce Storefront** (`{subdomain}.devcenterpoint.com` / `/store/:subdomain`)
 
-## 1. Product identity
+Slice Mart is **Tenant #1**, acting as the pilot deployment. The entire system is architected for unlimited future tenants across varied manufacturing, distribution, and retail domains.
 
-**Name (internal):** FMS Platform
-**Category:** Multi-tenant Manufacturing + Inventory + Sales + Workforce +
-Delivery SaaS.
+## 2. Core Separation of Concerns
+- **Tenant Isolation**: Non-negotiable server-side isolation (`tenant_id` discriminator + `TenantScope` + `TenantContext`).
+- **Entity Integrity**:
+  - `E-Commerce Order` ≠ `Sales Order` ≠ `Invoice` ≠ `Payment` ≠ `Delivery`
+  - `Customer (CRM)` ≠ `Supplier (SRM)` ≠ `Employee (HR)` ≠ `User (Auth)`
+  - `Warehouse` ≠ `Factory` ≠ `Production Line` ≠ `Branch`
+- **Double-Entry Ledger Integrity**: Strict, immutable stock ledger (`stock_ledger_entries`) and general ledger (`journal_entries`). Zero floating balances.
+
+## 3. Current Implementation Status (Verified)
+- **Backend**: Laravel 11 / PHP 8.2+ Modular Monolith (690/690 tests passing, 3,982 assertions).
+- **Frontend**: React 19 + TypeScript + Vite + Tailwind CSS v4 (128/128 tests passing, 0 type errors).
+- **Master Admin**: Provisioning wizard, subscription tiers, usage quotas, audit inspection, and Super Admin Impersonation.
+- **Tenant Management**: 11 industrial operations engines (Catalogue, BOM, Warehouses, Production, QC, Procurement, Sales, POS, Delivery, HR, Finance, RMS Reports).
+- **E-Commerce Storefront**: Subdomain resolver, dynamic product catalog, cart drawer, checkout, order tracking, Storefront CMS settings, and discount coupons.
 
 We are building **one product, sold many times**. It is an operating system for
 small and mid-sized manufacturing businesses that:

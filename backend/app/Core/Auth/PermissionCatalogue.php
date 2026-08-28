@@ -59,7 +59,9 @@ class PermissionCatalogue
         'core.role.manage',
         'core.permission.view',
         'core.audit_log.view',
+        'core.setting.view',
         'core.setting.manage',
+        'core.setting.configure',
         'core.sequence.configure',
 
         // Organization
@@ -258,6 +260,8 @@ class PermissionCatalogue
         // E-commerce
         'ecommerce.storefront.view',
         'ecommerce.storefront.manage',
+        'ecommerce.domain.view',
+        'ecommerce.domain.manage',
         'ecommerce.cart.view',
         'ecommerce.coupon.view',
         'ecommerce.coupon.manage',

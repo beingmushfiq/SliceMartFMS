@@ -182,14 +182,46 @@ export const StorefrontCartDrawer: React.FC<StorefrontCartDrawerProps> = ({ conf
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleCheckoutClick}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-3 text-xs font-bold text-zinc-950 shadow-lg shadow-emerald-500/20 hover:from-emerald-400 hover:to-teal-400 transition-all cursor-pointer active:scale-98"
-              >
-                <span>Proceed to Checkout</span>
-                <ArrowRight className="h-4 w-4" />
-              </button>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={handleCheckoutClick}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-3 text-xs font-bold text-zinc-950 shadow-lg shadow-emerald-500/20 hover:from-emerald-400 hover:to-teal-400 transition-all cursor-pointer active:scale-98"
+                >
+                  <span>Proceed to Checkout</span>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const sessionToken = useStorefrontCartStore.getState().sessionToken;
+                    try {
+                      const res = await (await import('../../lib/api/client')).api.post<{
+                        data: { whatsapp_url: string };
+                      }>(
+                        '/storefront/whatsapp/order-link',
+                        {
+                          cart_token: sessionToken,
+                        },
+                        {
+                          headers: {
+                            'X-Storefront-Subdomain': subdomain,
+                          },
+                        }
+                      );
+                      if (res.data?.data?.whatsapp_url) {
+                        window.open(res.data.data.whatsapp_url, '_blank');
+                      }
+                    } catch {
+                      window.open('https://wa.me/8801700000000', '_blank');
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-950/40 py-2.5 text-xs font-bold text-emerald-300 hover:bg-emerald-900/40 hover:text-white transition-all shadow-sm cursor-pointer"
+                >
+                  <span>💬 Order Cart via WhatsApp</span>
+                </button>
+              </div>
             </div>
           )}
         </div>

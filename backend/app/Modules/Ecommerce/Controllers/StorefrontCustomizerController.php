@@ -78,6 +78,9 @@ final class StorefrontCustomizerController extends Controller
             'guest_checkout_enabled' => 'sometimes|boolean',
             'cod_enabled' => 'sometimes|boolean',
             'online_payment_enabled' => 'sometimes|boolean',
+            'whatsapp_number' => 'nullable|string|max:32',
+            'whatsapp_ordering_enabled' => 'sometimes|boolean',
+            'whatsapp_default_message' => 'nullable|string|max:500',
             'min_order_amount' => 'nullable|numeric|min:0',
             'status' => 'sometimes|required|in:draft,live,maintenance,suspended',
         ]);

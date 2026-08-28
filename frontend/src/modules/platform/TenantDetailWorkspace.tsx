@@ -98,6 +98,7 @@ export const TenantDetailWorkspace: React.FC = () => {
   };
 
   const handleImpersonate = async () => {
+    if (!tenant) return;
     if (!confirm(`Launch diagnostic impersonation session for "${tenant.name}"?`)) return;
     setActionLoading(true);
     try {

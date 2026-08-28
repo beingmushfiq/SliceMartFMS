@@ -8,17 +8,17 @@ export function AppShell() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-dvh bg-zinc-950 text-zinc-100 font-sans antialiased flex-col">
+    <div className="flex min-h-dvh bg-base text-default font-sans antialiased flex-col">
       <ImpersonationBanner />
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-h-0">
         {/* Navigation Sidebar */}
         <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
         {/* Main content wrapper with offset for desktop sidebar */}
-        <div className="flex flex-1 flex-col lg:pl-64">
+        <div className="flex flex-1 flex-col lg:pl-64 min-w-0">
           <AppHeader onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
 
-          <main className="flex-1 p-4 sm:p-6 lg:p-8">
+          <main className="flex-1 p-(--page-padding-mobile) sm:p-(--page-padding) overflow-x-hidden">
             <Outlet />
           </main>
         </div>

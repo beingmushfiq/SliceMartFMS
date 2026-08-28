@@ -118,7 +118,10 @@ class StorefrontCheckoutController extends Controller
                 ]);
             }
 
-            // 5. Convert Cart
+            // 5. Assess Fraud Risk
+            app(\App\Modules\Ecommerce\Services\OrderFraudScorerService::class)->assessOrder($salesOrder);
+
+            // 6. Convert Cart
             $cart->status = 'converted';
             $cart->converted_sales_order_id = $salesOrder->id;
             $cart->save();

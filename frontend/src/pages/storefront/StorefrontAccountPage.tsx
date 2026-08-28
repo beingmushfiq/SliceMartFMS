@@ -1,0 +1,494 @@
+import React, { useEffect, useState } from 'react';
+import { Link, useOutletContext } from 'react-router-dom';
+import {
+  User as UserIcon,
+  ShoppingBag,
+  LogOut,
+  Phone,
+  Mail,
+  Lock,
+  ArrowRight,
+  Package,
+  Calendar,
+  AlertCircle,
+  CheckCircle2,
+  ChevronRight,
+} from 'lucide-react';
+import { api } from '../../lib/api/client';
+import { useStorefrontCustomerStore } from '../../lib/storefront/storefrontCustomerStore';
+import type { StorefrontConfig } from '../../types/api/storefront';
+
+interface OutletContextType {
+  config: StorefrontConfig;
+  subdomain: string;
+}
+
+interface CustomerOrder {
+  id: number;
+  uuid: string;
+  order_number: string;
+  order_date: string;
+  status: string;
+  payment_status: string;
+  total_amount: string;
+  currency: string;
+  shipping_address?: string;
+  items?: Array<{
+    id: number;
+    product?: {
+      name: string;
+    };
+    quantity: number;
+    unit_price: string;
+    line_total: string;
+  }>;
+}
+
+export const StorefrontAccountPage: React.FC = () => {
+  const { subdomain } = useOutletContext<OutletContextType>();
+  const { token, customer, setAuth, logout } = useStorefrontCustomerStore();
+
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
+  const [orders, setOrders] = useState<CustomerOrder[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Form states
+  const [formData, setFormData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    password: '',
+  });
+
+  const loadOrders = async () => {
+    if (!token) return;
+    setLoadingOrders(true);
+    try {
+      const response = await api.get<{ data: CustomerOrder[] }>('/storefront/customer/orders', {
+        headers: {
+          'X-Storefront-Subdomain': subdomain,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setOrders(response.data.data ?? []);
+    } catch {
+      // If unauthenticated or token expired, log out
+      logout();
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  useEffect(() => {
+    if (token) {
+      loadOrders();
+    }
+  }, [token, subdomain]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    setAuthLoading(true);
+    try {
+      const response = await api.post<{
+        data: {
+          token: string;
+          customer: { uuid: string; name: string; email: string | null; phone: string };
+        };
+      }>(
+        '/storefront/customer/login',
+        {
+          phone: formData.phone,
+          password: formData.password,
+        },
+        {
+          headers: {
+            'X-Storefront-Subdomain': subdomain,
+          },
+        }
+      );
+
+      setAuth(response.data.data.token, response.data.data.customer);
+      setSuccessMessage('Welcome back!');
+    } catch (err: any) {
+      setErrorMessage(err.message ?? 'Invalid credentials. Please verify phone and password.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    setAuthLoading(true);
+    try {
+      const response = await api.post<{
+        data: {
+          token: string;
+          customer: { uuid: string; name: string; email: string | null; phone: string };
+        };
+      }>(
+        '/storefront/customer/register',
+        {
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email || undefined,
+          password: formData.password,
+        },
+        {
+          headers: {
+            'X-Storefront-Subdomain': subdomain,
+          },
+        }
+      );
+
+      setAuth(response.data.data.token, response.data.data.customer);
+      setSuccessMessage('Account created successfully!');
+    } catch (err: any) {
+      setErrorMessage(err.message ?? 'Failed to register account.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  // ── Authenticated Account Dashboard ──────────────────────────────────
+  if (token && customer) {
+    return (
+      <div className="max-w-5xl mx-auto py-6 space-y-8">
+        {/* Account Header Card */}
+        <div className="rounded-3xl border border-zinc-800/80 bg-gradient-to-r from-zinc-900 via-zinc-900 to-zinc-950 p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-2xl">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-xl">
+              {customer.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold text-white">{customer.name}</h1>
+                <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-400 border border-emerald-500/20">
+                  Verified Shopper
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-zinc-400">
+                <span className="flex items-center gap-1">
+                  <Phone className="h-3 w-3 text-zinc-500" />
+                  {customer.phone}
+                </span>
+                {customer.email && (
+                  <span className="flex items-center gap-1">
+                    <Mail className="h-3 w-3 text-zinc-500" />
+                    {customer.email}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={logout}
+            className="inline-flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 transition-all shadow-sm"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Sign Out</span>
+          </button>
+        </div>
+
+        {/* Order History Section */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShoppingBag className="h-5 w-5 text-emerald-400" />
+              <h2 className="text-base font-bold text-zinc-100">Your Order History</h2>
+            </div>
+            <Link
+              to={`/store/${subdomain}/track`}
+              className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+            >
+              Track by Reference Number &rarr;
+            </Link>
+          </div>
+
+          {loadingOrders ? (
+            <div className="flex h-48 items-center justify-center rounded-3xl border border-zinc-800/80 bg-zinc-900/30">
+              <div className="h-7 w-7 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+            </div>
+          ) : orders.length === 0 ? (
+            <div className="rounded-3xl border border-zinc-800/80 bg-zinc-900/20 p-12 text-center space-y-4">
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-800 text-zinc-400">
+                <Package className="h-6 w-6" />
+              </div>
+              <h3 className="text-sm font-bold text-white">No Orders Placed Yet</h3>
+              <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+                Explore our freshest baked batches and treats straight from the factory ovens.
+              </p>
+              <Link
+                to={`/store/${subdomain}`}
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-xs font-bold text-zinc-950 hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20"
+              >
+                <span>Browse Products</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {orders.map((order) => (
+                <div
+                  key={order.id}
+                  className="rounded-2xl border border-zinc-800/80 bg-zinc-900/40 p-5 space-y-4 hover:border-zinc-700/80 transition-all shadow-md"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800/60 pb-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm font-bold text-white">
+                          {order.order_number}
+                        </span>
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                            order.status === 'delivered'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              : order.status === 'in_transit' || order.status === 'dispatched'
+                              ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20'
+                              : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          }`}
+                        >
+                          {order.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+                        <Calendar className="h-3 w-3" />
+                        <span>Placed on {new Date(order.order_date).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <span className="text-[11px] text-zinc-500 block">Total Amount</span>
+                        <span className="text-sm font-bold text-emerald-400 font-mono">
+                          ৳ {Number(order.total_amount).toFixed(2)}
+                        </span>
+                      </div>
+                      <Link
+                        to={`/store/${subdomain}/track?order=${encodeURIComponent(order.order_number)}`}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:text-white hover:border-emerald-500 transition-all shadow-sm"
+                      >
+                        <span>Track</span>
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </Link>
+                    </div>
+                  </div>
+
+                  {/* Items summary */}
+                  {order.items && order.items.length > 0 && (
+                    <div className="text-xs text-zinc-400 space-y-1">
+                      {order.items.map((item) => (
+                        <div key={item.id} className="flex justify-between items-center py-0.5">
+                          <span>
+                            {item.quantity}x {item.product?.name || 'Item'}
+                          </span>
+                          <span className="font-mono text-zinc-300">
+                            ৳ {Number(item.line_total).toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Unauthenticated Sign In / Sign Up Form ───────────────────────────
+  return (
+    <div className="max-w-md mx-auto py-12 space-y-6">
+      {/* Brand Header */}
+      <div className="text-center space-y-2">
+        <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <UserIcon className="h-6 w-6" />
+        </div>
+        <h1 className="text-2xl font-bold text-white tracking-tight">Customer Portal</h1>
+        <p className="text-xs text-zinc-400">
+          Sign in or register to view previous orders, save addresses, and track shipments.
+        </p>
+      </div>
+
+      {/* Tabs */}
+      <div className="grid grid-cols-2 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-1">
+        <button
+          onClick={() => {
+            setActiveTab('login');
+            setErrorMessage(null);
+          }}
+          className={`rounded-xl py-2 text-xs font-bold transition-all ${
+            activeTab === 'login'
+              ? 'bg-emerald-500 text-zinc-950 shadow-md'
+              : 'text-zinc-400 hover:text-white'
+          }`}
+        >
+          Sign In
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab('register');
+            setErrorMessage(null);
+          }}
+          className={`rounded-xl py-2 text-xs font-bold transition-all ${
+            activeTab === 'register'
+              ? 'bg-emerald-500 text-zinc-950 shadow-md'
+              : 'text-zinc-400 hover:text-white'
+          }`}
+        >
+          Create Account
+        </button>
+      </div>
+
+      {/* Error & Success Alerts */}
+      {errorMessage && (
+        <div className="flex items-center gap-2 rounded-2xl border border-rose-500/30 bg-rose-950/40 p-3.5 text-xs text-rose-300">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
+      {successMessage && (
+        <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-950/40 p-3.5 text-xs text-emerald-300">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <span>{successMessage}</span>
+        </div>
+      )}
+
+      {/* Form Container */}
+      <div className="rounded-3xl border border-zinc-800/80 bg-zinc-900/40 p-6 sm:p-8 shadow-2xl">
+        {activeTab === 'login' ? (
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-300">Mobile Phone Number</label>
+              <div className="relative">
+                <Phone className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
+                <input
+                  type="tel"
+                  required
+                  placeholder="+8801700000000"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-300">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={authLoading}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 text-xs font-bold text-zinc-950 hover:bg-emerald-400 disabled:opacity-50 transition-all shadow-lg shadow-emerald-500/20"
+            >
+              {authLoading ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-950 border-t-transparent" />
+              ) : (
+                <>
+                  <span>Sign In to Account</span>
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleRegister} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-300">Full Name</label>
+              <div className="relative">
+                <UserIcon className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. John Doe"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-300">Mobile Phone Number</label>
+              <div className="relative">
+                <Phone className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
+                <input
+                  type="tel"
+                  required
+                  placeholder="+8801700000000"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-300">Email Address (Optional)</label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
+                <input
+                  type="email"
+                  placeholder="john@example.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-300">Create Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  placeholder="At least 6 characters"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={authLoading}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 text-xs font-bold text-zinc-950 hover:bg-emerald-400 disabled:opacity-50 transition-all shadow-lg shadow-emerald-500/20"
+            >
+              {authLoading ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-950 border-t-transparent" />
+              ) : (
+                <>
+                  <span>Create My Account</span>
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};

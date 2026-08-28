@@ -18,6 +18,9 @@ export interface StorefrontConfig {
   guest_checkout_enabled: boolean;
   cod_enabled: boolean;
   online_payment_enabled: boolean;
+  whatsapp_number?: string | null;
+  whatsapp_ordering_enabled?: boolean;
+  whatsapp_default_message?: string | null;
   min_order_amount: string | null;
   status: 'draft' | 'live' | 'maintenance' | 'suspended';
 }

@@ -14,6 +14,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { useAuthStore } from '../../lib/auth/authStore';
+import { cn } from '../../lib/utils';
 import type { NotificationItem } from '../../types/api/notifications';
 
 interface AppHeaderProps {
@@ -71,7 +72,9 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
   const [isBranchMenuOpen, setIsBranchMenuOpen] = useState(false);
   const [isNotifMenuOpen, setIsNotifMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>(SAMPLE_NOTIFICATIONS);
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+  });
 
   const unreadCount = notifications.filter((n) => !n.read_at).length;
 
@@ -99,35 +102,35 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
   const getSeverityIcon = (severity: string) => {
     switch (severity) {
       case 'success':
-        return <CheckCircle2 className="h-4 w-4 text-emerald-400" />;
+        return <CheckCircle2 className="size-4 text-success shrink-0" aria-hidden="true" />;
       case 'warning':
-        return <AlertTriangle className="h-4 w-4 text-amber-400" />;
+        return <AlertTriangle className="size-4 text-warning shrink-0" aria-hidden="true" />;
       default:
-        return <Info className="h-4 w-4 text-sky-400" />;
+        return <Info className="size-4 text-info shrink-0" aria-hidden="true" />;
     }
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-zinc-800 bg-zinc-950/80 px-4 backdrop-blur-md sm:px-6">
+    <header className="sticky top-0 z-(--z-sticky) flex h-16 w-full items-center justify-between border-b border-default bg-surface/90 px-(--page-padding-mobile) sm:px-(--page-header-px) backdrop-blur-md transition-token-colors">
       {/* Left side: Hamburger + Tenant info */}
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={onToggleSidebar}
-          className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-100 lg:hidden"
+          className="rounded-sm p-2 text-muted hover:bg-surface-sunken hover:text-default transition-token-colors lg:hidden focus-visible:ring-focus"
           aria-label="Toggle Navigation"
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="size-5" />
         </button>
 
         {tenant && (
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 font-bold text-sm">
-              {tenant.name.slice(0, 2).toUpperCase()}
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-8 items-center justify-center rounded-sm bg-primary-subtle text-primary font-bold text-xs uppercase">
+              {tenant.name.slice(0, 2)}
             </div>
             <div className="hidden sm:block">
-              <span className="text-sm font-semibold text-zinc-100">{tenant.name}</span>
-              <span className="ml-2 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-medium text-zinc-400">
+              <span className="text-sm font-semibold text-default">{tenant.name}</span>
+              <span className="ml-2 rounded-md bg-surface-sunken border border-default px-1.5 py-0.5 text-2xs font-mono font-medium text-muted">
                 {tenant.currency_code}
               </span>
             </div>
@@ -140,16 +143,16 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
             <button
               type="button"
               onClick={() => setIsBranchMenuOpen(!isBranchMenuOpen)}
-              className="flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/60 px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+              className="flex items-center gap-1.5 rounded-sm border border-default bg-surface-raised px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-token-colors focus-visible:ring-focus"
             >
-              <Building2 className="h-3.5 w-3.5 text-zinc-400" />
+              <Building2 className="size-3.5 text-muted" aria-hidden="true" />
               <span>{activeBranch?.name ?? 'Select Branch'}</span>
-              <ChevronDown className="h-3 w-3 text-zinc-500" />
+              <ChevronDown className="size-3 text-muted" aria-hidden="true" />
             </button>
 
             {isBranchMenuOpen && (
-              <div className="absolute left-0 mt-2 w-48 rounded-xl border border-zinc-800 bg-zinc-900 p-1 shadow-2xl z-50">
-                <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+              <div className="absolute left-0 mt-2 w-52 rounded-(--popover-radius) border border-default bg-surface-raised p-1 shadow-overlay z-(--z-popover) animate-fade-in">
+                <div className="px-2 py-1 text-2xs font-semibold uppercase tracking-wider text-muted">
                   Switch Branch
                 </div>
                 {branches.map((b) => (
@@ -160,15 +163,16 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
                       void switchBranch(b.id);
                       setIsBranchMenuOpen(false);
                     }}
-                    className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs ${
+                    className={cn(
+                      'flex w-full items-center justify-between rounded-xs px-2.5 py-1.5 text-left text-xs transition-token-colors focus-visible:ring-focus',
                       activeBranch?.id === b.id
-                        ? 'bg-emerald-500/10 text-emerald-400 font-medium'
-                        : 'text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100'
-                    }`}
+                        ? 'bg-primary-subtle text-primary font-semibold'
+                        : 'text-default hover:bg-surface-sunken'
+                    )}
                   >
                     <span>{b.name}</span>
                     {b.is_head_office && (
-                      <span className="text-[9px] text-zinc-500 uppercase">HQ</span>
+                      <span className="text-2xs text-muted uppercase font-bold">HQ</span>
                     )}
                   </button>
                 ))}
@@ -179,31 +183,31 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
       </div>
 
       {/* Right side: Notifications + Theme toggle + User profile */}
-      <div className="flex items-center gap-2 sm:gap-4">
+      <div className="flex items-center gap-2 sm:gap-3">
         {/* Notifications Bell Dropdown */}
         <div className="relative">
           <button
             type="button"
             onClick={() => setIsNotifMenuOpen(!isNotifMenuOpen)}
-            className="relative rounded-lg p-2 text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-100"
+            className="relative rounded-sm p-2 text-muted hover:bg-surface-sunken hover:text-default transition-token-colors focus-visible:ring-focus"
             aria-label="Notifications"
           >
-            <Bell className="h-4 w-4" />
+            <Bell className="size-4" />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+              <span className="absolute top-1.5 right-1.5 flex size-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-danger opacity-75"></span>
+                <span className="relative inline-flex rounded-full size-2 bg-danger"></span>
               </span>
             )}
           </button>
 
           {isNotifMenuOpen && (
-            <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl border border-zinc-800 bg-zinc-900 shadow-2xl z-50 overflow-hidden">
-              <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-2.5">
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-(--popover-radius) border border-default bg-surface-raised shadow-overlay z-(--z-popover) overflow-hidden animate-fade-in">
+              <div className="flex items-center justify-between border-b border-default px-4 py-2.5">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-zinc-100">Notifications</span>
+                  <span className="text-xs font-bold text-default">Notifications</span>
                   {unreadCount > 0 && (
-                    <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold text-rose-400">
+                    <span className="rounded-full bg-danger-subtle text-danger border border-danger px-2 py-0.5 text-2xs font-semibold">
                       {unreadCount} new
                     </span>
                   )}
@@ -212,17 +216,17 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
                   <button
                     type="button"
                     onClick={markAllAsRead}
-                    className="text-[11px] font-medium text-emerald-400 hover:underline flex items-center gap-1"
+                    className="text-2xs font-medium text-primary hover:underline flex items-center gap-1 focus-visible:ring-focus rounded-md"
                   >
-                    <Check className="h-3 w-3" />
+                    <Check className="size-3" />
                     Mark all read
                   </button>
                 )}
               </div>
 
-              <div className="max-h-80 overflow-y-auto divide-y divide-zinc-800/50">
+              <div className="max-h-80 overflow-y-auto divide-y divide-default">
                 {notifications.length === 0 ? (
-                  <div className="p-4 text-center text-xs text-zinc-500">
+                  <div className="p-4 text-center text-xs text-muted">
                     No active notifications
                   </div>
                 ) : (
@@ -230,18 +234,19 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
                     <div
                       key={notif.id}
                       onClick={() => markSingleRead(notif.id)}
-                      className={`p-3.5 text-left transition-colors cursor-pointer hover:bg-zinc-800/50 ${
-                        !notif.read_at ? 'bg-zinc-800/20' : 'opacity-70'
-                      }`}
+                      className={cn(
+                        'p-3.5 text-left transition-token-colors cursor-pointer hover:bg-surface-sunken',
+                        !notif.read_at ? 'bg-primary-subtle/40' : 'opacity-70'
+                      )}
                     >
                       <div className="flex items-start gap-2.5">
                         <div className="mt-0.5">{getSeverityIcon(notif.severity)}</div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-zinc-200">{notif.title_key}</p>
-                          <p className="text-[11px] text-zinc-400 mt-0.5 line-clamp-2">
+                          <p className="text-xs font-semibold text-default">{notif.title_key}</p>
+                          <p className="text-2xs text-muted mt-0.5 line-clamp-2">
                             {notif.body_key}
                           </p>
-                          <span className="text-[10px] text-zinc-500 mt-1 block">
+                          <span className="text-2xs text-subtle mt-1 block font-mono">
                             {new Date(notif.created_at).toLocaleTimeString()}
                           </span>
                         </div>
@@ -258,10 +263,10 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
         <button
           type="button"
           onClick={toggleTheme}
-          className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-100"
-          aria-label="Toggle Theme"
+          className="rounded-sm p-2 text-muted hover:bg-surface-sunken hover:text-default transition-token-colors focus-visible:ring-focus"
+          aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
         >
-          {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
         </button>
 
         {/* User Dropdown */}
@@ -269,23 +274,23 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
           <button
             type="button"
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className="flex items-center gap-2 rounded-lg p-1.5 hover:bg-zinc-800/60"
+            className="flex items-center gap-2 rounded-sm p-1.5 hover:bg-surface-sunken transition-token-colors focus-visible:ring-focus"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-zinc-200">
-              <UserIcon className="h-4 w-4" />
+            <div className="flex size-7 items-center justify-center rounded-full bg-surface-sunken border border-default text-default">
+              <UserIcon className="size-3.5 text-muted" />
             </div>
             <div className="hidden text-left sm:block">
-              <div className="text-xs font-medium text-zinc-200">{user?.name ?? 'User'}</div>
-              <div className="text-[10px] text-zinc-500 truncate max-w-[120px]">{user?.email}</div>
+              <div className="text-xs font-medium text-default leading-tight">{user?.name ?? 'User'}</div>
+              <div className="text-2xs text-muted truncate max-w-30">{user?.email}</div>
             </div>
-            <ChevronDown className="hidden h-3.5 w-3.5 text-zinc-500 sm:block" />
+            <ChevronDown className="hidden size-3 text-muted sm:block" />
           </button>
 
           {isUserMenuOpen && (
-            <div className="absolute right-0 mt-2 w-56 rounded-xl border border-zinc-800 bg-zinc-900 p-1.5 shadow-2xl z-50">
-              <div className="border-b border-zinc-800/80 px-3 py-2">
-                <p className="text-xs font-medium text-zinc-200">{user?.name}</p>
-                <p className="text-[11px] text-zinc-500 truncate">{user?.email}</p>
+            <div className="absolute right-0 mt-2 w-56 rounded-(--popover-radius) border border-default bg-surface-raised p-1.5 shadow-overlay z-(--z-popover) animate-fade-in">
+              <div className="border-b border-default px-3 py-2">
+                <p className="text-xs font-semibold text-default">{user?.name}</p>
+                <p className="text-2xs text-muted truncate">{user?.email}</p>
               </div>
 
               <div className="mt-1">
@@ -295,9 +300,9 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
                     setIsUserMenuOpen(false);
                     void logout();
                   }}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-rose-400 hover:bg-rose-500/10 hover:text-rose-300"
+                  className="flex w-full items-center gap-2 rounded-xs px-3 py-2 text-left text-xs text-danger hover:bg-danger-subtle transition-token-colors focus-visible:ring-focus"
                 >
-                  <LogOut className="h-3.5 w-3.5" />
+                  <LogOut className="size-3.5" />
                   <span>Sign out</span>
                 </button>
               </div>

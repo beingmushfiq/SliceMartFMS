@@ -18,23 +18,38 @@ class ResolveStorefrontTenant
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $subdomain = $request->header('X-Storefront-Subdomain')
-            ?: $request->header('X-Tenant-Subdomain')
-            ?: $request->query('subdomain')
-            ?: $this->extractSubdomainFromHost($request->getHost());
+        $host = strtolower($request->header('X-Storefront-Domain') ?: $request->getHost());
 
-        if (empty($subdomain)) {
-            // Default to first active storefront if running locally
+        // 1. Check verified custom domain in tenant_domains table
+        $tenantDomain = \App\Models\TenantDomain::withoutTenantScope()
+            ->where('domain', $host)
+            ->where('verification_status', 'verified')
+            ->first();
+
+        if ($tenantDomain) {
             $storefront = Storefront::withoutTenantScope()
+                ->where('tenant_id', $tenantDomain->tenant_id)
                 ->where('status', '!=', 'suspended')
                 ->first();
         } else {
-            $storefront = Storefront::withoutTenantScope()
-                ->where(function ($query) use ($subdomain): void {
-                    $query->where('subdomain', $subdomain)
-                        ->orWhere('domain', $subdomain);
-                })
-                ->first();
+            $subdomain = $request->header('X-Storefront-Subdomain')
+                ?: $request->header('X-Tenant-Subdomain')
+                ?: $request->query('subdomain')
+                ?: $this->extractSubdomainFromHost($host);
+
+            if (empty($subdomain)) {
+                // Default to first active storefront if running in local test environment
+                $storefront = Storefront::withoutTenantScope()
+                    ->where('status', '!=', 'suspended')
+                    ->first();
+            } else {
+                $storefront = Storefront::withoutTenantScope()
+                    ->where(function ($query) use ($subdomain): void {
+                        $query->where('subdomain', $subdomain)
+                            ->orWhere('domain', $subdomain);
+                    })
+                    ->first();
+            }
         }
 
         if (! $storefront) {

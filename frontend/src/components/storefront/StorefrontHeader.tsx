@@ -54,6 +54,13 @@ export const StorefrontHeader: React.FC<StorefrontHeaderProps> = ({ config, subd
             Track Order
           </Link>
 
+          <Link
+            to={`/store/${subdomain}/account`}
+            className="text-xs font-semibold text-zinc-300 transition-colors hover:text-emerald-400 block"
+          >
+            My Account
+          </Link>
+
           {/* Cart Trigger */}
           <button
             type="button"

@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowLeft, ShieldAlert } from 'lucide-react';
+import { Button } from '../ui/Button';
 
 export const ImpersonationBanner: React.FC = () => {
   const isImpersonating = localStorage.getItem('is_impersonating') === 'true';
@@ -17,23 +18,24 @@ export const ImpersonationBanner: React.FC = () => {
   };
 
   return (
-    <div className="sticky top-0 z-50 flex items-center justify-between border-b border-amber-500/40 bg-amber-500/15 px-4 py-2 text-xs font-semibold text-amber-300 backdrop-blur-md">
+    <div className="sticky top-0 z-(--z-sticky) flex items-center justify-between border-b border-warning bg-warning-subtle px-4 py-2 text-xs font-semibold text-warning backdrop-blur-md">
       <div className="flex items-center gap-2">
-        <ShieldAlert className="h-4 w-4 shrink-0 text-amber-400" />
+        <ShieldAlert className="size-4 shrink-0 text-warning" aria-hidden="true" />
         <span>
           <strong>IMPERSONATION ACTIVE:</strong> You are currently viewing workspace as{' '}
-          <strong>{tenantName}</strong> (Super Admin Session).
+          <strong className="underline">{tenantName}</strong> (Super Admin Session).
         </span>
       </div>
 
-      <button
-        type="button"
+      <Button
+        variant="primary"
+        size="sm"
         onClick={handleExit}
-        className="flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1 text-[11px] font-bold text-zinc-950 hover:bg-amber-400 transition-all cursor-pointer shadow-sm"
+        className="text-xs"
       >
-        <ArrowLeft className="h-3.5 w-3.5" />
-        <span>Exit to Master SaaS Admin</span>
-      </button>
+        <ArrowLeft className="size-3.5 mr-1" aria-hidden="true" />
+        Exit to Master Admin
+      </Button>
     </div>
   );
 };

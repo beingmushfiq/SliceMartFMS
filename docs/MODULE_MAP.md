@@ -124,12 +124,16 @@ query key root                          ['<id>', '<resource>', ...]
 | `reports` | RMS — 58 reports, standard control set, exports, saved views | 8 | every data-owning module | tenant |
 | `dashboards` | Per-persona dashboards over materialised summaries | 8 | `reports` | tenant |
 
-### 2.9 E-commerce (Phase 9)
+### 2.9 E-commerce & Storefront CMS (Phase 9 & 10)
 
 | ID | Module | Phase | Depends on | Scope |
 |---|---|---|---|---|
 | `storefront` | Public catalogue, cart, SEO, tenant theming | 9 | `catalogue`, `pricing`, `inventory` | public |
 | `online-orders` | Checkout, order intake into `sales` with `channel=online`, customer account, order tracking | 9 | `storefront`, `sales`, `delivery` | public |
+| `storefront-cms` | Drag-and-drop page builder, promo blocks, sandboxed custom HTML/CSS | 10 | `storefront`, `tenancy` | tenant + public |
+| `courier-hub` | Steadfast, Pathao, REDX provider adapters, automated consignment, webhooks | 10 | `delivery`, `online-orders` | tenant + public |
+| `fraud-check` | Customer risk scoring, verification disposition, suspicious order hold | 10 | `online-orders`, `crm` | tenant |
+| `coupons` | Voucher code management, percentage/fixed discounts, cart redemption | 10 | `storefront`, `pricing` | tenant + public |
 
 ### 2.10 Hardening (Phase 10)
 

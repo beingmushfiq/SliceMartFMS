@@ -1071,6 +1071,221 @@ accounting (accounts, transactions, allocations) without implementing it.
 ---
 
 ## 7. Open questions (blocking the phase noted)
+---
+
+### ADR-028 — Transaction boundaries and idempotency
+**Status:** Accepted · **Resolves:** C17
+
+**Atomic transaction boundaries (11):**
+1. Lead → customer conversion (preserves salesman, source, lead history, date)
+2. Invoice posting (+ stock movement + ledger)
+3. Payment allocation across invoices
+4. Purchase receipt (+ stock movement + cost revaluation)
+5. Warehouse transfer (`transfer_out` + `transfer_in`)
+6. Production material issue
+7. Production completion / output posting
+8. QC result → stock state transition
+9. Rework order creation and closure
+10. Incentive finalisation for a period
+11. Courier booking (local state atomic; remote call queued)
+
+**Idempotency required for:** payments · courier booking · webhook ingestion ·
+order creation · invoice posting · POS sale completion · bulk imports.
+
+Mechanism: client sends an `Idempotency-Key` header; the server stores the key
+with its response and replays it on retry. Duplicate submission is therefore
+impossible even with double-clicks, retries or flaky networks.
+
+---
+
+### ADR-029 — Frontend is never built against imaginary APIs
+**Status:** Accepted · **Resolves:** C21
+
+For each module the order is fixed: **contract → backend → generated types →
+frontend**.
+
+- `API_CONTRACT.md` defines the envelope before any endpoint is written.
+- Backend types are **generated** into `frontend/src/types/api/**`. Hand-written
+  duplicates are forbidden.
+- Local development and tests use **MSW handlers derived from the real contract**
+  — not a mock data module that drifts. `mockData.ts` is deleted.
+- Any endpoint the frontend needs but the contract lacks is a **documentation
+  task first**, not an invented call.
+
+---
+
+### ADR-030 — Definition of Done (per module)
+**Status:** Accepted
+
+A module is not done until **all** of the following exist:
+
+**Backend** — migration (SQLite + MySQL verified) · model with `tenant_id`
+scope · relations · Form Request validation · Policy · Service/Action ·
+controller · API Resource · route registration · audit hooks ·
+notification hooks · report integration · feature tests including a
+**cross-tenant isolation test** · permission catalogue entries.
+
+**Frontend** — typed service module · query keys · route (lazy + guarded) ·
+permission-aware navigation entry · list view with URL-driven
+filter/sort/paginate · detail view · create/edit form (RHF + Zod) ·
+**the complete ADR-024 state matrix** · optimistic-update policy honoured ·
+translations for `en` + `bn` · dark-mode verified · responsive verified
+(desktop/laptop/tablet/mobile) · keyboard + a11y verified · empty/error/offline
+verified.
+
+**Docs** — `DEVELOPMENT_STATUS.md` updated · any contract change reflected in
+`API_CONTRACT.md` / `DATABASE_DESIGN.md` · any new decision recorded here.
+
+**"A feature is not complete when only its UI exists."**
+
+---
+
+### ADR-032 — Pragmatic Definition of Done for standard CRUD modules
+**Status:** Accepted · **Amends:** ADR-030 · **Owner:** 2026-08-24
+
+**Context.** ADR-030 lists a per-model **Policy** class and domain
+**event/listener audit hooks** among the thirteen Definition-of-Done artefacts.
+The only module shipped so far — Auth (§7 item 50 of `DEVELOPMENT_STATUS.md`) —
+uses **neither**: authorisation is enforced by the `permission:` route
+middleware (`AuthorizePermission`, ADR-008) and there is no event/listener
+indirection. Instantiating ~40 CRUD modules each with a Policy class that only
+re-checks the same permission string, plus an event + listener whose sole job is
+to write one audit row, is ceremony that duplicates guarantees the middleware
+and the transaction already give.
+
+**Decision.** For a **standard CRUD module** — one that follows the
+`API_CONTRACT.md` §15.1 shape, i.e. the master-data catalogue (`units`,
+`categories`, `brands`, and the resources that mirror them) — the Definition of
+Done is read as:
+
+- **Form Request** classes for validation — **kept**. Real value, testable,
+  PHPStan-typed request shapes.
+- **API Resource** classes for serialisation — **kept**. The envelope's `data`
+  shape is defined in exactly one place per resource.
+- **Action** class for every mutation — **kept**, and each wraps its work in
+  `DB::transaction()` and writes the audit row **inside the same transaction**
+  (ADR-027 append-only, ADR-028 boundaries). No event/listener indirection.
+- **Authorisation** stays on the route as
+  `permission:catalog.<resource>.<action>` middleware. **No per-model Policy
+  class** is created unless a resource needs a row-level rule a permission
+  string cannot express (e.g. "only the record's owner may edit"); a Policy is
+  added *only* when that need is real, never pre-emptively.
+- The **cross-tenant isolation test**, the **permission matrix test**
+  (authorised **and** forbidden) and the **envelope test** remain **mandatory
+  and unchanged**.
+
+**Consequence.** ADR-030's artefact list stands, but **Policy** and
+**event/listener** become **conditional** rather than unconditional for CRUD
+modules. Audit is not weakened — moving it from a listener into the transaction
+is strictly safer, because the audit row and the mutation now commit or roll
+back together (ADR-028). This is the reference template every catalogue module
+copies; a deviation from it is a documented exception, not a default.
+
+---
+
+### ADR-033 — Generated TypeScript types: one canonical file, one directory
+**Status:** Accepted · **Clarifies:** ADR-029 · **Owner:** 2026-08-24
+
+**Context.** ADR-029 requires request/response types to be **generated** from
+the backend into `frontend/src/types/api/**` and forbids hand-written
+duplicates. No generator is installed yet, and ADR-029 also gates the frontend
+build behind those types existing. `frontend/src/types/index.ts` is a legacy
+demo file whose shapes are UI mocks, **not** contract types.
+
+**Decision.** Adopt **both**, aimed at the **same** directory so there is
+exactly one source per type:
+
+1. Install **`spatie/laravel-typescript-transformer`** and configure it to emit
+   into `frontend/src/types/api/`. Backend DTO / API-Resource shapes are
+   annotated so the generator owns them going forward; CI re-runs generation and
+   a diff **fails the build** (`API_CONTRACT.md` §17 "Generated types").
+2. Until the generator is wired and green, the canonical
+   `frontend/src/types/api/catalog.ts` is **authored to the contract by hand**
+   and is the single source of truth for the catalogue module. When the
+   generator emits into that same path, its output **replaces** the hand-authored
+   file — the hand file is a **bootstrap, not a parallel copy**.
+3. The legacy `types/index.ts` demo shapes are **not** the contract and are
+   **not** imported by new module code. Contract types live only under
+   `types/api/**`.
+
+**Consequence.** The frontend is never blocked waiting for the generator, and
+ADR-029's "no hand-written duplicates" holds because the hand-authored file and
+the generated file occupy the **same path** — one strictly supersedes the other.
+
+---
+
+### ADR-034 — Three-Layer Experience Separation
+**Status:** Accepted · **Amends:** ADR-029
+
+**Context.** The system now requires distinct visual and logic separations
+between the Super Admin Platform, Tenant-facing Dashboards, and Public-facing
+Storefronts.
+
+**Decision.**
+1. **Master Admin (`/platform/*`)**: Full system management for Super Admins.
+2. **Tenant App (`/*`)**: The core SaaS product for registered tenants.
+3. **Headless Storefront (`/store/:subdomain` & `{subdomain}.devcenterpoint.com`)**:
+   Public-facing storefronts with separate CMS settings, theme previews, and
+   drag-and-drop page builders.
+4. **Impersonation**: Super Admins may impersonate tenants via a secure,
+   immutable audit-logged session.
+5. **CMS & Integration**: Support for sandboxed custom HTML/CSS blocks and
+   standardised Courier Integration Hub (Steadfast, Pathao, REDX) with
+   webhook-based status synchronization.
+
+---
+
+## 6. Scope resolutions (contradiction ledger)
+
+Every contradiction found in the legacy documentation, and where it is resolved:
+
+| # | Contradiction | Resolution |
+|---|---|---|
+| C1 | Single-client vs multi-tenant SaaS | ADR-001 → SaaS |
+| C2 | "2 warehouses / 1 line" hardcoded vs forbidden | ADR-002 → tenant config |
+| C3 | Schema had no tenancy tables | ADR-004, ADR-005 |
+| C4 | Four incompatible module lists (32 / 17 / 14 / 35) | `MODULE_MAP.md` — 41 modules canonical |
+| C5 | POS specified vs entirely absent | ADR-015 → in scope, Phase 5 |
+| C6 | E-commerce + courier specified vs absent | ADR-016, ADR-017 → Phases 6, 9 |
+| C7 | i18n mandated vs absent | ADR-018 → Phase 1 |
+| C8 | Wastage/scrap first-class vs missing | ADR-011, ADR-014 → tables + movement types + report |
+| C9 | `production_orders` vs plan→batch chain | ADR-011 → plan→batch |
+| C10 | Invoice template engine vs no tables | `DATABASE_DESIGN.md` → template tables, Phase 5 |
+| C11 | `module.resource.action` vs `module.action` | ADR-008 → three-segment |
+| C12 | Lead statuses fixed vs configurable | Configurable rows; the 7 legacy statuses are **seed defaults** |
+| C13 | Notification channels in/out of scope | ADR-019 → interface now, drivers later |
+| C14 | Protocol files disagreed on architecture doc | Single `TASK_PROTOCOL.md`; both legacy files archived |
+| C15 | Three competing reading lists, 6 docs missing | This file's precedence table; all 7 docs now created |
+| C16 | Filename vs mandated name mismatches | Canonical names adopted exactly |
+| C17 | 9 vs 10 transaction boundaries | ADR-028 → 11, enumerated |
+| C18 | 33 vs ~36 reports, no superset | `RMS_REPORT_MATRIX.md` → single superset catalogue |
+| C19 | Two disagreeing "core table" lists | `DATABASE_DESIGN.md` is the only table authority |
+| C20 | 2 inventory types vs 7 types + 5 states | ADR-014 |
+| C21 | No API contract existed | ADR-029 + `API_CONTRACT.md` |
+| C22 | Tokens name-only; dead `tailwind.config.js` | ADR-020 + `UI_SYSTEM.md` |
+| C23 | No module map, no ADR | This file + `MODULE_MAP.md` |
+| C24 | Status said "pre-development"; app exists | ADR-009 + `DEVELOPMENT_STATUS.md` reset |
+| C25 | TanStack Query locked, Zustand shipped | ADR-021 → both, hard boundary |
+| C26 | Dark mode mandated, zero `dark:` in code | ADR-026 |
+| C27 | Mobile "optional" vs 9 required workflows | Responsive web is required for all listed workflows; a **native app** remains out of scope (`PROJECT_CONTEXT.md`) |
+| C28 | Incentive formula unconfirmed but scheduled | Rule engine is configurable (ADR-002); **no default formula is invented** — see Open Questions |
+| C29 | Fourth UI-UX brief at repo root | Archived to `docs/_legacy/LEGACY_UIUX_FRONTEND_PROMPT.md` |
+| C30 | Extensionless filename | Archived; all canonical docs are `.md` |
+
+### Explicitly out of scope (Phase 0–10)
+
+Full double-entry accounting · payroll processing · native mobile apps ·
+manufacturing MRP/capacity scheduling optimisation · CCTV/NVR hardware
+integration (legacy `BUSINESS_RULES.md` raised it; **no requirements exist** —
+the fake CCTV screen in the prototype is deleted) · marketplace/multi-vendor ·
+warehouse robotics or barcode-printer firmware.
+
+The Finance module stays **structurally compatible** with future double-entry
+accounting (accounts, transactions, allocations) without implementing it.
+
+---
+
+## 7. Open questions (blocking the phase noted)
 
 | # | Question | Blocks | Owner |
 |---|---|---|---|
@@ -1095,6 +1310,4 @@ the question is escalated.
 | 2026-08-22 | **ADR-031 accepted** — motion, craft and the two-library motion stack (Framer Motion + GSAP), motion tokens, the three-tier loading model with a custom brand loader, and the required/permitted/forbidden motion matrix. Supersedes the "restrained Framer Motion" line in ADR-024 and updates the frontend stack table in §2. |
 | 2026-08-22 | Consistency pass (no decision changed): §1 now reads "ADR-001 through ADR-031"; the C4 resolution now names the actual outcome — **41 modules** in `MODULE_MAP.md`, not "35 domains". |
 | 2026-08-24 | **ADR-032 and ADR-033 accepted.** ADR-032 makes ADR-030's per-model **Policy** and **event/listener** artefacts *conditional* for standard CRUD modules: validation via Form Requests, serialisation via API Resources, mutations via Actions that write the audit row **inside** the transaction (ADR-027/028), and authorisation via the existing `permission:` middleware (ADR-008) — a Policy is added only for a row-level rule a permission string cannot express. ADR-033 resolves the generated-types bootstrap: install `spatie/laravel-typescript-transformer` emitting into `frontend/src/types/api/`, while the canonical `types/api/catalog.ts` is hand-authored to the contract until the generator is green, then replaced by generated output — one path, never a duplicate (ADR-029 upheld). §1 updated to "ADR-001 through ADR-033". No prior decision reversed. |
-
-
-
+| 2026-08-28 | **ADR-034 accepted** — Three-Layer Experience Separation (Master Admin `/platform/*`, Tenant App `/*`, Headless Storefront `/store/:subdomain` & `{subdomain}.devcenterpoint.com`), Super Admin Tenant Impersonation with immutable audit logging, Storefront CMS Settings with live theme preview, Drag-and-Drop section builder, Sandboxed Custom HTML/CSS Blocks, and Courier Integration Hub (Steadfast, Pathao, REDX) with webhook synchronization. |

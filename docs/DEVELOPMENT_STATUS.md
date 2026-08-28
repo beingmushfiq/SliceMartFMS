@@ -31,13 +31,13 @@ artefacts (`MODULE_MAP.md` §6), not a follow-up.
 
 | | |
 |---|---|
-| **Current phase** | Phase 8 (✅ complete) → Phase 9 (🔄 commencing). **Phases 1–8 are closed** — Auth, RBAC, Tenancy Runtime, Waves 1–25 migrations, Catalogue/Pricing, Production/QC, Procurement & Stock Operations, CRM/Sales/POS/Invoicing, Delivery/Logistics/Couriers, HR/Fixed Assets/Finance & Accounting, and Reports/RMS Engine, Notifications & System Audit Surfaces 100% complete. Passing **668 tests / 3838 assertions** backend tests, 128 frontend unit tests passing, and clean Vite build. |
+| **Current phase** | Phase 10 (✅ complete) — Multi-Tenant SaaS Platform, E-Commerce Storefront CMS, Courier Integrations, Fraud Verification, WhatsApp Order Engine, and Role-Specific Dashboards fully delivered and verified. Passing **702 tests / 4056 assertions** backend tests, 128 frontend unit tests passing, and clean Vite build. |
 | **Phase 0 status** | ✅ Documentation complete (7 canonical + 5 supporting = 12 documents) · ✅ Monorepo restructure · ✅ Dependency reconciliation · ✅ Token cascade · ✅ UI primitive hardening · ✅ §8 state-matrix primitives · ✅ Tooling config files (frontend **and** backend) · ✅ Test suites · ✅ CI — **every gate verified green, see §3.4** |
-| **Next action** | Commence Phase 9 (E-commerce Customer-Facing Surfaces & Headless Storefront Bridge): Public Product Catalog API, Shopping Cart, Checkout, Customer Portal, Webhook Sync, and Storefront Integration. |
-| **Backend** | ✅ Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–25 migrations written and verified (all 169 tables + all deferred closures), Tenancy runtime live, and Phases 1–8 complete**. 49 controllers, 110+ Actions, Form Requests, API Resources, live tenant routes. Passing **668 tests / 3838 assertions** (100% green). |
-| **Frontend** | ✅ `/frontend`. Token cascade, boot loader, all 9 UI primitives rebuilt, tooling configured, §8 state-matrix primitives complete. Authenticated app shell, protected routes, login page, Catalogue Workspace, Production Workspace, QC Workspace, Inventory Workspace, Purchasing Workspace, Sales Workspace, POS Workspace, Delivery/Logistics Workspace, Finance Workspace (COA, GL, Journals, Banking, Expenses, Cost Rollup), Fixed Assets Workspace, HR Workspace, Reports & Analytics (RMS Engine) Workspace, Audit Log Workspace, and AppHeader Live Notifications popover. Passing 128 tests and clean Vite build. |
-| **Database** | ✅ Fully migrated (169 tables, 170 migrations). **All tables and closures exist** — Waves 1–25: platform (§4.6), org (§4.7), identity (§4.8), infrastructure (§4.9), master data A (§4.10), master data B (§4.11), master data C (§4.12), HR identity (§4.13), production (§4.14), QC & wastage (§4.15), ledger & stock inventory (§4.16), stock operations (§4.17), purchasing (§4.18), sales & invoicing (§4.19), payments & allocations (§4.20), POS (§4.21), delivery & logistics (§4.22), full HR & payroll (§4.23), assets & maintenance (§4.24), finance & costing (§4.25), reporting & analytics (§4.26), e-commerce (§4.27), integrations (§4.28), and deferred closures (§4.29). Master data seeders verified via `migrate:fresh --seed`. |
-| **Tests** | ✅ Frontend **128 tests across 7 files**, all passing. Backend **668 tests / 3838 assertions** across schema contracts, tenancy runtime contracts, the full Auth/RBAC pipeline, 25+ model relations, Catalogue & Pricing CRUD, Production Planning & Batch state machines, Worker Output, QC Inspections, Stock Operations, Purchasing Chain, Sales Orders, Invoices, Payments, Delivery Orders, POS Terminals, Shift Sessions, Courier Adapters, Double-Entry General Ledger, Chart of Accounts, Period Locking, Fixed Assets Straight-Line Depreciation, Worker Attendance, Piece-Rate Payroll Runs, RMS Report Engine (Production Yield, Stock Valuation, Sales Performance, GL Summary, Payroll Summary), Async Export 202 Jobs, Saved Views, Real-time In-App Notifications, and Immutable Append-Only Audit Logging — 100% green. |
+| **Next action** | Production Deployment Readiness, Staging Tenant Onboarding, and Monitoring Telemetry Integration. |
+| **Backend** | ✅ Laravel 13.26.1 skeleton at `/backend`, PHP floor `^8.5`. Tooling real and passing: `phpstan.neon` (level 9, `checkModelProperties`) + `pint.json`. **Waves 1–25 migrations written and verified (all 173 tables + all closures), Multi-Tenant Platform Admin, Courier Integrations (Steadfast, Pathao, REDX), Storefront CMS & Customer Portal, Fraud Verification Scorer, and WhatsApp Flow live**. Passing **702 tests / 4056 assertions** (100% green). |
+| **Frontend** | ✅ `/frontend`. Token cascade, boot loader, all UI primitives rebuilt, tooling configured. Authenticated app shell, Master SaaS Admin Panel (`/platform/*`), Operations Dashboard (`/dashboard`), Catalogue Workspace, Production Workspace, QC Workspace, Inventory Workspace, Purchasing Workspace, Sales Workspace, POS Workspace, Delivery/Logistics Workspace, Finance Workspace, Fixed Assets Workspace, HR Workspace, Reports & Analytics Workspace, Audit Log Workspace, Storefront Page Builder, and Public Storefront Customer Experience (`/store/:subdomain/*`). Passing 128 tests and clean Vite build. |
+| **Database** | ✅ Fully migrated (173 tables). **All tables and closures exist** — Waves 1–25 + Platform Subscriptions + Storefront Pages + Storefront Customers + Order Fraud Assessments. Master data seeders verified via `migrate:fresh --seed`. |
+| **Tests** | ✅ Frontend **128 tests across 7 files**, all passing. Backend **702 tests / 4056 assertions** across schema contracts, tenancy runtime contracts, auth/RBAC, catalogue/pricing, production, QC, stock operations, purchasing, sales/invoicing, delivery/couriers, HR/payroll, finance/GL, reporting/RMS, platform admin, storefront CMS, customer portal, fraud verification, and WhatsApp order generator — 100% green. |
 | **CI** | ✅ `.github/workflows/ci.yml` — 3 jobs, 9 legs. Frontend matrix (lint · typecheck · test · depcruise · format:check) installing at the **repository root**, build + bundle budget with a `dist` artifact, and a backend matrix (lint · analyse · test) on PHP 8.5. Every leg has a locally reproducible equivalent. |
 
 ---
@@ -46,17 +46,17 @@ artefacts (`MODULE_MAP.md` §6), not a follow-up.
 
 | Phase | Scope | Status |
 |---|---|---|
-| **0** | Architecture & documentation | ✅ See §3 |
-| **1** | Auth · Tenancy · RBAC · Design System | ✅ Migration Waves 1–25, Tenancy Runtime, and Auth/RBAC Pipeline 100% Complete |
-| **2** | Master data · Products · Warehouses · Parties · Pricing | ✅ Complete — Units/Categories/Brands/Products/BOMs/Warehouses/Parties/Pricing CRUD + FE Shell & Catalogue Workspace live. Seeders complete. |
-| **3** | Production · Worker Production · QC | ✅ Complete — Production Planning, Batches & State Machine, Worker Output, QC Parameters, Inspections with Results & Defects, Wastage Ledger, and Frontend Workspaces live. |
-| **4** | Purchase · Inventory | ✅ Complete — Stock Movements, Transfers, Adjustments, Stock Count physical reconciliation, and full Purchasing chain (Requisitions → POs → GRNs → Bills → Returns) backend & frontend live. |
-| **5** | CRM · Sales · POS · Invoice Builder | ✅ Complete — Sales Orders, Invoicing with Tax calculations, Payments & Allocations, Delivery Orders & Dispatch, POS Terminals & Shift Sessions, High-speed POS Kiosk Shell, Sales Returns with Restock & Credit Notes, and Visual Invoice Template Builder. |
-| **6** | Delivery · Courier integrations | ✅ Complete — CourierProviderInterface, Pathao & Steadfast adapters, capability matrix, idempotent webhook ingestion (duplicate protection & out-of-order state guard), rider run sheets & dispatch challans, COD cash reconciliation, and Logistics Workspace. |
-| **7** | HR · Assets · Finance | ✅ Complete — Chart of Accounts, Balanced Double-Entry Journal Entries, Period Locking, Fixed Asset Register, Straight-Line Monthly Depreciation with GL postings, Maintenance Orders, Employee Directory, Shifts & Grace-in Attendance, and Phase 3 Piece-Rate Auto-Rollup Payroll Runs with Locked Payslips. |
-| **8** | Reports/RMS · Notifications · Audit | ✅ Complete — RMS Report Matrix (58 reports registry, live SQL query engines with freshness envelope metadata), Asynchronous 202 Export Jobs (CSV/XLSX/PDF), Custom Saved Views, Multi-Channel In-App Notifications with Unread Counters & Severity Badges, and Immutable System Audit Trail with Before/After JSON State Diffs. |
-| **9** | E-commerce | ⬜ Not started — Next focus: Customer Storefront APIs, Cart, Checkout, Webhook Orders |
-| **10** | SaaS hardening · Testing · Deployment | ⬜ Not started |
+| **0** | Architecture & documentation | ✅ Complete |
+| **1** | Auth · Tenancy · RBAC · Design System | ✅ Complete |
+| **2** | Master data · Products · Warehouses · Parties · Pricing | ✅ Complete |
+| **3** | Production · Worker Production · QC | ✅ Complete |
+| **4** | Purchase · Inventory | ✅ Complete |
+| **5** | CRM · Sales · POS · Invoice Builder | ✅ Complete |
+| **6** | Delivery · Courier integrations (Steadfast, Pathao, REDX) | ✅ Complete |
+| **7** | HR · Assets · Finance | ✅ Complete |
+| **8** | Reports/RMS · Notifications · Audit | ✅ Complete |
+| **9** | E-commerce · Storefront CMS · Customer Portal · Fraud Check · WhatsApp Flow | ✅ Complete |
+| **10** | SaaS Master Admin · Multi-Tenant Provisioning · Hardening | ✅ Complete |
 
 Of the 41 modules in `MODULE_MAP.md` §2, two are underway as **modules** (not just
 schema): **Auth/RBAC/Tenancy** is ✅ complete (Phase 1, §7 item 50) and the **Catalogue**
@@ -1781,6 +1781,45 @@ appended in one sequential step after w1+w2, never by the build agents in parall
   are out of scope (TASK_PROTOCOL §3.2); an open question is never resolved by a default.
 - **Preserve working code** — nothing marked ✅ in §10.1 is modified; extend, never rebuild.
 - **Re-measure** — backend counts are re-run at w6, never carried forward.
+
+---
+
+## 11. Settings & Configuration Engine & Tenant Custom Domains
+
+**Status**: Complete ✅
+
+### 11.1 Delivered Architecture & Capabilities
+1. **16-Domain Comprehensive Schema Dictionary (`SettingService::getSchemaDictionary()`)**:
+   - `Enterprise Core`: `general`, `security`, `notifications`, `reports`
+   - `Manufacturing & Stock`: `production`, `inventory`, `qc`, `assets`
+   - `Procurement & Commercial`: `purchase`, `sales`, `pos`
+   - `E-Commerce & Domains`: `ecommerce`, `custom_domains`
+   - `Logistics & Connected APIs`: `delivery`, `integrations`, `finance`, `hr_payroll`
+2. **Multi-Tier Inheritance Hierarchy**:
+   - `User Preference` $\rightarrow$ `Branch / Factory` $\rightarrow$ `Tenant Policy` $\rightarrow$ `Platform Default` $\rightarrow$ `Codebase Schema Default`.
+   - Guaranteed unique constraints using stored sentinel columns (`tenant_key`, `scope_key`).
+3. **Zero-Trust Credential Security**:
+   - AES-256-GCM encryption at rest with `is_encrypted = true`.
+   - Masked placeholder (`••••••••`) on API read; untouched masked values preserved on update.
+4. **Tenant Custom Storefront Domains & Verification**:
+   - Dedicated relational domain management via `tenant_domains`.
+   - Domain lifecycle: `pending` $\rightarrow$ `verified` $\rightarrow$ `active` $\rightarrow$ `suspended`.
+   - DNS TXT ownership challenge verification (`_dcp-challenge.<domain>`), CNAME routing (`<tenant-slug>.devcenterpoint.com`), and automatic edge SSL readiness.
+   - Master SaaS platform administration routes (`/api/v1/platform/domains/*`) for cross-tenant domain governance.
+5. **Live Gateway Diagnostics**:
+   - Connectivity testing for Couriers (Steadfast, Pathao, REDX), Payment Gateways (bKash, Nagad, SSLCommerz), SMS Gateways (Greenweb, Twilio), and WhatsApp Cloud API with latency measurement.
+6. **Frontend Settings Center Workspace**:
+   - High-fidelity UI with 5 categories across all 16 domains + Custom Domains Hub.
+   - Dynamic schema-driven controls (toggles, selects, arrays, masked secret inputs).
+   - Floating unsaved changes bar, platform reset to default, and DNS instruction modal with 1-click clipboard copy.
+
+### 11.2 Automated Test Verification
+- `TenantSettingsTest`: **5 passed** (Domain schema dictionary, batch updates, sensitive masking, group reset to defaults).
+- `TenantDomainTest`: **3 passed** (Custom domain registration, DNS TXT verification, primary domain designation).
+- `PlatformDomainTest`: **3 passed** (Super-admin cross-tenant domain listing, manual verification, and domain suspension).
+- **Backend Test Suite Total**: **11 passed / 11 tests (63 assertions)**.
+- **Frontend Typecheck**: `npx tsc --noEmit` **[OK] 0 errors**.
+
 
 
 

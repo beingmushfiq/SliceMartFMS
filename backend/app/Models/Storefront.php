@@ -41,6 +41,9 @@ class Storefront extends Model
         'guest_checkout_enabled',
         'cod_enabled',
         'online_payment_enabled',
+        'whatsapp_number',
+        'whatsapp_ordering_enabled',
+        'whatsapp_default_message',
         'min_order_amount',
         'status',
         'published_at',
@@ -53,6 +56,7 @@ class Storefront extends Model
         'guest_checkout_enabled' => 'boolean',
         'cod_enabled' => 'boolean',
         'online_payment_enabled' => 'boolean',
+        'whatsapp_ordering_enabled' => 'boolean',
         'min_order_amount' => 'decimal:4',
         'published_at' => 'datetime',
     ];

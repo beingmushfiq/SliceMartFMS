@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Check,
   Eye,
+  Globe,
   Layout,
   Palette,
   Save,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
 import type { StorefrontConfig } from '../../types/api/storefront';
+import { DomainSettingsTab } from './DomainSettingsTab';
 
 interface PublishedProductItem {
   id: number;
@@ -30,7 +32,7 @@ interface PublishedProductItem {
 }
 
 export const StorefrontSettingsWorkspace: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'branding' | 'products' | 'checkout'>('branding');
+  const [activeTab, setActiveTab] = useState<'branding' | 'products' | 'checkout' | 'domains'>('branding');
   const [products, setProducts] = useState<PublishedProductItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -50,6 +52,8 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
     guest_checkout_enabled: true,
     cod_enabled: true,
     online_payment_enabled: true,
+    whatsapp_number: '+8801700000000',
+    whatsapp_ordering_enabled: true,
     min_order_amount: '',
     status: 'live' as 'draft' | 'live' | 'maintenance' | 'suspended',
   });
@@ -68,7 +72,6 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
       ]);
 
       const conf = settingsRes.data.data ?? (settingsRes.data as any);
-      setConfig(conf);
       setProducts(prodRes.data.data ?? (prodRes.data as any) ?? []);
 
       setForm({
@@ -85,6 +88,8 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
         guest_checkout_enabled: conf.guest_checkout_enabled ?? true,
         cod_enabled: conf.cod_enabled ?? true,
         online_payment_enabled: conf.online_payment_enabled ?? true,
+        whatsapp_number: conf.whatsapp_number ?? '+8801700000000',
+        whatsapp_ordering_enabled: conf.whatsapp_ordering_enabled ?? true,
         min_order_amount: conf.min_order_amount ?? '',
         status: conf.status ?? 'live',
       });
@@ -118,6 +123,8 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
         guest_checkout_enabled: form.guest_checkout_enabled,
         cod_enabled: form.cod_enabled,
         online_payment_enabled: form.online_payment_enabled,
+        whatsapp_number: form.whatsapp_number,
+        whatsapp_ordering_enabled: form.whatsapp_ordering_enabled,
         min_order_amount: form.min_order_amount ? parseFloat(form.min_order_amount) : null,
         status: form.status,
       });
@@ -185,6 +192,14 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
 
         <div className="flex items-center gap-3">
           <a
+            href="/storefront/builder"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800/80 px-3.5 py-2 text-xs font-semibold text-zinc-200 hover:border-emerald-500 hover:text-white transition-all shadow-sm"
+          >
+            <Layout className="h-3.5 w-3.5 text-emerald-400" />
+            <span>Page & Block Builder</span>
+          </a>
+
+          <a
             href={`/store/${form.subdomain}`}
             target="_blank"
             rel="noreferrer"
@@ -245,6 +260,19 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
         >
           <Truck className="h-4 w-4" />
           <span>Checkout & Payment Rules</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('domains')}
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+            activeTab === 'domains'
+              ? 'border-emerald-500 text-emerald-400'
+              : 'border-transparent text-zinc-400 hover:text-zinc-200'
+          }`}
+        >
+          <Globe className="h-4 w-4" />
+          <span>Custom Domains & DNS</span>
         </button>
       </div>
 
@@ -500,6 +528,32 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
               />
             </label>
 
+            <label className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 cursor-pointer">
+              <div>
+                <div className="text-xs font-bold text-zinc-200">WhatsApp Instant Ordering</div>
+                <div className="text-[11px] text-zinc-500">Show 1-tap "Order via WhatsApp" button with cart snapshot on storefront</div>
+              </div>
+              <input
+                type="checkbox"
+                checked={form.whatsapp_ordering_enabled}
+                onChange={(e) => setForm({ ...form, whatsapp_ordering_enabled: e.target.checked })}
+                className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-emerald-500 focus:ring-emerald-500"
+              />
+            </label>
+
+            <div>
+              <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1">
+                WhatsApp Business Phone Number
+              </label>
+              <input
+                type="tel"
+                placeholder="+8801700000000"
+                value={form.whatsapp_number}
+                onChange={(e) => setForm({ ...form, whatsapp_number: e.target.value })}
+                className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+              />
+            </div>
+
             <div>
               <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1">
                 Minimum Order Amount ({form.currency})
@@ -513,6 +567,12 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
               />
             </div>
           </div>
+        </div>
+      )}
+
+      {activeTab === 'domains' && (
+        <div className="pt-2">
+          <DomainSettingsTab />
         </div>
       )}
     </div>

@@ -15,6 +15,9 @@ import AssetsWorkspace from '../modules/assets/AssetsWorkspace';
 import HrWorkspace from '../modules/hr/HrWorkspace';
 import { ReportsWorkspace } from '../modules/reports/ReportsWorkspace';
 import { AuditLogWorkspace } from '../modules/audit/AuditLogWorkspace';
+import { OrderFraudVerificationWorkspace } from '../modules/ecommerce/OrderFraudVerificationWorkspace';
+import { SettingsCenterWorkspace } from '../modules/settings/SettingsCenterWorkspace';
+import { TenantRoleDashboard } from '../pages/dashboard/TenantRoleDashboard';
 
 // Master SaaS Platform Admin imports
 import { PlatformProtectedRoute } from '../components/platform/PlatformProtectedRoute';
@@ -34,7 +37,10 @@ import { StorefrontProductDetailPage } from '../pages/storefront/StorefrontProdu
 import { StorefrontCheckoutPage } from '../pages/storefront/StorefrontCheckoutPage';
 import { StorefrontOrderConfirmationPage } from '../pages/storefront/StorefrontOrderConfirmationPage';
 import { StorefrontOrderTrackingPage } from '../pages/storefront/StorefrontOrderTrackingPage';
+import { StorefrontDynamicPage } from '../pages/storefront/StorefrontDynamicPage';
+import { StorefrontAccountPage } from '../pages/storefront/StorefrontAccountPage';
 import { StorefrontSettingsWorkspace } from '../modules/storefront/StorefrontSettingsWorkspace';
+import { StorefrontPageBuilderWorkspace } from '../modules/storefront/StorefrontPageBuilderWorkspace';
 
 export const router = createBrowserRouter([
   // Public Headless Storefront Routes
@@ -65,6 +71,14 @@ export const router = createBrowserRouter([
       {
         path: 'track',
         element: <StorefrontOrderTrackingPage />,
+      },
+      {
+        path: 'account',
+        element: <StorefrontAccountPage />,
+      },
+      {
+        path: 'pages/:slug',
+        element: <StorefrontDynamicPage />,
       },
     ],
   },
@@ -124,7 +138,11 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <Navigate to="/production" replace />,
+            element: <TenantRoleDashboard />,
+          },
+          {
+            path: 'dashboard',
+            element: <TenantRoleDashboard />,
           },
           {
             path: 'catalogue',
@@ -199,12 +217,32 @@ export const router = createBrowserRouter([
             element: <StorefrontSettingsWorkspace />,
           },
           {
+            path: 'storefront/builder',
+            element: <StorefrontPageBuilderWorkspace />,
+          },
+          {
+            path: 'fraud-verification',
+            element: <OrderFraudVerificationWorkspace />,
+          },
+          {
+            path: 'sales/fraud-verification',
+            element: <Navigate to="/fraud-verification" replace />,
+          },
+          {
             path: 'audit-logs',
             element: <AuditLogWorkspace />,
           },
           {
             path: 'audit',
             element: <Navigate to="/audit-logs" replace />,
+          },
+          {
+            path: 'settings',
+            element: <SettingsCenterWorkspace />,
+          },
+          {
+            path: 'settings/:group',
+            element: <SettingsCenterWorkspace />,
           },
           {
             path: '*',

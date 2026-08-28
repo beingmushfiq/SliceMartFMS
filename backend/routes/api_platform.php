@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Modules\Platform\Controllers\PlatformAuditController;
 use App\Modules\Platform\Controllers\PlatformAuthController;
 use App\Modules\Platform\Controllers\PlatformDashboardController;
+use App\Modules\Platform\Controllers\PlatformDomainController;
+use App\Modules\Platform\Controllers\PlatformImpersonationController;
 use App\Modules\Platform\Controllers\PlatformPlanController;
 use App\Modules\Platform\Controllers\PlatformTenantController;
 use Illuminate\Support\Facades\Route;
@@ -35,7 +37,16 @@ Route::prefix('v1/platform')
             Route::patch('tenants/{id}', [PlatformTenantController::class, 'update'])->name('tenants.update');
             Route::post('tenants/{id}/status', [PlatformTenantController::class, 'updateStatus'])->name('tenants.status');
             Route::post('tenants/{id}/manage-subscription', [PlatformTenantController::class, 'manageSubscription'])->name('tenants.manage-subscription');
-            Route::post('tenants/{id}/impersonate', [\App\Modules\Platform\Controllers\PlatformImpersonationController::class, 'impersonate'])->name('tenants.impersonate');
+            Route::post('tenants/{id}/impersonate', [PlatformImpersonationController::class, 'impersonate'])->name('tenants.impersonate');
+
+            // Platform-wide Custom Domain Management
+            Route::prefix('domains')->name('domains.')->group(static function (): void {
+                Route::get('/', [PlatformDomainController::class, 'index'])->name('index');
+                Route::get('{id}', [PlatformDomainController::class, 'show'])->name('show');
+                Route::post('{id}/verify', [PlatformDomainController::class, 'verify'])->name('verify');
+                Route::patch('{id}/status', [PlatformDomainController::class, 'updateStatus'])->name('status');
+                Route::delete('{id}', [PlatformDomainController::class, 'destroy'])->name('destroy');
+            });
 
             // Subscription Plan Management
             Route::get('plans', [PlatformPlanController::class, 'index'])->name('plans.index');
