@@ -63,13 +63,13 @@ export function UnitsSection() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
           <input
             type="text"
             placeholder="Search units..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 py-2 pl-9 pr-3 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+            className="w-full rounded-xl border border-default bg-surface-sunken py-2 pl-9 pr-3 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
           />
         </div>
 
@@ -92,9 +92,9 @@ export function UnitsSection() {
         data={unitsQuery.data}
         isFetching={unitsQuery.isFetching}
       >
-        <div className="overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-900/40">
-          <table className="w-full text-left text-xs text-zinc-300">
-            <thead className="border-b border-zinc-800 bg-zinc-900/80 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+        <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
+          <table className="w-full text-left text-xs text-default">
+            <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
                 <th className="py-3.5 pl-4 pr-3">Code</th>
                 <th className="py-3.5 px-3">Name</th>
@@ -104,22 +104,22 @@ export function UnitsSection() {
                 <th className="py-3.5 px-3">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/60">
+            <tbody className="divide-y divide-default">
               {units.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-zinc-500">
+                  <td colSpan={6} className="py-8 text-center text-muted">
                     No measurement units found.
                   </td>
                 </tr>
               ) : (
                 units.map((u) => (
-                  <tr key={u.id} className="hover:bg-zinc-800/30 transition-colors">
-                    <td className="py-3.5 pl-4 pr-3 font-mono font-medium text-emerald-400">
+                  <tr key={u.id} className="hover:bg-surface-sunken/60 transition-colors">
+                    <td className="py-3.5 pl-4 pr-3 font-mono font-medium text-emerald-600 dark:text-emerald-400">
                       {u.code}
                     </td>
-                    <td className="py-3.5 px-3 text-zinc-100 font-medium">{u.name}</td>
+                    <td className="py-3.5 px-3 text-default font-medium">{u.name}</td>
                     <td className="py-3.5 px-3 capitalize">
-                      <span className="inline-flex items-center gap-1 text-zinc-400">
+                      <span className="inline-flex items-center gap-1 text-muted">
                         <Ruler className="h-3 w-3" />
                         {u.type}
                       </span>
@@ -128,20 +128,20 @@ export function UnitsSection() {
                       <span
                         className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
                           u.is_base
-                            ? 'bg-emerald-500/10 text-emerald-400'
-                            : 'bg-zinc-800 text-zinc-400'
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                            : 'bg-surface-sunken text-muted border border-default'
                         }`}
                       >
                         {u.is_base ? 'Base Unit' : 'Derived'}
                       </span>
                     </td>
-                    <td className="py-3.5 px-3 font-mono">{u.precision} decimal(s)</td>
+                    <td className="py-3.5 px-3 font-mono text-muted">{u.precision} decimal(s)</td>
                     <td className="py-3.5 px-3">
                       <span
                         className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
                           u.is_active
-                            ? 'bg-emerald-500/10 text-emerald-400'
-                            : 'bg-zinc-800 text-zinc-500'
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                            : 'bg-surface-sunken text-muted border border-default'
                         }`}
                       >
                         {u.is_active ? 'Active' : 'Inactive'}
@@ -169,29 +169,29 @@ export function UnitsSection() {
           className="space-y-4"
         >
           {errorMsg && (
-            <div className="rounded-lg bg-rose-500/10 p-3 text-xs text-rose-400 border border-rose-500/20">
+            <div className="rounded-lg bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400 border border-rose-500/20">
               {errorMsg}
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-zinc-300 mb-1">Code *</label>
+              <label className="block text-xs font-medium text-default mb-1">Code *</label>
               <input
                 required
                 type="text"
                 placeholder="e.g. PCS, KG, LTR"
                 value={draft.code}
                 onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase() })}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none uppercase"
+                className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none uppercase"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-zinc-300 mb-1">Type *</label>
+              <label className="block text-xs font-medium text-default mb-1">Type *</label>
               <select
                 value={draft.type}
                 onChange={(e) => setDraft({ ...draft, type: e.target.value })}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
               >
                 <option value="piece">Piece (Discrete)</option>
                 <option value="weight">Weight</option>
@@ -204,20 +204,20 @@ export function UnitsSection() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-zinc-300 mb-1">Name *</label>
+            <label className="block text-xs font-medium text-default mb-1">Name *</label>
             <input
               required
               type="text"
               placeholder="e.g. Pieces, Kilogram, Litre"
               value={draft.name}
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4 items-center">
             <div>
-              <label className="block text-xs font-medium text-zinc-300 mb-1">
+              <label className="block text-xs font-medium text-default mb-1">
                 Decimal Precision
               </label>
               <input
@@ -228,7 +228,7 @@ export function UnitsSection() {
                 onChange={(e) =>
                   setDraft({ ...draft, precision: parseInt(e.target.value, 10) || 0 })
                 }
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
               />
             </div>
             <div className="flex items-center gap-2 pt-5">
@@ -237,15 +237,15 @@ export function UnitsSection() {
                 id="is_base"
                 checked={draft.is_base}
                 onChange={(e) => setDraft({ ...draft, is_base: e.target.checked })}
-                className="h-4 w-4 rounded border-zinc-800 bg-zinc-950 text-emerald-500 focus:ring-emerald-500/20"
+                className="h-4 w-4 rounded border-default text-emerald-500 focus:ring-emerald-500/20"
               />
-              <label htmlFor="is_base" className="text-xs text-zinc-300">
+              <label htmlFor="is_base" className="text-xs text-default">
                 Is Base Unit
               </label>
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+          <div className="flex justify-end gap-3 pt-4 border-t border-default">
             <Button variant="secondary" onClick={() => setIsCreateOpen(false)}>
               Cancel
             </Button>

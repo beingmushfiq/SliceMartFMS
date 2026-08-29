@@ -15,6 +15,7 @@ export const HrWorkspace: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'employees' | 'attendance' | 'leaves' | 'payroll'>(
     'payroll'
   );
+  const [selectedEmployeeForBadge, setSelectedEmployeeForBadge] = useState<Employee | null>(null);
 
   // Master Reference Data
   const [departments] = useState<Department[]>([
@@ -579,6 +580,7 @@ export const HrWorkspace: React.FC = () => {
                 <th className="px-6 py-3">Employment Type</th>
                 <th className="px-6 py-3">Shift</th>
                 <th className="px-6 py-3 text-center">Status</th>
+                <th className="px-6 py-3 text-right">Badge</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -615,6 +617,14 @@ export const HrWorkspace: React.FC = () => {
                     <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
                       ACTIVE
                     </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button
+                      onClick={() => setSelectedEmployeeForBadge(emp)}
+                      className="px-2.5 py-1 text-xs bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 rounded font-semibold border border-indigo-200 dark:border-indigo-800 transition"
+                    >
+                      🪪 ID Badge
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -906,6 +916,92 @@ export const HrWorkspace: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Employee ID Badge Print Modal */}
+      {selectedEmployeeForBadge && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b pb-3 dark:border-gray-700">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <span>🪪 Workforce ID Card</span>
+              </h3>
+              <button
+                onClick={() => setSelectedEmployeeForBadge(null)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Standard CR80 Card Layout Preview */}
+            <div className="border-2 border-indigo-500/40 rounded-2xl p-5 bg-linear-to-b from-indigo-900/10 to-transparent flex flex-col items-center text-center space-y-3">
+              <div className="w-full flex items-center justify-between border-b border-indigo-500/20 pb-2">
+                <span className="font-extrabold text-xs tracking-wider text-indigo-600 dark:text-indigo-400 uppercase">
+                  SLICE MART FMS
+                </span>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 uppercase">
+                  Security Pass
+                </span>
+              </div>
+
+              {/* Photo Avatar */}
+              <div className="size-20 rounded-2xl bg-indigo-100 dark:bg-indigo-950 border-2 border-indigo-400/40 flex items-center justify-center text-2xl font-bold text-indigo-600 dark:text-indigo-300 shadow-inner">
+                {selectedEmployeeForBadge.first_name[0]}{selectedEmployeeForBadge.last_name?.[0] ?? ''}
+              </div>
+
+              <div>
+                <div className="font-extrabold text-base text-gray-900 dark:text-gray-100">
+                  {selectedEmployeeForBadge.display_name}
+                </div>
+                <div className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                  {selectedEmployeeForBadge.designation?.name ?? 'Factory Operator'}
+                </div>
+                <div className="text-[11px] text-gray-500 dark:text-gray-400">
+                  {selectedEmployeeForBadge.department?.name ?? 'Production Floor'}
+                </div>
+              </div>
+
+              <div className="w-full grid grid-cols-2 gap-2 text-left bg-gray-50 dark:bg-gray-900/60 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-[11px] font-mono">
+                <div>
+                  <span className="text-[9px] text-gray-400 uppercase block font-sans">ID Code</span>
+                  <span className="font-bold text-gray-900 dark:text-gray-100">{selectedEmployeeForBadge.employee_code}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-gray-400 uppercase block font-sans">Phone</span>
+                  <span className="text-gray-700 dark:text-gray-300">{selectedEmployeeForBadge.phone}</span>
+                </div>
+              </div>
+
+              {/* High-Density Barcode Graphic */}
+              <div className="w-full bg-white p-2 rounded-lg border border-gray-300 flex flex-col items-center">
+                <div className="font-mono text-[8px] tracking-[3px] text-black font-bold uppercase mb-0.5">
+                  ||||| | |||| ||| ||||| || |||||| | ||| ||||
+                </div>
+                <div className="font-mono text-[9px] text-black font-semibold">
+                  *{selectedEmployeeForBadge.employee_code}*
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedEmployeeForBadge(null)}
+                className="flex-1 px-3 py-2 text-xs border rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="flex-1 px-3 py-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow cursor-pointer"
+              >
+                🖨️ Print Badge
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -153,36 +153,36 @@ export function WorkerProductionSection() {
       {/* KPI Stats Summary Bar */}
       {summary && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+          <div className="rounded-2xl border border-default bg-surface p-4 shadow-2xs">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">
               Total Good Output
             </div>
-            <div className="mt-1 text-2xl font-bold font-mono text-emerald-400">
+            <div className="mt-1 text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
               {summary.total_good_quantity}
             </div>
           </div>
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+          <div className="rounded-2xl border border-default bg-surface p-4 shadow-2xs">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">
               Rework Quantity
             </div>
-            <div className="mt-1 text-2xl font-bold font-mono text-amber-400">
+            <div className="mt-1 text-2xl font-bold font-mono text-amber-600 dark:text-amber-400">
               {summary.total_rework_quantity}
             </div>
           </div>
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+          <div className="rounded-2xl border border-default bg-surface p-4 shadow-2xs">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">
               Rejected Quantity
             </div>
-            <div className="mt-1 text-2xl font-bold font-mono text-red-400">
+            <div className="mt-1 text-2xl font-bold font-mono text-rose-600 dark:text-rose-400">
               {summary.total_rejected_quantity}
             </div>
           </div>
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+          <div className="rounded-2xl border border-default bg-surface p-4 shadow-2xs">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">
               Earned Wages
             </div>
-            <div className="mt-1 text-2xl font-bold font-mono text-zinc-100 flex items-center gap-1">
-              <DollarSign className="h-5 w-5 text-emerald-400" />
+            <div className="mt-1 text-2xl font-bold font-mono text-default flex items-center gap-1">
+              <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               <span>{summary.total_earned}</span>
             </div>
           </div>
@@ -193,20 +193,20 @@ export function WorkerProductionSection() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 items-center gap-3">
           <div className="relative flex-1 max-w-sm">
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input
               type="text"
               placeholder="Search by worker name or employee code..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 py-2 pl-9 pr-3 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-xl border border-default bg-surface-sunken py-2 pl-9 pr-3 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
             />
           </div>
 
           <select
             value={shiftFilter}
             onChange={(e) => setShiftFilter(e.target.value)}
-            className="rounded-xl border border-zinc-800 bg-zinc-900/60 py-2 px-3 text-xs text-zinc-300 focus:border-emerald-500 focus:outline-none"
+            className="rounded-xl border border-default bg-surface-sunken py-2 px-3 text-xs text-default focus:border-primary focus:outline-none"
           >
             <option value="all">All Shifts</option>
             <option value="morning">Morning Shift</option>
@@ -250,9 +250,9 @@ export function WorkerProductionSection() {
         data={entriesQuery.data}
         isFetching={entriesQuery.isFetching}
       >
-        <div className="overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-900/40">
-          <table className="w-full text-left text-xs text-zinc-300">
-            <thead className="border-b border-zinc-800 bg-zinc-900/80 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+        <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
+          <table className="w-full text-left text-xs text-default">
+            <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
                 <th className="py-3.5 pl-4 pr-3">Worker</th>
                 <th className="py-3.5 px-3">Batch & Product</th>
@@ -263,55 +263,55 @@ export function WorkerProductionSection() {
                 <th className="py-3.5 pr-4 text-right">Verification</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/60">
+            <tbody className="divide-y divide-default">
               {entries.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-zinc-500">
-                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800/50 mb-2">
-                      <Users className="h-5 w-5 text-zinc-400" />
+                  <td colSpan={7} className="py-12 text-center text-muted">
+                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-surface-sunken border border-default mb-2">
+                      <Users className="h-5 w-5 text-muted" />
                     </div>
-                    <div className="text-sm font-medium text-zinc-400">
+                    <div className="text-sm font-medium text-default">
                       No worker production entries found
                     </div>
-                    <div className="text-xs text-zinc-500 mt-1">
+                    <div className="text-xs text-muted mt-1">
                       Log daily worker unit output on the shop floor.
                     </div>
                   </td>
                 </tr>
               ) : (
                 entries.map((entry) => (
-                  <tr key={entry.id} className="hover:bg-zinc-800/30 transition-colors">
+                  <tr key={entry.id} className="hover:bg-surface-sunken/60 transition-colors">
                     <td className="py-3 pl-4 pr-3">
-                      <div className="font-medium text-zinc-200 flex items-center gap-1.5">
-                        <UserCheck className="h-3.5 w-3.5 text-emerald-400" />
+                      <div className="font-medium text-default flex items-center gap-1.5">
+                        <UserCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                         <span>{entry.employee_name ?? entry.employee_id}</span>
                       </div>
                       {entry.employee_code && (
-                        <div className="text-[10px] text-zinc-500">{entry.employee_code}</div>
+                        <div className="text-[10px] text-muted">{entry.employee_code}</div>
                       )}
                     </td>
                     <td className="py-3 px-3">
-                      <div className="font-mono text-zinc-300">
+                      <div className="font-mono text-default">
                         {entry.batch_number ?? entry.batch_id}
                       </div>
-                      <div className="text-[10px] text-zinc-500">
+                      <div className="text-[10px] text-muted">
                         {entry.product_name ?? entry.product_id}
                       </div>
                     </td>
-                    <td className="py-3 px-3 text-zinc-400">
+                    <td className="py-3 px-3 text-muted">
                       <div>{entry.work_date}</div>
-                      <div className="text-[10px] uppercase font-semibold text-zinc-500">
+                      <div className="text-[10px] uppercase font-semibold text-muted">
                         {entry.shift}
                       </div>
                     </td>
                     <td className="py-3 px-3 font-mono">
-                      <span className="text-emerald-400 font-medium">{entry.good_quantity}</span>
-                      <span className="text-zinc-600"> / </span>
-                      <span className="text-amber-400">{entry.rework_quantity}</span>
-                      <span className="text-zinc-600"> / </span>
-                      <span className="text-red-400">{entry.rejected_quantity}</span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">{entry.good_quantity}</span>
+                      <span className="text-muted"> / </span>
+                      <span className="text-amber-600 dark:text-amber-400">{entry.rework_quantity}</span>
+                      <span className="text-muted"> / </span>
+                      <span className="text-rose-600 dark:text-rose-400">{entry.rejected_quantity}</span>
                     </td>
-                    <td className="py-3 px-3 font-mono text-zinc-200">
+                    <td className="py-3 px-3 font-mono text-default">
                       {entry.total_earned ? `$${entry.total_earned}` : 'N/A'}
                     </td>
                     <td className="py-3 px-3">
@@ -324,14 +324,14 @@ export function WorkerProductionSection() {
                           size="sm"
                           onClick={() => verifyMutation.mutate(entry.id)}
                           disabled={verifyMutation.isPending}
-                          className="text-xs text-emerald-400 min-h-[36px] flex items-center gap-1"
+                          className="text-xs text-emerald-600 dark:text-emerald-400 min-h-[36px] flex items-center gap-1"
                         >
                           <ShieldCheck className="h-3.5 w-3.5" />
                           <span>Verify</span>
                         </Button>
                       ) : (
-                        <span className="text-[11px] text-zinc-500 flex items-center justify-end gap-1">
-                          <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                        <span className="text-[11px] text-muted flex items-center justify-end gap-1">
+                          <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
                           <span>Locked</span>
                         </span>
                       )}
@@ -352,20 +352,20 @@ export function WorkerProductionSection() {
       >
         <div className="space-y-4">
           {errorMsg && (
-            <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-400">
+            <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400">
               {errorMsg}
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Employee / Worker
               </label>
               <select
                 value={draft.employee_id}
                 onChange={(e) => setDraft((d) => ({ ...d, employee_id: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2.5 text-xs text-zinc-200"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2.5 text-xs text-default focus:border-primary focus:outline-none"
               >
                 {employees.map((emp) => (
                   <option key={emp.id} value={emp.id}>
@@ -376,13 +376,13 @@ export function WorkerProductionSection() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Production Batch
               </label>
               <select
                 value={draft.batch_id}
                 onChange={(e) => setDraft((d) => ({ ...d, batch_id: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2.5 text-xs text-zinc-200"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2.5 text-xs text-default focus:border-primary focus:outline-none"
               >
                 {batches.map((b) => (
                   <option key={b.id} value={b.id}>
@@ -395,19 +395,19 @@ export function WorkerProductionSection() {
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Work Date
               </label>
               <input
                 type="date"
                 value={draft.work_date}
                 onChange={(e) => setDraft((d) => ({ ...d, work_date: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-100"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Shift
               </label>
               <select
@@ -418,7 +418,7 @@ export function WorkerProductionSection() {
                     shift: e.target.value as 'morning' | 'evening' | 'night' | 'general',
                   }))
                 }
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-200"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
               >
                 <option value="morning">Morning</option>
                 <option value="evening">Evening</option>
@@ -428,7 +428,7 @@ export function WorkerProductionSection() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Wage Basis
               </label>
               <select
@@ -439,7 +439,7 @@ export function WorkerProductionSection() {
                     wage_type: e.target.value as 'piece_rate' | 'hourly',
                   }))
                 }
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-200"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
               >
                 <option value="piece_rate">Piece Rate</option>
                 <option value="hourly">Hourly</option>
@@ -449,7 +449,7 @@ export function WorkerProductionSection() {
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Good Qty (Units)
               </label>
               <input
@@ -457,12 +457,12 @@ export function WorkerProductionSection() {
                 step="0.0001"
                 value={draft.good_quantity}
                 onChange={(e) => setDraft((d) => ({ ...d, good_quantity: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2.5 text-xs font-mono text-emerald-400"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2.5 text-xs font-mono text-emerald-600 dark:text-emerald-400 focus:border-primary focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Rework Qty
               </label>
               <input
@@ -470,12 +470,12 @@ export function WorkerProductionSection() {
                 step="0.0001"
                 value={draft.rework_quantity}
                 onChange={(e) => setDraft((d) => ({ ...d, rework_quantity: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2.5 text-xs font-mono text-amber-400"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2.5 text-xs font-mono text-amber-600 dark:text-amber-400 focus:border-primary focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Rejected Qty
               </label>
               <input
@@ -483,12 +483,12 @@ export function WorkerProductionSection() {
                 step="0.0001"
                 value={draft.rejected_quantity}
                 onChange={(e) => setDraft((d) => ({ ...d, rejected_quantity: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2.5 text-xs font-mono text-red-400"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2.5 text-xs font-mono text-rose-600 dark:text-rose-400 focus:border-primary focus:outline-none"
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-zinc-800">
+          <div className="flex justify-end gap-2 pt-3 border-t border-default">
             <Button variant="ghost" onClick={() => setIsCreateOpen(false)}>
               Cancel
             </Button>

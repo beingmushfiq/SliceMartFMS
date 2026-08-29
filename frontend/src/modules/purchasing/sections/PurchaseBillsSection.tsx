@@ -70,7 +70,7 @@ export function PurchaseBillsSection() {
           <button
             onClick={fetchBills}
             disabled={loading}
-            className="p-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/80 rounded-lg border border-zinc-800 transition-colors"
+            className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors cursor-pointer"
             title="Refresh"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -78,67 +78,67 @@ export function PurchaseBillsSection() {
         </div>
 
         <div className="relative flex-1 sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
           <input
             type="text"
             placeholder="Search bill #, supplier invoice #, PO #..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-zinc-900/90 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50"
+            className="w-full pl-9 pr-3 py-2 text-xs bg-surface-sunken border border-default rounded-xl text-default placeholder:text-muted focus:outline-none focus:border-primary"
           />
         </div>
       </div>
 
       {/* Bills Table */}
-      <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 backdrop-blur-md overflow-hidden">
+      <div className="rounded-2xl border border-default bg-surface shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-zinc-300">
-            <thead className="bg-zinc-900/80 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-800">
+          <table className="w-full text-left text-xs text-default">
+            <thead className="bg-surface-sunken text-[11px] font-semibold text-muted uppercase tracking-wider border-b border-default">
               <tr>
-                <th className="px-4 py-3">Bill Number</th>
-                <th className="px-4 py-3">Supplier Invoice #</th>
-                <th className="px-4 py-3">Supplier</th>
-                <th className="px-4 py-3">Bill Date</th>
-                <th className="px-4 py-3">Due Date</th>
-                <th className="px-4 py-3 text-right">Grand Total</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Payment</th>
+                <th className="px-4 py-3.5">Bill Number</th>
+                <th className="px-4 py-3.5">Supplier Invoice #</th>
+                <th className="px-4 py-3.5">Supplier</th>
+                <th className="px-4 py-3.5">Bill Date</th>
+                <th className="px-4 py-3.5">Due Date</th>
+                <th className="px-4 py-3.5 text-right">Grand Total</th>
+                <th className="px-4 py-3.5">Status</th>
+                <th className="px-4 py-3.5">Payment</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/50">
+            <tbody className="divide-y divide-default">
               {filteredBills.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-zinc-500">
+                  <td colSpan={8} className="px-4 py-8 text-center text-muted">
                     {loading ? 'Loading purchase bills...' : 'No purchase bills found'}
                   </td>
                 </tr>
               ) : (
                 filteredBills.map((b) => (
-                  <tr key={b.id} className="hover:bg-zinc-800/30 transition-colors">
-                    <td className="px-4 py-3 font-mono font-medium text-zinc-100">
+                  <tr key={b.id} className="hover:bg-surface-sunken/60 transition-colors">
+                    <td className="px-4 py-3.5 font-mono font-medium text-default">
                       {b.bill_number}
                     </td>
-                    <td className="px-4 py-3 font-mono text-zinc-300">
+                    <td className="px-4 py-3.5 font-mono text-muted">
                       {b.supplier_invoice_number}
                     </td>
-                    <td className="px-4 py-3 text-zinc-200">{b.supplier_name ?? '—'}</td>
-                    <td className="px-4 py-3 font-mono text-zinc-400">{b.bill_date}</td>
-                    <td className="px-4 py-3 font-mono text-zinc-400">{b.due_date}</td>
-                    <td className="px-4 py-3 text-right font-mono font-semibold text-zinc-100">
+                    <td className="px-4 py-3.5 text-default font-medium">{b.supplier_name ?? '—'}</td>
+                    <td className="px-4 py-3.5 font-mono text-muted">{b.bill_date}</td>
+                    <td className="px-4 py-3.5 font-mono text-muted">{b.due_date}</td>
+                    <td className="px-4 py-3.5 text-right font-mono font-semibold text-default">
                       {b.currency_code} {parseFloat(b.grand_total).toFixed(2)}
                     </td>
-                    <td className="px-4 py-3">{getStatusBadge(b.status)}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3.5">{getStatusBadge(b.status)}</td>
+                    <td className="px-4 py-3.5">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
                           b.payment_status === 'paid'
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                             : b.payment_status === 'partially_paid'
-                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                              : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                              : 'bg-surface-sunken text-muted border border-default'
                         }`}
                       >
-                        {b.payment_status.replace('_', ' ')}
+                        {b.payment_status?.replace('_', ' ')}
                       </span>
                     </td>
                   </tr>

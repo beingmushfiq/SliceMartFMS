@@ -61,7 +61,7 @@ export function SalesReturnsSection() {
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-zinc-800 text-zinc-400 border border-zinc-700">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-surface-sunken text-muted border border-default">
             {status}
           </span>
         );
@@ -74,20 +74,20 @@ export function SalesReturnsSection() {
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
             <input
               type="text"
               placeholder="Search by return #, credit note..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-9 w-64 rounded-md border border-zinc-800 bg-zinc-900/60 pl-8 pr-3 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+              className="h-9 w-64 rounded-xl border border-default bg-surface-sunken pl-8 pr-3 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
             />
           </div>
 
           <button
             onClick={fetchReturns}
             disabled={loading}
-            className="flex h-9 items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900/60 px-3 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-50"
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface-sunken px-3 text-xs font-medium text-muted hover:bg-surface hover:text-default disabled:opacity-50 transition-colors cursor-pointer"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -96,65 +96,65 @@ export function SalesReturnsSection() {
       </div>
 
       {/* Returns Table */}
-      <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/40">
+      <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="border-b border-zinc-800 bg-zinc-900/80 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+          <table className="w-full text-left text-xs text-default">
+            <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
-                <th className="px-4 py-3">Return Number</th>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Customer</th>
-                <th className="px-4 py-3">Credit Note #</th>
-                <th className="px-4 py-3">Total Amount</th>
-                <th className="px-4 py-3">Restock</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-4 py-3.5">Return Number</th>
+                <th className="px-4 py-3.5">Date</th>
+                <th className="px-4 py-3.5">Customer</th>
+                <th className="px-4 py-3.5">Credit Note #</th>
+                <th className="px-4 py-3.5">Total Amount</th>
+                <th className="px-4 py-3.5">Restock</th>
+                <th className="px-4 py-3.5">Status</th>
+                <th className="px-4 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/60">
+            <tbody className="divide-y divide-default">
               {filteredReturns.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-zinc-500">
+                  <td colSpan={8} className="px-4 py-8 text-center text-muted">
                     {loading ? 'Loading returns...' : 'No sales returns found.'}
                   </td>
                 </tr>
               ) : (
                 filteredReturns.map((ret) => (
-                  <tr key={ret.id} className="hover:bg-zinc-800/20 transition-colors">
-                    <td className="px-4 py-3 font-mono font-medium text-emerald-400">
+                  <tr key={ret.id} className="hover:bg-surface-sunken/60 transition-colors">
+                    <td className="px-4 py-3.5 font-mono font-medium text-emerald-600 dark:text-emerald-400">
                       {ret.return_number}
                     </td>
-                    <td className="px-4 py-3 text-zinc-400">{ret.return_date}</td>
-                    <td className="px-4 py-3 text-zinc-200">
+                    <td className="px-4 py-3.5 text-muted">{ret.return_date}</td>
+                    <td className="px-4 py-3.5 text-default font-medium">
                       {ret.customer_name ?? 'Counter Customer'}
                     </td>
-                    <td className="px-4 py-3 font-mono text-zinc-300">
+                    <td className="px-4 py-3.5 font-mono text-muted">
                       {ret.credit_note_number ?? '-'}
                     </td>
-                    <td className="px-4 py-3 font-mono font-medium text-zinc-100">
+                    <td className="px-4 py-3.5 font-mono font-medium text-default">
                       {parseFloat(ret.total_amount || '0').toLocaleString('en-US', {
                         minimumFractionDigits: 2,
                       })}{' '}
-                      <span className="text-[10px] text-zinc-500">BDT</span>
+                      <span className="text-[10px] text-muted">BDT</span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3.5">
                       <span
-                        className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium uppercase ${
+                        className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium uppercase ${
                           ret.restock
-                            ? 'bg-emerald-500/10 text-emerald-400'
-                            : 'bg-zinc-800 text-zinc-400'
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                            : 'bg-surface-sunken text-muted border border-default'
                         }`}
                       >
                         {ret.restock ? 'Yes (Inventory)' : 'Scrap'}
                       </span>
                     </td>
-                    <td className="px-4 py-3">{getStatusBadge(ret.status)}</td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3.5">{getStatusBadge(ret.status)}</td>
+                    <td className="px-4 py-3.5 text-right">
                       {ret.status === 'draft' && (
                         <button
                           onClick={() => handleApprove(ret.id)}
                           disabled={actionLoading === ret.id}
-                          className="rounded bg-emerald-600/20 px-2.5 py-1 text-[11px] font-semibold text-emerald-400 hover:bg-emerald-600/30 disabled:opacity-50"
+                          className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50 transition-colors cursor-pointer"
                         >
                           {actionLoading === ret.id ? 'Approving...' : 'Approve & Restock'}
                         </button>

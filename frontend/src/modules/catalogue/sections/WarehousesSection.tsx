@@ -85,13 +85,13 @@ export function WarehousesSection() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
           <input
             type="text"
             placeholder="Search warehouses..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 py-2 pl-9 pr-3 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+            className="w-full rounded-xl border border-default bg-surface-sunken py-2 pl-9 pr-3 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
           />
         </div>
 
@@ -116,54 +116,54 @@ export function WarehousesSection() {
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {warehouses.length === 0 ? (
-            <div className="col-span-full py-12 text-center text-xs text-zinc-500">
+            <div className="col-span-full py-12 text-center text-xs text-muted">
               No physical warehouses configured.
             </div>
           ) : (
             warehouses.map((w) => (
               <div
                 key={w.id}
-                className="flex flex-col justify-between rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5 hover:border-zinc-700 transition-all shadow-sm"
+                className="flex flex-col justify-between rounded-2xl border border-default bg-surface p-5 hover:border-zinc-400 dark:hover:border-zinc-700 transition-all shadow-xs"
               >
                 <div>
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800 text-zinc-200">
-                        <WarehouseIcon className="h-5 w-5 text-emerald-400" />
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-sunken border border-default text-default">
+                        <WarehouseIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-zinc-100 text-sm">{w.name}</h3>
-                        <p className="font-mono text-[11px] text-zinc-500">{w.code}</p>
+                        <h3 className="font-semibold text-default text-sm">{w.name}</h3>
+                        <p className="font-mono text-[11px] text-muted">{w.code}</p>
                       </div>
                     </div>
                     {w.is_default && (
-                      <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                      <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                         Default
                       </span>
                     )}
                   </div>
 
                   {w.address && (
-                    <div className="mt-4 flex items-center gap-1.5 text-xs text-zinc-400">
-                      <MapPin className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
+                    <div className="mt-4 flex items-center gap-1.5 text-xs text-muted">
+                      <MapPin className="h-3.5 w-3.5 shrink-0 text-muted" />
                       <span className="truncate">{w.address}</span>
                     </div>
                   )}
 
                   <div className="mt-4 flex flex-wrap gap-2 text-[11px]">
-                    <span className="rounded-md bg-zinc-800/80 px-2 py-0.5 text-zinc-300 capitalize">
+                    <span className="rounded-md bg-surface-sunken border border-default px-2 py-0.5 text-muted capitalize">
                       {w.type} storage
                     </span>
                     {w.allows_negative_stock && (
-                      <span className="rounded-md bg-amber-500/10 px-2 py-0.5 text-amber-400">
+                      <span className="rounded-md bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-amber-600 dark:text-amber-400">
                         Allows Negative Stock
                       </span>
                     )}
                   </div>
                 </div>
 
-                <div className="mt-5 pt-3 border-t border-zinc-800/60 flex items-center justify-between">
-                  <span className="text-[11px] text-zinc-500">
+                <div className="mt-5 pt-3 border-t border-default flex items-center justify-between">
+                  <span className="text-[11px] text-muted">
                     {w.is_active ? '● Operating' : '○ Disabled'}
                   </span>
                   <button
@@ -172,7 +172,7 @@ export function WarehousesSection() {
                       setSelectedWarehouse(w);
                       setIsLocationModalOpen(true);
                     }}
-                    className="text-xs text-emerald-400 hover:text-emerald-300 font-medium flex items-center gap-1 cursor-pointer"
+                    className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-medium flex items-center gap-1 cursor-pointer"
                   >
                     <Plus className="h-3 w-3" />
                     <span>Add Bin</span>
@@ -198,29 +198,29 @@ export function WarehousesSection() {
           className="space-y-4"
         >
           {errorMsg && (
-            <div className="rounded-lg bg-rose-500/10 p-3 text-xs text-rose-400 border border-rose-500/20">
+            <div className="rounded-lg bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400 border border-rose-500/20">
               {errorMsg}
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-zinc-300 mb-1">Code *</label>
+              <label className="block text-xs font-medium text-default mb-1">Code *</label>
               <input
                 required
                 type="text"
                 placeholder="e.g. WH-CENTRAL"
                 value={draft.code}
                 onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase() })}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none uppercase"
+                className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none uppercase"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-zinc-300 mb-1">Type *</label>
+              <label className="block text-xs font-medium text-default mb-1">Type *</label>
               <select
                 value={draft.type}
                 onChange={(e) => setDraft({ ...draft, type: e.target.value })}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
               >
                 <option value="general">General</option>
                 <option value="raw_materials">Raw Materials Depot</option>
@@ -232,51 +232,51 @@ export function WarehousesSection() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-zinc-300 mb-1">Warehouse Name *</label>
+            <label className="block text-xs font-medium text-default mb-1">Warehouse Name *</label>
             <input
               required
               type="text"
               placeholder="e.g. Central Finished Goods Depot"
               value={draft.name}
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-zinc-300 mb-1">Address</label>
+            <label className="block text-xs font-medium text-default mb-1">Address</label>
             <input
               type="text"
               placeholder="e.g. Plot 45, Tejgaon Industrial Area, Dhaka"
               value={draft.address}
               onChange={(e) => setDraft({ ...draft, address: e.target.value })}
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
             />
           </div>
 
           <div className="flex items-center gap-6 pt-2">
-            <label className="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
+            <label className="flex items-center gap-2 text-xs text-default cursor-pointer">
               <input
                 type="checkbox"
                 checked={draft.is_default}
                 onChange={(e) => setDraft({ ...draft, is_default: e.target.checked })}
-                className="h-4 w-4 rounded border-zinc-800 bg-zinc-950 text-emerald-500 focus:ring-emerald-500/20"
+                className="h-4 w-4 rounded border-default text-emerald-500 focus:ring-emerald-500/20"
               />
               <span>Set as Default Warehouse</span>
             </label>
 
-            <label className="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
+            <label className="flex items-center gap-2 text-xs text-default cursor-pointer">
               <input
                 type="checkbox"
                 checked={draft.allows_negative_stock}
                 onChange={(e) => setDraft({ ...draft, allows_negative_stock: e.target.checked })}
-                className="h-4 w-4 rounded border-zinc-800 bg-zinc-950 text-emerald-500 focus:ring-emerald-500/20"
+                className="h-4 w-4 rounded border-default text-emerald-500 focus:ring-emerald-500/20"
               />
               <span>Allow Negative Stock</span>
             </label>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+          <div className="flex justify-end gap-3 pt-4 border-t border-default">
             <Button variant="secondary" onClick={() => setIsCreateOpen(false)}>
               Cancel
             </Button>
@@ -301,7 +301,7 @@ export function WarehousesSection() {
           className="space-y-4"
         >
           <div>
-            <label className="block text-xs font-medium text-zinc-300 mb-1">
+            <label className="block text-xs font-medium text-default mb-1">
               Location / Bin Code *
             </label>
             <input
@@ -312,23 +312,23 @@ export function WarehousesSection() {
               onChange={(e) =>
                 setLocationDraft({ ...locationDraft, code: e.target.value.toUpperCase() })
               }
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none uppercase"
+              className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none uppercase"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-zinc-300 mb-1">Location Name *</label>
+            <label className="block text-xs font-medium text-default mb-1">Location Name *</label>
             <input
               required
               type="text"
               placeholder="e.g. Aisle 1 Rack A Top Shelf"
               value={locationDraft.name}
               onChange={(e) => setLocationDraft({ ...locationDraft, name: e.target.value })}
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+          <div className="flex justify-end gap-3 pt-4 border-t border-default">
             <Button variant="secondary" onClick={() => setIsLocationModalOpen(false)}>
               Cancel
             </Button>

@@ -68,17 +68,17 @@ export function InvoiceTemplateBuilder({ invoice, onClose }: InvoiceTemplateBuil
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 p-4 bg-zinc-950 text-zinc-100 min-h-[600px]">
+    <div className="flex flex-col lg:flex-row gap-6 p-4 bg-surface text-default min-h-[600px] rounded-2xl">
       {/* Left: Customizer Sidebar */}
-      <div className="w-full lg:w-80 space-y-5 rounded-lg border border-zinc-800 bg-zinc-900/60 p-5">
-        <div className="flex items-center gap-2 border-b border-zinc-800 pb-3">
-          <Sliders className="h-4 w-4 text-emerald-400" />
-          <h3 className="font-semibold text-sm text-zinc-100">Invoice Template Designer</h3>
+      <div className="w-full lg:w-80 space-y-5 rounded-2xl border border-default bg-surface-sunken p-5">
+        <div className="flex items-center gap-2 border-b border-default pb-3">
+          <Sliders className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+          <h3 className="font-semibold text-sm text-default">Invoice Template Designer</h3>
         </div>
 
         {/* Layout Selection */}
         <div className="space-y-2">
-          <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+          <label className="text-xs font-semibold uppercase tracking-wider text-muted">
             Document Layout
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -91,10 +91,10 @@ export function InvoiceTemplateBuilder({ invoice, onClose }: InvoiceTemplateBuil
               <button
                 key={t.id}
                 onClick={() => setLayout(t.id as InvoiceLayout)}
-                className={`flex items-center justify-between rounded-md border p-2.5 text-left text-xs transition-all ${
+                className={`flex items-center justify-between rounded-xl border p-2.5 text-left text-xs transition-all cursor-pointer ${
                   layout === t.id
-                    ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400 font-semibold'
-                    : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:bg-zinc-800'
+                    ? 'border-primary bg-primary/10 text-primary font-semibold'
+                    : 'border-default bg-surface text-muted hover:bg-surface-sunken hover:text-default'
                 }`}
               >
                 <span>{t.label}</span>
@@ -106,61 +106,61 @@ export function InvoiceTemplateBuilder({ invoice, onClose }: InvoiceTemplateBuil
 
         {/* Visibility Toggles */}
         <div className="space-y-3 pt-2">
-          <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+          <label className="text-xs font-semibold uppercase tracking-wider text-muted">
             Components & Modules
           </label>
 
-          <label className="flex items-center justify-between text-xs text-zinc-300">
+          <label className="flex items-center justify-between text-xs text-default cursor-pointer">
             <span>Company Logo & Watermark</span>
             <input
               type="checkbox"
               checked={showLogo}
               onChange={(e) => setShowLogo(e.target.checked)}
-              className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-emerald-500 focus:ring-emerald-500"
+              className="h-4 w-4 rounded border-default bg-surface text-primary focus:ring-primary"
             />
           </label>
 
-          <label className="flex items-center justify-between text-xs text-zinc-300">
+          <label className="flex items-center justify-between text-xs text-default cursor-pointer">
             <span>NBR QR Verification Code</span>
             <input
               type="checkbox"
               checked={showQrCode}
               onChange={(e) => setShowQrCode(e.target.checked)}
-              className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-emerald-500 focus:ring-emerald-500"
+              className="h-4 w-4 rounded border-default bg-surface text-primary focus:ring-primary"
             />
           </label>
 
-          <label className="flex items-center justify-between text-xs text-zinc-300">
+          <label className="flex items-center justify-between text-xs text-default cursor-pointer">
             <span>Detailed Tax & HS Code Breakdown</span>
             <input
               type="checkbox"
               checked={showTaxBreakdown}
               onChange={(e) => setShowTaxBreakdown(e.target.checked)}
-              className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-emerald-500 focus:ring-emerald-500"
+              className="h-4 w-4 rounded border-default bg-surface text-primary focus:ring-primary"
             />
           </label>
 
-          <label className="flex items-center justify-between text-xs text-zinc-300">
+          <label className="flex items-center justify-between text-xs text-default cursor-pointer">
             <span>Bank & Wire Payment Details</span>
             <input
               type="checkbox"
               checked={showBankDetails}
               onChange={(e) => setShowBankDetails(e.target.checked)}
-              className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-emerald-500 focus:ring-emerald-500"
+              className="h-4 w-4 rounded border-default bg-surface text-primary focus:ring-primary"
             />
           </label>
         </div>
 
         {/* Custom Footer Note */}
         <div className="space-y-1.5 pt-2">
-          <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+          <label className="text-xs font-semibold uppercase tracking-wider text-muted">
             Legal Footer Memo
           </label>
           <textarea
             rows={3}
             value={footerNote}
             onChange={(e) => setFooterNote(e.target.value)}
-            className="w-full rounded-md border border-zinc-800 bg-zinc-900 p-2 text-xs text-zinc-200 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+            className="w-full rounded-xl border border-default bg-surface p-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
           />
         </div>
 
@@ -168,7 +168,7 @@ export function InvoiceTemplateBuilder({ invoice, onClose }: InvoiceTemplateBuil
         <div className="pt-3 flex gap-2">
           <button
             onClick={handlePrint}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-emerald-600 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-500"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-2.5 text-xs font-bold text-white shadow-xs hover:bg-primary-hover transition-colors cursor-pointer"
           >
             <Printer className="h-4 w-4" />
             Print / Save PDF
@@ -176,7 +176,7 @@ export function InvoiceTemplateBuilder({ invoice, onClose }: InvoiceTemplateBuil
           {onClose && (
             <button
               onClick={onClose}
-              className="rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2.5 text-xs font-medium text-zinc-300 hover:bg-zinc-800"
+              className="rounded-xl border border-default bg-surface px-3 py-2.5 text-xs font-medium text-muted hover:bg-surface-sunken hover:text-default transition-colors cursor-pointer"
             >
               Close
             </button>
@@ -185,7 +185,7 @@ export function InvoiceTemplateBuilder({ invoice, onClose }: InvoiceTemplateBuil
       </div>
 
       {/* Right: Live Interactive Printable Preview Sheet */}
-      <div className="flex-1 flex justify-center overflow-auto p-4 rounded-lg border border-zinc-800 bg-zinc-900/30">
+      <div className="flex-1 flex justify-center overflow-auto p-4 rounded-2xl border border-default bg-surface-sunken">
         <div
           className={`bg-white text-zinc-900 shadow-2xl rounded-sm transition-all ${
             layout === 'thermal_80mm'

@@ -104,29 +104,25 @@
   --badge-tracking: 0.05em;
 
   /* ─── Navigation ───────────────────────────────────────────────────────────
-     The sidebar is dark chrome in BOTH modes (§3.4) — it does not re-map, so
-     its tokens resolve to navy primitives directly rather than to semantic
-     surface roles. This is the documented exception to the layer-2-only rule
-     and the reason these tokens exist at all: they give the sidebar a single
-     place to be theme-independent without any component hardcoding a hex.
+     Light mode navigation default tokens. Dark mode re-mapped in tokens.semantic.dark.css.
      ──────────────────────────────────────────────────────────────────────── */
-  --nav-item-height: 36px;
+  --nav-item-height: 38px;
   --nav-item-px: var(--space-3);
   --nav-item-gap: var(--space-2_5);
-  --nav-item-radius: var(--radius-sm);
-  --nav-bg: var(--navy-900);
-  --nav-bg-deep: var(--navy-950);
-  --nav-fg: var(--slate-400);
-  --nav-fg-hover: #ffffff;
-  --nav-fg-active: #ffffff;
+  --nav-item-radius: var(--radius-md);
+  --nav-bg: #ffffff;
+  --nav-bg-deep: var(--slate-50);
+  --nav-fg: var(--slate-600);
+  --nav-fg-hover: var(--navy-900);
+  --nav-fg-active: var(--blue-600);
   --nav-icon: var(--slate-500);
-  --nav-icon-hover: var(--slate-300);
-  --nav-icon-active: var(--blue-400);
-  --nav-hover-bg: rgb(255 255 255 / 0.08);
-  --nav-active-bg: rgb(37 99 235 / 0.18);
-  --nav-active-marker: var(--blue-400);
-  --nav-border: rgb(255 255 255 / 0.1);
-  --nav-section-fg: var(--slate-600);
+  --nav-icon-hover: var(--slate-800);
+  --nav-icon-active: var(--blue-600);
+  --nav-hover-bg: var(--slate-100);
+  --nav-active-bg: var(--blue-50);
+  --nav-active-marker: var(--blue-600);
+  --nav-border: var(--slate-200);
+  --nav-section-fg: var(--slate-500);
 
   /* ─── Tooltips & Popovers ──────────────────────────────────────────────────
      The tooltip also ignores theme: a dark chip on a light surface and a dark

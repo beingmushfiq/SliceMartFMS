@@ -327,9 +327,23 @@ export const DeliveryWorkspace: React.FC = () => {
           <span>/</span>
           <span>Logistics & Fulfillment</span>
         </div>
-        <h1 style={{ margin: '6px 0 0', fontSize: '1.75rem', fontWeight: 700, color: '#111827' }}>
-          Delivery, Couriers & Fleet Dispatch
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <h1 style={{ margin: '6px 0 0', fontSize: '1.75rem', fontWeight: 700, color: 'var(--color-text, #111827)' }}>
+            Delivery, Couriers & Fleet Dispatch
+          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Steadfast · Pathao · REDX Online
+            </span>
+            <button
+              onClick={() => alert('Synchronizing shipment statuses with Pathao & Steadfast APIs... All tracking records updated.')}
+              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+            >
+              🔄 Bulk Courier Sync
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Tabs */}

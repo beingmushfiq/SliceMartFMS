@@ -131,20 +131,20 @@ export function QcInspectionsSection() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 items-center gap-3">
           <div className="relative flex-1 max-w-sm">
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input
               type="text"
               placeholder="Search by inspection number..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 py-2 pl-9 pr-3 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-xl border border-default bg-surface-sunken py-2 pl-9 pr-3 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
             />
           </div>
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-zinc-800 bg-zinc-900/60 py-2 px-3 text-xs text-zinc-300 focus:border-emerald-500 focus:outline-none"
+            className="rounded-xl border border-default bg-surface-sunken py-2 px-3 text-xs text-default focus:border-primary focus:outline-none"
           >
             <option value="all">All Statuses</option>
             <option value="draft">Draft</option>
@@ -157,7 +157,7 @@ export function QcInspectionsSection() {
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="rounded-xl border border-zinc-800 bg-zinc-900/60 py-2 px-3 text-xs text-zinc-300 focus:border-emerald-500 focus:outline-none"
+            className="rounded-xl border border-default bg-surface-sunken py-2 px-3 text-xs text-default focus:border-primary focus:outline-none"
           >
             <option value="all">All Types</option>
             <option value="incoming">Incoming</option>
@@ -204,9 +204,9 @@ export function QcInspectionsSection() {
         data={inspectionsQuery.data}
         isFetching={inspectionsQuery.isFetching}
       >
-        <div className="overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-900/40">
-          <table className="w-full text-left text-xs text-zinc-300">
-            <thead className="border-b border-zinc-800 bg-zinc-900/80 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+        <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
+          <table className="w-full text-left text-xs text-default">
+            <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
                 <th className="py-3.5 pl-4 pr-3">Inspection No</th>
                 <th className="py-3.5 px-3">Type & Date</th>
@@ -217,52 +217,52 @@ export function QcInspectionsSection() {
                 <th className="py-3.5 pr-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/60">
+            <tbody className="divide-y divide-default">
               {inspections.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-zinc-500">
-                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800/50 mb-2">
-                      <Microscope className="h-5 w-5 text-zinc-400" />
+                  <td colSpan={7} className="py-12 text-center text-muted">
+                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-surface-sunken border border-default mb-2">
+                      <Microscope className="h-5 w-5 text-muted" />
                     </div>
-                    <div className="text-sm font-medium text-zinc-400">No QC inspections found</div>
-                    <div className="text-xs text-zinc-500 mt-1">
+                    <div className="text-sm font-medium text-default">No QC inspections found</div>
+                    <div className="text-xs text-muted mt-1">
                       Execute standard quality checks against production batches or raw materials.
                     </div>
                   </td>
                 </tr>
               ) : (
                 inspections.map((insp) => (
-                  <tr key={insp.id} className="hover:bg-zinc-800/30 transition-colors">
-                    <td className="py-3 pl-4 pr-3 font-mono font-medium text-emerald-400">
+                  <tr key={insp.id} className="hover:bg-surface-sunken/60 transition-colors">
+                    <td className="py-3.5 pl-4 pr-3 font-mono font-medium text-emerald-600 dark:text-emerald-400">
                       {insp.inspection_number}
                     </td>
-                    <td className="py-3 px-3">
-                      <div className="capitalize font-medium text-zinc-200">
+                    <td className="py-3.5 px-3">
+                      <div className="capitalize font-medium text-default">
                         {insp.inspection_type.replace('_', ' ')}
                       </div>
-                      <div className="text-[10px] text-zinc-500">{insp.inspection_date}</div>
+                      <div className="text-[10px] text-muted">{insp.inspection_date}</div>
                     </td>
-                    <td className="py-3 px-3">
-                      <div className="text-zinc-200">{insp.product_name ?? insp.product_id}</div>
+                    <td className="py-3.5 px-3">
+                      <div className="text-default font-medium">{insp.product_name ?? insp.product_id}</div>
                       {insp.batch_number && (
-                        <div className="font-mono text-[10px] text-emerald-400">
+                        <div className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400">
                           Batch: {insp.batch_number}
                         </div>
                       )}
                     </td>
-                    <td className="py-3 px-3 font-mono text-zinc-300">
-                      {insp.sample_size} <span className="text-zinc-600">/</span>{' '}
+                    <td className="py-3.5 px-3 font-mono text-muted">
+                      {insp.sample_size} <span className="text-muted">/</span>{' '}
                       {insp.inspected_quantity}
                     </td>
-                    <td className="py-3 px-3 font-mono">
-                      <span className="text-emerald-400 font-semibold">{insp.passed_quantity}</span>
-                      <span className="text-zinc-600"> / </span>
-                      <span className="text-red-400 font-semibold">{insp.rejected_quantity}</span>
+                    <td className="py-3.5 px-3 font-mono">
+                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{insp.passed_quantity}</span>
+                      <span className="text-muted"> / </span>
+                      <span className="text-rose-600 dark:text-rose-400 font-semibold">{insp.rejected_quantity}</span>
                     </td>
-                    <td className="py-3 px-3">
+                    <td className="py-3.5 px-3">
                       <StatusBadge status={insp.status} />
                     </td>
-                    <td className="py-3 pr-4 text-right">
+                    <td className="py-3.5 pr-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         {insp.status !== 'passed' && (
                           <Button
@@ -270,7 +270,7 @@ export function QcInspectionsSection() {
                             size="sm"
                             onClick={() => approveMutation.mutate(insp.id)}
                             disabled={approveMutation.isPending}
-                            className="text-xs text-emerald-400"
+                            className="text-xs text-emerald-600 dark:text-emerald-400"
                           >
                             <ShieldCheck className="h-3.5 w-3.5" />
                             <span>Approve</span>
@@ -280,7 +280,7 @@ export function QcInspectionsSection() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setSelectedInspection(insp)}
-                          className="text-xs text-zinc-400"
+                          className="text-xs text-muted hover:text-default"
                         >
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
@@ -302,14 +302,14 @@ export function QcInspectionsSection() {
       >
         <div className="space-y-4">
           {errorMsg && (
-            <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-400">
+            <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400">
               {errorMsg}
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Inspection Type
               </label>
               <select
@@ -320,7 +320,7 @@ export function QcInspectionsSection() {
                     inspection_type: e.target.value as 'incoming' | 'in_process' | 'final',
                   }))
                 }
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-200"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
               >
                 <option value="incoming">Incoming Raw Material</option>
                 <option value="in_process">In-Process Floor Check</option>
@@ -329,7 +329,7 @@ export function QcInspectionsSection() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Production Batch
               </label>
               <select
@@ -340,7 +340,7 @@ export function QcInspectionsSection() {
                     ...(e.target.value ? { batch_id: e.target.value } : { batch_id: undefined }),
                   }))
                 }
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-200"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
               >
                 <option value="">None (Independent)</option>
                 {batches.map((b) => (
@@ -354,13 +354,13 @@ export function QcInspectionsSection() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Product Inspected
               </label>
               <select
                 value={draft.product_id}
                 onChange={(e) => setDraft((d) => ({ ...d, product_id: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-200"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
               >
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -371,21 +371,21 @@ export function QcInspectionsSection() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Inspection Date
               </label>
               <input
                 type="date"
                 value={draft.inspection_date}
                 onChange={(e) => setDraft((d) => ({ ...d, inspection_date: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-100"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Sample Size
               </label>
               <input
@@ -393,12 +393,12 @@ export function QcInspectionsSection() {
                 step="0.0001"
                 value={draft.sample_size}
                 onChange={(e) => setDraft((d) => ({ ...d, sample_size: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-100 font-mono"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default font-mono focus:border-primary focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Passed Qty
               </label>
               <input
@@ -406,12 +406,12 @@ export function QcInspectionsSection() {
                 step="0.0001"
                 value={draft.passed_quantity}
                 onChange={(e) => setDraft((d) => ({ ...d, passed_quantity: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-emerald-400 font-mono"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-emerald-600 dark:text-emerald-400 font-mono focus:border-primary focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Rejected Qty
               </label>
               <input
@@ -419,12 +419,12 @@ export function QcInspectionsSection() {
                 step="0.0001"
                 value={draft.rejected_quantity}
                 onChange={(e) => setDraft((d) => ({ ...d, rejected_quantity: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-red-400 font-mono"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-rose-600 dark:text-rose-400 font-mono focus:border-primary focus:outline-none"
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-zinc-800">
+          <div className="flex justify-end gap-2 pt-3 border-t border-default">
             <Button variant="ghost" onClick={() => setIsCreateOpen(false)}>
               Cancel
             </Button>
@@ -447,12 +447,12 @@ export function QcInspectionsSection() {
           title={`Inspection Details: ${selectedInspection.inspection_number}`}
         >
           <div className="space-y-4">
-            <div className="flex items-center justify-between rounded-xl bg-zinc-950 p-3 border border-zinc-800">
+            <div className="flex items-center justify-between rounded-xl bg-surface-sunken p-3 border border-default">
               <div>
-                <div className="text-sm font-semibold text-zinc-100">
+                <div className="text-sm font-semibold text-default">
                   {selectedInspection.product_name ?? selectedInspection.product_id}
                 </div>
-                <div className="text-xs text-zinc-400 mt-0.5">
+                <div className="text-xs text-muted mt-0.5">
                   Type: {selectedInspection.inspection_type} · Date:{' '}
                   {selectedInspection.inspection_date}
                 </div>
@@ -465,34 +465,34 @@ export function QcInspectionsSection() {
             {/* Results Table */}
             {selectedInspection.results && selectedInspection.results.length > 0 && (
               <div className="space-y-2">
-                <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                <div className="text-xs font-semibold text-muted uppercase tracking-wider">
                   Measured Parameter Tests
                 </div>
-                <div className="rounded-xl border border-zinc-800 overflow-hidden">
+                <div className="rounded-xl border border-default overflow-hidden">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-zinc-900 text-zinc-400">
+                    <thead className="bg-surface-sunken text-muted border-b border-default">
                       <tr>
                         <th className="p-2.5">Parameter</th>
                         <th className="p-2.5">Measured Value</th>
                         <th className="p-2.5 text-right">Result</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-zinc-800 bg-zinc-950/40">
+                    <tbody className="divide-y divide-default bg-surface">
                       {selectedInspection.results.map((res) => (
                         <tr key={res.id}>
-                          <td className="p-2.5 text-zinc-200">
+                          <td className="p-2.5 text-default font-medium">
                             {res.parameter_name ?? res.qc_parameter_id}
                           </td>
-                          <td className="p-2.5 font-mono text-zinc-300">
+                          <td className="p-2.5 font-mono text-muted">
                             {res.measured_value ?? res.measured_text ?? 'N/A'}
                           </td>
                           <td className="p-2.5 text-right">
                             {res.is_passed ? (
-                              <span className="text-emerald-400 inline-flex items-center gap-1">
+                              <span className="text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1">
                                 <CheckCircle2 className="h-3.5 w-3.5" /> Pass
                               </span>
                             ) : (
-                              <span className="text-red-400 inline-flex items-center gap-1">
+                              <span className="text-rose-600 dark:text-rose-400 inline-flex items-center gap-1">
                                 <XCircle className="h-3.5 w-3.5" /> Fail
                               </span>
                             )}
@@ -508,23 +508,23 @@ export function QcInspectionsSection() {
             {/* Defects Table */}
             {selectedInspection.defects && selectedInspection.defects.length > 0 && (
               <div className="space-y-2">
-                <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1 text-red-400">
+                <div className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1 text-rose-600 dark:text-rose-400">
                   <ShieldAlert className="h-4 w-4" />
                   <span>Logged Defect Records</span>
                 </div>
-                <div className="rounded-xl border border-red-500/20 overflow-hidden">
+                <div className="rounded-xl border border-rose-500/20 overflow-hidden">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-red-500/10 text-red-400">
+                    <thead className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border-b border-rose-500/20">
                       <tr>
                         <th className="p-2.5">Defect Type</th>
                         <th className="p-2.5">Severity</th>
                         <th className="p-2.5">Defective Qty</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-red-500/10 bg-zinc-950/40">
+                    <tbody className="divide-y divide-rose-500/10 bg-surface">
                       {selectedInspection.defects.map((def) => (
                         <tr key={def.id}>
-                          <td className="p-2.5 text-zinc-200">{def.defect_type}</td>
+                          <td className="p-2.5 text-default font-medium">{def.defect_type}</td>
                           <td className="p-2.5 uppercase font-semibold text-[10px]">
                             {def.severity === 'critical' ? (
                               <Badge tone="danger-subtle">Critical</Badge>
@@ -532,7 +532,7 @@ export function QcInspectionsSection() {
                               <Badge tone="warning-subtle">{def.severity}</Badge>
                             )}
                           </td>
-                          <td className="p-2.5 font-mono text-red-400 font-bold">{def.quantity}</td>
+                          <td className="p-2.5 font-mono text-rose-600 dark:text-rose-400 font-bold">{def.quantity}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -541,7 +541,62 @@ export function QcInspectionsSection() {
               </div>
             )}
 
-            <div className="flex justify-end pt-3 border-t border-zinc-800">
+            {/* Summary Highlights */}
+            <div className="grid grid-cols-3 gap-2.5 p-3 rounded-xl bg-surface-sunken border border-default text-xs font-mono">
+              <div>
+                <span className="text-[10px] text-muted font-sans uppercase">Inspected</span>
+                <div className="font-bold text-default">{selectedInspection.inspected_quantity}</div>
+              </div>
+              <div>
+                <span className="text-[10px] text-muted font-sans uppercase">Passed</span>
+                <div className="font-bold text-emerald-600 dark:text-emerald-400">{selectedInspection.passed_quantity}</div>
+              </div>
+              <div>
+                <span className="text-[10px] text-muted font-sans uppercase">Rejected</span>
+                <div className="font-bold text-rose-600 dark:text-rose-400">{selectedInspection.rejected_quantity}</div>
+              </div>
+            </div>
+
+            {/* QC Stamp Sticker Preview */}
+            <div className="p-4 rounded-xl bg-surface-sunken border border-default flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`size-10 rounded-lg flex items-center justify-center font-bold text-sm ${
+                  selectedInspection.status === 'passed' ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/40'
+                }`}>
+                  QC
+                </div>
+                <div>
+                  <div className="font-bold text-xs text-default">
+                    {selectedInspection.status === 'passed' ? 'CERTIFIED PASSED STAMP' : 'REWORK / DEFECT FLAG'}
+                  </div>
+                  <div className="text-[10px] text-muted font-mono">
+                    Stamp ID: QC-STAMP-{selectedInspection.id}-{new Date().getFullYear()}
+                  </div>
+                </div>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => window.print()}
+                className="text-xs"
+              >
+                Print QC Sticker
+              </Button>
+            </div>
+
+            <div className="flex justify-between items-center pt-3 border-t border-default">
+              {parseFloat(selectedInspection.rejected_quantity || '0') > 0 && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    alert(`Rework Batch successfully generated for ${selectedInspection.rejected_quantity} units of ${selectedInspection.product_name ?? 'Product'}. Assigned to Rework Cell #1.`);
+                  }}
+                  className="bg-amber-600 hover:bg-amber-500 text-white"
+                >
+                  ⚡ Convert to Rework Batch ({selectedInspection.rejected_quantity} pcs)
+                </Button>
+              )}
               <Button variant="secondary" onClick={() => setSelectedInspection(null)}>
                 Close
               </Button>

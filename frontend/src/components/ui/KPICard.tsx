@@ -73,7 +73,7 @@ export function KPICard({
         whileTap: { scale: craft.pressScale },
       })}
       className={cn(
-        'rounded-(--card-radius) p-(--card-padding) bg-(--card-bg) border border-(--card-border) shadow-(--card-shadow)',
+        'group relative overflow-hidden rounded-xl p-5 bg-surface/90 border border-white/8 shadow-sm backdrop-blur-md transition-all duration-200 hover:border-indigo-500/30 hover:shadow-[0_0_25px_rgba(99,102,241,0.08)]',
         alert && alertBorder[alert],
         isClickable && 'cursor-pointer',
         className
@@ -84,16 +84,22 @@ export function KPICard({
       onKeyDown={isClickable ? (e) => e.key === 'Enter' && onClick?.() : undefined}
       aria-label={isClickable ? `${label}: ${value}` : undefined}
     >
-      <div className="flex items-start justify-between gap-2">
+      {/* Subtle top card shimmer highlight */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-white/15 to-transparent"
+        aria-hidden="true"
+      />
+
+      <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1 min-w-0">
-          <span className="text-2xs font-semibold tracking-wide uppercase text-muted truncate">
+          <span className="text-[11px] font-bold tracking-wider uppercase text-muted truncate">
             {label}
           </span>
 
           {isNumeric ? (
             <AnimatedNumber
               value={value as number}
-              className="text-(length:--kpi-value-size) font-bold text-default tabular"
+              className="text-2xl sm:text-3xl font-extrabold text-default tracking-tight tabular"
             />
           ) : (
             <m.span
@@ -101,13 +107,13 @@ export function KPICard({
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...enterBase }}
-              className="text-(length:--kpi-value-size) font-bold text-default tabular"
+              className="text-2xl sm:text-3xl font-extrabold text-default tracking-tight tabular"
             >
               {value}
             </m.span>
           )}
 
-          {subValue && <span className="text-xs text-muted mt-0.5">{subValue}</span>}
+          {subValue && <span className="text-xs text-muted font-medium mt-0.5">{subValue}</span>}
         </div>
 
         {icon && (
@@ -116,7 +122,7 @@ export function KPICard({
             animate={{ scale: 1, opacity: 1 }}
             transition={{ ...enterBase, delay: index * stagger + 0.15 }}
             className={cn(
-              'w-9 h-9 rounded-lg flex items-center justify-center shrink-0',
+              'size-10 rounded-xl flex items-center justify-center shrink-0 border border-white/8 shadow-sm transition-transform duration-200 group-hover:scale-110',
               iconColor ?? 'bg-surface-sunken text-muted'
             )}
           >
@@ -131,20 +137,20 @@ export function KPICard({
           animate={{ opacity: 1 }}
           transition={{ delay: index * stagger + 0.25 }}
           className={cn(
-            'flex items-center gap-1 text-xs',
-            delta > 0 ? 'text-success' : delta < 0 ? 'text-danger' : 'text-muted'
+            'flex items-center gap-1.5 text-xs font-semibold mt-3 pt-2.5 border-t border-white/5',
+            delta > 0 ? 'text-emerald-400' : delta < 0 ? 'text-rose-400' : 'text-muted'
           )}
         >
           {delta > 0 ? (
-            <TrendingUp className="w-3 h-3" aria-hidden="true" />
+            <TrendingUp className="w-3.5 h-3.5" aria-hidden="true" />
           ) : delta < 0 ? (
-            <TrendingDown className="w-3 h-3" aria-hidden="true" />
+            <TrendingDown className="w-3.5 h-3.5" aria-hidden="true" />
           ) : (
-            <Minus className="w-3 h-3" aria-hidden="true" />
+            <Minus className="w-3.5 h-3.5" aria-hidden="true" />
           )}
           <span>
             {delta > 0 ? '+' : ''}
-            {delta}%{deltaLabel && <span className="text-muted ml-1">{deltaLabel}</span>}
+            {delta}%{deltaLabel && <span className="text-muted font-normal ml-1">· {deltaLabel}</span>}
           </span>
         </m.div>
       )}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowDownLeft, ArrowUpRight, CheckCircle2, Plus, RefreshCw, Search } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Plus, RefreshCw, Search } from 'lucide-react';
 import type { Payment } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
 
@@ -77,20 +77,20 @@ export function PaymentsSection() {
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
             <input
               type="text"
               placeholder="Search by payment #, ref..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-9 w-64 rounded-md border border-zinc-800 bg-zinc-900/60 pl-8 pr-3 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+              className="h-9 w-64 rounded-xl border border-default bg-surface-sunken pl-8 pr-3 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
             />
           </div>
 
           <select
             value={directionFilter}
             onChange={(e) => setDirectionFilter(e.target.value)}
-            className="h-9 rounded-md border border-zinc-800 bg-zinc-900/60 px-3 text-xs text-zinc-200 focus:border-emerald-500 focus:outline-none"
+            className="h-9 rounded-xl border border-default bg-surface-sunken px-3 text-xs text-default focus:border-primary focus:outline-none"
           >
             <option value="all">All Directions</option>
             <option value="in">Inflow (Customer Receipts)</option>
@@ -100,7 +100,7 @@ export function PaymentsSection() {
           <button
             onClick={fetchPayments}
             disabled={loading}
-            className="flex h-9 items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900/60 px-3 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-50"
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface-sunken px-3 text-xs font-medium text-muted hover:bg-surface hover:text-default disabled:opacity-50 transition-colors cursor-pointer"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -109,7 +109,7 @@ export function PaymentsSection() {
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex h-9 items-center gap-1.5 rounded-md bg-emerald-600 px-3.5 text-xs font-medium text-white shadow-sm hover:bg-emerald-500"
+          className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-medium text-white shadow-xs hover:bg-primary-hover transition-colors cursor-pointer"
         >
           <Plus className="h-3.5 w-3.5" />
           Record Payment
@@ -117,41 +117,41 @@ export function PaymentsSection() {
       </div>
 
       {/* Payments Table */}
-      <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/40">
+      <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="border-b border-zinc-800 bg-zinc-900/80 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+          <table className="w-full text-left text-xs text-default">
+            <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
-                <th className="px-4 py-3">Payment Number</th>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Direction</th>
-                <th className="px-4 py-3">Method</th>
-                <th className="px-4 py-3">Reference</th>
-                <th className="px-4 py-3">Total Amount</th>
-                <th className="px-4 py-3">Allocated</th>
-                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3.5">Payment Number</th>
+                <th className="px-4 py-3.5">Date</th>
+                <th className="px-4 py-3.5">Direction</th>
+                <th className="px-4 py-3.5">Method</th>
+                <th className="px-4 py-3.5">Reference</th>
+                <th className="px-4 py-3.5">Total Amount</th>
+                <th className="px-4 py-3.5">Allocated</th>
+                <th className="px-4 py-3.5">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/60">
+            <tbody className="divide-y divide-default">
               {filteredPayments.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-zinc-500">
+                  <td colSpan={8} className="px-4 py-8 text-center text-muted">
                     {loading ? 'Loading payments...' : 'No payments found.'}
                   </td>
                 </tr>
               ) : (
                 filteredPayments.map((p) => (
-                  <tr key={p.id} className="hover:bg-zinc-800/20 transition-colors">
-                    <td className="px-4 py-3 font-mono font-medium text-emerald-400">
+                  <tr key={p.id} className="hover:bg-surface-sunken/60 transition-colors">
+                    <td className="px-4 py-3.5 font-mono font-medium text-emerald-600 dark:text-emerald-400">
                       {p.payment_number}
                     </td>
-                    <td className="px-4 py-3 text-zinc-400">{p.payment_date}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3.5 text-muted">{p.payment_date}</td>
+                    <td className="px-4 py-3.5">
                       <span
-                        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
                           p.direction === 'in'
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                            : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                            : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
                         }`}
                       >
                         {p.direction === 'in' ? (
@@ -162,26 +162,26 @@ export function PaymentsSection() {
                         {p.direction === 'in' ? 'Inflow' : 'Outflow'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 uppercase text-[10px] text-zinc-300">
+                    <td className="px-4 py-3.5 uppercase text-[10px] text-default font-medium">
                       {p.method.replace('_', ' ')}
                     </td>
-                    <td className="px-4 py-3 text-zinc-400 font-mono">
+                    <td className="px-4 py-3.5 text-muted font-mono">
                       {p.reference_number ?? '-'}
                     </td>
-                    <td className="px-4 py-3 font-mono font-medium text-zinc-100">
+                    <td className="px-4 py-3.5 font-mono font-medium text-default">
                       {parseFloat(p.amount || '0').toLocaleString('en-US', {
                         minimumFractionDigits: 2,
                       })}{' '}
-                      <span className="text-[10px] text-zinc-500">{p.currency_code}</span>
+                      <span className="text-[10px] text-muted">{p.currency_code}</span>
                     </td>
-                    <td className="px-4 py-3 font-mono text-zinc-400">
+                    <td className="px-4 py-3.5 font-mono text-muted">
                       {parseFloat(p.allocated_amount || '0').toLocaleString('en-US', {
                         minimumFractionDigits: 2,
                       })}
                     </td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        <CheckCircle2 className="h-3 w-3" /> {p.status}
+                    <td className="px-4 py-3.5">
+                      <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        {p.status}
                       </span>
                     </td>
                   </tr>
@@ -195,16 +195,16 @@ export function PaymentsSection() {
       {/* Record Payment Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-md rounded-lg border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
-            <h3 className="text-base font-semibold text-zinc-100">Record Payment Transaction</h3>
+          <div className="w-full max-w-md rounded-2xl border border-default bg-surface p-6 shadow-xl">
+            <h3 className="text-base font-semibold text-default">Record Payment / Receipt</h3>
             <form onSubmit={handleRecordPayment} className="mt-4 space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-zinc-400">Direction</label>
+                  <label className="block text-xs font-medium text-default mb-1">Direction</label>
                   <select
                     value={direction}
                     onChange={(e) => setDirection(e.target.value as typeof direction)}
-                    className="mt-1 w-full rounded-md border border-zinc-800 bg-zinc-800/80 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                    className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
                   >
                     <option value="in">Customer Inflow (Receipt)</option>
                     <option value="out">Vendor Outflow (Payment)</option>
@@ -212,11 +212,11 @@ export function PaymentsSection() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-zinc-400">Method</label>
+                  <label className="block text-xs font-medium text-default mb-1">Method</label>
                   <select
                     value={method}
                     onChange={(e) => setMethod(e.target.value as typeof method)}
-                    className="mt-1 w-full rounded-md border border-zinc-800 bg-zinc-800/80 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                    className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
                   >
                     <option value="cash">Cash</option>
                     <option value="bank_transfer">Bank Transfer</option>
@@ -228,7 +228,7 @@ export function PaymentsSection() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-400">Amount (BDT)</label>
+                <label className="block text-xs font-medium text-default mb-1">Amount (BDT)</label>
                 <input
                   type="number"
                   step="0.0001"
@@ -236,22 +236,22 @@ export function PaymentsSection() {
                   placeholder="e.g. 5000.00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-zinc-800 bg-zinc-800/80 px-3 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-400">Payment Date</label>
+                <label className="block text-xs font-medium text-default mb-1">Payment Date</label>
                 <input
                   type="date"
                   value={paymentDate}
                   onChange={(e) => setPaymentDate(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-zinc-800 bg-zinc-800/80 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-400">
+                <label className="block text-xs font-medium text-default mb-1">
                   Transaction / Cheque Reference #
                 </label>
                 <input
@@ -259,33 +259,33 @@ export function PaymentsSection() {
                   placeholder="e.g. TRX-9823412 or Cheque #0012"
                   value={referenceNumber}
                   onChange={(e) => setReferenceNumber(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-zinc-800 bg-zinc-800/80 px-3 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-400">Notes</label>
+                <label className="block text-xs font-medium text-default mb-1">Notes</label>
                 <textarea
                   rows={2}
                   placeholder="Optional memo..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-zinc-800 bg-zinc-800/80 px-3 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-3 border-t border-default">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="rounded-md border border-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-800"
+                  className="rounded-xl border border-default px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface-sunken hover:text-default transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="rounded-md bg-emerald-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                  className="rounded-xl bg-primary px-4 py-1.5 text-xs font-medium text-white hover:bg-primary-hover disabled:opacity-50 transition-colors cursor-pointer"
                 >
                   {loading ? 'Recording...' : 'Record Payment'}
                 </button>

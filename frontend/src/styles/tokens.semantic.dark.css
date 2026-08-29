@@ -18,15 +18,11 @@
   /* ─── Surfaces ─────────────────────────────────────────────────────────────
      §3.3 RULE 1 — Elevation is expressed by lightness, not shadow.
 
-     Shadows are nearly invisible on dark backgrounds, so the progression runs
-     the other way: --color-surface-raised is LIGHTER than --color-surface, and
-     the shadow tiers reduce to a subtle ring (see the --shadow-* overrides
-     at the foot of this file).
-
-       bg      navy-950   the deepest layer, behind everything
-       surface navy-900   cards, tables, panels
-       raised  navy-800   modals, popovers, dropdowns — lighter = higher
-       sunken  navy-950   table headers, inset wells — back to the deepest
+     Luxury Obsidian Multi-Layered Elevation:
+       bg      navy-950   #06090f (deep chromatic black base)
+       surface navy-900   #0a0e17 (obsidian card foundation)
+       raised  navy-800   #131a29 (elevated interactive modals and menus)
+       sunken  navy-950   #06090f (inset wells, table headers)
      ──────────────────────────────────────────────────────────────────────── */
   --color-bg: var(--navy-950);
   --color-surface: var(--navy-900);
@@ -35,77 +31,56 @@
 
   /* ─── Borders ──────────────────────────────────────────────────────────────
      §3.3 RULE 3 — Borders gain opacity, not hue.
-
-     rgb(255 255 255 / 0.08) reads as a hairline at any surface lightness; a
-     fixed grey does not — it would look correct on navy-900 and disappear on
-     navy-800. Opacity-based borders are self-adjusting.
+     Ultra-fine hairline with crisp contrast separation.
      ──────────────────────────────────────────────────────────────────────── */
-  --color-border: rgb(255 255 255 / 0.08);
-  --color-border-strong: rgb(255 255 255 / 0.16);
+  --color-border: rgb(255 255 255 / 0.07);
+  --color-border-strong: rgb(255 255 255 / 0.14);
 
   /* ─── Text Hierarchy ───────────────────────────────────────────────────────
-     Slate 100 rather than pure white for body text. Pure white on navy has
-     too much contrast and produces halation — the text appears to vibrate
-     during long reading sessions, which is exactly what a stock ledger is.
+     Crisp platinum and slate hierarchy.
      ──────────────────────────────────────────────────────────────────────── */
-  --color-text: var(--slate-100);
-  --color-text-muted: var(--slate-400);
-  --color-text-subtle: var(--slate-500);
+  --color-text: #f8fafc;
+  --color-text-muted: #94a3b8;
+  --color-text-subtle: #64748b;
 
   /* ─── Primary ──────────────────────────────────────────────────────────────
-     Steps up the ramp: blue-500 instead of blue-600. A mid-dark blue on a
-     dark navy surface has too little separation from the background.
-
-     --color-primary-fg stays navy-950 rather than white: blue-500 is light
-     enough that dark text on it is the higher-contrast pairing (it clears
-     4.5:1 comfortably, whereas white on blue-500 does not).
-
-     --color-primary-subtle becomes a translucent tint rather than a solid
-     colour — blue-950 as a solid would fight the navy surface underneath it.
+     Luminous Electric Indigo / Cobalt Accent
      ──────────────────────────────────────────────────────────────────────── */
-  --color-primary: var(--blue-500);
-  --color-primary-hover: var(--blue-400);
-  --color-primary-fg: var(--navy-950);
-  --color-primary-subtle: rgb(59 130 246 / 0.14);
+  --color-primary: #6366f1;
+  --color-primary-hover: #818cf8;
+  --color-primary-fg: #ffffff;
+  --color-primary-subtle: rgb(99 102 241 / 0.14);
 
   /* ─── Accent ───────────────────────────────────────────────────────────────
-     Amber-400: one step lighter, so it still reads as warm emphasis rather
-     than muddy brown against navy.
+     Auric Gold / Warm Amber
      ──────────────────────────────────────────────────────────────────────── */
-  --color-accent: var(--amber-400);
-  --color-accent-fg: var(--navy-950);
-  --color-accent-subtle: rgb(251 191 36 / 0.14);
+  --color-accent: #f59e0b;
+  --color-accent-fg: #0a0e17;
+  --color-accent-subtle: rgb(245 158 11 / 0.14);
 
   /* ─── Status Colours ───────────────────────────────────────────────────────
-     §3.3 RULE 2 — Status colours are re-tuned, not reused.
-
-     --red-600 on navy is harsh and vibrates. Dark mode uses lighter, slightly
-     desaturated status hues (the -400 steps) paired with translucent -subtle
-     backgrounds instead of the solid -50 tints, which would be far too bright.
-
-     The foreground flips to navy-950 for the same reason as primary: the -400
-     steps are light, so dark text on them is the higher-contrast pairing.
+     Luminous status hues with soft ambient diffusion.
      ──────────────────────────────────────────────────────────────────────── */
 
-  /* success */
-  --color-success: var(--green-400);
-  --color-success-fg: var(--navy-950);
-  --color-success-subtle: rgb(74 222 128 / 0.14);
+  /* success — vibrant emerald */
+  --color-success: #10b981;
+  --color-success-fg: #0a0e17;
+  --color-success-subtle: rgb(16 185 129 / 0.14);
 
-  /* warning */
-  --color-warning: var(--amber-400);
-  --color-warning-fg: var(--navy-950);
-  --color-warning-subtle: rgb(251 191 36 / 0.14);
+  /* warning — amber */
+  --color-warning: #f59e0b;
+  --color-warning-fg: #0a0e17;
+  --color-warning-subtle: rgb(245 158 11 / 0.14);
 
-  /* danger */
-  --color-danger: var(--red-400);
-  --color-danger-fg: var(--navy-950);
-  --color-danger-subtle: rgb(248 113 113 / 0.14);
+  /* danger — rose / crimson */
+  --color-danger: #f43f5e;
+  --color-danger-fg: #ffffff;
+  --color-danger-subtle: rgb(244 63 94 / 0.14);
 
-  /* info */
-  --color-info: var(--cyan-400);
-  --color-info-fg: var(--navy-950);
-  --color-info-subtle: rgb(34 211 238 / 0.14);
+  /* info — electric cyan */
+  --color-info: #06b6d4;
+  --color-info-fg: #0a0e17;
+  --color-info-subtle: rgb(6 182 212 / 0.14);
 
   /* ─── Interactive States ───────────────────────────────────────────────────
      The focus ring brightens (blue-400 base at a higher opacity) so it remains
@@ -148,6 +123,21 @@
   --shadow-md: 0 0 0 1px rgb(255 255 255 / 0.06), 0 4px 14px -2px rgb(0 0 0 / 0.5);
   --shadow-lg: 0 0 0 1px rgb(255 255 255 / 0.07), 0 14px 32px -8px rgb(0 0 0 / 0.6);
   --shadow-overlay: 0 0 0 1px rgb(255 255 255 / 0.08), 0 28px 56px -14px rgb(0 0 0 / 0.7);
+
+  /* ─── Navigation (Dark Mode Obsidian Chrome) ────────────────────────────── */
+  --nav-bg: #070a10;
+  --nav-bg-deep: #05070c;
+  --nav-fg: #94a3b8;
+  --nav-fg-hover: #f8fafc;
+  --nav-fg-active: #ffffff;
+  --nav-icon: #64748b;
+  --nav-icon-hover: #cbd5e1;
+  --nav-icon-active: #818cf8;
+  --nav-hover-bg: rgba(255, 255, 255, 0.05);
+  --nav-active-bg: linear-gradient(90deg, rgba(99, 102, 241, 0.20) 0%, rgba(99, 102, 241, 0.04) 100%);
+  --nav-active-marker: #6366f1;
+  --nav-border: rgba(255, 255, 255, 0.08);
+  --nav-section-fg: #64748b;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

@@ -136,18 +136,6 @@ export function Modal({
     }
   }, [open]);
 
-  // §4.2 defect 2 — background inert:
-  // Mark all content outside the dialog as inert (prevents screen reader
-  // access and mouse interaction) while the dialog is open.
-  useEffect(() => {
-    if (!open) return;
-    const main = document.getElementById('root')?.firstElementChild;
-    if (main) main.setAttribute('inert', '');
-    return () => {
-      if (main) main.removeAttribute('inert');
-    };
-  }, [open]);
-
   // §4.2 defect 2 — focus restore on close:
   // When the dialog closes, return focus to whichever element triggered it.
   useEffect(() => {
@@ -418,15 +406,6 @@ export function Drawer({
         dialogRef.current?.focus();
       });
     }
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const main = document.getElementById('root')?.firstElementChild;
-    if (main) main.setAttribute('inert', '');
-    return () => {
-      if (main) main.removeAttribute('inert');
-    };
   }, [open]);
 
   useEffect(() => {

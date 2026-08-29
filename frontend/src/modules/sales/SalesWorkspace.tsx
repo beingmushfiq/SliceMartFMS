@@ -54,33 +54,37 @@ export default function SalesWorkspace() {
   const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[0];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 max-w-7xl mx-auto py-2">
       {/* Workspace Header */}
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-default pb-5">
         <div>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400">
-            Revenue & Commercial Operations
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-primary bg-primary-subtle px-2.5 py-0.5 rounded-full border border-primary/20">
+              Revenue & Commercial Operations
+            </span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-default">
             {currentTab?.label}
           </h1>
-          <p className="mt-1 text-xs text-zinc-400">{currentTab?.description}</p>
+          <p className="mt-1.5 text-xs text-muted max-w-2xl leading-relaxed">
+            {currentTab?.description}
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
           <a
             href="/fraud-verification"
-            className="inline-flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 transition-all shadow-sm"
+            className="inline-flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2 text-xs font-semibold text-amber-700 dark:text-amber-300 hover:bg-amber-500/15 transition-all shadow-2xs"
           >
-            <span className="flex h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+            <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
             <span>Fraud Check & Verification Queue</span>
           </a>
         </div>
       </div>
 
-      {/* Tabs Navigation */}
-      <div className="flex overflow-x-auto border-b border-zinc-800 pb-px scrollbar-none">
-        <div className="flex gap-2">
+      {/* Segmented Tabs Navigation Tray */}
+      <div className="flex overflow-x-auto p-1.5 bg-surface-sunken rounded-2xl border border-default shadow-2xs">
+        <div className="flex gap-1.5 min-w-full sm:min-w-0">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -88,14 +92,14 @@ export default function SalesWorkspace() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-semibold whitespace-nowrap transition-all ${
+                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 ${
                   isActive
-                    ? 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
-                    : 'border-transparent text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+                    ? 'bg-surface text-default font-semibold shadow-xs border border-default/70'
+                    : 'text-muted hover:text-default hover:bg-surface/50 border border-transparent'
                 }`}
               >
-                <Icon className="h-4 w-4" />
-                {tab.label}
+                <Icon className={`size-4 ${isActive ? 'text-primary' : 'text-muted'}`} />
+                <span>{tab.label}</span>
               </button>
             );
           })}
@@ -103,7 +107,7 @@ export default function SalesWorkspace() {
       </div>
 
       {/* Tab Content */}
-      <div>
+      <div className="pt-1">
         {activeTab === 'orders' && <SalesOrdersSection />}
         {activeTab === 'invoices' && <InvoicesSection />}
         {activeTab === 'deliveries' && <DeliveriesSection />}

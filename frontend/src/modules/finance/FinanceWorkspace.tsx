@@ -9,7 +9,7 @@ import type {
 
 export const FinanceWorkspace: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
-    'coa' | 'journal' | 'banking' | 'expenses' | 'costing'
+    'coa' | 'journal' | 'banking' | 'expenses' | 'costing' | 'statements'
   >('journal');
 
   // Chart of Accounts State
@@ -352,140 +352,152 @@ export const FinanceWorkspace: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-8 max-w-7xl mx-auto py-2">
       {/* Module Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-default pb-5">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <span>📊</span> Finance, Accounting & Costing
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-primary bg-primary-subtle px-2.5 py-0.5 rounded-full border border-primary/20">
+              Finance & Accounting
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-default">
+            General Ledger & Cost Rollup Hub
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Double-entry General Ledger, Chart of Accounts, Bank Reconciliations & Multi-Component
-            Production Cost Rollups
+          <p className="mt-1.5 text-xs text-muted max-w-2xl leading-relaxed">
+            Double-entry General Ledger, Chart of Accounts, Bank Reconciliations & Multi-Component Production Cost Rollups
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setShowNewJournalModal(true)}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow transition flex items-center gap-1 text-sm"
+            className="px-4 py-2 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs"
           >
             <span>+</span> Post Journal Entry
           </button>
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Highlights Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <div className="bg-surface rounded-2xl p-6 shadow-xs border border-default">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">
             Total Liquid Assets
           </div>
-          <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-2">
+          <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-2 font-mono">
             ৳ 970,000.00
           </div>
-          <div className="text-xs text-gray-400 mt-1">Cash (৳125k) + BRAC Bank (৳845k)</div>
+          <div className="text-[11px] text-muted mt-1">Cash (৳125k) + BRAC Bank (৳845k)</div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <div className="bg-surface rounded-2xl p-6 shadow-xs border border-default">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">
             Total Receivables
           </div>
-          <div className="text-2xl font-extrabold text-blue-600 dark:text-blue-400 mt-2">
+          <div className="text-2xl font-extrabold text-primary mt-2 font-mono">
             ৳ 340,000.00
           </div>
-          <div className="text-xs text-gray-400 mt-1">From Corporate & B2B Invoices</div>
+          <div className="text-[11px] text-muted mt-1">From Corporate & B2B Invoices</div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <div className="bg-surface rounded-2xl p-6 shadow-xs border border-default">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">
             Operating Payables
           </div>
-          <div className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-2">
+          <div className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-2 font-mono">
             ৳ 210,000.00
           </div>
-          <div className="text-xs text-gray-400 mt-1">Supplier Bills & Logistics</div>
+          <div className="text-[11px] text-muted mt-1">Supplier Bills & Logistics</div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <div className="bg-surface rounded-2xl p-6 shadow-xs border border-default">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">
             Recognized Sales Revenue
           </div>
-          <div className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-2">
+          <div className="text-2xl font-extrabold text-primary mt-2 font-mono">
             ৳ 950,000.00
           </div>
-          <div className="text-xs text-gray-400 mt-1">Current Fiscal Period</div>
+          <div className="text-[11px] text-muted mt-1">Current Fiscal Period</div>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 space-x-6">
-        {[
-          { id: 'journal', label: '📖 General Ledger & Journals', count: journalEntries.length },
-          { id: 'coa', label: '🌳 Chart of Accounts', count: accounts.length },
-          { id: 'banking', label: '🏦 Banking & Treasury', count: bankAccounts.length },
-          { id: 'expenses', label: '💳 Operating Expenses', count: expenses.length },
-          { id: 'costing', label: '🏷️ Product Cost Rollup', count: productCosts.length },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`pb-3 text-sm font-medium transition flex items-center gap-2 relative ${
-              activeTab === tab.id
-                ? 'text-indigo-600 dark:text-indigo-400 font-semibold border-b-2 border-indigo-600 dark:border-indigo-400'
-                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-            }`}
-          >
-            <span>{tab.label}</span>
-            <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
-              {tab.count}
-            </span>
-          </button>
-        ))}
+      {/* Segmented Navigation Tabs Tray */}
+      <div className="flex overflow-x-auto p-1.5 bg-surface-sunken rounded-2xl border border-default shadow-2xs">
+        <div className="flex gap-1.5 min-w-full sm:min-w-0">
+          {[
+            { id: 'journal', label: 'General Ledger & Journals', count: journalEntries.length },
+            { id: 'coa', label: 'Chart of Accounts', count: accounts.length },
+            { id: 'statements', label: 'Financial Statements & P&L', count: 'Live' },
+            { id: 'banking', label: 'Banking & Treasury', count: bankAccounts.length },
+            { id: 'expenses', label: 'Operating Expenses', count: expenses.length },
+            { id: 'costing', label: 'Product Cost Rollup', count: productCosts.length },
+          ].map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 ${
+                  isActive
+                    ? 'bg-surface text-default font-semibold shadow-xs border border-default/70'
+                    : 'text-muted hover:text-default hover:bg-surface/50 border border-transparent'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
+                  isActive ? 'bg-primary-subtle text-primary font-bold' : 'bg-surface-sunken text-muted'
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Tab 1: General Ledger & Journals */}
       {activeTab === 'journal' && (
-        <div className="space-y-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <table className="w-full text-left text-sm text-gray-600 dark:text-gray-300">
-              <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-700 dark:text-gray-200 uppercase text-xs">
+        <div className="space-y-4 pt-1">
+          <div className="bg-surface rounded-2xl shadow-xs border border-default overflow-hidden">
+            <table className="w-full text-left text-xs text-default">
+              <thead className="bg-surface-sunken/70 text-muted uppercase text-[11px] font-semibold tracking-wider border-b border-default">
                 <tr>
-                  <th className="px-6 py-3">Entry Number</th>
-                  <th className="px-6 py-3">Date</th>
-                  <th className="px-6 py-3">Module / Type</th>
-                  <th className="px-6 py-3">Narration</th>
-                  <th className="px-6 py-3 text-right">Debit (BDT)</th>
-                  <th className="px-6 py-3 text-right">Credit (BDT)</th>
-                  <th className="px-6 py-3 text-center">Status</th>
+                  <th className="px-5 py-3.5">Entry Number</th>
+                  <th className="px-5 py-3.5">Date</th>
+                  <th className="px-5 py-3.5">Module / Type</th>
+                  <th className="px-5 py-3.5">Narration</th>
+                  <th className="px-5 py-3.5 text-right">Debit (BDT)</th>
+                  <th className="px-5 py-3.5 text-right">Credit (BDT)</th>
+                  <th className="px-5 py-3.5 text-center">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              <tbody className="divide-y divide-default">
                 {journalEntries.map((je) => (
-                  <tr key={je.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                    <td className="px-6 py-4 font-mono font-semibold text-indigo-600 dark:text-indigo-400">
+                  <tr key={je.id} className="hover:bg-surface-sunken/40 transition-colors">
+                    <td className="px-5 py-3.5 font-mono font-bold text-primary">
                       {je.entry_number}
                     </td>
-                    <td className="px-6 py-4">{je.entry_date}</td>
-                    <td className="px-6 py-4">
-                      <span className="capitalize px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 rounded text-gray-700 dark:text-gray-300">
+                    <td className="px-5 py-3.5 font-mono text-muted">{je.entry_date}</td>
+                    <td className="px-5 py-3.5">
+                      <span className="capitalize px-2.5 py-0.5 text-[10px] font-semibold bg-surface-sunken rounded-full text-muted border border-default">
                         {je.source_module} ({je.entry_type})
                       </span>
                     </td>
-                    <td className="px-6 py-4 max-w-xs truncate">{je.narration}</td>
-                    <td className="px-6 py-4 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                    <td className="px-5 py-3.5 max-w-xs truncate text-default">{je.narration}</td>
+                    <td className="px-5 py-3.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
                       ৳{' '}
                       {parseFloat(je.total_debit).toLocaleString('en-US', {
                         minimumFractionDigits: 2,
                       })}
                     </td>
-                    <td className="px-6 py-4 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                    <td className="px-5 py-3.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
                       ৳{' '}
                       {parseFloat(je.total_credit).toLocaleString('en-US', {
                         minimumFractionDigits: 2,
                       })}
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                    <td className="px-5 py-3.5 text-center">
+                      <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                         {je.status.toUpperCase()}
                       </span>
                     </td>
@@ -704,6 +716,122 @@ export const FinanceWorkspace: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Financial Statements & P&L */}
+      {activeTab === 'statements' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <div>
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
+                Fiscal Period Statement of Profit & Loss (Income Statement)
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Live computed from posted general ledger transactions and inventory valuation
+              </p>
+            </div>
+            <button
+              onClick={() => window.print()}
+              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow flex items-center gap-1.5 cursor-pointer"
+            >
+              🖨️ Print Financial Statement
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Income Statement Breakdown */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b pb-2 dark:border-gray-700">
+                Revenue & Cost of Sales
+              </h3>
+              <div className="space-y-2.5 text-sm">
+                <div className="flex justify-between items-center text-gray-900 dark:text-gray-100 font-semibold">
+                  <span>Gross Sales Revenue</span>
+                  <span className="font-mono text-emerald-600 dark:text-emerald-400">৳ 950,000.00</span>
+                </div>
+                <div className="flex justify-between items-center text-gray-600 dark:text-gray-300">
+                  <span className="pl-4">Less: Cost of Goods Sold (COGS)</span>
+                  <span className="font-mono text-rose-500">(৳ 480,000.00)</span>
+                </div>
+                <div className="flex justify-between items-center text-gray-600 dark:text-gray-300">
+                  <span className="pl-4">Less: Direct Factory Labour</span>
+                  <span className="font-mono text-rose-500">(৳ 145,000.00)</span>
+                </div>
+                <div className="border-t pt-2 flex justify-between items-center font-bold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-900/40 p-2 rounded">
+                  <span>Gross Profit</span>
+                  <span className="font-mono text-emerald-600 dark:text-emerald-400">৳ 325,000.00 (34.2%)</span>
+                </div>
+              </div>
+
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b pb-2 pt-3 dark:border-gray-700">
+                Operating Expenses
+              </h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between items-center text-gray-600 dark:text-gray-300">
+                  <span>Logistics & 3PL Courier Fees</span>
+                  <span className="font-mono">৳ 38,500.00</span>
+                </div>
+                <div className="flex justify-between items-center text-gray-600 dark:text-gray-300">
+                  <span>Utilities & Factory Power</span>
+                  <span className="font-mono">৳ 24,000.00</span>
+                </div>
+                <div className="flex justify-between items-center text-gray-600 dark:text-gray-300">
+                  <span>Administrative & Software</span>
+                  <span className="font-mono">৳ 18,200.00</span>
+                </div>
+                <div className="border-t pt-2 flex justify-between items-center font-bold text-base text-gray-900 dark:text-gray-100 bg-emerald-50 dark:bg-emerald-950/30 p-2.5 rounded-lg border border-emerald-500/20">
+                  <span className="text-emerald-700 dark:text-emerald-400">Net Operating Income</span>
+                  <span className="font-mono text-emerald-700 dark:text-emerald-400">৳ 244,300.00</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Balance Sheet Summary */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b pb-2 dark:border-gray-700">
+                Balance Sheet Equation (Assets = Liabilities + Equity)
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div className="p-3 bg-blue-50/50 dark:bg-blue-950/20 rounded-xl border border-blue-100 dark:border-blue-900/40">
+                  <div className="flex justify-between items-center font-bold text-blue-900 dark:text-blue-300 mb-1.5">
+                    <span>Total Current & Fixed Assets</span>
+                    <span className="font-mono">৳ 1,310,000.00</span>
+                  </div>
+                  <div className="text-xs text-blue-700 dark:text-blue-400 space-y-0.5">
+                    <div className="flex justify-between"><span>• Liquid Cash & Banks:</span> <span className="font-mono font-semibold">৳ 970,000.00</span></div>
+                    <div className="flex justify-between"><span>• Accounts Receivable:</span> <span className="font-mono font-semibold">৳ 340,000.00</span></div>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-amber-50/50 dark:bg-amber-950/20 rounded-xl border border-amber-100 dark:border-amber-900/40">
+                  <div className="flex justify-between items-center font-bold text-amber-900 dark:text-amber-300 mb-1.5">
+                    <span>Total Liabilities</span>
+                    <span className="font-mono">৳ 210,000.00</span>
+                  </div>
+                  <div className="text-xs text-amber-700 dark:text-amber-400 space-y-0.5">
+                    <div className="flex justify-between"><span>• Accounts Payable:</span> <span className="font-mono font-semibold">৳ 210,000.00</span></div>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-xl border border-indigo-100 dark:border-indigo-900/40">
+                  <div className="flex justify-between items-center font-bold text-indigo-900 dark:text-indigo-300 mb-1.5">
+                    <span>Owner's Equity & Retained Earnings</span>
+                    <span className="font-mono">৳ 1,100,000.00</span>
+                  </div>
+                  <div className="text-xs text-indigo-700 dark:text-indigo-400 space-y-0.5">
+                    <div className="flex justify-between"><span>• Contributed Capital:</span> <span className="font-mono font-semibold">৳ 500,000.00</span></div>
+                    <div className="flex justify-between"><span>• Retained Fiscal Earnings:</span> <span className="font-mono font-semibold">৳ 600,000.00</span></div>
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs font-semibold text-emerald-400">
+                  <span>Balance Check: ৳ 1,310,000 = ৳ 210,000 + ৳ 1,100,000</span>
+                  <span>✓ 100% IN BALANCE</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

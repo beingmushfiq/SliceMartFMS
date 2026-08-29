@@ -64,7 +64,7 @@ export function GoodsReceiptsSection() {
           <button
             onClick={fetchReceipts}
             disabled={loading}
-            className="p-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/80 rounded-lg border border-zinc-800 transition-colors"
+            className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors cursor-pointer"
             title="Refresh"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -72,53 +72,53 @@ export function GoodsReceiptsSection() {
         </div>
 
         <div className="relative flex-1 sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
           <input
             type="text"
             placeholder="Search GRN #, supplier, PO #, challan..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-zinc-900/90 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50"
+            className="w-full pl-9 pr-3 py-2 text-xs bg-surface-sunken border border-default rounded-xl text-default placeholder:text-muted focus:outline-none focus:border-primary"
           />
         </div>
       </div>
 
       {/* Goods Receipts Table */}
-      <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 backdrop-blur-md overflow-hidden">
+      <div className="rounded-2xl border border-default bg-surface shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-zinc-300">
-            <thead className="bg-zinc-900/80 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-800">
+          <table className="w-full text-left text-xs text-default">
+            <thead className="bg-surface-sunken text-[11px] font-semibold text-muted uppercase tracking-wider border-b border-default">
               <tr>
-                <th className="px-4 py-3">GRN #</th>
-                <th className="px-4 py-3">PO Reference</th>
-                <th className="px-4 py-3">Supplier</th>
-                <th className="px-4 py-3">Challan / Inv #</th>
-                <th className="px-4 py-3">Receipt Date</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Received Items</th>
+                <th className="px-4 py-3.5">GRN #</th>
+                <th className="px-4 py-3.5">PO Reference</th>
+                <th className="px-4 py-3.5">Supplier</th>
+                <th className="px-4 py-3.5">Challan / Inv #</th>
+                <th className="px-4 py-3.5">Receipt Date</th>
+                <th className="px-4 py-3.5">Status</th>
+                <th className="px-4 py-3.5">Received Items</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/50">
+            <tbody className="divide-y divide-default">
               {filteredReceipts.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-zinc-500">
+                  <td colSpan={7} className="px-4 py-8 text-center text-muted">
                     {loading ? 'Loading goods receipts...' : 'No goods receipt notes found'}
                   </td>
                 </tr>
               ) : (
                 filteredReceipts.map((r) => (
-                  <tr key={r.id} className="hover:bg-zinc-800/30 transition-colors">
-                    <td className="px-4 py-3 font-mono font-medium text-zinc-100">
+                  <tr key={r.id} className="hover:bg-surface-sunken/60 transition-colors">
+                    <td className="px-4 py-3.5 font-mono font-medium text-default">
                       {r.grn_number}
                     </td>
-                    <td className="px-4 py-3 font-mono text-zinc-300">{r.po_number ?? '—'}</td>
-                    <td className="px-4 py-3 text-zinc-200">{r.supplier_name ?? '—'}</td>
-                    <td className="px-4 py-3 font-mono text-zinc-400">
+                    <td className="px-4 py-3.5 font-mono text-muted">{r.po_number ?? '—'}</td>
+                    <td className="px-4 py-3.5 text-default font-medium">{r.supplier_name ?? '—'}</td>
+                    <td className="px-4 py-3.5 font-mono text-muted">
                       {r.supplier_document_number ?? '—'}
                     </td>
-                    <td className="px-4 py-3 font-mono text-zinc-400">{r.receipt_date}</td>
-                    <td className="px-4 py-3">{getStatusBadge(r.status)}</td>
-                    <td className="px-4 py-3 text-zinc-400 font-mono">
+                    <td className="px-4 py-3.5 font-mono text-muted">{r.receipt_date}</td>
+                    <td className="px-4 py-3.5">{getStatusBadge(r.status)}</td>
+                    <td className="px-4 py-3.5 text-muted font-mono">
                       {r.items?.length ?? 0} item(s)
                     </td>
                   </tr>

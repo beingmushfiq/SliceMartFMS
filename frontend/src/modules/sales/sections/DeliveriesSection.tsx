@@ -79,7 +79,7 @@ export function DeliveriesSection() {
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-zinc-800 text-zinc-400 border border-zinc-700">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-surface-sunken text-muted border border-default">
             {status}
           </span>
         );
@@ -92,20 +92,20 @@ export function DeliveriesSection() {
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
             <input
               type="text"
               placeholder="Search by delivery #, recipient..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-9 w-64 rounded-md border border-zinc-800 bg-zinc-900/60 pl-8 pr-3 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+              className="h-9 w-64 rounded-xl border border-default bg-surface-sunken pl-8 pr-3 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
             />
           </div>
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 rounded-md border border-zinc-800 bg-zinc-900/60 px-3 text-xs text-zinc-200 focus:border-emerald-500 focus:outline-none"
+            className="h-9 rounded-xl border border-default bg-surface-sunken px-3 text-xs text-default focus:border-primary focus:outline-none"
           >
             <option value="all">All Statuses</option>
             <option value="pending">Pending</option>
@@ -118,7 +118,7 @@ export function DeliveriesSection() {
           <button
             onClick={fetchDeliveries}
             disabled={loading}
-            className="flex h-9 items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900/60 px-3 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-50"
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface-sunken px-3 text-xs font-medium text-muted hover:bg-surface hover:text-default disabled:opacity-50 transition-colors cursor-pointer"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -127,46 +127,46 @@ export function DeliveriesSection() {
       </div>
 
       {/* Deliveries Table */}
-      <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/40">
+      <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="border-b border-zinc-800 bg-zinc-900/80 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+          <table className="w-full text-left text-xs text-default">
+            <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
-                <th className="px-4 py-3">Delivery Number</th>
-                <th className="px-4 py-3">Recipient</th>
-                <th className="px-4 py-3">Phone</th>
-                <th className="px-4 py-3">Warehouse</th>
-                <th className="px-4 py-3">Type</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-4 py-3.5">Delivery Number</th>
+                <th className="px-4 py-3.5">Recipient</th>
+                <th className="px-4 py-3.5">Phone</th>
+                <th className="px-4 py-3.5">Warehouse</th>
+                <th className="px-4 py-3.5">Type</th>
+                <th className="px-4 py-3.5">Status</th>
+                <th className="px-4 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/60">
+            <tbody className="divide-y divide-default">
               {filteredDeliveries.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-zinc-500">
+                  <td colSpan={7} className="px-4 py-8 text-center text-muted">
                     {loading ? 'Loading delivery orders...' : 'No delivery orders found.'}
                   </td>
                 </tr>
               ) : (
                 filteredDeliveries.map((del) => (
-                  <tr key={del.id} className="hover:bg-zinc-800/20 transition-colors">
-                    <td className="px-4 py-3 font-mono font-medium text-emerald-400">
+                  <tr key={del.id} className="hover:bg-surface-sunken/60 transition-colors">
+                    <td className="px-4 py-3.5 font-mono font-medium text-emerald-600 dark:text-emerald-400">
                       {del.delivery_number}
                     </td>
-                    <td className="px-4 py-3 text-zinc-200">{del.recipient_name}</td>
-                    <td className="px-4 py-3 text-zinc-400">{del.recipient_phone}</td>
-                    <td className="px-4 py-3 text-zinc-400">{del.warehouse_name ?? 'Main WH'}</td>
-                    <td className="px-4 py-3 uppercase text-[10px] text-zinc-400">
+                    <td className="px-4 py-3.5 text-default font-medium">{del.recipient_name}</td>
+                    <td className="px-4 py-3.5 text-muted">{del.recipient_phone}</td>
+                    <td className="px-4 py-3.5 text-muted">{del.warehouse_name ?? 'Main WH'}</td>
+                    <td className="px-4 py-3.5 uppercase text-[10px] text-muted">
                       {del.delivery_type.replace('_', ' ')}
                     </td>
-                    <td className="px-4 py-3">{getStatusBadge(del.status)}</td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3.5">{getStatusBadge(del.status)}</td>
+                    <td className="px-4 py-3.5 text-right">
                       {del.status === 'pending' && (
                         <button
                           onClick={() => handleDispatch(del.id)}
                           disabled={actionLoading === del.id}
-                          className="flex items-center gap-1 ml-auto rounded bg-emerald-600/20 px-2.5 py-1 text-[11px] font-semibold text-emerald-400 hover:bg-emerald-600/30 disabled:opacity-50"
+                          className="flex items-center gap-1 ml-auto rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50 transition-colors cursor-pointer"
                         >
                           <Truck className="h-3 w-3" />
                           {actionLoading === del.id ? 'Dispatching...' : 'Dispatch'}

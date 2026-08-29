@@ -177,15 +177,15 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
       )}
 
       {/* Header & Quick Links */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-zinc-800/80 pb-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-default pb-5">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-zinc-100">Storefront CMS & Customizer</h1>
-            <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">
+            <h1 className="text-xl font-bold text-default">Storefront CMS & Customizer</h1>
+            <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
               Subdomain: {form.subdomain}.devcenterpoint.com
             </span>
           </div>
-          <p className="text-xs text-zinc-400 mt-1">
+          <p className="text-xs text-muted mt-1">
             Manage your branded online customer storefront, theme styling, and published products.
           </p>
         </div>
@@ -193,9 +193,9 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
         <div className="flex items-center gap-3">
           <a
             href="/storefront/builder"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800/80 px-3.5 py-2 text-xs font-semibold text-zinc-200 hover:border-emerald-500 hover:text-white transition-all shadow-sm"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-default bg-surface px-3.5 py-2 text-xs font-semibold text-default hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all shadow-xs"
           >
-            <Layout className="h-3.5 w-3.5 text-emerald-400" />
+            <Layout className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>Page & Block Builder</span>
           </a>
 
@@ -203,9 +203,9 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
             href={`/store/${form.subdomain}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800/80 px-3.5 py-2 text-xs font-semibold text-zinc-200 hover:border-emerald-500 hover:text-white transition-all shadow-sm"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-default bg-surface px-3.5 py-2 text-xs font-semibold text-default hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all shadow-xs"
           >
-            <Eye className="h-3.5 w-3.5 text-emerald-400" />
+            <Eye className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>Open Live Storefront</span>
           </a>
 
@@ -213,7 +213,7 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
             type="button"
             onClick={handleSaveSettings}
             disabled={saving}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-zinc-950 hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20 cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20 cursor-pointer disabled:opacity-50"
           >
             <Save className="h-3.5 w-3.5" />
             <span>{saving ? 'Saving...' : 'Save Settings'}</span>
@@ -222,14 +222,14 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
       </div>
 
       {/* Workspace Tabs */}
-      <div className="flex border-b border-zinc-800">
+      <div className="flex border-b border-default">
         <button
           type="button"
           onClick={() => setActiveTab('branding')}
           className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
             activeTab === 'branding'
-              ? 'border-emerald-500 text-emerald-400'
-              : 'border-transparent text-zinc-400 hover:text-zinc-200'
+              ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+              : 'border-transparent text-muted hover:text-default'
           }`}
         >
           <Palette className="h-4 w-4" />
@@ -241,8 +241,8 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
           onClick={() => setActiveTab('products')}
           className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
             activeTab === 'products'
-              ? 'border-emerald-500 text-emerald-400'
-              : 'border-transparent text-zinc-400 hover:text-zinc-200'
+              ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+              : 'border-transparent text-muted hover:text-default'
           }`}
         >
           <Tag className="h-4 w-4" />
@@ -254,8 +254,8 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
           onClick={() => setActiveTab('checkout')}
           className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
             activeTab === 'checkout'
-              ? 'border-emerald-500 text-emerald-400'
-              : 'border-transparent text-zinc-400 hover:text-zinc-200'
+              ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+              : 'border-transparent text-muted hover:text-default'
           }`}
         >
           <Truck className="h-4 w-4" />
@@ -267,8 +267,8 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
           onClick={() => setActiveTab('domains')}
           className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
             activeTab === 'domains'
-              ? 'border-emerald-500 text-emerald-400'
-              : 'border-transparent text-zinc-400 hover:text-zinc-200'
+              ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+              : 'border-transparent text-muted hover:text-default'
           }`}
         >
           <Globe className="h-4 w-4" />
@@ -280,43 +280,43 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
       {activeTab === 'branding' && (
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
           {/* Left: Customization Form */}
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6 space-y-4 shadow-xl">
-            <h2 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
-              <Layout className="h-4 w-4 text-emerald-400" />
+          <div className="rounded-2xl border border-default bg-surface p-6 space-y-4 shadow-xs">
+            <h2 className="text-sm font-bold text-default flex items-center gap-2">
+              <Layout className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               <span>Theme & Copy Customizer</span>
             </h2>
 
             <div className="space-y-3">
               <div>
-                <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1">
+                <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block mb-1">
                   Storefront Name
                 </label>
                 <input
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-xs text-default focus:border-primary focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1">
+                <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block mb-1">
                   Subdomain Slug
                 </label>
-                <div className="flex items-center rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs">
+                <div className="flex items-center rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-xs">
                   <input
                     type="text"
                     value={form.subdomain}
                     onChange={(e) => setForm({ ...form, subdomain: e.target.value })}
-                    className="flex-1 bg-transparent text-zinc-100 focus:outline-none"
+                    className="flex-1 bg-transparent text-default focus:outline-none"
                   />
-                  <span className="text-zinc-500">.devcenterpoint.com</span>
+                  <span className="text-muted">.devcenterpoint.com</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1">
+                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block mb-1">
                     Primary Accent Color
                   </label>
                   <div className="flex items-center gap-2">
@@ -324,46 +324,46 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
                       type="color"
                       value={form.primary_color}
                       onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
-                      className="h-8 w-12 rounded-lg border border-zinc-700 bg-transparent cursor-pointer"
+                      className="h-8 w-12 rounded-lg border border-default bg-transparent cursor-pointer"
                     />
-                    <span className="font-mono text-xs text-zinc-300">{form.primary_color}</span>
+                    <span className="font-mono text-xs text-default">{form.primary_color}</span>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1">
+                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block mb-1">
                     Store Currency
                   </label>
                   <input
                     type="text"
                     value={form.currency}
                     onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })}
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                    className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-xs text-default focus:border-primary focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1">
+                <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block mb-1">
                   Hero Title
                 </label>
                 <input
                   type="text"
                   value={form.hero_title}
                   onChange={(e) => setForm({ ...form, hero_title: e.target.value })}
-                  className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-xs text-default focus:border-primary focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1">
+                <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block mb-1">
                   Hero Subtitle
                 </label>
                 <textarea
                   rows={2}
                   value={form.hero_subtitle}
                   onChange={(e) => setForm({ ...form, hero_subtitle: e.target.value })}
-                  className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-xs text-default focus:border-primary focus:outline-none"
                 />
               </div>
             </div>
@@ -371,15 +371,15 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
 
           {/* Right: Live Mock Preview */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between text-xs font-semibold text-zinc-400">
+            <div className="flex items-center justify-between text-xs font-semibold text-muted">
               <span>Live Theme Preview</span>
-              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-400">
+              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                 Synchronized
               </span>
             </div>
 
-            <div className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl space-y-6">
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+            <div className="overflow-hidden rounded-3xl border border-default bg-surface-sunken p-6 shadow-md space-y-6">
+              <div className="flex items-center justify-between border-b border-default pb-3">
                 <div className="flex items-center gap-2">
                   <div
                     className="flex h-7 w-7 items-center justify-center rounded-lg text-white font-bold text-xs"
@@ -387,9 +387,9 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
                   >
                     <Store className="h-4 w-4" />
                   </div>
-                  <span className="text-sm font-bold text-zinc-100">{form.name || 'Storefront'}</span>
+                  <span className="text-sm font-bold text-default">{form.name || 'Storefront'}</span>
                 </div>
-                <div className="flex items-center gap-1 text-[11px] text-zinc-400">
+                <div className="flex items-center gap-1 text-[11px] text-muted">
                   <ShoppingBag className="h-3.5 w-3.5" />
                   <span>Cart (0)</span>
                 </div>
@@ -397,22 +397,21 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
 
               {/* Mock Banner */}
               <div
-                className="rounded-2xl p-6 relative overflow-hidden"
+                className="rounded-2xl p-6 relative overflow-hidden bg-surface border border-default shadow-xs"
                 style={{
-                  background: `linear-gradient(135deg, ${form.primary_color}22, #09090b)`,
-                  borderColor: `${form.primary_color}44`,
-                  borderWidth: '1px',
+                  borderLeftColor: form.primary_color,
+                  borderLeftWidth: '4px',
                 }}
               >
                 <div className="relative z-10 space-y-2">
                   <div
                     className="inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold"
-                    style={{ backgroundColor: `${form.primary_color}33`, color: form.primary_color }}
+                    style={{ backgroundColor: `${form.primary_color}22`, color: form.primary_color }}
                   >
                     Factory Direct
                   </div>
-                  <h3 className="text-lg font-bold text-white leading-tight">{form.hero_title}</h3>
-                  <p className="text-xs text-zinc-300 line-clamp-2">{form.hero_subtitle}</p>
+                  <h3 className="text-lg font-bold text-default leading-tight">{form.hero_title}</h3>
+                  <p className="text-xs text-muted line-clamp-2">{form.hero_subtitle}</p>
                 </div>
               </div>
             </div>
@@ -422,31 +421,31 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
 
       {/* Tab: Products */}
       {activeTab === 'products' && (
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6 space-y-4 shadow-xl">
+        <div className="rounded-2xl border border-default bg-surface p-6 space-y-4 shadow-xs">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-zinc-100">Catalog Product Publication</h2>
-            <span className="text-xs text-zinc-400">
+            <h2 className="text-sm font-bold text-default">Catalog Product Publication</h2>
+            <span className="text-xs text-muted">
               Toggle products on or off to make them available to public online shoppers.
             </span>
           </div>
 
-          <div className="divide-y divide-zinc-800/60 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
+          <div className="divide-y divide-default overflow-hidden rounded-xl border border-default bg-surface">
             {products.map((product) => (
               <div
                 key={product.id}
-                className="flex items-center justify-between p-4 hover:bg-zinc-900/50 transition-colors"
+                className="flex items-center justify-between p-4 hover:bg-surface-sunken/60 transition-colors"
               >
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-[11px] text-zinc-500">{product.sku}</span>
-                    <span className="text-xs font-bold text-zinc-200">{product.name}</span>
+                    <span className="font-mono text-[11px] text-muted">{product.sku}</span>
+                    <span className="text-xs font-bold text-default">{product.name}</span>
                     {product.category_name && (
-                      <span className="rounded-md bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400">
+                      <span className="rounded-md bg-surface-sunken border border-default px-2 py-0.5 text-[10px] text-muted">
                         {product.category_name}
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-emerald-400 font-semibold">
+                  <div className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold font-mono">
                     {form.currency} {parseFloat(product.default_sale_price || '0').toFixed(2)}
                   </div>
                 </div>
@@ -457,8 +456,8 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
                     onClick={() => handleToggleProduct(product)}
                     className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
                       product.is_published
-                        ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-rose-500/10 hover:border-rose-500/30 hover:text-rose-400'
-                        : 'bg-zinc-800 border border-zinc-700 text-zinc-400 hover:border-emerald-500 hover:text-emerald-400'
+                        ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-rose-500/10 hover:border-rose-500/30 hover:text-rose-600'
+                        : 'bg-surface-sunken border border-default text-muted hover:border-emerald-500 hover:text-emerald-600'
                     }`}
                   >
                     {product.is_published ? (
@@ -482,67 +481,67 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
 
       {/* Tab: Checkout Rules */}
       {activeTab === 'checkout' && (
-        <div className="max-w-2xl rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6 space-y-6 shadow-xl">
-          <h2 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-emerald-400" />
+        <div className="max-w-2xl rounded-2xl border border-default bg-surface p-6 space-y-6 shadow-xs">
+          <h2 className="text-sm font-bold text-default flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             <span>Checkout Policies & Gateways</span>
           </h2>
 
           <div className="space-y-4">
-            <label className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 cursor-pointer">
+            <label className="flex items-center justify-between rounded-xl border border-default bg-surface-sunken p-4 cursor-pointer">
               <div>
-                <div className="text-xs font-bold text-zinc-200">Guest Checkout</div>
-                <div className="text-[11px] text-zinc-500">Allow shoppers to place orders without registration</div>
+                <div className="text-xs font-bold text-default">Guest Checkout</div>
+                <div className="text-[11px] text-muted">Allow shoppers to place orders without registration</div>
               </div>
               <input
                 type="checkbox"
                 checked={form.guest_checkout_enabled}
                 onChange={(e) => setForm({ ...form, guest_checkout_enabled: e.target.checked })}
-                className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-emerald-500 focus:ring-emerald-500"
+                className="h-4 w-4 rounded border-default text-emerald-500 focus:ring-emerald-500"
               />
             </label>
 
-            <label className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 cursor-pointer">
+            <label className="flex items-center justify-between rounded-xl border border-default bg-surface-sunken p-4 cursor-pointer">
               <div>
-                <div className="text-xs font-bold text-zinc-200">Cash on Delivery (COD)</div>
-                <div className="text-[11px] text-zinc-500">Allow customers to pay cash when package is delivered</div>
+                <div className="text-xs font-bold text-default">Cash on Delivery (COD)</div>
+                <div className="text-[11px] text-muted">Allow customers to pay cash when package is delivered</div>
               </div>
               <input
                 type="checkbox"
                 checked={form.cod_enabled}
                 onChange={(e) => setForm({ ...form, cod_enabled: e.target.checked })}
-                className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-emerald-500 focus:ring-emerald-500"
+                className="h-4 w-4 rounded border-default text-emerald-500 focus:ring-emerald-500"
               />
             </label>
 
-            <label className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 cursor-pointer">
+            <label className="flex items-center justify-between rounded-xl border border-default bg-surface-sunken p-4 cursor-pointer">
               <div>
-                <div className="text-xs font-bold text-zinc-200">Online Payment Gateway</div>
-                <div className="text-[11px] text-zinc-500">Enable credit cards and mobile wallets (bKash / Nagad)</div>
+                <div className="text-xs font-bold text-default">Online Payment Gateway</div>
+                <div className="text-[11px] text-muted">Enable credit cards and mobile wallets (bKash / Nagad)</div>
               </div>
               <input
                 type="checkbox"
                 checked={form.online_payment_enabled}
                 onChange={(e) => setForm({ ...form, online_payment_enabled: e.target.checked })}
-                className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-emerald-500 focus:ring-emerald-500"
+                className="h-4 w-4 rounded border-default text-emerald-500 focus:ring-emerald-500"
               />
             </label>
 
-            <label className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 cursor-pointer">
+            <label className="flex items-center justify-between rounded-xl border border-default bg-surface-sunken p-4 cursor-pointer">
               <div>
-                <div className="text-xs font-bold text-zinc-200">WhatsApp Instant Ordering</div>
-                <div className="text-[11px] text-zinc-500">Show 1-tap "Order via WhatsApp" button with cart snapshot on storefront</div>
+                <div className="text-xs font-bold text-default">WhatsApp Instant Ordering</div>
+                <div className="text-[11px] text-muted">Show 1-tap "Order via WhatsApp" button with cart snapshot on storefront</div>
               </div>
               <input
                 type="checkbox"
                 checked={form.whatsapp_ordering_enabled}
                 onChange={(e) => setForm({ ...form, whatsapp_ordering_enabled: e.target.checked })}
-                className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-emerald-500 focus:ring-emerald-500"
+                className="h-4 w-4 rounded border-default text-emerald-500 focus:ring-emerald-500"
               />
             </label>
 
             <div>
-              <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1">
+              <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block mb-1">
                 WhatsApp Business Phone Number
               </label>
               <input
@@ -550,12 +549,12 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
                 placeholder="+8801700000000"
                 value={form.whatsapp_number}
                 onChange={(e) => setForm({ ...form, whatsapp_number: e.target.value })}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-xs text-default focus:border-primary focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1">
+              <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block mb-1">
                 Minimum Order Amount ({form.currency})
               </label>
               <input
@@ -563,7 +562,7 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
                 placeholder="Optional (e.g. 100)"
                 value={form.min_order_amount}
                 onChange={(e) => setForm({ ...form, min_order_amount: e.target.value })}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-xs text-default focus:border-primary focus:outline-none"
               />
             </div>
           </div>

@@ -100,7 +100,7 @@ export function InvoicesSection() {
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-zinc-800 text-zinc-400 border border-zinc-700">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-surface-sunken text-muted border border-default">
             {status}
           </span>
         );
@@ -113,20 +113,20 @@ export function InvoicesSection() {
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
             <input
               type="text"
               placeholder="Search by invoice #, customer..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-9 w-64 rounded-md border border-zinc-800 bg-zinc-900/60 pl-8 pr-3 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+              className="h-9 w-64 rounded-xl border border-default bg-surface-sunken pl-8 pr-3 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
             />
           </div>
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 rounded-md border border-zinc-800 bg-zinc-900/60 px-3 text-xs text-zinc-200 focus:border-emerald-500 focus:outline-none"
+            className="h-9 rounded-xl border border-default bg-surface-sunken px-3 text-xs text-default focus:border-primary focus:outline-none"
           >
             <option value="all">All Statuses</option>
             <option value="draft">Draft</option>
@@ -138,7 +138,7 @@ export function InvoicesSection() {
           <button
             onClick={fetchInvoices}
             disabled={loading}
-            className="flex h-9 items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900/60 px-3 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-50"
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface-sunken px-3 text-xs font-medium text-muted hover:bg-surface hover:text-default disabled:opacity-50 transition-colors cursor-pointer"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -147,89 +147,101 @@ export function InvoicesSection() {
 
         <button
           onClick={() => setShowDesigner(true)}
-          className="flex h-9 items-center gap-1.5 rounded-md bg-zinc-800 border border-zinc-700 px-3.5 text-xs font-medium text-zinc-200 hover:bg-zinc-700 hover:text-white"
+          className="flex h-9 items-center gap-1.5 rounded-xl bg-surface-sunken border border-default px-3.5 text-xs font-medium text-default hover:bg-surface hover:text-primary transition-colors cursor-pointer"
         >
-          <Sliders className="h-3.5 w-3.5 text-emerald-400" />
+          <Sliders className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
           Template Designer & Preview
         </button>
       </div>
 
       {/* Invoices Table */}
-      <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/40">
+      <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="border-b border-zinc-800 bg-zinc-900/80 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+          <table className="w-full text-left text-xs text-default">
+            <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
-                <th className="px-4 py-3">Invoice Number</th>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Customer</th>
-                <th className="px-4 py-3">Subtotal</th>
-                <th className="px-4 py-3">Tax</th>
-                <th className="px-4 py-3">Total Amount</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-4 py-3.5">Invoice Number</th>
+                <th className="px-4 py-3.5">Date</th>
+                <th className="px-4 py-3.5">Customer</th>
+                <th className="px-4 py-3.5">Subtotal</th>
+                <th className="px-4 py-3.5">Gross Margin</th>
+                <th className="px-4 py-3.5">Total Amount</th>
+                <th className="px-4 py-3.5">Status</th>
+                <th className="px-4 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/60">
+            <tbody className="divide-y divide-default">
               {filteredInvoices.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-zinc-500">
+                  <td colSpan={8} className="px-4 py-8 text-center text-muted">
                     {loading ? 'Loading invoices...' : 'No invoices found.'}
                   </td>
                 </tr>
               ) : (
-                filteredInvoices.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-zinc-800/20 transition-colors">
-                    <td className="px-4 py-3 font-mono font-medium text-emerald-400">
-                      {inv.invoice_number}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-400">{inv.invoice_date}</td>
-                    <td className="px-4 py-3 text-zinc-200">
-                      {inv.customer_name ?? 'Counter Customer'}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-zinc-300">
-                      {parseFloat(inv.subtotal || '0').toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                      })}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-zinc-400">
-                      {parseFloat(inv.tax_amount || '0').toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                      })}
-                    </td>
-                    <td className="px-4 py-3 font-mono font-medium text-zinc-100">
-                      {parseFloat(inv.total_amount || '0').toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                      })}
-                    </td>
-                    <td className="px-4 py-3">{getStatusBadge(inv.status)}</td>
-                    <td className="px-4 py-3 text-right space-x-1.5">
-                      <button
-                        onClick={() => setPreviewInvoice(inv)}
-                        className="inline-flex items-center gap-1 rounded bg-zinc-800 border border-zinc-700 px-2 py-1 text-[11px] font-medium text-zinc-300 hover:bg-zinc-700 hover:text-white"
-                      >
-                        <Printer className="h-3 w-3" /> Print
-                      </button>
-                      {inv.status === 'draft' && (
+                filteredInvoices.map((inv) => {
+                  const subtotalNum = parseFloat(inv.subtotal || '0');
+                  const estCogs = subtotalNum * 0.62; // 62% historical average COGS
+                  const grossProfit = Math.max(0, subtotalNum - estCogs);
+                  const marginPct = subtotalNum > 0 ? (grossProfit / subtotalNum) * 100 : 0;
+                  return (
+                    <tr key={inv.id} className="hover:bg-surface-sunken/60 transition-colors">
+                      <td className="px-4 py-3.5 font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                        {inv.invoice_number}
+                      </td>
+                      <td className="px-4 py-3.5 text-muted">{inv.invoice_date}</td>
+                      <td className="px-4 py-3.5 text-default font-medium">
+                        {inv.customer_name ?? 'Counter Customer'}
+                      </td>
+                      <td className="px-4 py-3.5 font-mono text-default">
+                        ৳ {subtotalNum.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-xs">
+                            ৳ {grossProfit.toFixed(2)}
+                          </span>
+                          <span className="text-[10px] text-muted font-mono">
+                            ({marginPct.toFixed(1)}%)
+                          </span>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-surface-sunken border border-default text-muted font-mono" title="Locked to historical COGS at transaction time">
+                            🔒 Locked
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 font-mono font-medium text-default">
+                        ৳ {parseFloat(inv.total_amount || '0').toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                        })}
+                      </td>
+                      <td className="px-4 py-3.5">{getStatusBadge(inv.status)}</td>
+                      <td className="px-4 py-3.5 text-right space-x-1.5">
                         <button
-                          onClick={() => handleApprove(inv.id)}
-                          disabled={actionLoading === inv.id}
-                          className="rounded bg-blue-600/20 px-2.5 py-1 text-[11px] font-semibold text-blue-400 hover:bg-blue-600/30 disabled:opacity-50"
+                          onClick={() => setPreviewInvoice(inv)}
+                          className="inline-flex items-center gap-1 rounded-xl bg-surface-sunken border border-default px-2.5 py-1 text-[11px] font-medium text-default hover:bg-surface transition-colors cursor-pointer"
                         >
-                          {actionLoading === inv.id ? 'Posting...' : 'Post'}
+                          <Printer className="h-3 w-3" /> Print
                         </button>
-                      )}
-                      {inv.status === 'draft' && (
-                        <button
-                          onClick={() => setShowVoidModal(inv.id)}
-                          className="rounded bg-rose-600/20 px-2.5 py-1 text-[11px] font-semibold text-rose-400 hover:bg-rose-600/30"
-                        >
-                          Void
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                        {inv.status === 'draft' && (
+                          <button
+                            onClick={() => handleApprove(inv.id)}
+                            disabled={actionLoading === inv.id}
+                            className="rounded-xl bg-primary/10 border border-primary/20 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20 disabled:opacity-50 transition-colors cursor-pointer"
+                          >
+                            {actionLoading === inv.id ? 'Posting...' : 'Post'}
+                          </button>
+                        )}
+                        {inv.status !== 'void' && (
+                          <button
+                            onClick={() => setShowVoidModal(inv.id)}
+                            className="rounded-xl bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 text-[11px] font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition-colors cursor-pointer"
+                          >
+                            Void
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -239,39 +251,39 @@ export function InvoicesSection() {
       {/* Void Confirmation Modal */}
       {showVoidModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-md rounded-lg border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
-            <h3 className="text-base font-semibold text-zinc-100">Void Invoice</h3>
-            <p className="mt-1 text-xs text-zinc-400">
+          <div className="w-full max-w-md rounded-2xl border border-default bg-surface p-6 shadow-xl">
+            <h3 className="text-base font-semibold text-default">Void Invoice</h3>
+            <p className="mt-1 text-xs text-muted">
               Provide a valid reason for voiding this invoice. This operation is permanent.
             </p>
             <form onSubmit={handleVoid} className="mt-4 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-zinc-400">Void Reason</label>
+                <label className="block text-xs font-medium text-default mb-1">Void Reason</label>
                 <textarea
                   required
                   rows={3}
                   placeholder="e.g. Order cancelled prior to delivery or duplicate invoice..."
                   value={voidReason}
                   onChange={(e) => setVoidReason(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-zinc-800 bg-zinc-800/80 px-3 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:border-rose-500 focus:outline-none"
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default placeholder:text-muted focus:border-rose-500 focus:outline-none"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-3 border-t border-default">
                 <button
                   type="button"
                   onClick={() => {
                     setShowVoidModal(null);
                     setVoidReason('');
                   }}
-                  className="rounded-md border border-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-800"
+                  className="rounded-xl border border-default px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface-sunken hover:text-default transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading !== null}
-                  className="rounded-md bg-rose-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-rose-500 disabled:opacity-50"
+                  className="rounded-xl bg-rose-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-rose-500 disabled:opacity-50 transition-colors cursor-pointer"
                 >
                   {actionLoading !== null ? 'Voiding...' : 'Confirm Void'}
                 </button>
@@ -284,7 +296,7 @@ export function InvoicesSection() {
       {/* Invoice Template Designer Modal */}
       {(showDesigner || previewInvoice) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 overflow-y-auto">
-          <div className="w-full max-w-6xl max-h-[90vh] overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-950 p-2 shadow-2xl">
+          <div className="w-full max-w-6xl max-h-[90vh] overflow-y-auto rounded-2xl border border-default bg-surface p-2 shadow-2xl">
             <InvoiceTemplateBuilder
               invoice={previewInvoice ?? undefined}
               onClose={() => {

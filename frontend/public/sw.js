@@ -2,7 +2,7 @@
 // SLICE MART FMS — SERVICE WORKER (PWA Offline & Cache Engine)
 // ─────────────────────────────────────────────────────────────
 
-const CACHE_NAME = 'slicemart-fms-v1.1';
+const CACHE_NAME = 'slicemart-fms-v1.2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -55,7 +55,9 @@ self.addEventListener('fetch', (event) => {
         .catch(async () => {
           const cached = await caches.match(request);
           if (cached) return cached;
-          return caches.match('/index.html');
+          const indexCached = await caches.match('/index.html');
+          if (indexCached) return indexCached;
+          return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
         })
     );
     return;
@@ -77,7 +79,7 @@ self.addEventListener('fetch', (event) => {
             caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }
           return response;
-        });
+        }).catch(() => new Response('', { status: 404, statusText: 'Not Found' }));
       })
     );
     return;
@@ -86,9 +88,12 @@ self.addEventListener('fetch', (event) => {
   // Default: Network with Cache Fallback
   event.respondWith(
     fetch(request)
-      .then((response) => {
-        return response;
+      .then((response) => response)
+      .catch(async () => {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        return new Response('', { status: 408, statusText: 'Request Timeout' });
       })
-      .catch(() => caches.match(request))
   );
 });
+

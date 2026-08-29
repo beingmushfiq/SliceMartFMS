@@ -69,23 +69,27 @@ export default function CatalogueWorkspace() {
   const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[0];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 max-w-7xl mx-auto py-2">
       {/* Workspace Header */}
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-default pb-5">
         <div>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400">
-            Master Data Registry
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-primary bg-primary-subtle px-2.5 py-0.5 rounded-full border border-primary/20">
+              Master Data Registry
+            </span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-default">
             {currentTab?.label}
           </h1>
-          <p className="mt-1 text-xs text-zinc-400">{currentTab?.description}</p>
+          <p className="mt-1.5 text-xs text-muted max-w-2xl leading-relaxed">
+            {currentTab?.description}
+          </p>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="border-b border-zinc-800">
-        <nav className="flex space-x-2 overflow-x-auto pb-px" aria-label="Catalogue sections">
+      {/* Segmented Navigation Tabs Tray */}
+      <div className="flex overflow-x-auto p-1.5 bg-surface-sunken rounded-2xl border border-default shadow-2xs">
+        <nav className="flex gap-1.5 min-w-full sm:min-w-0" aria-label="Catalogue sections">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -94,13 +98,13 @@ export default function CatalogueWorkspace() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 border-b-2 py-3 px-3.5 text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer ${
                   isActive
-                    ? 'border-emerald-500 text-emerald-400'
-                    : 'border-transparent text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+                    ? 'bg-surface text-default font-semibold shadow-xs border border-default/70'
+                    : 'text-muted hover:text-default hover:bg-surface/50 border border-transparent'
                 }`}
               >
-                <Icon className={`h-4 w-4 ${isActive ? 'text-emerald-400' : 'text-zinc-500'}`} />
+                <Icon className={`size-4 ${isActive ? 'text-primary' : 'text-muted'}`} />
                 <span>{tab.label}</span>
               </button>
             );
@@ -108,8 +112,8 @@ export default function CatalogueWorkspace() {
         </nav>
       </div>
 
-      {/* Active Section Content */}
-      <div className="mt-4">
+      {/* Tab Section Content */}
+      <div className="pt-1">
         {activeTab === 'products' && <ProductsSection />}
         {activeTab === 'units' && <UnitsSection />}
         {activeTab === 'categories' && <CategoriesSection />}

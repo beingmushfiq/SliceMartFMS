@@ -276,10 +276,10 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
       {/* Main Layout Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
         {/* Sidebar: Pages Directory & New Templates */}
-        <div className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 shadow-xl">
+        <div className="space-y-4 rounded-2xl border border-default bg-surface p-4 shadow-2xs">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Pages</h3>
-            <span className="text-[11px] text-zinc-500 font-mono">({pages.length})</span>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Pages</h3>
+            <span className="text-[11px] text-muted font-mono">({pages.length})</span>
           </div>
 
           <div className="space-y-1">
@@ -293,19 +293,19 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                 }}
                 className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-semibold transition-all cursor-pointer ${
                   selectedPage?.id === p.id
-                    ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
-                    : 'text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200'
+                    ? 'bg-primary/15 border border-primary/30 text-primary'
+                    : 'text-muted hover:bg-surface-sunken hover:text-default'
                 }`}
               >
                 <div className="truncate">
-                  <div className="truncate">{p.title}</div>
-                  <div className="font-mono text-[10px] text-zinc-500">/{p.slug}</div>
+                  <div className="truncate text-default font-medium">{p.title}</div>
+                  <div className="font-mono text-[10px] text-muted">/{p.slug}</div>
                 </div>
                 <span
-                  className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                  className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${
                     p.status === 'published'
-                      ? 'bg-emerald-500/20 text-emerald-400'
-                      : 'bg-zinc-800 text-zinc-400'
+                      ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                      : 'bg-surface-sunken text-muted border border-default'
                   }`}
                 >
                   {p.status}
@@ -315,41 +315,41 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
           </div>
 
           {/* Quick Create Templates */}
-          <div className="border-t border-zinc-800/80 pt-4 space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block">
+          <div className="border-t border-default pt-4 space-y-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted block">
               Add Preset Page
             </span>
             <div className="grid grid-cols-1 gap-1.5">
               <button
                 type="button"
                 onClick={() => handleCreateNewPage('about')}
-                className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 px-2.5 py-1.5 text-left text-[11px] font-medium text-zinc-300 hover:border-emerald-500/40 hover:text-white transition-colors cursor-pointer"
+                className="flex items-center gap-2 rounded-xl border border-default bg-surface-sunken px-2.5 py-2 text-left text-[11px] font-medium text-default hover:border-primary/40 hover:text-primary transition-colors cursor-pointer"
               >
-                <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+                <Sparkles className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>About Us Page</span>
               </button>
               <button
                 type="button"
                 onClick={() => handleCreateNewPage('faq')}
-                className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 px-2.5 py-1.5 text-left text-[11px] font-medium text-zinc-300 hover:border-emerald-500/40 hover:text-white transition-colors cursor-pointer"
+                className="flex items-center gap-2 rounded-xl border border-default bg-surface-sunken px-2.5 py-2 text-left text-[11px] font-medium text-default hover:border-primary/40 hover:text-primary transition-colors cursor-pointer"
               >
-                <HelpCircle className="h-3.5 w-3.5 text-teal-400" />
+                <HelpCircle className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400" />
                 <span>Help / FAQ Page</span>
               </button>
               <button
                 type="button"
                 onClick={() => handleCreateNewPage('policy')}
-                className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 px-2.5 py-1.5 text-left text-[11px] font-medium text-zinc-300 hover:border-emerald-500/40 hover:text-white transition-colors cursor-pointer"
+                className="flex items-center gap-2 rounded-xl border border-default bg-surface-sunken px-2.5 py-2 text-left text-[11px] font-medium text-default hover:border-primary/40 hover:text-primary transition-colors cursor-pointer"
               >
-                <FileText className="h-3.5 w-3.5 text-amber-400" />
+                <FileText className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
                 <span>Return Policy</span>
               </button>
               <button
                 type="button"
                 onClick={() => handleCreateNewPage('custom')}
-                className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 px-2.5 py-1.5 text-left text-[11px] font-medium text-zinc-300 hover:border-emerald-500/40 hover:text-white transition-colors cursor-pointer"
+                className="flex items-center gap-2 rounded-xl border border-default bg-surface-sunken px-2.5 py-2 text-left text-[11px] font-medium text-default hover:border-primary/40 hover:text-primary transition-colors cursor-pointer"
               >
-                <Plus className="h-3.5 w-3.5 text-zinc-400" />
+                <Plus className="h-3.5 w-3.5 text-muted" />
                 <span>Blank Custom Page</span>
               </button>
             </div>
@@ -359,42 +359,89 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
         {/* Center Canvas: Block Reordering & Editor */}
         {selectedPage && previewMode === 'edit' && (
           <div className="space-y-6 lg:col-span-3">
-            {/* Page Metadata Card */}
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5 shadow-xl space-y-4">
+            {/* Page Metadata Card & SEO SERP Preview */}
+            <div className="rounded-2xl border border-default bg-surface p-5 shadow-2xs space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 block mb-1">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted block mb-1">
                     Page Title
                   </label>
                   <input
                     type="text"
                     value={selectedPage.title}
                     onChange={(e) => setSelectedPage({ ...selectedPage, title: e.target.value })}
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                    className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-xs text-default focus:border-primary focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 block mb-1">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted block mb-1">
                     URL Slug
                   </label>
-                  <div className="flex items-center rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs">
-                    <span className="text-zinc-500">/pages/</span>
+                  <div className="flex items-center rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs">
+                    <span className="text-muted">/pages/</span>
                     <input
                       type="text"
                       value={selectedPage.slug}
                       onChange={(e) => setSelectedPage({ ...selectedPage, slug: e.target.value })}
-                      className="flex-1 bg-transparent text-zinc-100 focus:outline-none pl-1"
+                      className="flex-1 bg-transparent text-default focus:outline-none pl-1 font-mono"
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* SEO Meta Fields */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 pt-2 border-t border-default">
+                <div>
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted block mb-1">
+                    SEO Meta Title (Browser & Search Snippet)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Premium Bread & Confectionery — Slice Mart"
+                    value={selectedPage.meta_title || ''}
+                    onChange={(e) => setSelectedPage({ ...selectedPage, meta_title: e.target.value })}
+                    className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted block mb-1">
+                    SEO Meta Description
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Brief 150-160 character summary for search engines..."
+                    value={selectedPage.meta_description || ''}
+                    onChange={(e) => setSelectedPage({ ...selectedPage, meta_description: e.target.value })}
+                    className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Google Search Live SERP Snippet Preview */}
+              <div className="p-4 rounded-xl bg-surface-sunken border border-default space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase font-bold text-muted">Google Search Snippet Preview</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono">Live SERP</span>
+                </div>
+                <div className="text-xs text-emerald-600 dark:text-emerald-400 font-sans truncate">
+                  https://slicemart.com › pages › <span className="font-mono">{selectedPage.slug || 'untitled'}</span>
+                </div>
+                <div className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
+                  {selectedPage.meta_title || selectedPage.title || 'Page Title — Slice Mart FMS'}
+                </div>
+                <div className="text-xs text-muted line-clamp-2">
+                  {selectedPage.meta_description ||
+                    'Discover industrial manufacturing quality, certified baking ingredients, and fresh wholesale confectionery delivered daily across Bangladesh.'}
                 </div>
               </div>
             </div>
 
             {/* Block Palette Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
-              <span className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-                <Layers className="h-4 w-4 text-emerald-400" />
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-default bg-surface p-4 shadow-2xs">
+              <span className="text-xs font-bold text-default flex items-center gap-1.5">
+                <Layers className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 <span>Add Section Block:</span>
               </span>
 
@@ -402,33 +449,33 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleAddBlock('hero_banner')}
-                  className="flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:border-emerald-500 hover:text-white transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-xl border border-default bg-surface-sunken px-3 py-1.5 text-xs font-semibold text-default hover:border-primary hover:text-primary transition-all cursor-pointer"
                 >
-                  <ImageIcon className="h-3.5 w-3.5 text-emerald-400" />
+                  <ImageIcon className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                   <span>Hero Banner</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleAddBlock('rich_text')}
-                  className="flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:border-teal-500 hover:text-white transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-xl border border-default bg-surface-sunken px-3 py-1.5 text-xs font-semibold text-default hover:border-primary hover:text-primary transition-all cursor-pointer"
                 >
-                  <FileText className="h-3.5 w-3.5 text-teal-400" />
+                  <FileText className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400" />
                   <span>Rich Text</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleAddBlock('faq')}
-                  className="flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:border-amber-500 hover:text-white transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-xl border border-default bg-surface-sunken px-3 py-1.5 text-xs font-semibold text-default hover:border-primary hover:text-primary transition-all cursor-pointer"
                 >
-                  <HelpCircle className="h-3.5 w-3.5 text-amber-400" />
+                  <HelpCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
                   <span>FAQ Accordion</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleAddBlock('custom_html_css')}
-                  className="flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:border-rose-500 hover:text-white transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-xl border border-default bg-surface-sunken px-3 py-1.5 text-xs font-semibold text-default hover:border-primary hover:text-primary transition-all cursor-pointer"
                 >
-                  <Code className="h-3.5 w-3.5 text-rose-400" />
+                  <Code className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
                   <span>Sandboxed HTML/CSS</span>
                 </button>
               </div>
@@ -439,15 +486,15 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
               {(selectedPage.blocks || []).map((block, idx) => (
                 <div
                   key={block.id || idx}
-                  className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5 shadow-xl space-y-3"
+                  className="rounded-2xl border border-default bg-surface p-5 shadow-2xs space-y-3"
                 >
                   {/* Block Header & Reorder Controls */}
-                  <div className="flex items-center justify-between border-b border-zinc-800/60 pb-3">
+                  <div className="flex items-center justify-between border-b border-default pb-3">
                     <div className="flex items-center gap-2">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-zinc-800 font-mono text-[11px] text-zinc-400">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-surface-sunken border border-default font-mono text-[11px] text-muted">
                         {idx + 1}
                       </span>
-                      <span className="text-xs font-bold text-zinc-200 capitalize">
+                      <span className="text-xs font-bold text-default capitalize">
                         {block.type.replace('_', ' ')} Block
                       </span>
                     </div>
@@ -457,7 +504,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                         type="button"
                         disabled={idx === 0}
                         onClick={() => handleMoveBlock(idx, 'up')}
-                        className="rounded-lg border border-zinc-800 bg-zinc-900 p-1.5 text-zinc-400 hover:text-white disabled:opacity-30 cursor-pointer"
+                        className="rounded-xl border border-default bg-surface-sunken p-1.5 text-muted hover:text-default disabled:opacity-30 cursor-pointer transition-colors"
                       >
                         <ArrowUp className="h-3.5 w-3.5" />
                       </button>
@@ -465,14 +512,14 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                         type="button"
                         disabled={idx === (selectedPage.blocks || []).length - 1}
                         onClick={() => handleMoveBlock(idx, 'down')}
-                        className="rounded-lg border border-zinc-800 bg-zinc-900 p-1.5 text-zinc-400 hover:text-white disabled:opacity-30 cursor-pointer"
+                        className="rounded-xl border border-default bg-surface-sunken p-1.5 text-muted hover:text-default disabled:opacity-30 cursor-pointer transition-colors"
                       >
                         <ArrowDown className="h-3.5 w-3.5" />
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDeleteBlock(idx)}
-                        className="rounded-lg border border-zinc-800 bg-zinc-900 p-1.5 text-zinc-500 hover:text-rose-400 cursor-pointer ml-2"
+                        className="rounded-xl border border-default bg-surface-sunken p-1.5 text-muted hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer ml-2 transition-colors"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -491,7 +538,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                           blocks[idx] = { ...block, title: e.target.value };
                           setSelectedPage({ ...selectedPage, blocks });
                         }}
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                        className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
                       />
                       <textarea
                         rows={2}
@@ -502,7 +549,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                           blocks[idx] = { ...block, subtitle: e.target.value };
                           setSelectedPage({ ...selectedPage, blocks });
                         }}
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                        className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
                       />
                     </div>
                   )}
@@ -518,7 +565,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                           blocks[idx] = { ...block, title: e.target.value };
                           setSelectedPage({ ...selectedPage, blocks });
                         }}
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                        className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
                       />
                       <textarea
                         rows={4}
@@ -529,7 +576,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                           blocks[idx] = { ...block, content: e.target.value };
                           setSelectedPage({ ...selectedPage, blocks });
                         }}
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none font-sans"
+                        className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none font-sans"
                       />
                     </div>
                   )}
@@ -537,7 +584,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                   {block.type === 'custom_html_css' && (
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div>
-                        <label className="text-[10px] font-mono text-zinc-400 block mb-1">
+                        <label className="text-[10px] font-mono text-muted block mb-1">
                           Custom HTML (Rendered in Secure Sandbox)
                         </label>
                         <textarea
@@ -548,11 +595,11 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                             blocks[idx] = { ...block, html: e.target.value };
                             setSelectedPage({ ...selectedPage, blocks });
                           }}
-                          className="w-full rounded-xl border border-zinc-800 bg-zinc-950 p-2.5 font-mono text-[11px] text-emerald-400 focus:border-emerald-500 focus:outline-none"
+                          className="w-full rounded-xl border border-default bg-surface-sunken p-2.5 font-mono text-[11px] text-emerald-600 dark:text-emerald-400 focus:border-primary focus:outline-none"
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-mono text-zinc-400 block mb-1">
+                        <label className="text-[10px] font-mono text-muted block mb-1">
                           Custom CSS Styles
                         </label>
                         <textarea
@@ -563,7 +610,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                             blocks[idx] = { ...block, css: e.target.value };
                             setSelectedPage({ ...selectedPage, blocks });
                           }}
-                          className="w-full rounded-xl border border-zinc-800 bg-zinc-950 p-2.5 font-mono text-[11px] text-cyan-400 focus:border-cyan-500 focus:outline-none"
+                          className="w-full rounded-xl border border-default bg-surface-sunken p-2.5 font-mono text-[11px] text-cyan-600 dark:text-cyan-400 focus:border-cyan-500 focus:outline-none"
                         />
                       </div>
                     </div>
@@ -572,7 +619,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                   {block.type === 'faq' && (
                     <div className="space-y-2">
                       {(block.faqs || []).map((faq, fIdx) => (
-                        <div key={fIdx} className="space-y-1.5 rounded-xl border border-zinc-800/80 bg-zinc-950 p-3">
+                        <div key={fIdx} className="space-y-1.5 rounded-xl border border-default bg-surface-sunken p-3">
                           <input
                             type="text"
                             placeholder="Question..."
@@ -585,7 +632,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                               blocks[idx] = { ...block, faqs: newFaqs };
                               setSelectedPage({ ...selectedPage, blocks });
                             }}
-                            className="w-full bg-transparent text-xs font-bold text-zinc-100 focus:outline-none"
+                            className="w-full bg-transparent text-xs font-bold text-default focus:outline-none"
                           />
                           <textarea
                             rows={2}
@@ -599,7 +646,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                               blocks[idx] = { ...block, faqs: newFaqs };
                               setSelectedPage({ ...selectedPage, blocks });
                             }}
-                            className="w-full bg-transparent text-xs text-zinc-400 focus:outline-none"
+                            className="w-full bg-transparent text-xs text-muted focus:outline-none"
                           />
                         </div>
                       ))}
@@ -614,32 +661,32 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
         {/* Live Preview Pane */}
         {selectedPage && previewMode === 'preview' && (
           <div className="lg:col-span-3 space-y-6">
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6 sm:p-10 shadow-2xl space-y-8">
-              <div className="border-b border-zinc-800 pb-4">
-                <span className="font-mono text-xs text-emerald-400">/pages/{selectedPage.slug}</span>
-                <h1 className="text-2xl font-bold text-white mt-1">{selectedPage.title}</h1>
+            <div className="rounded-3xl border border-default bg-surface p-6 sm:p-10 shadow-2xl space-y-8">
+              <div className="border-b border-default pb-4">
+                <span className="font-mono text-xs text-emerald-600 dark:text-emerald-400">/pages/{selectedPage.slug}</span>
+                <h1 className="text-2xl font-bold text-default mt-1">{selectedPage.title}</h1>
               </div>
 
               {(selectedPage.blocks || []).map((block, idx) => (
                 <div key={idx} className="space-y-4">
                   {block.type === 'hero_banner' && (
-                    <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-950/40 via-zinc-900 to-zinc-950 p-8 text-center space-y-3">
-                      <h2 className="text-xl font-bold text-white sm:text-2xl">{block.title}</h2>
-                      <p className="text-xs text-zinc-300 max-w-xl mx-auto">{block.subtitle}</p>
+                    <div className="rounded-2xl border border-primary/20 bg-surface-sunken p-8 text-center space-y-3">
+                      <h2 className="text-xl font-bold text-default sm:text-2xl">{block.title}</h2>
+                      <p className="text-xs text-muted max-w-xl mx-auto">{block.subtitle}</p>
                     </div>
                   )}
 
                   {block.type === 'rich_text' && (
-                    <div className="prose prose-invert max-w-none space-y-2">
-                      {block.title && <h3 className="text-base font-bold text-zinc-100">{block.title}</h3>}
-                      <p className="text-xs text-zinc-300 leading-relaxed whitespace-pre-line">
+                    <div className="prose max-w-none space-y-2">
+                      {block.title && <h3 className="text-base font-bold text-default">{block.title}</h3>}
+                      <p className="text-xs text-muted leading-relaxed whitespace-pre-line">
                         {block.content}
                       </p>
                     </div>
                   )}
 
                   {block.type === 'custom_html_css' && (
-                    <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
+                    <div className="overflow-hidden rounded-2xl border border-default bg-surface">
                       <iframe
                         title="Sandboxed Block Preview"
                         sandbox="allow-scripts"
@@ -656,12 +703,12 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
 
                   {block.type === 'faq' && (
                     <div className="space-y-3">
-                      <h3 className="text-sm font-bold text-zinc-100">{block.title || 'FAQ'}</h3>
+                      <h3 className="text-sm font-bold text-default">{block.title || 'FAQ'}</h3>
                       <div className="space-y-2">
                         {(block.faqs || []).map((faq, fIdx) => (
-                          <div key={fIdx} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-                            <h4 className="text-xs font-bold text-zinc-200">{faq.q}</h4>
-                            <p className="text-xs text-zinc-400 mt-1">{faq.a}</p>
+                          <div key={fIdx} className="rounded-xl border border-default bg-surface-sunken p-4">
+                            <h4 className="text-xs font-bold text-default">{faq.q}</h4>
+                            <p className="text-xs text-muted mt-1">{faq.a}</p>
                           </div>
                         ))}
                       </div>

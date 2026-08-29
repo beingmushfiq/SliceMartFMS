@@ -83,6 +83,8 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
+    localStorage.setItem('ui.theme', next);
+    localStorage.setItem('theme', next);
     document.documentElement.setAttribute('data-theme', next);
     if (next === 'dark') {
       document.documentElement.classList.add('dark');
@@ -127,19 +129,19 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
 
         {/* Live Factory Line Status Pills (Desktop) */}
         <div className="hidden xl:flex items-center gap-2">
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-medium text-emerald-400">
-            <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
+            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
             <span className="font-semibold">Line 01 (Cut):</span>
             <span>Running (98.4%)</span>
           </div>
 
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[11px] font-medium text-blue-400">
-            <span className="size-1.5 rounded-full bg-blue-400 animate-pulse" />
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[11px] font-medium text-blue-700 dark:text-blue-300">
+            <span className="size-1.5 rounded-full bg-blue-500 animate-pulse" />
             <span className="font-semibold">Line 02 (Sew):</span>
             <span>Batch PB-042</span>
           </div>
 
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[11px] font-medium text-amber-400">
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[11px] font-medium text-amber-700 dark:text-amber-300">
             <Activity className="size-3" />
             <span className="font-semibold">QC Gate:</span>
             <span>Active</span>
@@ -258,11 +260,12 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
                   </div>
                 ) : (
                   notifications.map((notif) => (
-                    <div
+                    <button
                       key={notif.id}
+                      type="button"
                       onClick={() => markSingleRead(notif.id)}
                       className={cn(
-                        'p-3.5 text-left transition-token-colors cursor-pointer hover:bg-surface-sunken',
+                        'w-full p-3.5 text-left transition-token-colors cursor-pointer hover:bg-surface-sunken focus-visible:ring-focus outline-none',
                         !notif.read_at ? 'bg-primary-subtle/30' : 'opacity-70'
                       )}
                     >
@@ -278,7 +281,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
                           </span>
                         </div>
                       </div>
-                    </div>
+                    </button>
                   ))
                 )}
               </div>
@@ -303,7 +306,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
             className="flex items-center gap-2.5 rounded-lg p-1.5 hover:bg-surface-sunken transition-token-colors focus-visible:ring-focus border border-transparent hover:border-default"
           >
-            <div className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-bold text-xs shadow-xs">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-linear-to-br from-blue-600 to-indigo-600 text-white font-bold text-xs shadow-xs">
               {user?.name && user.name.length > 0 ? user.name[0] : 'U'}
             </div>
             <div className="hidden text-left sm:block">

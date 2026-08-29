@@ -14,26 +14,23 @@
   /* ─── Neutrals ─────────────────────────────────────────────────────────────
      Two families, deliberately distinct.
 
-     --navy-*  the spine. Dark application chrome: sidebar, command palette,
-               overlays, dark-mode surfaces. Carries blue chroma so it reads as
-               a considered colour rather than "dark grey".
+     --navy-*  the spine. Deep Obsidian & Chromatic Space neutrals.
+               Carries deep space undertones for luxury enterprise ergonomics.
      --slate-* the cool neutral. Light-mode backgrounds, hairline borders,
                muted and subtle text.
-
-     navy 900/950 are inherited unchanged from the prototype — the sidebar is
-     the one surface every operator sees all day and it was already right.
      ──────────────────────────────────────────────────────────────────────── */
-  --navy-50: #eef2fb;
-  --navy-100: #dbe3f4;
-  --navy-200: #bac9e7;
-  --navy-300: #93a6d2;
-  --navy-400: #6a80b2;
-  --navy-500: #47598e;
-  --navy-600: #35456e;
-  --navy-700: #263352;
-  --navy-800: #1a2438;
-  --navy-900: #0f172a;
-  --navy-950: #020617;
+  --navy-50: #f4f6fa;
+  --navy-100: #e2e7f2;
+  --navy-200: #c2cde3;
+  --navy-300: #99abcf;
+  --navy-400: #6d84b5;
+  --navy-500: #496296;
+  --navy-600: #344872;
+  --navy-700: #22304f;
+  --navy-800: #131a29;
+  --navy-850: #0e1420;
+  --navy-900: #0a0e17;
+  --navy-950: #06090f;
 
   --slate-50: #f8fafc;
   --slate-100: #f1f5f9;
@@ -48,22 +45,21 @@
   --slate-950: #020617;
 
   /* ─── Chromatics ───────────────────────────────────────────────────────────
-     Full 50→950 ramps. The semantic layer picks steps out of these; nothing
-     else may.
+     Full 50→950 ramps. The semantic layer picks steps out of these.
      ──────────────────────────────────────────────────────────────────────── */
 
-  /* blue — primary action */
+  /* indigo/blue — primary luminous action */
   --blue-50: #eff6ff;
   --blue-100: #dbeafe;
   --blue-200: #bfdbfe;
   --blue-300: #93c5fd;
   --blue-400: #60a5fa;
   --blue-500: #3b82f6;
-  --blue-600: #2563eb;
-  --blue-700: #1d4ed8;
-  --blue-800: #1e40af;
-  --blue-900: #1e3a8a;
-  --blue-950: #172554;
+  --blue-600: #4f46e5;
+  --blue-700: #4338ca;
+  --blue-800: #3730a3;
+  --blue-900: #312e81;
+  --blue-950: #1e1b4b;
 
   /* amber — the warm accent, and warning */
   --amber-50: #fffbeb;

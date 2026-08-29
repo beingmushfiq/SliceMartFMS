@@ -35,90 +35,90 @@ export function StockCountsSection() {
     switch (status) {
       case 'draft':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-zinc-800 text-zinc-300 border border-zinc-700">
-            <Clock className="h-3 w-3 text-zinc-400" /> Draft
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-surface-sunken text-muted border border-default">
+            <Clock className="size-3 text-muted" /> Draft
           </span>
         );
       case 'counting':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            <Calculator className="h-3 w-3 text-amber-400" /> Counting
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+            <Calculator className="size-3 text-amber-500" /> Counting
           </span>
         );
       case 'completed':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Reconciled
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+            <CheckCircle2 className="size-3 text-emerald-500" /> Reconciled
           </span>
         );
       case 'cancelled':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/20">
-            <XCircle className="h-3 w-3 text-rose-400" /> Cancelled
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30">
+            <XCircle className="size-3 text-rose-500" /> Cancelled
           </span>
         );
     }
   };
 
   return (
-    <div className="space-y-4">
-      {/* Action Bar */}
+    <div className="space-y-6">
+      {/* Action Toolbar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={fetchCounts}
             disabled={loading}
-            className="p-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/80 rounded-lg border border-zinc-800 transition-colors"
+            className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors shadow-2xs"
             title="Refresh"
           >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`size-4 ${loading ? 'animate-spin text-primary' : ''}`} />
           </button>
         </div>
 
         <div className="relative flex-1 sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted" />
           <input
             type="text"
             placeholder="Search count session #, warehouse..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-zinc-900/90 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50"
+            className="w-full pl-9 pr-3.5 py-2 text-xs bg-surface-sunken border border-default rounded-xl text-default placeholder:text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-2xs"
           />
         </div>
       </div>
 
-      {/* Counts Table */}
-      <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 backdrop-blur-md overflow-hidden">
+      {/* Counts Data Grid Container */}
+      <div className="rounded-2xl border border-default bg-surface shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-zinc-300">
-            <thead className="bg-zinc-900/80 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-800">
+          <table className="w-full text-left text-xs text-default">
+            <thead className="bg-surface-sunken/70 text-[11px] font-semibold text-muted uppercase tracking-wider border-b border-default">
               <tr>
-                <th className="px-4 py-3">Count Session #</th>
-                <th className="px-4 py-3">Warehouse</th>
-                <th className="px-4 py-3">Count Type</th>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Snapshotted Lines</th>
+                <th className="px-4 py-3.5">Count Session #</th>
+                <th className="px-4 py-3.5">Warehouse</th>
+                <th className="px-4 py-3.5">Count Type</th>
+                <th className="px-4 py-3.5">Date</th>
+                <th className="px-4 py-3.5">Status</th>
+                <th className="px-4 py-3.5">Snapshotted Lines</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/50">
+            <tbody className="divide-y divide-default">
               {filteredCounts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-zinc-500">
+                  <td colSpan={6} className="px-4 py-12 text-center text-muted">
                     {loading ? 'Loading physical count sessions...' : 'No count sessions found'}
                   </td>
                 </tr>
               ) : (
                 filteredCounts.map((c) => (
-                  <tr key={c.id} className="hover:bg-zinc-800/30 transition-colors">
-                    <td className="px-4 py-3 font-mono font-medium text-zinc-100">
+                  <tr key={c.id} className="hover:bg-surface-sunken/40 transition-colors">
+                    <td className="px-4 py-3.5 font-mono font-semibold text-default">
                       {c.count_number}
                     </td>
-                    <td className="px-4 py-3 text-zinc-200">{c.warehouse_name ?? '—'}</td>
-                    <td className="px-4 py-3 capitalize text-zinc-300">{c.count_type} count</td>
-                    <td className="px-4 py-3 font-mono text-zinc-400">{c.count_date}</td>
-                    <td className="px-4 py-3">{getStatusBadge(c.status)}</td>
-                    <td className="px-4 py-3 text-zinc-400 font-mono">
+                    <td className="px-4 py-3.5 text-default">{c.warehouse_name ?? '—'}</td>
+                    <td className="px-4 py-3.5 capitalize text-muted">{c.count_type} count</td>
+                    <td className="px-4 py-3.5 font-mono text-muted">{c.count_date}</td>
+                    <td className="px-4 py-3.5">{getStatusBadge(c.status)}</td>
+                    <td className="px-4 py-3.5 text-muted font-mono">
                       {c.items?.length ?? 0} item(s)
                     </td>
                   </tr>

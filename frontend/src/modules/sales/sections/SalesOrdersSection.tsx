@@ -147,20 +147,20 @@ export function SalesOrdersSection() {
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
             <input
               type="text"
               placeholder="Search by order #, customer..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-9 w-64 rounded-md border border-zinc-800 bg-zinc-900/60 pl-8 pr-3 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+              className="h-9 w-64 rounded-xl border border-default bg-surface-sunken pl-8 pr-3 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
             />
           </div>
 
           <select
             value={channelFilter}
             onChange={(e) => setChannelFilter(e.target.value)}
-            className="h-9 rounded-md border border-zinc-800 bg-zinc-900/60 px-3 text-xs text-zinc-200 focus:border-emerald-500 focus:outline-none"
+            className="h-9 rounded-xl border border-default bg-surface-sunken px-3 text-xs text-default focus:border-primary focus:outline-none"
           >
             <option value="all">All Channels</option>
             <option value="dealer">Dealer</option>
@@ -173,7 +173,7 @@ export function SalesOrdersSection() {
           <button
             onClick={fetchOrders}
             disabled={loading}
-            className="flex h-9 items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900/60 px-3 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-50"
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface-sunken px-3 text-xs font-medium text-muted hover:bg-surface hover:text-default disabled:opacity-50 transition-colors cursor-pointer"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -182,7 +182,7 @@ export function SalesOrdersSection() {
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex h-9 items-center gap-1.5 rounded-md bg-emerald-600 px-3.5 text-xs font-medium text-white shadow-sm hover:bg-emerald-500"
+          className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-medium text-white shadow-xs hover:bg-primary-hover transition-colors cursor-pointer"
         >
           <Plus className="h-3.5 w-3.5" />
           New Sales Order
@@ -190,65 +190,65 @@ export function SalesOrdersSection() {
       </div>
 
       {/* Orders Table */}
-      <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/40">
+      <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="border-b border-zinc-800 bg-zinc-900/80 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+          <table className="w-full text-left text-xs text-default">
+            <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
-                <th className="px-4 py-3">Order Number</th>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Channel</th>
-                <th className="px-4 py-3">Customer</th>
-                <th className="px-4 py-3">Amount</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Payment</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-4 py-3.5">Order Number</th>
+                <th className="px-4 py-3.5">Date</th>
+                <th className="px-4 py-3.5">Channel</th>
+                <th className="px-4 py-3.5">Customer</th>
+                <th className="px-4 py-3.5">Amount</th>
+                <th className="px-4 py-3.5">Status</th>
+                <th className="px-4 py-3.5">Payment</th>
+                <th className="px-4 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/60">
+            <tbody className="divide-y divide-default">
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-zinc-500">
+                  <td colSpan={8} className="px-4 py-8 text-center text-muted">
                     {loading ? 'Loading sales orders...' : 'No sales orders found.'}
                   </td>
                 </tr>
               ) : (
                 filteredOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-zinc-800/20 transition-colors">
-                    <td className="px-4 py-3 font-mono font-medium text-emerald-400">
+                  <tr key={order.id} className="hover:bg-surface-sunken/60 transition-colors">
+                    <td className="px-4 py-3.5 font-mono font-medium text-emerald-600 dark:text-emerald-400">
                       {order.order_number}
                     </td>
-                    <td className="px-4 py-3 text-zinc-400">{order.order_date}</td>
-                    <td className="px-4 py-3">{getChannelBadge(order.channel)}</td>
-                    <td className="px-4 py-3 text-zinc-200">
+                    <td className="px-4 py-3.5 text-muted">{order.order_date}</td>
+                    <td className="px-4 py-3.5">{getChannelBadge(order.channel)}</td>
+                    <td className="px-4 py-3.5 text-default font-medium">
                       {order.customer_name ?? 'Walk-in / Direct'}
                     </td>
-                    <td className="px-4 py-3 font-mono font-medium text-zinc-100">
+                    <td className="px-4 py-3.5 font-mono font-medium text-default">
                       {parseFloat(order.total_amount || '0').toLocaleString('en-US', {
                         minimumFractionDigits: 2,
                       })}{' '}
-                      <span className="text-[10px] text-zinc-500">{order.currency_code}</span>
+                      <span className="text-[10px] text-muted">{order.currency_code}</span>
                     </td>
-                    <td className="px-4 py-3">{getStatusBadge(order.status)}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3.5">{getStatusBadge(order.status)}</td>
+                    <td className="px-4 py-3.5">
                       <span
-                        className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${
+                        className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
                           order.payment_status === 'paid'
-                            ? 'bg-emerald-500/10 text-emerald-400'
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                             : order.payment_status === 'partially_paid'
-                              ? 'bg-amber-500/10 text-amber-400'
-                              : 'bg-rose-500/10 text-rose-400'
+                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                              : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
                         }`}
                       >
                         {order.payment_status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3.5 text-right">
                       {order.status === 'draft' && (
                         <button
                           onClick={() => handleApprove(order.id)}
                           disabled={actionLoading === order.id}
-                          className="rounded bg-emerald-600/20 px-2.5 py-1 text-[11px] font-semibold text-emerald-400 hover:bg-emerald-600/30 disabled:opacity-50"
+                          className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50 cursor-pointer"
                         >
                           {actionLoading === order.id ? 'Confirming...' : 'Confirm'}
                         </button>
@@ -265,15 +265,15 @@ export function SalesOrdersSection() {
       {/* Quick Create Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-md rounded-lg border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
-            <h3 className="text-base font-semibold text-zinc-100">Create New Sales Order</h3>
+          <div className="w-full max-w-md rounded-2xl border border-default bg-surface p-6 shadow-xl">
+            <h3 className="text-base font-semibold text-default">Create New Sales Order</h3>
             <form onSubmit={handleCreateOrder} className="mt-4 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-zinc-400">Channel</label>
+                <label className="block text-xs font-medium text-default mb-1">Channel</label>
                 <select
                   value={channel}
                   onChange={(e) => setChannel(e.target.value as typeof channel)}
-                  className="mt-1 w-full rounded-md border border-zinc-800 bg-zinc-800/80 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
                 >
                   <option value="dealer">Dealer</option>
                   <option value="counter">Counter</option>
@@ -284,39 +284,39 @@ export function SalesOrdersSection() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-400">Customer Name</label>
+                <label className="block text-xs font-medium text-default mb-1">Customer Name</label>
                 <input
                   type="text"
                   placeholder="e.g. Retail Partner A"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-zinc-800 bg-zinc-800/80 px-3 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-400">Customer Phone</label>
+                <label className="block text-xs font-medium text-default mb-1">Customer Phone</label>
                 <input
                   type="text"
                   placeholder="+8801700000000"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-zinc-800 bg-zinc-800/80 px-3 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-400">Order Date</label>
+                <label className="block text-xs font-medium text-default mb-1">Order Date</label>
                 <input
                   type="date"
                   value={orderDate}
                   onChange={(e) => setOrderDate(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-zinc-800 bg-zinc-800/80 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-400">
+                <label className="block text-xs font-medium text-default mb-1">
                   Notes / Instructions
                 </label>
                 <textarea
@@ -324,22 +324,22 @@ export function SalesOrdersSection() {
                   placeholder="Optional delivery instructions..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-zinc-800 bg-zinc-800/80 px-3 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-3 border-t border-default">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="rounded-md border border-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-800"
+                  className="rounded-xl border border-default px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface-sunken hover:text-default transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="rounded-md bg-emerald-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                  className="rounded-xl bg-primary px-4 py-1.5 text-xs font-medium text-white hover:bg-primary-hover disabled:opacity-50 transition-colors cursor-pointer"
                 >
                   {loading ? 'Creating...' : 'Create Order'}
                 </button>

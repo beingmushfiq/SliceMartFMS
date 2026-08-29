@@ -27,9 +27,14 @@ export const StorefrontCartDrawer: React.FC<StorefrontCartDrawerProps> = ({ conf
   return (
     <div className="fixed inset-0 z-50 overflow-hidden font-sans">
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+      <button
+        type="button"
+        aria-label="Close cart drawer"
+        className="fixed inset-0 w-full h-full bg-black/60 backdrop-blur-xs transition-opacity cursor-default border-none"
         onClick={closeDrawer}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') closeDrawer();
+        }}
       />
 
       <div className="fixed inset-y-0 right-0 flex max-w-full pl-10">
@@ -52,54 +57,78 @@ export const StorefrontCartDrawer: React.FC<StorefrontCartDrawerProps> = ({ conf
             </button>
           </div>
 
+          {/* Free Shipping Progress Indicator */}
+          {items.length > 0 && (
+            <div className="py-2.5 px-3 rounded-xl bg-zinc-900/60 border border-zinc-800/80 my-2">
+              <div className="flex items-center justify-between text-[11px] font-mono mb-1.5">
+                <span className="text-zinc-400">Free Express Delivery:</span>
+                <span className="text-emerald-400 font-bold">
+                  {parseFloat(cart?.total_amount ?? '0') >= 1000
+                    ? '🎉 Free Shipping Unlocked!'
+                    : `৳${Math.max(0, 1000 - parseFloat(cart?.total_amount ?? '0')).toFixed(0)} away`}
+                </span>
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-zinc-800 overflow-hidden">
+                <div
+                  className="h-full bg-linear-to-r from-emerald-500 to-teal-400 transition-all duration-500 rounded-full"
+                  style={{
+                    width: `${Math.min(100, (parseFloat(cart?.total_amount ?? '0') / 1000) * 100)}%`,
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
           {/* Cart Items List */}
-          <div className="flex-1 overflow-y-auto py-4 space-y-4">
+          <div className="flex-1 overflow-y-auto py-2 space-y-3">
             {items.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-900 text-zinc-600 mb-3">
-                  <ShoppingBag className="h-8 w-8" />
+                <div className="flex size-16 items-center justify-center rounded-2xl bg-zinc-900 border border-zinc-800 text-zinc-600 mb-3 shadow-inner">
+                  <ShoppingBag className="size-8" />
                 </div>
-                <p className="text-sm font-semibold text-zinc-300">Your cart is empty</p>
-                <p className="text-xs text-zinc-500 mt-1 max-w-xs">
-                  Discover our factory fresh products and add your favorites to get started.
+                <p className="text-sm font-bold text-zinc-200">Your cart is empty</p>
+                <p className="text-xs text-zinc-500 mt-1 max-w-xs leading-relaxed">
+                  Discover our factory-fresh products and add your favorites to get started.
                 </p>
               </div>
             ) : (
               items.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between gap-4 rounded-xl border border-zinc-900 bg-zinc-900/40 p-3.5"
+                  className="flex items-center justify-between gap-4 rounded-xl border border-zinc-800/80 bg-zinc-900/50 p-3.5 hover:border-zinc-700 transition-all"
                 >
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-xs font-semibold text-zinc-200 truncate">
+                    <h4 className="text-xs font-bold text-zinc-200 truncate">
                       {item.product_name}
                     </h4>
-                    <p className="text-[11px] font-medium text-emerald-400 mt-0.5">
+                    <p className="text-xs font-mono font-bold text-emerald-400 mt-0.5">
                       {currency} {parseFloat(item.unit_price).toFixed(2)}
                     </p>
                   </div>
 
                   {/* Quantity Stepper */}
                   <div className="flex items-center gap-2">
-                    <div className="flex items-center rounded-lg border border-zinc-800 bg-zinc-900">
+                    <div className="flex items-center rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xs">
                       <button
                         type="button"
                         onClick={() =>
                           updateQuantity(item.id, Math.max(0, parseInt(item.quantity) - 1))
                         }
                         className="p-1.5 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                        title="Decrease"
                       >
-                        <Minus className="h-3 w-3" />
+                        <Minus className="size-3" />
                       </button>
-                      <span className="w-7 text-center text-xs font-bold text-zinc-100">
+                      <span className="w-7 text-center text-xs font-bold text-white font-mono">
                         {parseInt(item.quantity)}
                       </span>
                       <button
                         type="button"
                         onClick={() => updateQuantity(item.id, parseInt(item.quantity) + 1)}
                         className="p-1.5 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                        title="Increase"
                       >
-                        <Plus className="h-3 w-3" />
+                        <Plus className="size-3" />
                       </button>
                     </div>
 
@@ -109,7 +138,7 @@ export const StorefrontCartDrawer: React.FC<StorefrontCartDrawerProps> = ({ conf
                       className="p-1.5 text-zinc-500 hover:text-rose-400 transition-colors cursor-pointer"
                       title="Remove item"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="size-4" />
                     </button>
                   </div>
                 </div>
@@ -186,7 +215,7 @@ export const StorefrontCartDrawer: React.FC<StorefrontCartDrawerProps> = ({ conf
                 <button
                   type="button"
                   onClick={handleCheckoutClick}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-3 text-xs font-bold text-zinc-950 shadow-lg shadow-emerald-500/20 hover:from-emerald-400 hover:to-teal-400 transition-all cursor-pointer active:scale-98"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-linear-to-r from-emerald-500 to-teal-500 py-3 text-xs font-bold text-zinc-950 shadow-lg shadow-emerald-500/20 hover:from-emerald-400 hover:to-teal-400 transition-all cursor-pointer active:scale-98"
                 >
                   <span>Proceed to Checkout</span>
                   <ArrowRight className="h-4 w-4" />

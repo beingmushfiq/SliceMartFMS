@@ -39,6 +39,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const response = await api.post<LoginResponseData>('/auth/login', credentials);
       const data = response.data;
       setAccessToken(data.access_token);
+      localStorage.setItem('access_token', data.access_token);
       set({
         user: data.user,
         tenant: data.tenant,
@@ -50,6 +51,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await get().bootstrap();
     } catch (err: unknown) {
       setAccessToken(null);
+      localStorage.removeItem('access_token');
       const message =
         err instanceof Error ? err.message : 'Invalid credentials. Please check and try again.';
       set({
@@ -67,6 +69,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Ignore network errors on logout
     } finally {
       setAccessToken(null);
+      localStorage.removeItem('access_token');
       set({
         user: null,
         tenant: null,
@@ -80,6 +83,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   bootstrap: async () => {
+    const savedToken = localStorage.getItem('access_token');
+    if (savedToken) {
+      setAccessToken(savedToken);
+    }
     try {
       const response = await api.get<MeResponseData>('/auth/me');
       const data = response.data;
@@ -93,7 +100,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         error: null,
       });
     } catch {
+      setAccessToken(null);
+      localStorage.removeItem('access_token');
       set({
+        user: null,
+        tenant: null,
+        branches: [],
+        activeBranch: null,
+        permissions: new Set(),
         status: 'unauthenticated',
       });
     }

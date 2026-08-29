@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, ClipboardList, Plus, Search, Calendar, Eye } from 'lucide-react';
+import { ClipboardList, Plus, Search } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
@@ -114,20 +114,20 @@ export function ProductionPlansSection() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 items-center gap-3">
           <div className="relative flex-1 max-w-sm">
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input
               type="text"
               placeholder="Search plans by title or number..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 py-2 pl-9 pr-3 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-xl border border-default bg-surface-sunken py-2 pl-9 pr-3 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
             />
           </div>
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-zinc-800 bg-zinc-900/60 py-2 px-3 text-xs text-zinc-300 focus:border-emerald-500 focus:outline-none"
+            className="rounded-xl border border-default bg-surface-sunken py-2 px-3 text-xs text-default focus:border-primary focus:outline-none"
           >
             <option value="all">All Statuses</option>
             <option value="draft">Draft</option>
@@ -171,9 +171,9 @@ export function ProductionPlansSection() {
         data={plansQuery.data}
         isFetching={plansQuery.isFetching}
       >
-        <div className="overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-900/40">
-          <table className="w-full text-left text-xs text-zinc-300">
-            <thead className="border-b border-zinc-800 bg-zinc-900/80 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+        <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
+          <table className="w-full text-left text-xs text-default">
+            <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
                 <th className="py-3.5 pl-4 pr-3">Plan Number</th>
                 <th className="py-3.5 px-3">Title</th>
@@ -183,17 +183,17 @@ export function ProductionPlansSection() {
                 <th className="py-3.5 pr-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/60">
+            <tbody className="divide-y divide-default">
               {plans.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-zinc-500">
-                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800/50 mb-2">
-                      <ClipboardList className="h-5 w-5 text-zinc-400" />
+                  <td colSpan={6} className="py-12 text-center text-muted">
+                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-surface-sunken border border-default mb-2">
+                      <ClipboardList className="h-5 w-5 text-muted" />
                     </div>
-                    <div className="text-sm font-medium text-zinc-400">
+                    <div className="text-sm font-medium text-default">
                       No production plans found
                     </div>
-                    <div className="text-xs text-zinc-500 mt-1">
+                    <div className="text-xs text-muted mt-1">
                       {search
                         ? 'Try adjusting search or status filters'
                         : 'Create your first production plan to get started.'}
@@ -202,47 +202,40 @@ export function ProductionPlansSection() {
                 </tr>
               ) : (
                 plans.map((plan) => (
-                  <tr key={plan.id} className="hover:bg-zinc-800/30 transition-colors">
-                    <td className="py-3 pl-4 pr-3 font-mono font-medium text-emerald-400">
+                  <tr key={plan.id} className="hover:bg-surface-sunken/60 transition-colors">
+                    <td className="py-3 pl-4 pr-3 font-mono font-medium text-primary">
                       {plan.plan_number}
                     </td>
-                    <td className="py-3 px-3 font-medium text-zinc-200">{plan.title}</td>
-                    <td className="py-3 px-3 text-zinc-400">
-                      <div className="flex items-center gap-1.5 text-[11px]">
-                        <Calendar className="h-3.5 w-3.5 text-zinc-500" />
-                        <span>{plan.start_date}</span>
-                        <span className="text-zinc-600">→</span>
-                        <span>{plan.end_date}</span>
-                      </div>
+                    <td className="py-3 px-3 font-medium text-default">{plan.title}</td>
+                    <td className="py-3 px-3 text-muted">
+                      {plan.start_date} to {plan.end_date}
                     </td>
-                    <td className="py-3 px-3 text-zinc-400">{plan.items?.length ?? 0} products</td>
+                    <td className="py-3 px-3 font-mono text-default">
+                      {plan.items?.length ?? 0} items
+                    </td>
                     <td className="py-3 px-3">
                       <StatusBadge status={plan.status} />
                     </td>
-                    <td className="py-3 pr-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {plan.status === 'draft' && (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => approveMutation.mutate(plan.id)}
-                            disabled={approveMutation.isPending}
-                            className="text-xs flex items-center gap-1 text-emerald-400 hover:text-emerald-300"
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                            <span>Approve</span>
-                          </Button>
-                        )}
+                    <td className="py-3 pr-4 text-right space-x-1.5">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setSelectedPlan(plan)}
+                        className="text-xs"
+                      >
+                        View
+                      </Button>
+                      {plan.status === 'draft' && (
                         <Button
-                          variant="ghost"
+                          variant="secondary"
                           size="sm"
-                          onClick={() => setSelectedPlan(plan)}
-                          className="text-xs flex items-center gap-1 text-zinc-400 hover:text-zinc-200"
+                          onClick={() => approveMutation.mutate(plan.id)}
+                          disabled={approveMutation.isPending}
+                          className="text-xs text-emerald-600 dark:text-emerald-400"
                         >
-                          <Eye className="h-3.5 w-3.5" />
-                          <span>View</span>
+                          Approve
                         </Button>
-                      </div>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -256,18 +249,18 @@ export function ProductionPlansSection() {
       <Modal
         open={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        title="Create Production Plan"
+        title="Create Master Production Plan"
       >
         <div className="space-y-4">
           {errorMsg && (
-            <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-400">
+            <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400">
               {errorMsg}
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Plan Number
               </label>
               <input
@@ -275,12 +268,12 @@ export function ProductionPlansSection() {
                 value={draft.plan_number}
                 onChange={(e) => setDraft((d) => ({ ...d, plan_number: e.target.value }))}
                 placeholder="e.g. PLN-2026-001"
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Plan Title
               </label>
               <input
@@ -288,33 +281,33 @@ export function ProductionPlansSection() {
                 value={draft.title}
                 onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
                 placeholder="e.g. Weekly Production Wave A"
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Start Date
               </label>
               <input
                 type="date"
                 value={draft.start_date}
                 onChange={(e) => setDraft((d) => ({ ...d, start_date: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 End Date
               </label>
               <input
                 type="date"
                 value={draft.end_date}
                 onChange={(e) => setDraft((d) => ({ ...d, end_date: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
               />
             </div>
           </div>
@@ -322,7 +315,7 @@ export function ProductionPlansSection() {
           {/* Plan Items Table */}
           <div className="space-y-2 pt-2">
             <div className="flex items-center justify-between">
-              <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+              <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">
                 Planned Products
               </label>
               <button
@@ -340,7 +333,7 @@ export function ProductionPlansSection() {
                     ],
                   }))
                 }
-                className="text-xs text-emerald-400 hover:text-emerald-300 font-medium"
+                className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 font-medium cursor-pointer"
               >
                 + Add Item
               </button>
@@ -350,10 +343,10 @@ export function ProductionPlansSection() {
               {draft.items.map((item, idx) => (
                 <div
                   key={idx}
-                  className="grid grid-cols-12 gap-2 rounded-xl bg-zinc-950 p-2.5 border border-zinc-800"
+                  className="grid grid-cols-12 gap-2 rounded-xl bg-surface-sunken p-2.5 border border-default"
                 >
                   <div className="col-span-5">
-                    <label className="text-[10px] text-zinc-500">Product</label>
+                    <label className="text-[10px] text-muted">Product</label>
                     <select
                       value={item.product_id}
                       onChange={(e) => {
@@ -365,7 +358,7 @@ export function ProductionPlansSection() {
                           ),
                         }));
                       }}
-                      className="w-full rounded-lg border border-zinc-800 bg-zinc-900 p-1.5 text-xs text-zinc-200"
+                      className="w-full rounded-lg border border-default bg-surface p-1.5 text-xs text-default focus:border-primary focus:outline-none"
                     >
                       {products.map((p) => (
                         <option key={p.id} value={p.id}>
@@ -376,7 +369,7 @@ export function ProductionPlansSection() {
                   </div>
 
                   <div className="col-span-4">
-                    <label className="text-[10px] text-zinc-500">Bill of Materials</label>
+                    <label className="text-[10px] text-muted">Bill of Materials</label>
                     <select
                       value={item.bom_id}
                       onChange={(e) => {
@@ -386,7 +379,7 @@ export function ProductionPlansSection() {
                           items: d.items.map((it, i) => (i === idx ? { ...it, bom_id: val } : it)),
                         }));
                       }}
-                      className="w-full rounded-lg border border-zinc-800 bg-zinc-900 p-1.5 text-xs text-zinc-200"
+                      className="w-full rounded-lg border border-default bg-surface p-1.5 text-xs text-default focus:border-primary focus:outline-none"
                     >
                       {boms.map((b) => (
                         <option key={b.id} value={b.id}>
@@ -397,7 +390,7 @@ export function ProductionPlansSection() {
                   </div>
 
                   <div className="col-span-3">
-                    <label className="text-[10px] text-zinc-500">Planned Qty</label>
+                    <label className="text-[10px] text-muted">Planned Qty</label>
                     <input
                       type="number"
                       step="0.0001"
@@ -411,7 +404,7 @@ export function ProductionPlansSection() {
                           ),
                         }));
                       }}
-                      className="w-full rounded-lg border border-zinc-800 bg-zinc-900 p-1.5 text-xs text-zinc-200"
+                      className="w-full rounded-lg border border-default bg-surface p-1.5 text-xs text-default focus:border-primary focus:outline-none font-mono"
                     />
                   </div>
                 </div>
@@ -419,7 +412,7 @@ export function ProductionPlansSection() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-zinc-800">
+          <div className="flex justify-end gap-2 pt-3 border-t border-default">
             <Button variant="ghost" onClick={() => setIsCreateOpen(false)}>
               Cancel
             </Button>
@@ -442,10 +435,10 @@ export function ProductionPlansSection() {
           title={`Plan Details: ${selectedPlan.plan_number}`}
         >
           <div className="space-y-4">
-            <div className="flex items-center justify-between rounded-xl bg-zinc-950 p-3 border border-zinc-800">
+            <div className="flex items-center justify-between rounded-xl bg-surface-sunken p-3 border border-default">
               <div>
-                <div className="text-sm font-semibold text-zinc-100">{selectedPlan.title}</div>
-                <div className="text-xs text-zinc-400 mt-0.5">
+                <div className="text-sm font-semibold text-default">{selectedPlan.title}</div>
+                <div className="text-xs text-muted mt-0.5">
                   {selectedPlan.start_date} to {selectedPlan.end_date}
                 </div>
               </div>
@@ -455,28 +448,28 @@ export function ProductionPlansSection() {
             </div>
 
             <div className="space-y-2">
-              <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+              <div className="text-xs font-semibold text-muted uppercase tracking-wider">
                 Planned Items ({selectedPlan.items?.length ?? 0})
               </div>
-              <div className="rounded-xl border border-zinc-800 overflow-hidden">
+              <div className="rounded-xl border border-default overflow-hidden">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-zinc-900 text-zinc-400">
+                  <thead className="bg-surface-sunken text-muted">
                     <tr>
                       <th className="p-2.5">Product</th>
                       <th className="p-2.5">Planned Qty</th>
                       <th className="p-2.5">Completed Qty</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800 bg-zinc-950/40">
+                  <tbody className="divide-y divide-default bg-surface">
                     {selectedPlan.items?.map((item) => (
                       <tr key={item.id}>
-                        <td className="p-2.5 text-zinc-200">
+                        <td className="p-2.5 text-default">
                           {item.product_name ?? item.product_id}
                         </td>
-                        <td className="p-2.5 font-mono text-emerald-400">
+                        <td className="p-2.5 font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
                           {item.planned_quantity}
                         </td>
-                        <td className="p-2.5 font-mono text-zinc-400">{item.completed_quantity}</td>
+                        <td className="p-2.5 font-mono text-muted">{item.completed_quantity}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -484,7 +477,7 @@ export function ProductionPlansSection() {
               </div>
             </div>
 
-            <div className="flex justify-end pt-3 border-t border-zinc-800">
+            <div className="flex justify-end pt-3 border-t border-default">
               <Button variant="secondary" onClick={() => setSelectedPlan(null)}>
                 Close
               </Button>

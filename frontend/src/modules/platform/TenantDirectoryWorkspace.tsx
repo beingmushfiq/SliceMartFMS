@@ -43,8 +43,26 @@ export const TenantDirectoryWorkspace: React.FC = () => {
   }, [search, statusFilter]);
 
   useEffect(() => {
-    fetchTenants();
-  }, [fetchTenants]);
+    let ignore = false;
+    const params: Record<string, string> = {};
+    if (search) params['search'] = search;
+    if (statusFilter !== 'all') params['status'] = statusFilter;
+
+    api.get<PlatformTenant[]>('/platform/tenants', { params })
+      .then((res) => {
+        if (!ignore) setTenants(res.data);
+      })
+      .catch(() => {
+        // error handling
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [search, statusFilter]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,28 +93,28 @@ export const TenantDirectoryWorkspace: React.FC = () => {
     switch (status) {
       case 'active':
         return (
-          <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-mono font-bold uppercase flex items-center gap-1">
-            <CheckCircle className="w-3 h-3" />
+          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold uppercase flex items-center gap-1.5 w-fit">
+            <CheckCircle className="size-3" />
             <span>Active</span>
           </span>
         );
       case 'trial':
         return (
-          <span className="px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-mono font-bold uppercase flex items-center gap-1">
-            <Clock className="w-3 h-3" />
+          <span className="px-2.5 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold uppercase flex items-center gap-1.5 w-fit">
+            <Clock className="size-3" />
             <span>Trial</span>
           </span>
         );
       case 'suspended':
         return (
-          <span className="px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[10px] font-mono font-bold uppercase flex items-center gap-1">
-            <XCircle className="w-3 h-3" />
+          <span className="px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30 text-[10px] font-mono font-bold uppercase flex items-center gap-1.5 w-fit">
+            <XCircle className="size-3" />
             <span>Suspended</span>
           </span>
         );
       default:
         return (
-          <span className="px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 text-[10px] font-mono font-bold uppercase">
+          <span className="px-2.5 py-0.5 rounded-full bg-surface-sunken text-muted border border-default text-[10px] font-mono font-bold uppercase w-fit">
             {status}
           </span>
         );
@@ -104,35 +122,40 @@ export const TenantDirectoryWorkspace: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-default pb-5">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Tenant Directory</h1>
-          <p className="text-xs text-slate-400 mt-1 font-mono">
-            Provision, monitor, and enforce multi-tenant lifecycle states across DevCenterPoint.
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+              Tenant Management
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-default">Tenant Directory</h1>
+          <p className="mt-1.5 text-xs text-muted max-w-2xl leading-relaxed">
+            Provision, monitor, configure subscription tiers, and enforce multi-tenant lifecycle states across DevCenterPoint.
           </p>
         </div>
 
         <Link
           to="/platform/tenants/new"
-          className="px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all self-start sm:self-auto"
+          className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all self-start sm:self-auto cursor-pointer"
         >
-          <UserPlus className="w-4 h-4" />
+          <UserPlus className="size-4" />
           <span>Provision Tenant</span>
         </Link>
       </div>
 
       {/* Filters Bar */}
-      <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+      <div className="p-4 rounded-2xl bg-surface border border-default shadow-xs flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
         <form onSubmit={handleSearchSubmit} className="flex-1 relative">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="size-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by business name, slug (e.g. slicemart), or domain..."
-            className="w-full bg-slate-950 border border-slate-700/80 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono transition-colors"
+            className="w-full bg-surface-sunken border border-default rounded-xl pl-10 pr-4 py-2 text-xs text-default placeholder:text-muted focus:outline-none focus:border-amber-500 font-mono transition-colors shadow-2xs"
           />
         </form>
 
@@ -141,10 +164,10 @@ export const TenantDirectoryWorkspace: React.FC = () => {
             <button
               key={tab}
               onClick={() => setStatusFilter(tab)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-mono capitalize transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-mono capitalize transition-all cursor-pointer ${
                 statusFilter === tab
-                  ? 'bg-amber-500 text-slate-950 font-bold'
-                  : 'bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700'
+                  ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
+                  : 'bg-surface-sunken text-muted hover:text-default hover:bg-surface border border-default'
               }`}
             >
               {tab}
@@ -152,82 +175,82 @@ export const TenantDirectoryWorkspace: React.FC = () => {
           ))}
           <button
             onClick={fetchTenants}
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"
+            className="p-2 rounded-xl bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default transition-colors cursor-pointer shadow-2xs"
             title="Refresh list"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className={`size-4 ${loading ? 'animate-spin text-primary' : ''}`} />
           </button>
         </div>
       </div>
 
       {/* Tenants Table */}
-      <div className="rounded-2xl bg-slate-900 border border-slate-800 shadow-xl overflow-hidden">
+      <div className="rounded-2xl bg-surface border border-default shadow-xs overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-slate-400 text-xs font-mono animate-pulse">
+          <div className="p-12 text-center text-muted text-xs font-mono animate-pulse">
             Loading tenant registry...
           </div>
         ) : tenants.length === 0 ? (
-          <div className="p-12 text-center text-slate-400 text-xs font-mono">
+          <div className="p-12 text-center text-muted text-xs font-mono">
             No tenants matched your query.
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-950/80 border-b border-slate-800 text-slate-400 uppercase font-mono text-[10px]">
+            <table className="w-full text-left text-xs text-default">
+              <thead className="bg-surface-sunken/70 border-b border-default text-muted uppercase font-mono text-[10px]">
                 <tr>
                   <th className="py-3.5 pl-6">Tenant Name & Subdomain</th>
-                  <th className="py-3.5">Plan Tier</th>
-                  <th className="py-3.5">Status</th>
-                  <th className="py-3.5">Currency / Locale</th>
-                  <th className="py-3.5">Onboarded</th>
+                  <th className="py-3.5 px-4">Plan Tier</th>
+                  <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 px-4">Currency / Locale</th>
+                  <th className="py-3.5 px-4">Onboarded</th>
                   <th className="py-3.5 pr-6 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 font-mono">
+              <tbody className="divide-y divide-default font-mono">
                 {tenants.map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-800/30 transition-colors">
+                  <tr key={t.id} className="hover:bg-surface-sunken/40 transition-colors">
                     <td className="py-4 pl-6">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 font-bold">
-                          <Building2 className="w-4 h-4" />
+                        <div className="size-9 rounded-xl bg-surface-sunken border border-default flex items-center justify-center text-amber-600 dark:text-amber-400 font-bold shrink-0">
+                          <Building2 className="size-4" />
                         </div>
                         <div>
                           <Link
                             to={`/platform/tenants/${t.id}`}
-                            className="font-bold text-slate-100 hover:text-amber-400 transition-colors text-sm font-sans"
+                            className="font-bold text-default hover:text-amber-600 dark:hover:text-amber-400 transition-colors text-sm font-sans"
                           >
                             {t.name}
                           </Link>
-                          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400">
+                          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted">
                             <span>{t.slug}.devcenterpoint.com</span>
                             <a
                               href={`https://${t.slug}.devcenterpoint.com`}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-slate-500 hover:text-slate-300"
+                              className="text-muted hover:text-default"
                             >
-                              <ExternalLink className="w-3 h-3" />
+                              <ExternalLink className="size-3" />
                             </a>
                           </div>
                         </div>
                       </div>
                     </td>
 
-                    <td className="py-4 text-slate-300">
+                    <td className="py-4 px-4 text-default">
                       <div>
-                        <span className="font-semibold text-slate-200">{t.plan?.name ?? 'Standard'}</span>
-                        <div className="text-[10px] text-slate-400">${t.plan?.price ?? 0}/mo</div>
+                        <span className="font-semibold text-default">{t.plan?.name ?? 'Standard'}</span>
+                        <div className="text-[10px] text-muted font-mono">${t.plan?.price ?? 0}/mo</div>
                       </div>
                     </td>
 
-                    <td className="py-4">{getStatusBadge(t.status)}</td>
+                    <td className="py-4 px-4">{getStatusBadge(t.status)}</td>
 
-                    <td className="py-4 text-slate-400 text-[11px]">
-                      <div>{t.currency_code}</div>
-                      <div className="text-[10px] text-slate-400">{t.timezone}</div>
+                    <td className="py-4 px-4 text-muted text-[11px]">
+                      <div className="font-bold text-default">{t.currency_code}</div>
+                      <div className="text-[10px] text-muted">{t.timezone}</div>
                     </td>
 
-                    <td className="py-4 text-slate-400 text-[11px]">
+                    <td className="py-4 px-4 text-muted text-[11px]">
                       {new Date(t.created_at).toLocaleDateString()}
                     </td>
 
@@ -235,7 +258,7 @@ export const TenantDirectoryWorkspace: React.FC = () => {
                       <div className="inline-flex items-center gap-2">
                         <Link
                           to={`/platform/tenants/${t.id}`}
-                          className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs transition-colors"
+                          className="px-3 py-1.5 rounded-xl bg-surface-sunken hover:bg-surface text-default border border-default text-xs font-sans font-semibold transition-all shadow-2xs"
                         >
                           View Details
                         </Link>
@@ -246,7 +269,7 @@ export const TenantDirectoryWorkspace: React.FC = () => {
                               setSelectedTenant(t);
                               setModalType('status');
                             }}
-                            className="px-2.5 py-1 rounded bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/40 text-xs transition-colors"
+                            className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30 text-xs font-sans font-semibold transition-all shadow-2xs cursor-pointer"
                             title="Suspend Tenant Access"
                           >
                             Suspend
@@ -257,7 +280,7 @@ export const TenantDirectoryWorkspace: React.FC = () => {
                               setSelectedTenant(t);
                               setModalType('status');
                             }}
-                            className="px-2.5 py-1 rounded bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-800/40 text-xs transition-colors"
+                            className="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-sans font-semibold transition-all shadow-2xs cursor-pointer"
                             title="Reactivate Tenant"
                           >
                             Reactivate
@@ -275,30 +298,30 @@ export const TenantDirectoryWorkspace: React.FC = () => {
 
       {/* Status Modal */}
       {modalType === 'status' && selectedTenant && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
-            <h2 className="text-lg font-bold text-slate-100 font-sans">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface border border-default rounded-2xl p-6 max-w-md w-full shadow-xl">
+            <h2 className="text-lg font-bold text-default font-sans">
               {selectedTenant.status === 'active' ? 'Suspend Tenant Access' : 'Reactivate Tenant'}
             </h2>
-            <p className="text-xs text-slate-400 mt-1 font-mono">
-              Target Tenant: <strong className="text-slate-200">{selectedTenant.name}</strong> ({selectedTenant.slug})
+            <p className="text-xs text-muted mt-1 font-mono">
+              Target Tenant: <strong className="text-default">{selectedTenant.name}</strong> ({selectedTenant.slug})
             </p>
 
             {actionError && (
-              <div className="mt-4 p-3 rounded-lg bg-rose-950/50 border border-rose-800 text-rose-300 text-xs">
+              <div className="mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs">
                 {actionError}
               </div>
             )}
 
             <div className="mt-4">
-              <label className="block text-xs font-mono text-slate-300 mb-1">
+              <label className="block text-xs font-mono text-muted mb-1">
                 Reason for state change (Logged in platform audit trail)
               </label>
               <textarea
                 value={actionReason}
                 onChange={(e) => setActionReason(e.target.value)}
                 placeholder="e.g. Non-payment of subscription fee or SLA terms violation"
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-amber-500 font-mono"
+                className="w-full bg-surface-sunken border border-default rounded-xl p-3 text-xs text-default placeholder:text-muted focus:outline-none focus:border-amber-500 font-mono shadow-2xs"
                 rows={3}
               />
             </div>
@@ -309,7 +332,7 @@ export const TenantDirectoryWorkspace: React.FC = () => {
                   setModalType(null);
                   setSelectedTenant(null);
                 }}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition-colors"
+                className="px-4 py-2 rounded-xl bg-surface-sunken hover:bg-surface text-default border border-default text-xs transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -317,7 +340,7 @@ export const TenantDirectoryWorkspace: React.FC = () => {
                 <button
                   onClick={() => handleUpdateStatus('suspended')}
                   disabled={actionLoading}
-                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition-colors disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
                 >
                   {actionLoading ? 'Suspending...' : 'Confirm Suspension'}
                 </button>
@@ -325,7 +348,7 @@ export const TenantDirectoryWorkspace: React.FC = () => {
                 <button
                   onClick={() => handleUpdateStatus('active')}
                   disabled={actionLoading}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
                 >
                   {actionLoading ? 'Reactivating...' : 'Confirm Reactivation'}
                 </button>

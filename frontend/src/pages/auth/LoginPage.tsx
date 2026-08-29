@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { AlertCircle, Eye, EyeOff, Lock, Mail, Package } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, Lock, Mail, Package, Sparkles } from 'lucide-react';
 import { useAuthStore } from '../../lib/auth/authStore';
 import { isApiError } from '../../lib/api/errors';
 
@@ -13,6 +13,14 @@ const loginSchema = z.object({
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
+
+const DEMO_PERSONAS = [
+  { label: 'Admin', email: 'admin@slicemart.test', role: 'Full Access' },
+  { label: 'Production', email: 'production@slicemart.test', role: 'Factory Floor' },
+  { label: 'QC Inspector', email: 'qc@slicemart.test', role: 'Quality QA' },
+  { label: 'Storekeeper', email: 'store@slicemart.test', role: 'Inventory' },
+  { label: 'Sales Officer', email: 'sales@slicemart.test', role: 'Commercial / POS' },
+];
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -30,19 +38,26 @@ export default function LoginPage() {
   }
 
   const state = location.state as LocationState | null;
-  const from = state?.from?.pathname ?? '/catalogue';
+  const from = state?.from?.pathname ?? '/dashboard';
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: '',
-      password: '',
+      email: 'admin@slicemart.test',
+      password: 'Password123!',
     },
   });
+
+  const setDemoPersona = (email: string) => {
+    setValue('email', email, { shouldValidate: true });
+    setValue('password', 'Password123!', { shouldValidate: true });
+    setServerError(null);
+  };
 
   const onSubmit = async (values: LoginFormValues) => {
     setServerError(null);
@@ -77,19 +92,42 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-dvh w-full items-center justify-center bg-zinc-950 px-4 py-12 text-zinc-100 sm:px-6 lg:px-8">
       {/* Background glow effects */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 h-96 w-96 rounded-full bg-emerald-500/10 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/3 h-80 w-80 rounded-full bg-teal-500/10 blur-[140px] pointer-events-none" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 h-96 w-96 rounded-full bg-blue-500/10 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/3 h-80 w-80 rounded-full bg-indigo-500/10 blur-[140px] pointer-events-none" />
 
-      <div className="relative w-full max-w-md space-y-8 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-8 shadow-2xl backdrop-blur-xl">
+      <div className="relative w-full max-w-md space-y-6 rounded-2xl border border-zinc-800/80 bg-zinc-900/80 p-8 shadow-2xl backdrop-blur-xl">
         {/* Brand Header */}
         <div className="text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 shadow-lg shadow-emerald-500/25">
-            <Package className="h-6 w-6 text-zinc-950 font-bold" />
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-blue-500 via-indigo-500 to-indigo-700 shadow-lg shadow-blue-500/25">
+            <Package className="h-6 w-6 text-white font-bold" />
           </div>
           <h2 className="mt-4 text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">
             SliceMart FMS
           </h2>
-          <p className="mt-1 text-xs text-zinc-400">Sign in to access your tenant workspace</p>
+          <p className="mt-1 text-xs text-zinc-400">Enterprise Factory & Commerce Workspace</p>
+        </div>
+
+        {/* Quick-Fill Persona Chips */}
+        <div className="space-y-2 rounded-xl bg-zinc-950/60 p-3 border border-zinc-800/60">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1">
+              <Sparkles className="size-3 text-blue-400" />
+              Quick Demo Personas
+            </span>
+            <span className="text-[10px] text-zinc-500 font-mono">Password123!</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {DEMO_PERSONAS.map((persona) => (
+              <button
+                key={persona.email}
+                type="button"
+                onClick={() => setDemoPersona(persona.email)}
+                className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-zinc-800/80 hover:bg-blue-600/20 hover:text-blue-300 border border-zinc-700/60 hover:border-blue-500/40 transition-all cursor-pointer"
+              >
+                {persona.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Server error alert banner */}
@@ -101,7 +139,7 @@ export default function LoginPage() {
         )}
 
         {/* Login Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Email field */}
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold text-zinc-300">Email Address</label>
@@ -112,12 +150,12 @@ export default function LoginPage() {
               <input
                 type="email"
                 autoComplete="email"
-                placeholder="operator@acme.test"
+                placeholder="admin@slicemart.test"
                 {...register('email')}
-                className={`block w-full rounded-xl border bg-zinc-950/80 py-2.5 pr-3.5 pl-10 text-xs text-zinc-100 placeholder-zinc-500 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/50 ${
+                className={`block w-full rounded-xl border bg-zinc-950/80 py-2.5 pr-3.5 pl-10 text-xs text-zinc-100 placeholder-zinc-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${
                   errors.email
                     ? 'border-rose-500/80 focus:border-rose-500'
-                    : 'border-zinc-800 focus:border-emerald-500'
+                    : 'border-zinc-800 focus:border-blue-500'
                 }`}
               />
             </div>
@@ -138,16 +176,16 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 placeholder="••••••••"
                 {...register('password')}
-                className={`block w-full rounded-xl border bg-zinc-950/80 py-2.5 pr-10 pl-10 text-xs text-zinc-100 placeholder-zinc-500 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/50 ${
+                className={`block w-full rounded-xl border bg-zinc-950/80 py-2.5 pr-10 pl-10 text-xs text-zinc-100 placeholder-zinc-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${
                   errors.password
                     ? 'border-rose-500/80 focus:border-rose-500'
-                    : 'border-zinc-800 focus:border-emerald-500'
+                    : 'border-zinc-800 focus:border-blue-500'
                 }`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-zinc-500 hover:text-zinc-300"
+                className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-zinc-500 hover:text-zinc-300 cursor-pointer"
                 tabIndex={-1}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -162,11 +200,11 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 py-3 px-4 text-xs font-semibold text-zinc-950 shadow-md shadow-emerald-500/20 transition-all hover:from-emerald-400 hover:to-teal-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-zinc-950 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 py-3 px-4 text-xs font-semibold text-white shadow-md shadow-blue-500/20 transition-all hover:from-blue-500 hover:to-indigo-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-zinc-950 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {isLoading ? (
               <>
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-950 border-t-transparent" />
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                 <span>Signing in...</span>
               </>
             ) : (
@@ -184,3 +222,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

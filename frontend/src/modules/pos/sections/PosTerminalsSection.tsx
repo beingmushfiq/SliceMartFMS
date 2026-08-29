@@ -65,20 +65,20 @@ export function PosTerminalsSection() {
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
             <input
               type="text"
               placeholder="Search by terminal code, name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-9 w-64 rounded-md border border-zinc-800 bg-zinc-900/60 pl-8 pr-3 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+              className="h-9 w-64 rounded-xl border border-default bg-surface-sunken pl-8 pr-3 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
             />
           </div>
 
           <button
             onClick={fetchTerminals}
             disabled={loading}
-            className="flex h-9 items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900/60 px-3 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-50"
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface-sunken px-3 text-xs font-medium text-muted hover:bg-surface hover:text-default disabled:opacity-50 transition-colors cursor-pointer"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -87,7 +87,7 @@ export function PosTerminalsSection() {
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex h-9 items-center gap-1.5 rounded-md bg-emerald-600 px-3.5 text-xs font-medium text-white shadow-sm hover:bg-emerald-500"
+          className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-medium text-white shadow-xs hover:bg-primary-hover transition-colors cursor-pointer"
         >
           <Plus className="h-3.5 w-3.5" />
           Add POS Terminal
@@ -95,41 +95,41 @@ export function PosTerminalsSection() {
       </div>
 
       {/* Terminals Table */}
-      <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/40">
+      <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="border-b border-zinc-800 bg-zinc-900/80 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+          <table className="w-full text-left text-xs text-default">
+            <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
-                <th className="px-4 py-3">Terminal Code</th>
-                <th className="px-4 py-3">Name / Label</th>
-                <th className="px-4 py-3">Branch</th>
-                <th className="px-4 py-3">Default Warehouse</th>
-                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3.5">Terminal Code</th>
+                <th className="px-4 py-3.5">Name / Label</th>
+                <th className="px-4 py-3.5">Branch</th>
+                <th className="px-4 py-3.5">Default Warehouse</th>
+                <th className="px-4 py-3.5">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/60">
+            <tbody className="divide-y divide-default">
               {filteredTerminals.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-zinc-500">
+                  <td colSpan={5} className="px-4 py-8 text-center text-muted">
                     {loading ? 'Loading terminals...' : 'No POS terminals registered.'}
                   </td>
                 </tr>
               ) : (
                 filteredTerminals.map((t) => (
-                  <tr key={t.id} className="hover:bg-zinc-800/20 transition-colors">
-                    <td className="px-4 py-3 font-mono font-medium text-emerald-400">{t.code}</td>
-                    <td className="px-4 py-3 text-zinc-200">{t.name}</td>
-                    <td className="px-4 py-3 text-zinc-400">{t.branch_name ?? 'Main Outlet'}</td>
-                    <td className="px-4 py-3 text-zinc-400">
+                  <tr key={t.id} className="hover:bg-surface-sunken/60 transition-colors">
+                    <td className="px-4 py-3.5 font-mono font-medium text-emerald-600 dark:text-emerald-400">{t.code}</td>
+                    <td className="px-4 py-3.5 text-default font-medium">{t.name}</td>
+                    <td className="px-4 py-3.5 text-muted">{t.branch_name ?? 'Main Outlet'}</td>
+                    <td className="px-4 py-3.5 text-muted">
                       {t.default_warehouse_name ?? 'Shop Floor Stock'}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3.5">
                       {t.is_active ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                           <CheckCircle2 className="h-3 w-3" /> Active
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-zinc-800 text-zinc-400 border border-zinc-700">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-surface-sunken text-muted border border-default">
                           <XCircle className="h-3 w-3" /> Inactive
                         </span>
                       )}
@@ -145,47 +145,47 @@ export function PosTerminalsSection() {
       {/* Add Terminal Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-md rounded-lg border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
-            <h3 className="text-base font-semibold text-zinc-100">
+          <div className="w-full max-w-md rounded-2xl border border-default bg-surface p-6 shadow-xl">
+            <h3 className="text-base font-semibold text-default">
               Register POS Terminal Register
             </h3>
             <form onSubmit={handleCreateTerminal} className="mt-4 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-zinc-400">Terminal Code</label>
+                <label className="block text-xs font-medium text-default mb-1">Terminal Code</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. POS-REG-01"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-zinc-800 bg-zinc-800/80 px-3 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none uppercase"
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none uppercase font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-400">Terminal Name</label>
+                <label className="block text-xs font-medium text-default mb-1">Terminal Name</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Front Cash Counter 1"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-zinc-800 bg-zinc-800/80 px-3 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-3 border-t border-default">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="rounded-md border border-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-800"
+                  className="rounded-xl border border-default px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface-sunken hover:text-default transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="rounded-md bg-emerald-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                  className="rounded-xl bg-primary px-4 py-1.5 text-xs font-medium text-white hover:bg-primary-hover disabled:opacity-50 transition-colors cursor-pointer"
                 >
                   {loading ? 'Creating...' : 'Register Terminal'}
                 </button>

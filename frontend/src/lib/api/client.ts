@@ -62,7 +62,11 @@ export function setAccessToken(token: string | null): void {
 }
 
 export function getAccessToken(): string | null {
-  return accessToken;
+  if (accessToken) return accessToken;
+  if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+    return localStorage.getItem('access_token') || localStorage.getItem('platform_access_token');
+  }
+  return null;
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -379,8 +383,9 @@ async function execute<T>(
     ...options.headers,
   };
 
-  if (accessToken && options.skipAuth !== true) {
-    headers['Authorization'] = `Bearer ${accessToken}`;
+  const token = getAccessToken();
+  if (token && options.skipAuth !== true) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
   if (options.idempotencyKey) {
     headers['Idempotency-Key'] = options.idempotencyKey;

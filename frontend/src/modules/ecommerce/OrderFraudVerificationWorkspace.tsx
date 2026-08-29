@@ -252,26 +252,26 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
       </div>
 
       {/* Controls Bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3.5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-default bg-surface p-3.5 shadow-2xs">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted" />
           <input
             type="text"
             placeholder="Search by order #, customer name, phone..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 pl-9 pr-3.5 py-1.5 text-xs text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+            className="w-full rounded-xl border border-default bg-surface-sunken pl-9 pr-3.5 py-1.5 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
           />
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-xs text-zinc-400">
+          <div className="flex items-center gap-2 text-xs text-muted">
             <Filter className="h-3.5 w-3.5" />
             <span>Risk:</span>
             <select
               value={riskFilter}
               onChange={(e) => setRiskFilter(e.target.value)}
-              className="rounded-xl border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-xs text-zinc-200 focus:outline-none"
+              className="rounded-xl border border-default bg-surface-sunken px-2.5 py-1 text-xs text-default focus:outline-none"
             >
               <option value="">All Risks</option>
               <option value="high">High (70+)</option>
@@ -280,12 +280,12 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
             </select>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-zinc-400">
+          <div className="flex items-center gap-2 text-xs text-muted">
             <span>Status:</span>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-xl border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-xs text-zinc-200 focus:outline-none"
+              className="rounded-xl border border-default bg-surface-sunken px-2.5 py-1 text-xs text-default focus:outline-none"
             >
               <option value="">All Statuses</option>
               <option value="pending_review">Pending Review</option>
@@ -298,10 +298,10 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
       </div>
 
       {/* Queue Table */}
-      <div className="overflow-hidden rounded-3xl border border-zinc-800/80 bg-zinc-900/40 shadow-xl">
+      <div className="overflow-hidden rounded-3xl border border-default bg-surface shadow-2xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-zinc-300">
-            <thead className="border-b border-zinc-800 bg-zinc-950/60 text-[11px] uppercase tracking-wider text-zinc-400 font-bold">
+          <table className="w-full text-left text-xs text-default">
+            <thead className="border-b border-default bg-surface-sunken text-[11px] uppercase tracking-wider text-muted font-bold">
               <tr>
                 <th className="py-3.5 px-4">Order #</th>
                 <th className="py-3.5 px-4">Customer</th>
@@ -312,35 +312,35 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
                 <th className="py-3.5 px-4 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/60">
+            <tbody className="divide-y divide-default">
               {loading ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center">
-                    <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+                    <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                   </td>
                 </tr>
               ) : filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-zinc-500">
+                  <td colSpan={7} className="py-12 text-center text-muted">
                     No orders currently match the selected filter criteria.
                   </td>
                 </tr>
               ) : (
                 filteredItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-zinc-800/30 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-white">
+                  <tr key={item.id} className="hover:bg-surface-sunken/60 transition-colors">
+                    <td className="py-3.5 px-4 font-mono font-bold text-default">
                       {item.sales_order?.order_number}
                     </td>
                     <td className="py-3.5 px-4">
-                      <div className="font-semibold text-zinc-200">
+                      <div className="font-semibold text-default">
                         {item.sales_order?.customer?.name || 'Walk-in / Online Shopper'}
                       </div>
-                      <div className="text-[11px] text-zinc-500 flex items-center gap-1">
+                      <div className="text-[11px] text-muted flex items-center gap-1">
                         <Phone className="h-3 w-3" />
                         <span>{item.sales_order?.customer?.phone || 'N/A'}</span>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 font-mono font-semibold text-emerald-400">
+                    <td className="py-3.5 px-4 font-mono font-semibold text-emerald-600 dark:text-emerald-400">
                       ৳ {Number(item.sales_order?.total_amount || 0).toFixed(2)}
                     </td>
                     <td className="py-3.5 px-4">
@@ -348,10 +348,10 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
                         <span
                           className={`rounded-full px-2 py-0.5 font-mono text-[11px] font-bold ${
                             item.risk_level === 'high'
-                              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                              ? 'bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30'
                               : item.risk_level === 'medium'
-                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                              : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                              ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30'
+                              : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30'
                           }`}
                         >
                           {item.risk_score} / 100
@@ -363,7 +363,7 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
                         {(item.risk_factors || []).map((f, fIdx) => (
                           <span
                             key={fIdx}
-                            className="rounded-md bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400"
+                            className="rounded-md bg-surface-sunken border border-default px-1.5 py-0.5 text-[10px] text-muted"
                             title={f.description}
                           >
                             {f.code}
@@ -375,12 +375,12 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
                       <span
                         className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                           item.verification_status === 'verified'
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                             : item.verification_status === 'on_hold'
-                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
                             : item.verification_status === 'rejected'
-                            ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                            : 'bg-sky-500/10 text-sky-400 border border-sky-500/20'
+                            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                            : 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20'
                         }`}
                       >
                         {item.verification_status.replace('_', ' ')}
@@ -389,7 +389,7 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
                     <td className="py-3.5 px-4 text-right">
                       <button
                         onClick={() => openReviewModal(item)}
-                        className="rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:border-emerald-500 hover:text-white transition-all shadow-sm"
+                        className="rounded-xl border border-default bg-surface-sunken px-3 py-1.5 text-xs font-semibold text-default hover:border-primary hover:text-primary transition-all shadow-2xs cursor-pointer"
                       >
                         Review
                       </button>
@@ -404,36 +404,36 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
 
       {/* Verification Modal */}
       {selectedItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl rounded-3xl border border-zinc-800 bg-zinc-900 p-6 sm:p-8 space-y-6 shadow-2xl overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-2xl rounded-3xl border border-default bg-surface p-6 sm:p-8 space-y-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center justify-between border-b border-default pb-4">
               <div>
-                <h3 className="text-lg font-bold text-white">
+                <h3 className="text-lg font-bold text-default">
                   Order Review: {selectedItem.sales_order?.order_number}
                 </h3>
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-muted">
                   Customer: {selectedItem.sales_order?.customer?.name} ({selectedItem.sales_order?.customer?.phone})
                 </p>
               </div>
               <button
                 onClick={() => setSelectedItem(null)}
-                className="rounded-xl p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                className="rounded-xl p-1.5 text-muted hover:bg-surface-sunken hover:text-default cursor-pointer transition-colors"
               >
                 ✕
               </button>
             </div>
 
             {/* Risk Breakdown Card */}
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 space-y-3">
+            <div className="rounded-2xl border border-default bg-surface-sunken p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-zinc-300">Fraud Risk Assessment</span>
+                <span className="text-xs font-semibold text-default">Fraud Risk Assessment</span>
                 <span
                   className={`rounded-full px-2.5 py-0.5 font-mono text-xs font-bold ${
                     selectedItem.risk_level === 'high'
-                      ? 'bg-rose-500/20 text-rose-300'
+                      ? 'bg-rose-500/20 text-rose-600 dark:text-rose-300'
                       : selectedItem.risk_level === 'medium'
-                      ? 'bg-amber-500/20 text-amber-300'
-                      : 'bg-emerald-500/20 text-emerald-300'
+                      ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300'
+                      : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
                   }`}
                 >
                   Risk Score: {selectedItem.risk_score} / 100 ({selectedItem.risk_level.toUpperCase()})
@@ -444,13 +444,13 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
                 {(selectedItem.risk_factors || []).map((factor, idx) => (
                   <div
                     key={idx}
-                    className="flex items-start justify-between text-xs rounded-xl bg-zinc-900/60 p-2.5 border border-zinc-800/60"
+                    className="flex items-start justify-between text-xs rounded-xl bg-surface p-2.5 border border-default"
                   >
                     <div>
-                      <div className="font-semibold text-zinc-200">{factor.code}</div>
-                      <div className="text-[11px] text-zinc-400">{factor.description}</div>
+                      <div className="font-semibold text-default">{factor.code}</div>
+                      <div className="text-[11px] text-muted">{factor.description}</div>
                     </div>
-                    <span className="font-mono text-rose-400 font-bold">+{factor.points} pts</span>
+                    <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">+{factor.points} pts</span>
                   </div>
                 ))}
               </div>
@@ -458,11 +458,11 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
 
             {/* Verification Checklist */}
             <div className="space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
                 Verification Checklist
               </h4>
               <div className="space-y-2">
-                <label className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 text-xs text-zinc-200 cursor-pointer">
+                <label className="flex items-center gap-3 rounded-xl border border-default bg-surface-sunken p-3 text-xs text-default cursor-pointer">
                   <input
                     type="checkbox"
                     checked={checklist.phone_confirmed}
@@ -474,7 +474,7 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
                   <span>Customer reached via phone and confirmed order intent</span>
                 </label>
 
-                <label className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 text-xs text-zinc-200 cursor-pointer">
+                <label className="flex items-center gap-3 rounded-xl border border-default bg-surface-sunken p-3 text-xs text-default cursor-pointer">
                   <input
                     type="checkbox"
                     checked={checklist.address_validated}
@@ -486,7 +486,7 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
                   <span>Delivery address & landmark verified for courier dispatch</span>
                 </label>
 
-                <label className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 text-xs text-zinc-200 cursor-pointer">
+                <label className="flex items-center gap-3 rounded-xl border border-default bg-surface-sunken p-3 text-xs text-default cursor-pointer">
                   <input
                     type="checkbox"
                     checked={checklist.items_confirmed}
@@ -502,7 +502,7 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
 
             {/* Notes */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-300">
+              <label className="text-xs font-semibold text-default">
                 Verification / Agent Notes
               </label>
               <textarea
@@ -510,17 +510,17 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
                 value={reviewNotes}
                 onChange={(e) => setReviewNotes(e.target.value)}
                 placeholder="Add verification notes, customer remarks, or reason for hold/rejection..."
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-xs text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-3 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
               />
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-4 border-t border-zinc-800">
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-4 border-t border-default">
               <button
                 type="button"
                 disabled={actionLoading}
                 onClick={handleReject}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 transition-all"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-xs font-semibold text-rose-600 dark:text-rose-300 hover:bg-rose-500/20 transition-all cursor-pointer"
               >
                 <XCircle className="h-4 w-4" />
                 <span>Reject & Cancel</span>
@@ -530,7 +530,7 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
                 type="button"
                 disabled={actionLoading}
                 onClick={handleHold}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 transition-all"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2 text-xs font-semibold text-amber-600 dark:text-amber-300 hover:bg-amber-500/20 transition-all cursor-pointer"
               >
                 <PauseCircle className="h-4 w-4" />
                 <span>Put on Hold</span>
@@ -540,7 +540,7 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
                 type="button"
                 disabled={actionLoading}
                 onClick={handleVerify}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500 px-5 py-2 text-xs font-bold text-zinc-950 hover:bg-emerald-400 shadow-lg shadow-emerald-500/20 transition-all"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary text-white hover:bg-primary-hover px-5 py-2 text-xs font-bold shadow-lg shadow-primary/20 transition-all cursor-pointer"
               >
                 <CheckCircle className="h-4 w-4" />
                 <span>Approve & Release to Assembly</span>

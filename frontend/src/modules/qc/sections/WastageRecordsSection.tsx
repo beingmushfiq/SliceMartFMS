@@ -120,20 +120,20 @@ export function WastageRecordsSection() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 items-center gap-3">
           <div className="relative flex-1 max-w-sm">
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input
               type="text"
               placeholder="Search by wastage number..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 py-2 pl-9 pr-3 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-xl border border-default bg-surface-sunken py-2 pl-9 pr-3 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
             />
           </div>
 
           <select
             value={stageFilter}
             onChange={(e) => setStageFilter(e.target.value)}
-            className="rounded-xl border border-zinc-800 bg-zinc-900/60 py-2 px-3 text-xs text-zinc-300 focus:border-emerald-500 focus:outline-none"
+            className="rounded-xl border border-default bg-surface-sunken py-2 px-3 text-xs text-default focus:border-primary focus:outline-none"
           >
             <option value="all">All Stages</option>
             <option value="input">Material Input</option>
@@ -178,9 +178,9 @@ export function WastageRecordsSection() {
         data={wastageQuery.data}
         isFetching={wastageQuery.isFetching}
       >
-        <div className="overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-900/40">
-          <table className="w-full text-left text-xs text-zinc-300">
-            <thead className="border-b border-zinc-800 bg-zinc-900/80 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+        <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
+          <table className="w-full text-left text-xs text-default">
+            <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
                 <th className="py-3.5 pl-4 pr-3">Record Number</th>
                 <th className="py-3.5 px-3">Product / Batch</th>
@@ -191,53 +191,53 @@ export function WastageRecordsSection() {
                 <th className="py-3.5 pr-4 text-right">Recovery</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/60">
+            <tbody className="divide-y divide-default">
               {records.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-zinc-500">
-                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800/50 mb-2">
-                      <Trash2 className="h-5 w-5 text-zinc-400" />
+                  <td colSpan={7} className="py-12 text-center text-muted">
+                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-surface-sunken border border-default mb-2">
+                      <Trash2 className="h-5 w-5 text-muted" />
                     </div>
-                    <div className="text-sm font-medium text-zinc-400">
+                    <div className="text-sm font-medium text-default">
                       No wastage records found
                     </div>
-                    <div className="text-xs text-zinc-500 mt-1">
+                    <div className="text-xs text-muted mt-1">
                       Track process scrap, damaged materials and manufacturing shrinkage.
                     </div>
                   </td>
                 </tr>
               ) : (
                 records.map((rec) => (
-                  <tr key={rec.id} className="hover:bg-zinc-800/30 transition-colors">
-                    <td className="py-3 pl-4 pr-3 font-mono font-medium text-emerald-400">
+                  <tr key={rec.id} className="hover:bg-surface-sunken/60 transition-colors">
+                    <td className="py-3 pl-4 pr-3 font-mono font-medium text-emerald-600 dark:text-emerald-400">
                       {rec.record_number}
                     </td>
                     <td className="py-3 px-3">
-                      <div className="text-zinc-200 font-medium">
+                      <div className="text-default font-medium">
                         {rec.product_name ?? rec.product_id}
                       </div>
                       {rec.batch_number && (
-                        <div className="text-[10px] font-mono text-zinc-500">
+                        <div className="text-[10px] font-mono text-muted">
                           Batch: {rec.batch_number}
                         </div>
                       )}
                     </td>
-                    <td className="py-3 px-3 capitalize text-zinc-300">
-                      <span className="rounded-md bg-zinc-800 px-2 py-0.5 text-[10px] font-medium">
+                    <td className="py-3 px-3 capitalize text-default">
+                      <span className="rounded-md bg-surface-sunken border border-default px-2 py-0.5 text-[10px] font-medium text-muted">
                         {rec.recorded_date}
                       </span>
                     </td>
                     <td className="py-3 px-3">
-                      <div className="text-zinc-300 flex items-center gap-1">
-                        <AlertOctagon className="h-3.5 w-3.5 text-amber-400" />
+                      <div className="text-default flex items-center gap-1">
+                        <AlertOctagon className="h-3.5 w-3.5 text-amber-500" />
                         <span>{rec.reason_name ?? rec.reason_code ?? 'Defect'}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-3 font-mono font-semibold text-red-400">
+                    <td className="py-3 px-3 font-mono font-semibold text-rose-600 dark:text-rose-400">
                       {rec.quantity}
                     </td>
-                    <td className="py-3 px-3 font-mono text-zinc-200 flex items-center gap-0.5">
-                      <DollarSign className="h-3.5 w-3.5 text-zinc-500" />
+                    <td className="py-3 px-3 font-mono text-default flex items-center gap-0.5">
+                      <DollarSign className="h-3.5 w-3.5 text-muted" />
                       <span>{rec.total_cost}</span>
                     </td>
                     <td className="py-3 pr-4 text-right">
@@ -259,14 +259,14 @@ export function WastageRecordsSection() {
       >
         <div className="space-y-4">
           {errorMsg && (
-            <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-400">
+            <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400">
               {errorMsg}
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Wastage Number
               </label>
               <input
@@ -274,12 +274,12 @@ export function WastageRecordsSection() {
                 value={draft.wastage_number}
                 onChange={(e) => setDraft((d) => ({ ...d, wastage_number: e.target.value }))}
                 placeholder="e.g. WST-2026-001"
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-100"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Process Stage
               </label>
               <select
@@ -290,7 +290,7 @@ export function WastageRecordsSection() {
                     stage: e.target.value as CreateWastageDraft['stage'],
                   }))
                 }
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-200"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
               >
                 <option value="input">Material Input</option>
                 <option value="in_process">In-Process</option>
@@ -304,13 +304,13 @@ export function WastageRecordsSection() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Product / Material
               </label>
               <select
                 value={draft.product_id}
                 onChange={(e) => setDraft((d) => ({ ...d, product_id: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-200"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
               >
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -321,7 +321,7 @@ export function WastageRecordsSection() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Batch (Optional)
               </label>
               <select
@@ -334,7 +334,7 @@ export function WastageRecordsSection() {
                       : { production_batch_id: undefined }),
                   }))
                 }
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-200"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
               >
                 <option value="">None (Storage/Transit)</option>
                 {batches.map((b) => (
@@ -348,7 +348,7 @@ export function WastageRecordsSection() {
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Scrapped Qty
               </label>
               <input
@@ -356,18 +356,18 @@ export function WastageRecordsSection() {
                 step="0.0001"
                 value={draft.quantity}
                 onChange={(e) => setDraft((d) => ({ ...d, quantity: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-red-400 font-mono"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-rose-600 dark:text-rose-400 font-mono focus:border-primary focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Unit of Measure
               </label>
               <select
                 value={draft.unit_id}
                 onChange={(e) => setDraft((d) => ({ ...d, unit_id: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-200"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
               >
                 {units.map((u) => (
                   <option key={u.id} value={u.id}>
@@ -378,13 +378,13 @@ export function WastageRecordsSection() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Reason Code
               </label>
               <select
                 value={draft.reason_code_id}
                 onChange={(e) => setDraft((d) => ({ ...d, reason_code_id: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-200"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
               >
                 {reasonCodes.map((rc) => (
                   <option key={rc.id} value={rc.id}>
@@ -397,7 +397,7 @@ export function WastageRecordsSection() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Estimated Cost Impact ($)
               </label>
               <input
@@ -405,12 +405,12 @@ export function WastageRecordsSection() {
                 step="0.0001"
                 value={draft.estimated_cost}
                 onChange={(e) => setDraft((d) => ({ ...d, estimated_cost: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-100 font-mono"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default font-mono focus:border-primary focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Warehouse / Location
               </label>
               <select
@@ -423,7 +423,7 @@ export function WastageRecordsSection() {
                       : { warehouse_id: undefined }),
                   }))
                 }
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-200"
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
               >
                 {warehouses.map((w) => (
                   <option key={w.id} value={w.id}>
@@ -434,7 +434,7 @@ export function WastageRecordsSection() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-zinc-800">
+          <div className="flex justify-end gap-2 pt-3 border-t border-default">
             <Button variant="ghost" onClick={() => setIsCreateOpen(false)}>
               Cancel
             </Button>

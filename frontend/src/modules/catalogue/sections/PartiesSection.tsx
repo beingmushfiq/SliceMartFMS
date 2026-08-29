@@ -150,26 +150,26 @@ export function PartiesSection() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 items-center gap-3">
           <div className="relative flex-1 max-w-sm">
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input
               type="text"
               placeholder="Search by code, name, phone, email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 py-2 pl-9 pr-3 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-xl border border-default bg-surface-sunken py-2 pl-9 pr-3 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
             />
           </div>
 
-          <div className="flex items-center rounded-xl border border-zinc-800 bg-zinc-900/60 p-1 text-xs">
+          <div className="flex items-center rounded-xl border border-default bg-surface-sunken p-1 text-xs">
             {(['all', 'customer', 'supplier', 'dealer', 'agent'] as const).map((r) => (
               <button
                 key={r}
                 type="button"
                 onClick={() => setRoleFilter(r)}
-                className={`rounded-lg px-2.5 py-1 font-medium capitalize transition-colors ${
+                className={`rounded-lg px-2.5 py-1 font-medium capitalize transition-colors cursor-pointer ${
                   roleFilter === r
-                    ? 'bg-zinc-800 text-zinc-100 shadow-sm'
-                    : 'text-zinc-400 hover:text-zinc-200'
+                    ? 'bg-surface text-default shadow-xs border border-default'
+                    : 'text-muted hover:text-default'
                 }`}
               >
                 {r === 'all' ? 'All Roles' : `${r}s`}
@@ -198,9 +198,9 @@ export function PartiesSection() {
         data={partiesQuery.data}
         isFetching={partiesQuery.isFetching}
       >
-        <div className="overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-900/40">
-          <table className="w-full text-left text-xs text-zinc-300">
-            <thead className="border-b border-zinc-800 bg-zinc-900/80 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+        <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
+          <table className="w-full text-left text-xs text-default">
+            <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
                 <th className="py-3.5 pl-4 pr-3">Party</th>
                 <th className="py-3.5 px-3">Roles</th>
@@ -210,39 +210,39 @@ export function PartiesSection() {
                 <th className="py-3.5 px-3">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/60">
+            <tbody className="divide-y divide-default">
               {parties.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-zinc-500">
+                  <td colSpan={6} className="py-8 text-center text-muted">
                     No parties found matching the criteria.
                   </td>
                 </tr>
               ) : (
                 parties.map((p) => (
-                  <tr key={p.id} className="hover:bg-zinc-800/30 transition-colors">
+                  <tr key={p.id} className="hover:bg-surface-sunken/60 transition-colors">
                     <td className="py-3.5 pl-4 pr-3">
-                      <div className="font-medium text-zinc-100">{p.name}</div>
-                      <div className="text-[11px] text-zinc-500 font-mono mt-0.5">{p.code}</div>
+                      <div className="font-medium text-default">{p.name}</div>
+                      <div className="text-[11px] text-muted font-mono mt-0.5">{p.code}</div>
                     </td>
                     <td className="py-3.5 px-3">
                       <div className="flex flex-wrap gap-1">
                         {p.is_customer && (
-                          <span className="rounded bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-medium text-blue-400">
+                          <span className="rounded bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 text-[9px] font-medium text-blue-600 dark:text-blue-400">
                             Customer
                           </span>
                         )}
                         {p.is_supplier && (
-                          <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-medium text-amber-400">
+                          <span className="rounded bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 text-[9px] font-medium text-amber-600 dark:text-amber-400">
                             Supplier
                           </span>
                         )}
                         {p.is_dealer && (
-                          <span className="rounded bg-purple-500/10 px-1.5 py-0.5 text-[9px] font-medium text-purple-400">
+                          <span className="rounded bg-purple-500/10 border border-purple-500/20 px-1.5 py-0.5 text-[9px] font-medium text-purple-600 dark:text-purple-400">
                             Dealer
                           </span>
                         )}
                         {p.is_agent && (
-                          <span className="rounded bg-teal-500/10 px-1.5 py-0.5 text-[9px] font-medium text-teal-400">
+                          <span className="rounded bg-teal-500/10 border border-teal-500/20 px-1.5 py-0.5 text-[9px] font-medium text-teal-600 dark:text-teal-400">
                             Agent
                           </span>
                         )}
@@ -250,32 +250,48 @@ export function PartiesSection() {
                     </td>
                     <td className="py-3.5 px-3 space-y-0.5">
                       {p.phone && (
-                        <div className="flex items-center gap-1 text-[11px] text-zinc-400">
-                          <Phone className="h-3 w-3 text-zinc-500" />
+                        <div className="flex items-center gap-1 text-[11px] text-muted">
+                          <Phone className="h-3 w-3 text-muted" />
                           <span>{p.phone}</span>
                         </div>
                       )}
                       {p.email && (
-                        <div className="flex items-center gap-1 text-[11px] text-zinc-400">
-                          <Mail className="h-3 w-3 text-zinc-500" />
+                        <div className="flex items-center gap-1 text-[11px] text-muted">
+                          <Mail className="h-3 w-3 text-muted" />
                           <span>{p.email}</span>
                         </div>
                       )}
-                      {!p.phone && !p.email && <span className="text-zinc-600">-</span>}
+                      {!p.phone && !p.email && <span className="text-muted">-</span>}
                     </td>
-                    <td className="py-3.5 px-3 font-mono">{p.credit_limit}</td>
-                    <td className="py-3.5 px-3 font-mono font-medium text-zinc-200">
-                      {p.current_balance}
+                    <td className="py-3.5 px-3 font-mono text-muted">
+                      {parseFloat(p.credit_limit || '0') > 0 ? (
+                        <span>৳ {parseFloat(p.credit_limit).toLocaleString()}</span>
+                      ) : (
+                        <span>-</span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-3 font-mono">
+                      <span
+                        className={
+                          parseFloat(p.current_balance || '0') > 0
+                            ? 'text-rose-600 dark:text-rose-400 font-semibold'
+                            : parseFloat(p.current_balance || '0') < 0
+                              ? 'text-emerald-600 dark:text-emerald-400 font-semibold'
+                              : 'text-muted'
+                        }
+                      >
+                        ৳ {parseFloat(p.current_balance || '0').toLocaleString()}
+                      </span>
                     </td>
                     <td className="py-3.5 px-3">
                       <span
                         className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
                           p.status === 'active'
-                            ? 'bg-emerald-500/10 text-emerald-400'
-                            : 'bg-zinc-800 text-zinc-500'
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                            : 'bg-surface-sunken text-muted border border-default'
                         }`}
                       >
-                        {p.status}
+                        {p.status || 'Active'}
                       </span>
                     </td>
                   </tr>
@@ -286,7 +302,7 @@ export function PartiesSection() {
         </div>
       </QueryBoundary>
 
-      {/* Create Party Modal */}
+      {/* Create Modal */}
       <Modal open={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create New Party">
         <form
           onSubmit={(e) => {
@@ -296,29 +312,29 @@ export function PartiesSection() {
           className="space-y-4"
         >
           {errorMsg && (
-            <div className="rounded-lg bg-rose-500/10 p-3 text-xs text-rose-400 border border-rose-500/20">
+            <div className="rounded-lg bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400 border border-rose-500/20">
               {errorMsg}
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-zinc-300 mb-1">Code *</label>
+              <label className="block text-xs font-medium text-default mb-1">Code *</label>
               <input
                 required
                 type="text"
                 placeholder="e.g. CUST-001, SUPP-001"
                 value={draft.code}
                 onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase() })}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none uppercase"
+                className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none uppercase"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-zinc-300 mb-1">Type *</label>
+              <label className="block text-xs font-medium text-default mb-1">Type *</label>
               <select
                 value={draft.type}
                 onChange={(e) => setDraft({ ...draft, type: e.target.value })}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
               >
                 <option value="business">Business / Corporate</option>
                 <option value="individual">Individual</option>
@@ -327,54 +343,54 @@ export function PartiesSection() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-zinc-300 mb-1">Display Name *</label>
+            <label className="block text-xs font-medium text-default mb-1">Display Name *</label>
             <input
               required
               type="text"
               placeholder="e.g. Acme Electronics Ltd."
               value={draft.name}
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
             />
           </div>
 
           {/* Role Checkboxes */}
           <div>
-            <label className="block text-xs font-medium text-zinc-300 mb-1.5">Roles *</label>
-            <div className="flex flex-wrap gap-4 rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
-              <label className="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
+            <label className="block text-xs font-medium text-default mb-1.5">Roles *</label>
+            <div className="flex flex-wrap gap-4 rounded-xl border border-default bg-surface-sunken p-3">
+              <label className="flex items-center gap-2 text-xs text-default cursor-pointer">
                 <input
                   type="checkbox"
                   checked={draft.is_customer}
                   onChange={(e) => setDraft({ ...draft, is_customer: e.target.checked })}
-                  className="h-4 w-4 rounded border-zinc-800 bg-zinc-950 text-emerald-500 focus:ring-emerald-500/20"
+                  className="h-4 w-4 rounded border-default text-emerald-500 focus:ring-emerald-500/20"
                 />
                 <span>Customer</span>
               </label>
-              <label className="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
+              <label className="flex items-center gap-2 text-xs text-default cursor-pointer">
                 <input
                   type="checkbox"
                   checked={draft.is_supplier}
                   onChange={(e) => setDraft({ ...draft, is_supplier: e.target.checked })}
-                  className="h-4 w-4 rounded border-zinc-800 bg-zinc-950 text-emerald-500 focus:ring-emerald-500/20"
+                  className="h-4 w-4 rounded border-default text-emerald-500 focus:ring-emerald-500/20"
                 />
                 <span>Supplier</span>
               </label>
-              <label className="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
+              <label className="flex items-center gap-2 text-xs text-default cursor-pointer">
                 <input
                   type="checkbox"
                   checked={draft.is_dealer}
                   onChange={(e) => setDraft({ ...draft, is_dealer: e.target.checked })}
-                  className="h-4 w-4 rounded border-zinc-800 bg-zinc-950 text-emerald-500 focus:ring-emerald-500/20"
+                  className="h-4 w-4 rounded border-default text-emerald-500 focus:ring-emerald-500/20"
                 />
                 <span>Dealer</span>
               </label>
-              <label className="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
+              <label className="flex items-center gap-2 text-xs text-default cursor-pointer">
                 <input
                   type="checkbox"
                   checked={draft.is_agent}
                   onChange={(e) => setDraft({ ...draft, is_agent: e.target.checked })}
-                  className="h-4 w-4 rounded border-zinc-800 bg-zinc-950 text-emerald-500 focus:ring-emerald-500/20"
+                  className="h-4 w-4 rounded border-default text-emerald-500 focus:ring-emerald-500/20"
                 />
                 <span>Agent</span>
               </label>
@@ -383,41 +399,41 @@ export function PartiesSection() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-zinc-300 mb-1">Phone</label>
+              <label className="block text-xs font-medium text-default mb-1">Phone</label>
               <input
                 type="text"
                 placeholder="e.g. +8801700000000"
                 value={draft.phone}
                 onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-zinc-300 mb-1">Email</label>
+              <label className="block text-xs font-medium text-default mb-1">Email</label>
               <input
                 type="email"
                 placeholder="e.g. info@acme.test"
                 value={draft.email}
                 onChange={(e) => setDraft({ ...draft, email: e.target.value })}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-zinc-300 mb-1">Credit Limit</label>
+              <label className="block text-xs font-medium text-default mb-1">Credit Limit</label>
               <input
                 type="number"
                 step="0.0001"
                 min="0"
                 value={draft.credit_limit}
                 onChange={(e) => setDraft({ ...draft, credit_limit: e.target.value })}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-zinc-300 mb-1">Credit Days</label>
+              <label className="block text-xs font-medium text-default mb-1">Credit Days</label>
               <input
                 type="number"
                 min="0"
@@ -425,12 +441,12 @@ export function PartiesSection() {
                 onChange={(e) =>
                   setDraft({ ...draft, credit_days: parseInt(e.target.value, 10) || 0 })
                 }
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+          <div className="flex justify-end gap-3 pt-4 border-t border-default">
             <Button variant="secondary" onClick={() => setIsCreateOpen(false)}>
               Cancel
             </Button>
