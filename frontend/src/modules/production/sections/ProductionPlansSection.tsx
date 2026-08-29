@@ -34,14 +34,14 @@ export function ProductionPlansSection() {
   const [selectedPlan, setSelectedPlan] = useState<ProductionPlan | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [draft, setDraft] = useState<CreatePlanDraft>({
+  const [draft, setDraft] = useState<CreatePlanDraft>(() => ({
     plan_number: '',
     title: '',
     start_date: new Date().toISOString().slice(0, 10),
     end_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
     notes: '',
     items: [{ product_id: '', bom_id: '', planned_quantity: '100.0000' }],
-  });
+  }));
 
   const queryClient = useQueryClient();
 
