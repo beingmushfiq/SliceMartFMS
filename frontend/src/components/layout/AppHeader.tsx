@@ -6,12 +6,14 @@ import {
   Menu,
   Moon,
   Sun,
-  User as UserIcon,
   Bell,
   Check,
   AlertTriangle,
   Info,
   CheckCircle2,
+  Search,
+  Activity,
+  Zap,
 } from 'lucide-react';
 import { useAuthStore } from '../../lib/auth/authStore';
 import { cn } from '../../lib/utils';
@@ -67,7 +69,7 @@ const SAMPLE_NOTIFICATIONS: NotificationItem[] = [
 ];
 
 export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
-  const { user, tenant, branches, activeBranch, switchBranch, logout } = useAuthStore();
+  const { user, branches, activeBranch, switchBranch, logout } = useAuthStore();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isBranchMenuOpen, setIsBranchMenuOpen] = useState(false);
   const [isNotifMenuOpen, setIsNotifMenuOpen] = useState(false);
@@ -102,58 +104,65 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
   const getSeverityIcon = (severity: string) => {
     switch (severity) {
       case 'success':
-        return <CheckCircle2 className="size-4 text-success shrink-0" aria-hidden="true" />;
+        return <CheckCircle2 className="size-4 text-emerald-500 shrink-0" aria-hidden="true" />;
       case 'warning':
-        return <AlertTriangle className="size-4 text-warning shrink-0" aria-hidden="true" />;
+        return <AlertTriangle className="size-4 text-amber-500 shrink-0" aria-hidden="true" />;
       default:
-        return <Info className="size-4 text-info shrink-0" aria-hidden="true" />;
+        return <Info className="size-4 text-blue-500 shrink-0" aria-hidden="true" />;
     }
   };
 
   return (
-    <header className="sticky top-0 z-(--z-sticky) flex h-16 w-full items-center justify-between border-b border-default bg-surface/90 px-(--page-padding-mobile) sm:px-(--page-header-px) backdrop-blur-md transition-token-colors">
-      {/* Left side: Hamburger + Tenant info */}
+    <header className="sticky top-0 z-(--z-sticky) flex h-16 w-full items-center justify-between border-b border-default bg-surface/95 px-4 sm:px-6 backdrop-blur-md transition-token-colors">
+      {/* Left side: Hamburger + Factory Line Telemetry */}
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={onToggleSidebar}
-          className="rounded-sm p-2 text-muted hover:bg-surface-sunken hover:text-default transition-token-colors lg:hidden focus-visible:ring-focus"
+          className="rounded-lg p-2 text-muted hover:bg-surface-sunken hover:text-default transition-token-colors lg:hidden focus-visible:ring-focus"
           aria-label="Toggle Navigation"
         >
           <Menu className="size-5" />
         </button>
 
-        {tenant && (
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-sm bg-primary-subtle text-primary font-bold text-xs uppercase">
-              {tenant.name.slice(0, 2)}
-            </div>
-            <div className="hidden sm:block">
-              <span className="text-sm font-semibold text-default">{tenant.name}</span>
-              <span className="ml-2 rounded-md bg-surface-sunken border border-default px-1.5 py-0.5 text-2xs font-mono font-medium text-muted">
-                {tenant.currency_code}
-              </span>
-            </div>
+        {/* Live Factory Line Status Pills (Desktop) */}
+        <div className="hidden xl:flex items-center gap-2">
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-medium text-emerald-400">
+            <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="font-semibold">Line 01 (Cut):</span>
+            <span>Running (98.4%)</span>
           </div>
-        )}
+
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[11px] font-medium text-blue-400">
+            <span className="size-1.5 rounded-full bg-blue-400 animate-pulse" />
+            <span className="font-semibold">Line 02 (Sew):</span>
+            <span>Batch PB-042</span>
+          </div>
+
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[11px] font-medium text-amber-400">
+            <Activity className="size-3" />
+            <span className="font-semibold">QC Gate:</span>
+            <span>Active</span>
+          </div>
+        </div>
 
         {/* Branch Selector Dropdown */}
-        {branches && branches.length > 1 && (
-          <div className="relative ml-2">
+        {branches && branches.length > 0 && (
+          <div className="relative">
             <button
               type="button"
               onClick={() => setIsBranchMenuOpen(!isBranchMenuOpen)}
-              className="flex items-center gap-1.5 rounded-sm border border-default bg-surface-raised px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-token-colors focus-visible:ring-focus"
+              className="flex items-center gap-2 rounded-lg border border-default bg-surface-raised px-3 py-1.5 text-xs text-default hover:bg-surface-sunken transition-token-colors focus-visible:ring-focus shadow-xs"
             >
-              <Building2 className="size-3.5 text-muted" aria-hidden="true" />
-              <span>{activeBranch?.name ?? 'Select Branch'}</span>
+              <Building2 className="size-3.5 text-primary" aria-hidden="true" />
+              <span className="font-medium">{activeBranch?.name ?? 'Head Office'}</span>
               <ChevronDown className="size-3 text-muted" aria-hidden="true" />
             </button>
 
             {isBranchMenuOpen && (
-              <div className="absolute left-0 mt-2 w-52 rounded-(--popover-radius) border border-default bg-surface-raised p-1 shadow-overlay z-(--z-popover) animate-fade-in">
-                <div className="px-2 py-1 text-2xs font-semibold uppercase tracking-wider text-muted">
-                  Switch Branch
+              <div className="absolute left-0 mt-2 w-56 rounded-xl border border-default bg-surface-raised p-1.5 shadow-xl z-(--z-popover) animate-fade-in">
+                <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted">
+                  Operating Branch
                 </div>
                 {branches.map((b) => (
                   <button
@@ -164,7 +173,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
                       setIsBranchMenuOpen(false);
                     }}
                     className={cn(
-                      'flex w-full items-center justify-between rounded-xs px-2.5 py-1.5 text-left text-xs transition-token-colors focus-visible:ring-focus',
+                      'flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs transition-token-colors focus-visible:ring-focus',
                       activeBranch?.id === b.id
                         ? 'bg-primary-subtle text-primary font-semibold'
                         : 'text-default hover:bg-surface-sunken'
@@ -172,7 +181,9 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
                   >
                     <span>{b.name}</span>
                     {b.is_head_office && (
-                      <span className="text-2xs text-muted uppercase font-bold">HQ</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-400 font-bold">
+                        HQ
+                      </span>
                     )}
                   </button>
                 ))}
@@ -182,32 +193,48 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
         )}
       </div>
 
-      {/* Right side: Notifications + Theme toggle + User profile */}
+      {/* Right side: Search + Notifications + Theme toggle + User profile */}
       <div className="flex items-center gap-2 sm:gap-3">
+        {/* Quick Search Bar / Command Launcher */}
+        <button
+          type="button"
+          onClick={() => {
+            const searchInput = document.querySelector('input[type="search"]') as HTMLInputElement;
+            if (searchInput) searchInput.focus();
+          }}
+          className="hidden md:flex items-center gap-2 rounded-lg border border-default bg-surface-sunken px-3 py-1.5 text-xs text-muted hover:border-slate-400 transition-token-colors"
+        >
+          <Search className="size-3.5" />
+          <span>Quick search...</span>
+          <kbd className="rounded border border-default bg-surface px-1.5 py-0.5 text-[10px] font-mono text-muted font-semibold">
+            ⌘K
+          </kbd>
+        </button>
+
         {/* Notifications Bell Dropdown */}
         <div className="relative">
           <button
             type="button"
             onClick={() => setIsNotifMenuOpen(!isNotifMenuOpen)}
-            className="relative rounded-sm p-2 text-muted hover:bg-surface-sunken hover:text-default transition-token-colors focus-visible:ring-focus"
+            className="relative rounded-lg p-2 text-muted hover:bg-surface-sunken hover:text-default transition-token-colors focus-visible:ring-focus"
             aria-label="Notifications"
           >
             <Bell className="size-4" />
             {unreadCount > 0 && (
               <span className="absolute top-1.5 right-1.5 flex size-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-danger opacity-75"></span>
-                <span className="relative inline-flex rounded-full size-2 bg-danger"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                <span className="relative inline-flex rounded-full size-2 bg-red-500"></span>
               </span>
             )}
           </button>
 
           {isNotifMenuOpen && (
-            <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-(--popover-radius) border border-default bg-surface-raised shadow-overlay z-(--z-popover) overflow-hidden animate-fade-in">
-              <div className="flex items-center justify-between border-b border-default px-4 py-2.5">
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl border border-default bg-surface-raised shadow-2xl z-(--z-popover) overflow-hidden animate-fade-in">
+              <div className="flex items-center justify-between border-b border-default px-4 py-3 bg-surface-sunken/40">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-default">Notifications</span>
+                  <span className="text-xs font-bold text-default">Factory Telemetry & Alerts</span>
                   {unreadCount > 0 && (
-                    <span className="rounded-full bg-danger-subtle text-danger border border-danger px-2 py-0.5 text-2xs font-semibold">
+                    <span className="rounded-full bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 text-[10px] font-bold">
                       {unreadCount} new
                     </span>
                   )}
@@ -216,17 +243,17 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
                   <button
                     type="button"
                     onClick={markAllAsRead}
-                    className="text-2xs font-medium text-primary hover:underline flex items-center gap-1 focus-visible:ring-focus rounded-md"
+                    className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1 focus-visible:ring-focus"
                   >
                     <Check className="size-3" />
-                    Mark all read
+                    Mark read
                   </button>
                 )}
               </div>
 
               <div className="max-h-80 overflow-y-auto divide-y divide-default">
                 {notifications.length === 0 ? (
-                  <div className="p-4 text-center text-xs text-muted">
+                  <div className="p-6 text-center text-xs text-muted">
                     No active notifications
                   </div>
                 ) : (
@@ -236,17 +263,17 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
                       onClick={() => markSingleRead(notif.id)}
                       className={cn(
                         'p-3.5 text-left transition-token-colors cursor-pointer hover:bg-surface-sunken',
-                        !notif.read_at ? 'bg-primary-subtle/40' : 'opacity-70'
+                        !notif.read_at ? 'bg-primary-subtle/30' : 'opacity-70'
                       )}
                     >
                       <div className="flex items-start gap-2.5">
                         <div className="mt-0.5">{getSeverityIcon(notif.severity)}</div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-semibold text-default">{notif.title_key}</p>
-                          <p className="text-2xs text-muted mt-0.5 line-clamp-2">
+                          <p className="text-[11px] text-muted mt-0.5 line-clamp-2 leading-relaxed">
                             {notif.body_key}
                           </p>
-                          <span className="text-2xs text-subtle mt-1 block font-mono">
+                          <span className="text-[10px] text-muted mt-1 block font-mono">
                             {new Date(notif.created_at).toLocaleTimeString()}
                           </span>
                         </div>
@@ -263,10 +290,10 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
         <button
           type="button"
           onClick={toggleTheme}
-          className="rounded-sm p-2 text-muted hover:bg-surface-sunken hover:text-default transition-token-colors focus-visible:ring-focus"
+          className="rounded-lg p-2 text-muted hover:bg-surface-sunken hover:text-default transition-token-colors focus-visible:ring-focus"
           aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
         >
-          {theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          {theme === 'dark' ? <Sun className="size-4 text-amber-400" /> : <Moon className="size-4 text-slate-700" />}
         </button>
 
         {/* User Dropdown */}
@@ -274,23 +301,27 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
           <button
             type="button"
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className="flex items-center gap-2 rounded-sm p-1.5 hover:bg-surface-sunken transition-token-colors focus-visible:ring-focus"
+            className="flex items-center gap-2.5 rounded-lg p-1.5 hover:bg-surface-sunken transition-token-colors focus-visible:ring-focus border border-transparent hover:border-default"
           >
-            <div className="flex size-7 items-center justify-center rounded-full bg-surface-sunken border border-default text-default">
-              <UserIcon className="size-3.5 text-muted" />
+            <div className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-bold text-xs shadow-xs">
+              {user?.name && user.name.length > 0 ? user.name[0] : 'U'}
             </div>
             <div className="hidden text-left sm:block">
-              <div className="text-xs font-medium text-default leading-tight">{user?.name ?? 'User'}</div>
-              <div className="text-2xs text-muted truncate max-w-30">{user?.email}</div>
+              <div className="text-xs font-semibold text-default leading-tight">{user?.name ?? 'Operator'}</div>
+              <div className="text-[10px] text-muted truncate max-w-30">{user?.email}</div>
             </div>
             <ChevronDown className="hidden size-3 text-muted sm:block" />
           </button>
 
           {isUserMenuOpen && (
-            <div className="absolute right-0 mt-2 w-56 rounded-(--popover-radius) border border-default bg-surface-raised p-1.5 shadow-overlay z-(--z-popover) animate-fade-in">
-              <div className="border-b border-default px-3 py-2">
-                <p className="text-xs font-semibold text-default">{user?.name}</p>
-                <p className="text-2xs text-muted truncate">{user?.email}</p>
+            <div className="absolute right-0 mt-2 w-56 rounded-xl border border-default bg-surface-raised p-1.5 shadow-2xl z-(--z-popover) animate-fade-in">
+              <div className="border-b border-default px-3 py-2.5">
+                <p className="text-xs font-bold text-default">{user?.name}</p>
+                <p className="text-[11px] text-muted truncate">{user?.email}</p>
+                <div className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-[9px] font-semibold text-blue-400 border border-blue-500/20">
+                  <Zap className="size-2.5" />
+                  <span>Factory Operator</span>
+                </div>
               </div>
 
               <div className="mt-1">
@@ -300,7 +331,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
                     setIsUserMenuOpen(false);
                     void logout();
                   }}
-                  className="flex w-full items-center gap-2 rounded-xs px-3 py-2 text-left text-xs text-danger hover:bg-danger-subtle transition-token-colors focus-visible:ring-focus"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium text-red-500 hover:bg-red-500/10 transition-token-colors focus-visible:ring-focus"
                 >
                   <LogOut className="size-3.5" />
                   <span>Sign out</span>
@@ -313,3 +344,4 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
     </header>
   );
 }
+
