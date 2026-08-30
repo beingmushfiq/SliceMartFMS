@@ -1,0 +1,463 @@
+import React, { useState, useEffect } from 'react';
+import {
+  History,
+  Search,
+  Filter,
+  RefreshCw,
+  Eye,
+  Clock,
+  Sparkles,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
+import { api } from '../../lib/api/client';
+import { Button } from '../../components/ui/Button';
+import { notify } from '../../components/ui/Toast';
+import { VersionDiffModal, type AuditLogEntry } from '../../components/audit/VersionDiffModal';
+
+interface PaginationMeta {
+  total: number;
+  current_page: number;
+  per_page: number;
+  last_page: number;
+}
+
+export const ActivityLogWorkspace: React.FC = () => {
+  const [logs, setLogs] = useState<AuditLogEntry[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta>({
+    total: 0,
+    current_page: 1,
+    per_page: 25,
+    last_page: 1,
+  });
+  const [loading, setLoading] = useState(true);
+
+  // Filter States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedAction, setSelectedAction] = useState<string>('all');
+  const [selectedType, setSelectedType] = useState<string>('all');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [page, setPage] = useState(1);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Selected Log for Visual Diff Modal
+  const [selectedLog, setSelectedLog] = useState<AuditLogEntry | null>(null);
+
+  useEffect(() => {
+    let ignore = false;
+
+    const params: Record<string, string | number> = {
+      page,
+      per_page: 25,
+    };
+
+    if (searchQuery.trim()) params.q = searchQuery.trim();
+    if (selectedAction !== 'all') params.action = selectedAction;
+    if (selectedType !== 'all') params.auditable_type = selectedType;
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+
+    api
+      .get<{ data: AuditLogEntry[]; meta: PaginationMeta }>('/audit-logs', { params })
+      .then((res) => {
+        if (!ignore) {
+          setLogs(res.data.data ?? []);
+          if (res.data.meta) {
+            setMeta(res.data.meta);
+          }
+          setLoading(false);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!ignore) {
+          const msg = err instanceof Error ? err.message : 'Failed to fetch activity logs.';
+          notify.error(msg);
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [page, searchQuery, selectedAction, selectedType, startDate, endDate, refreshKey]);
+
+  const handleRefresh = () => {
+    setLoading(true);
+    setRefreshKey((k) => k + 1);
+  };
+
+  const handleApplyFilter = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setPage(1);
+    setRefreshKey((k) => k + 1);
+  };
+
+  const handleResetFilter = () => {
+    setLoading(true);
+    setSearchQuery('');
+    setSelectedAction('all');
+    setSelectedType('all');
+    setStartDate('');
+    setEndDate('');
+    setPage(1);
+    setRefreshKey((k) => k + 1);
+  };
+
+  const getActionBadge = (action: string) => {
+    const act = action.toLowerCase();
+    if (act.includes('create') || act.includes('store')) {
+      return 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30';
+    }
+    if (act.includes('update') || act.includes('edit')) {
+      return 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30';
+    }
+    if (act.includes('delete') || act.includes('destroy') || act.includes('void')) {
+      return 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30';
+    }
+    if (act.includes('approve') || act.includes('verify')) {
+      return 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30';
+    }
+    return 'bg-surface-sunken text-muted border-default';
+  };
+
+  // Metrics from current dataset
+  const updatesCount = logs.filter((l) => l.action.toLowerCase().includes('update')).length;
+  const createsCount = logs.filter((l) => l.action.toLowerCase().includes('create')).length;
+  const deletesCount = logs.filter((l) =>
+    l.action.toLowerCase().includes('delete') || l.action.toLowerCase().includes('void')
+  ).length;
+
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto py-2">
+      {/* Top Banner */}
+      <div className="relative overflow-hidden rounded-2xl border border-default bg-surface p-6 sm:p-7 shadow-xs">
+        <div
+          className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full bg-emerald-500/10 blur-3xl"
+          aria-hidden="true"
+        />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="flex size-14 items-center justify-center rounded-2xl bg-linear-to-br from-emerald-600 to-teal-700 text-white font-bold shadow-lg ring-4 ring-emerald-500/20">
+              <History className="size-7" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-bold text-default tracking-tight">
+                  Activity Log & Version Audit Trail
+                </h1>
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <Sparkles className="size-3" />
+                  Append-Only Immutability
+                </span>
+              </div>
+              <p className="text-xs text-muted max-w-2xl leading-relaxed">
+                Comprehensive historical timeline of all records created, updated, and deleted. Inspect exact 
+                <strong> Before vs. After field diffs</strong> and author tracking.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={handleRefresh}
+              disabled={loading}
+              className="text-xs"
+            >
+              <RefreshCw className={`size-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
+              <span>Refresh Log</span>
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="rounded-2xl border border-default bg-surface p-4 space-y-1 shadow-2xs">
+          <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Total Recorded Logs</span>
+          <div className="text-2xl font-extrabold text-default font-mono">{meta.total}</div>
+          <span className="text-[11px] text-muted">Historical activities</span>
+        </div>
+
+        <div className="rounded-2xl border border-default bg-surface p-4 space-y-1 shadow-2xs">
+          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+            Edit / Update Diffs
+          </span>
+          <div className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 font-mono">
+            {updatesCount}
+          </div>
+          <span className="text-[11px] text-muted">Field mutations in page</span>
+        </div>
+
+        <div className="rounded-2xl border border-default bg-surface p-4 space-y-1 shadow-2xs">
+          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+            New Record Creates
+          </span>
+          <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
+            {createsCount}
+          </div>
+          <span className="text-[11px] text-muted">Initial creations in page</span>
+        </div>
+
+        <div className="rounded-2xl border border-default bg-surface p-4 space-y-1 shadow-2xs">
+          <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">
+            Deletes / Voids
+          </span>
+          <div className="text-2xl font-extrabold text-rose-600 dark:text-rose-400 font-mono">
+            {deletesCount}
+          </div>
+          <span className="text-[11px] text-muted">Removed items in page</span>
+        </div>
+      </div>
+
+      {/* Search & Filter Form */}
+      <form
+        onSubmit={handleApplyFilter}
+        className="rounded-2xl border border-default bg-surface p-4 space-y-3 shadow-xs"
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5">
+          {/* Keyword Search */}
+          <div className="relative sm:col-span-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted" />
+            <input
+              type="text"
+              placeholder="Search by action, user, entity, or correlation..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-xl border border-default bg-surface-sunken pl-9 pr-3 py-1.5 text-xs text-default placeholder-muted focus:border-primary focus:outline-none"
+            />
+          </div>
+
+          {/* Action Filter */}
+          <div>
+            <select
+              value={selectedAction}
+              onChange={(e) => {
+                setSelectedAction(e.target.value);
+                setPage(1);
+              }}
+              className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-1.5 text-xs text-default focus:border-primary focus:outline-none"
+            >
+              <option value="all">All Action Types</option>
+              <option value="create">CREATE</option>
+              <option value="update">UPDATE (Edit)</option>
+              <option value="delete">DELETE</option>
+              <option value="approve">APPROVE</option>
+              <option value="void">VOID</option>
+            </select>
+          </div>
+
+          {/* Entity Type Filter */}
+          <div>
+            <select
+              value={selectedType}
+              onChange={(e) => {
+                setSelectedType(e.target.value);
+                setPage(1);
+              }}
+              className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-1.5 text-xs text-default focus:border-primary focus:outline-none"
+            >
+              <option value="all">All Entity Models</option>
+              <option value="Product">Product</option>
+              <option value="BillOfMaterials">Bill of Materials</option>
+              <option value="ProductionBatch">Production Batch</option>
+              <option value="ProductionPlan">Production Plan</option>
+              <option value="QcInspection">QC Inspection</option>
+              <option value="WastageRecord">Wastage Record</option>
+              <option value="SalesOrder">Sales Order</option>
+              <option value="PurchaseOrder">Purchase Order</option>
+              <option value="Role">Role / RBAC</option>
+              <option value="Warehouse">Warehouse & Stock</option>
+            </select>
+          </div>
+
+          {/* Filter Buttons */}
+          <div className="flex items-center gap-2">
+            <Button type="submit" variant="primary" size="sm" className="flex-1 text-xs">
+              <Filter className="size-3 mr-1" />
+              <span>Filter</span>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleResetFilter}
+              className="text-xs"
+            >
+              Reset
+            </Button>
+          </div>
+        </div>
+      </form>
+
+      {/* Activity Table */}
+      <div className="rounded-2xl border border-default bg-surface overflow-hidden shadow-xs">
+        {loading ? (
+          <div className="flex h-64 items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+          </div>
+        ) : logs.length === 0 ? (
+          <div className="p-12 text-center space-y-3">
+            <History className="size-10 text-muted mx-auto" />
+            <h4 className="text-sm font-bold text-default">No Activity Logs Found</h4>
+            <p className="text-xs text-muted max-w-sm mx-auto">
+              No mutations match your current search and filter parameters.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-default bg-surface-sunken text-[11px] font-bold uppercase tracking-wider text-muted">
+                  <th className="py-3 px-4">Timestamp</th>
+                  <th className="py-3 px-4">Operator / Actor</th>
+                  <th className="py-3 px-4">Action</th>
+                  <th className="py-3 px-4">Entity Model</th>
+                  <th className="py-3 px-4">Changed Fields</th>
+                  <th className="py-3 px-4 text-right">Version Inspection</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-default">
+                {logs.map((log) => {
+                  const entityClean = log.auditable_type
+                    ? log.auditable_type.split('\\').pop()
+                    : 'System Record';
+                  const changedCount = log.changed_fields?.length ?? 0;
+
+                  return (
+                    <tr key={log.id} className="hover:bg-surface-sunken/40 transition-colors">
+                      {/* Timestamp */}
+                      <td className="py-3 px-4 whitespace-nowrap font-mono text-[11px] text-muted">
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="size-3 text-muted" />
+                          <span>{log.created_at ? new Date(log.created_at).toLocaleString() : 'N/A'}</span>
+                        </div>
+                      </td>
+
+                      {/* Operator */}
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="flex size-6 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
+                            {log.user?.name ? log.user.name.charAt(0).toUpperCase() : 'S'}
+                          </div>
+                          <div>
+                            <span className="font-semibold text-default block text-xs">
+                              {log.user?.name || (log.user_id ? `User #${log.user_id}` : 'System Agent')}
+                            </span>
+                            {log.user?.email && (
+                              <span className="text-[10px] text-muted block">{log.user.email}</span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Action */}
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${getActionBadge(
+                            log.action
+                          )}`}
+                        >
+                          {log.action}
+                        </span>
+                      </td>
+
+                      {/* Entity Model */}
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <div className="font-mono text-xs text-default font-semibold">
+                          <span>{entityClean}</span>
+                          {log.auditable_id && (
+                            <span className="text-primary ml-1">#{log.auditable_id}</span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Changed Fields Badges */}
+                      <td className="py-3 px-4">
+                        {changedCount > 0 ? (
+                          <div className="flex items-center gap-1 flex-wrap max-w-xs">
+                            {log.changed_fields?.slice(0, 3).map((f) => (
+                              <span
+                                key={f}
+                                className="font-mono text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/20"
+                              >
+                                {f}
+                              </span>
+                            ))}
+                            {changedCount > 3 && (
+                              <span className="text-[10px] text-muted font-mono">
+                                +{changedCount - 3} more
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-muted italic">No state changes</span>
+                        )}
+                      </td>
+
+                      {/* Action Button */}
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setSelectedLog(log)}
+                          className="text-[11px] h-7 px-2.5 shadow-2xs"
+                        >
+                          <Eye className="size-3 mr-1 text-primary" />
+                          <span>View Version Diff</span>
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        <div className="flex items-center justify-between px-4 py-3 border-t border-default bg-surface-sunken text-xs">
+          <span className="text-muted">
+            Showing Page <strong className="text-default">{meta.current_page}</strong> of{' '}
+            <strong className="text-default">{meta.last_page}</strong> ({meta.total} total items)
+          </span>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={meta.current_page <= 1}
+              className="text-xs h-7 px-2"
+            >
+              <ChevronLeft className="size-3.5 mr-1" />
+              <span>Previous</span>
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))}
+              disabled={meta.current_page >= meta.last_page}
+              className="text-xs h-7 px-2"
+            >
+              <span>Next</span>
+              <ChevronRight className="size-3.5 ml-1" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Interactive Version Diff Modal */}
+      {selectedLog && (
+        <VersionDiffModal
+          isOpen={!!selectedLog}
+          onClose={() => setSelectedLog(null)}
+          log={selectedLog}
+        />
+      )}
+    </div>
+  );
+};

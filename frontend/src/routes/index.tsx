@@ -14,7 +14,8 @@ import FinanceWorkspace from '../modules/finance/FinanceWorkspace';
 import AssetsWorkspace from '../modules/assets/AssetsWorkspace';
 import HrWorkspace from '../modules/hr/HrWorkspace';
 import { ReportsWorkspace } from '../modules/reports/ReportsWorkspace';
-import { AuditLogWorkspace } from '../modules/audit/AuditLogWorkspace';
+import { ActivityLogWorkspace } from '../pages/settings/ActivityLogWorkspace';
+import { RolesManagementWorkspace } from '../pages/settings/RolesManagementWorkspace';
 import { OrderFraudVerificationWorkspace } from '../modules/ecommerce/OrderFraudVerificationWorkspace';
 import { SettingsCenterWorkspace } from '../modules/settings/SettingsCenterWorkspace';
 import { TenantRoleDashboard } from '../pages/dashboard/TenantRoleDashboard';
@@ -240,15 +241,31 @@ export const router = createBrowserRouter([
           },
           {
             path: 'audit-logs',
-            element: <AuditLogWorkspace />,
+            element: <ActivityLogWorkspace />,
+          },
+          {
+            path: 'activity-logs',
+            element: <ActivityLogWorkspace />,
           },
           {
             path: 'audit',
             element: <Navigate to="/audit-logs" replace />,
           },
           {
+            path: 'roles',
+            element: <RolesManagementWorkspace />,
+          },
+          {
             path: 'settings',
             element: <SettingsCenterWorkspace />,
+          },
+          {
+            path: 'settings/roles',
+            element: <RolesManagementWorkspace />,
+          },
+          {
+            path: 'settings/audit-logs',
+            element: <ActivityLogWorkspace />,
           },
           {
             path: 'settings/profile',

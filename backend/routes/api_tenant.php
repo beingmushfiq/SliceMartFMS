@@ -692,8 +692,21 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             Route::post('orders/{orderId}/reject', [\App\Modules\Ecommerce\Controllers\OrderFraudVerificationController::class, 'reject'])->name('reject');
         });
 
-        // ── System Audit Logging ──────────────────────────────────────
+        // ── RBAC & Role Management ──────────────────────────────────
+        Route::prefix('roles')->name('roles.')->group(static function (): void {
+            Route::get('/', [\App\Modules\Auth\Controllers\RoleController::class, 'index'])->name('index');
+            Route::post('/', [\App\Modules\Auth\Controllers\RoleController::class, 'store'])->name('store');
+            Route::get('{id}', [\App\Modules\Auth\Controllers\RoleController::class, 'show'])->name('show');
+            Route::put('{id}', [\App\Modules\Auth\Controllers\RoleController::class, 'update'])->name('update');
+            Route::delete('{id}', [\App\Modules\Auth\Controllers\RoleController::class, 'destroy'])->name('destroy');
+        });
+
+        Route::get('permissions', [\App\Modules\Auth\Controllers\RoleController::class, 'permissions'])->name('permissions.index');
+
+        // ── System Audit Logging & Entity History ───────────────────
         Route::prefix('audit-logs')->name('audit-logs.')->group(static function (): void {
             Route::get('/', [App\Modules\Audit\Controllers\AuditLogController::class, 'index'])->name('index');
+            Route::get('{id}', [App\Modules\Audit\Controllers\AuditLogController::class, 'show'])->name('show');
+            Route::get('entity/{type}/{id}', [App\Modules\Audit\Controllers\AuditLogController::class, 'entityHistory'])->name('entity');
         });
     });

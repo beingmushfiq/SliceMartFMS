@@ -11,6 +11,7 @@ import {
   Microscope,
   Search,
   Settings,
+  Shield,
   ShieldCheck,
   ShoppingBag,
   ShoppingCart,
@@ -152,10 +153,16 @@ const navSections: NavSection[] = [
         permission: ['reports.standard.view'],
       },
       {
-        label: 'Audit Trail',
-        to: '/audit-logs',
+        label: 'Roles & RBAC',
+        to: '/settings/roles',
+        icon: Shield,
+        permission: ['core.role.view'],
+      },
+      {
+        label: 'Activity Log & Diffs',
+        to: '/activity-logs',
         icon: ShieldCheck,
-        permission: ['audit.logs.view'],
+        permission: ['core.audit_log.view'],
       },
       {
         label: 'Settings Center',
