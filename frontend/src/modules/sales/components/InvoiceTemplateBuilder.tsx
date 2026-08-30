@@ -68,7 +68,7 @@ export function InvoiceTemplateBuilder({ invoice, onClose }: InvoiceTemplateBuil
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 p-4 bg-surface text-default min-h-[600px] rounded-2xl">
+    <div className="flex flex-col lg:flex-row gap-6 p-4 bg-surface text-default min-h-150 rounded-2xl">
       {/* Left: Customizer Sidebar */}
       <div className="w-full lg:w-80 space-y-5 rounded-2xl border border-default bg-surface-sunken p-5">
         <div className="flex items-center gap-2 border-b border-default pb-3">
@@ -190,7 +190,7 @@ export function InvoiceTemplateBuilder({ invoice, onClose }: InvoiceTemplateBuil
           className={`bg-white text-zinc-900 shadow-2xl rounded-sm transition-all ${
             layout === 'thermal_80mm'
               ? 'w-[320px] p-4 text-[11px] font-mono'
-              : 'w-full max-w-[780px] p-8 text-xs font-sans min-h-[950px]'
+              : 'w-full max-w-195 p-8 text-xs font-sans min-h-237.5'
           }`}
         >
           {/* Header */}

@@ -60,7 +60,7 @@ export const StorefrontProductDetailPage: React.FC = () => {
         <h2 className="text-base font-bold text-zinc-200">Product Not Found</h2>
         <p className="text-xs text-zinc-500 mt-1">The requested product could not be located.</p>
         <Link
-          to={`/store/${subdomain}`}
+          to={`/store/${subdomain}/products`}
           className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:underline"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
@@ -84,7 +84,7 @@ export const StorefrontProductDetailPage: React.FC = () => {
     <div className="space-y-8 max-w-4xl mx-auto">
       {/* Back Button */}
       <Link
-        to={`/store/${subdomain}`}
+        to={`/store/${subdomain}/products`}
         className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />

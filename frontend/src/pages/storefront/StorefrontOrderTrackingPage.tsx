@@ -75,11 +75,12 @@ export const StorefrontOrderTrackingPage: React.FC = () => {
         params,
       });
 
-      setOrder(response.data.data ?? (response.data as any));
+      setOrder(response.data.data ?? (response.data as unknown as TrackedOrderDetails));
       setSearchParams(params);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setOrder(null);
-      setError(err.message ?? 'No order found with the provided details.');
+      const msg = err instanceof Error ? err.message : 'No order found with the provided details.';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -91,7 +92,7 @@ export const StorefrontOrderTrackingPage: React.FC = () => {
     <div className="max-w-3xl mx-auto space-y-8 py-4">
       {/* Back Button */}
       <Link
-        to={`/store/${subdomain}`}
+        to={`/store/${subdomain}/products`}
         className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -145,7 +146,7 @@ export const StorefrontOrderTrackingPage: React.FC = () => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-3 text-xs font-bold text-zinc-950 shadow-lg shadow-emerald-500/20 hover:from-emerald-400 hover:to-teal-400 transition-all cursor-pointer disabled:opacity-50"
+          className="w-full flex items-center justify-center gap-2 rounded-xl bg-linear-to-r from-emerald-500 to-teal-500 py-3 text-xs font-bold text-zinc-950 shadow-lg shadow-emerald-500/20 hover:from-emerald-400 hover:to-teal-400 transition-all cursor-pointer disabled:opacity-50"
         >
           {loading ? (
             <span>Locating Order...</span>

@@ -91,7 +91,7 @@ export const StorefrontFooter: React.FC<StorefrontFooterProps> = ({ config }) =>
             </h4>
             <ul className="space-y-2 text-xs">
               <li>
-                <a href={`/store/${subdomain}`} className="hover:text-emerald-400 transition-colors">
+                <a href={`/store/${subdomain}/products`} className="hover:text-emerald-400 transition-colors">
                   Product Catalog
                 </a>
               </li>

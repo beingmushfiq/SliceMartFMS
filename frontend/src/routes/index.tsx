@@ -18,6 +18,7 @@ import { AuditLogWorkspace } from '../modules/audit/AuditLogWorkspace';
 import { OrderFraudVerificationWorkspace } from '../modules/ecommerce/OrderFraudVerificationWorkspace';
 import { SettingsCenterWorkspace } from '../modules/settings/SettingsCenterWorkspace';
 import { TenantRoleDashboard } from '../pages/dashboard/TenantRoleDashboard';
+import { ProfileSettingsWorkspace } from '../pages/settings/ProfileSettingsWorkspace';
 
 // Master SaaS Platform Admin imports
 import { PlatformProtectedRoute } from '../components/platform/PlatformProtectedRoute';
@@ -33,6 +34,7 @@ import PlatformAuditWorkspace from '../modules/platform/PlatformAuditWorkspace';
 // Public Headless E-Commerce Storefront imports
 import { StorefrontShell } from '../components/storefront/StorefrontShell';
 import { StorefrontHomePage } from '../pages/storefront/StorefrontHomePage';
+import { StorefrontCatalogPage } from '../pages/storefront/StorefrontCatalogPage';
 import { StorefrontProductDetailPage } from '../pages/storefront/StorefrontProductDetailPage';
 import { StorefrontCheckoutPage } from '../pages/storefront/StorefrontCheckoutPage';
 import { StorefrontOrderConfirmationPage } from '../pages/storefront/StorefrontOrderConfirmationPage';
@@ -55,6 +57,14 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <StorefrontHomePage />,
+      },
+      {
+        path: 'products',
+        element: <StorefrontCatalogPage />,
+      },
+      {
+        path: 'collections/:categorySlug',
+        element: <StorefrontCatalogPage />,
       },
       {
         path: 'products/:idOrSku',
@@ -241,8 +251,16 @@ export const router = createBrowserRouter([
             element: <SettingsCenterWorkspace />,
           },
           {
+            path: 'settings/profile',
+            element: <ProfileSettingsWorkspace />,
+          },
+          {
             path: 'settings/:group',
             element: <SettingsCenterWorkspace />,
+          },
+          {
+            path: 'profile',
+            element: <ProfileSettingsWorkspace />,
           },
           {
             path: '*',

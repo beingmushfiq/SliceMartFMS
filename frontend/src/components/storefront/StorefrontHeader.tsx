@@ -79,7 +79,7 @@ export const StorefrontHeader: React.FC<StorefrontHeaderProps> = ({ config, subd
           {/* Center Navigation Links */}
           <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-zinc-300">
             <Link
-              to={`/store/${subdomain}`}
+              to={`/store/${subdomain}/products`}
               className="hover:text-emerald-400 transition-colors py-1 hover:border-b-2 hover:border-emerald-400"
             >
               All Products

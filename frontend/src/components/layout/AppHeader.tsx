@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Building2,
   ChevronDown,
@@ -14,6 +15,7 @@ import {
   Search,
   Activity,
   Zap,
+  User,
 } from 'lucide-react';
 import { useAuthStore } from '../../lib/auth/authStore';
 import { cn } from '../../lib/utils';
@@ -327,7 +329,16 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
                 </div>
               </div>
 
-              <div className="mt-1">
+              <div className="mt-1 space-y-0.5">
+                <Link
+                  to="/profile"
+                  onClick={() => setIsUserMenuOpen(false)}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium text-default hover:bg-surface-sunken transition-token-colors focus-visible:ring-focus"
+                >
+                  <User className="size-3.5 text-primary" />
+                  <span>Profile & Account</span>
+                </Link>
+
                 <button
                   type="button"
                   onClick={() => {

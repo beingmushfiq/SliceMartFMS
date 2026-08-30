@@ -236,7 +236,7 @@ export function WorkerProductionSection() {
             }
             setIsCreateOpen(true);
           }}
-          className="flex items-center gap-1.5 min-h-[44px]"
+          className="flex items-center gap-1.5 min-h-11"
         >
           <Plus className="h-4 w-4" />
           <span>Log Worker Output</span>
@@ -324,7 +324,7 @@ export function WorkerProductionSection() {
                           size="sm"
                           onClick={() => verifyMutation.mutate(entry.id)}
                           disabled={verifyMutation.isPending}
-                          className="text-xs text-emerald-600 dark:text-emerald-400 min-h-[36px] flex items-center gap-1"
+                          className="text-xs text-emerald-600 dark:text-emerald-400 min-h-9 flex items-center gap-1"
                         >
                           <ShieldCheck className="h-3.5 w-3.5" />
                           <span>Verify</span>
@@ -496,7 +496,7 @@ export function WorkerProductionSection() {
               variant="primary"
               onClick={() => createMutation.mutate(draft)}
               disabled={createMutation.isPending || !draft.employee_id || !draft.batch_id}
-              className="min-h-[44px]"
+              className="min-h-11"
             >
               {createMutation.isPending ? 'Logging...' : 'Save Entry'}
             </Button>
