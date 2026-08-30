@@ -60,14 +60,14 @@ export function ProductionBatchesSection() {
   } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [createDraft, setCreateDraft] = useState<CreateBatchDraft>({
+  const [createDraft, setCreateDraft] = useState<CreateBatchDraft>(() => ({
     batch_number: '',
     product_id: '',
     bom_id: '',
     target_quantity: '100.0000',
     scheduled_start: new Date().toISOString().slice(0, 10),
     scheduled_end: new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10),
-  });
+  }));
 
   const [inputDraft, setInputDraft] = useState<RecordInputDraft>({
     product_id: '',

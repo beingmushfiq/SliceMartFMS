@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { Check, Printer, Sliders } from 'lucide-react';
 import type { Invoice } from '../../../types/api/sales';
+import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
+import { useDocumentPrint } from '../../../components/print/useDocumentPrint';
+import { SalesInvoiceDocument } from '../../../components/print/documents/SalesInvoiceDocument';
+import { ThermalReceipt } from '../../../components/print/receipts/ThermalReceipt';
 
 interface InvoiceTemplateBuilderProps {
   invoice?: Invoice | null | undefined;
@@ -10,86 +14,97 @@ interface InvoiceTemplateBuilderProps {
 export type InvoiceLayout = 'standard' | 'compact' | 'thermal_80mm' | 'commercial_vat';
 
 export function InvoiceTemplateBuilder({ invoice, onClose }: InvoiceTemplateBuilderProps) {
+  const { config: businessConfig } = useBusinessConfig();
+  const { printDocument, isPrinting } = useDocumentPrint();
+
   const [layout, setLayout] = useState<InvoiceLayout>('standard');
-  const [showLogo, setShowLogo] = useState(true);
-  const [showQrCode, setShowQrCode] = useState(true);
-  const [showTaxBreakdown, setShowTaxBreakdown] = useState(true);
-  const [showBankDetails, setShowBankDetails] = useState(true);
-  const [footerNote, setFooterNote] = useState(
-    'Thank you for your business! Goods once sold are subject to warranty terms.'
-  );
+  const [copyType, setCopyType] = useState<'ORIGINAL' | 'DUPLICATE' | 'CUSTOMER COPY'>('ORIGINAL');
 
   // Sample or active invoice data
-  const inv = invoice ?? {
+  const inv: Invoice = invoice ?? {
     id: 1,
     uuid: 'inv-sample-uuid',
     invoice_number: 'INV-202608-0001',
     customer_name: 'Apex Industrial Corporation',
+    party_id: 101,
+    sales_order_number: 'SO-202608-088',
     invoice_date: '2026-08-28',
     due_date: '2026-09-28',
-    subtotal: '25400.0000',
-    tax_amount: '3810.0000',
-    discount_amount: '0.0000',
-    shipping_amount: '500.0000',
-    round_off: '0.0000',
-    total_amount: '29710.0000',
-    paid_amount: '0.0000',
-    due_amount: '29710.0000',
-    status: 'posted',
+    subtotal: '25400.00',
+    tax_amount: '3810.00',
+    discount_amount: '0.00',
+    shipping_amount: '500.00',
+    round_off: '0.00',
+    total_amount: '29710.00',
+    paid_amount: '29710.00',
+    due_amount: '0.00',
+    status: 'paid',
     printed_count: 1,
     items: [
       {
         id: 1,
         uuid: 'item-1',
         invoice_id: 1,
-        product_name: 'Industrial Bread Slicing Blade 12mm Grade A',
-        quantity: '50.0000',
-        unit_price: '400.0000',
-        discount_amount: '0.0000',
-        tax_amount: '3000.0000',
-        line_total: '20000.0000',
+        product_name: 'Artisan Sourdough Loaf (800g Master Case)',
+        quantity: '50',
+        unit_price: '400.00',
+        discount_amount: '0.00',
+        tax_amount: '3000.00',
+        line_total: '20000.00',
       },
       {
         id: 2,
         uuid: 'item-2',
         invoice_id: 1,
-        product_name: 'Food Grade Heavy Conveyor Belt 2.4m',
-        quantity: '3.0000',
-        unit_price: '1800.0000',
-        discount_amount: '0.0000',
-        tax_amount: '810.0000',
-        line_total: '5400.0000',
+        product_name: 'Chocolate Fudge Brownie Catering Tray',
+        quantity: '3',
+        unit_price: '1800.00',
+        discount_amount: '0.00',
+        tax_amount: '810.00',
+        line_total: '5400.00',
       },
     ],
   };
 
   const handlePrint = () => {
-    window.print();
+    const isThermal = layout === 'thermal_80mm';
+    printDocument(
+      isThermal ? (
+        <ThermalReceipt invoice={inv} businessConfig={businessConfig} paperWidth="80mm" />
+      ) : (
+        <SalesInvoiceDocument invoice={inv} businessConfig={businessConfig} copyType={copyType} />
+      ),
+      {
+        documentTitle: `${inv.invoice_number}.pdf`,
+        pageClass: isThermal ? 'print-page-thermal-80' : 'print-page-a4',
+      }
+    );
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 p-4 bg-surface text-default min-h-150 rounded-2xl">
+    <div className="flex flex-col lg:flex-row gap-6 p-4 bg-surface text-default min-h-[600px] rounded-2xl">
       {/* Left: Customizer Sidebar */}
       <div className="w-full lg:w-80 space-y-5 rounded-2xl border border-default bg-surface-sunken p-5">
         <div className="flex items-center gap-2 border-b border-default pb-3">
           <Sliders className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-          <h3 className="font-semibold text-sm text-default">Invoice Template Designer</h3>
+          <h3 className="font-semibold text-sm text-default">Invoice Document Engine</h3>
         </div>
 
         {/* Layout Selection */}
         <div className="space-y-2">
           <label className="text-xs font-semibold uppercase tracking-wider text-muted">
-            Document Layout
+            Document Paper & Layout
           </label>
           <div className="grid grid-cols-2 gap-2">
             {[
-              { id: 'standard', label: 'Standard VAT' },
-              { id: 'compact', label: 'Compact A5' },
-              { id: 'thermal_80mm', label: 'POS 80mm' },
+              { id: 'standard', label: 'Standard A4 Tax' },
               { id: 'commercial_vat', label: 'NBR Mushak 6.3' },
+              { id: 'thermal_80mm', label: 'POS 80mm Roll' },
+              { id: 'compact', label: 'Compact Office' },
             ].map((t) => (
               <button
                 key={t.id}
+                type="button"
                 onClick={() => setLayout(t.id as InvoiceLayout)}
                 className={`flex items-center justify-between rounded-xl border p-2.5 text-left text-xs transition-all cursor-pointer ${
                   layout === t.id
@@ -104,77 +119,54 @@ export function InvoiceTemplateBuilder({ invoice, onClose }: InvoiceTemplateBuil
           </div>
         </div>
 
-        {/* Visibility Toggles */}
-        <div className="space-y-3 pt-2">
+        {/* Copy Stamp */}
+        <div className="space-y-2">
           <label className="text-xs font-semibold uppercase tracking-wider text-muted">
-            Components & Modules
+            Copy Type Stamp
           </label>
-
-          <label className="flex items-center justify-between text-xs text-default cursor-pointer">
-            <span>Company Logo & Watermark</span>
-            <input
-              type="checkbox"
-              checked={showLogo}
-              onChange={(e) => setShowLogo(e.target.checked)}
-              className="h-4 w-4 rounded border-default bg-surface text-primary focus:ring-primary"
-            />
-          </label>
-
-          <label className="flex items-center justify-between text-xs text-default cursor-pointer">
-            <span>NBR QR Verification Code</span>
-            <input
-              type="checkbox"
-              checked={showQrCode}
-              onChange={(e) => setShowQrCode(e.target.checked)}
-              className="h-4 w-4 rounded border-default bg-surface text-primary focus:ring-primary"
-            />
-          </label>
-
-          <label className="flex items-center justify-between text-xs text-default cursor-pointer">
-            <span>Detailed Tax & HS Code Breakdown</span>
-            <input
-              type="checkbox"
-              checked={showTaxBreakdown}
-              onChange={(e) => setShowTaxBreakdown(e.target.checked)}
-              className="h-4 w-4 rounded border-default bg-surface text-primary focus:ring-primary"
-            />
-          </label>
-
-          <label className="flex items-center justify-between text-xs text-default cursor-pointer">
-            <span>Bank & Wire Payment Details</span>
-            <input
-              type="checkbox"
-              checked={showBankDetails}
-              onChange={(e) => setShowBankDetails(e.target.checked)}
-              className="h-4 w-4 rounded border-default bg-surface text-primary focus:ring-primary"
-            />
-          </label>
+          <select
+            value={copyType}
+            onChange={(e) => setCopyType(e.target.value as any)}
+            className="w-full rounded-xl border border-default bg-surface px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
+          >
+            <option value="ORIGINAL">ORIGINAL (Customer Copy)</option>
+            <option value="DUPLICATE">DUPLICATE (Accounts Copy)</option>
+            <option value="CUSTOMER COPY">CUSTOMER COPY (Retail)</option>
+          </select>
         </div>
 
-        {/* Custom Footer Note */}
-        <div className="space-y-1.5 pt-2">
-          <label className="text-xs font-semibold uppercase tracking-wider text-muted">
-            Legal Footer Memo
-          </label>
-          <textarea
-            rows={3}
-            value={footerNote}
-            onChange={(e) => setFooterNote(e.target.value)}
-            className="w-full rounded-xl border border-default bg-surface p-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
-          />
+        {/* Document Specifications Summary */}
+        <div className="p-3 bg-surface rounded-xl border border-default text-[11px] space-y-1 text-muted">
+          <div className="flex justify-between">
+            <span>Paper Specification:</span>
+            <span className="font-mono font-semibold text-default">
+              {layout === 'thermal_80mm' ? '80mm Thermal Roll' : 'A4 Portrait (210×297mm)'}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span>Barcode Symbology:</span>
+            <span className="font-mono text-default">Code128 + QR</span>
+          </div>
+          <div className="flex justify-between">
+            <span>NBR Compliance:</span>
+            <span className="font-semibold text-emerald-600">Mushak Verified</span>
+          </div>
         </div>
 
         {/* Print / Actions */}
         <div className="pt-3 flex gap-2">
           <button
+            type="button"
             onClick={handlePrint}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-2.5 text-xs font-bold text-white shadow-xs hover:bg-primary-hover transition-colors cursor-pointer"
+            disabled={isPrinting}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-2.5 text-xs font-bold text-white shadow-xs hover:opacity-90 transition-all cursor-pointer"
           >
             <Printer className="h-4 w-4" />
-            Print / Save PDF
+            <span>{isPrinting ? 'Preparing Document...' : 'Print / Save PDF'}</span>
           </button>
           {onClose && (
             <button
+              type="button"
               onClick={onClose}
               className="rounded-xl border border-default bg-surface px-3 py-2.5 text-xs font-medium text-muted hover:bg-surface-sunken hover:text-default transition-colors cursor-pointer"
             >
@@ -187,156 +179,17 @@ export function InvoiceTemplateBuilder({ invoice, onClose }: InvoiceTemplateBuil
       {/* Right: Live Interactive Printable Preview Sheet */}
       <div className="flex-1 flex justify-center overflow-auto p-4 rounded-2xl border border-default bg-surface-sunken">
         <div
-          className={`bg-white text-zinc-900 shadow-2xl rounded-sm transition-all ${
+          className={`bg-white shadow-2xl rounded-sm transition-all ${
             layout === 'thermal_80mm'
-              ? 'w-[320px] p-4 text-[11px] font-mono'
-              : 'w-full max-w-195 p-8 text-xs font-sans min-h-237.5'
+              ? 'document-preview-thermal-80'
+              : 'document-preview-sheet-a4'
           }`}
         >
-          {/* Header */}
-          <div className="flex justify-between items-start border-b border-zinc-200 pb-4">
-            <div>
-              {showLogo && (
-                <div className="font-extrabold tracking-tight text-xl text-emerald-700 flex items-center gap-2 mb-1">
-                  <div className="h-6 w-6 rounded bg-emerald-600 flex items-center justify-center text-white text-xs">
-                    SM
-                  </div>
-                  SLICEMART FOODS & CO.
-                </div>
-              )}
-              <p className="text-zinc-500 text-[11px]">Factory & Operations HQ</p>
-              <p className="text-zinc-500 text-[11px]">
-                Plot 42, Tejgaon Industrial Area, Dhaka-1208
-              </p>
-              <p className="text-zinc-500 text-[11px]">
-                BIN / VAT: 001928374-0102 | Phone: +880 2 8878900
-              </p>
-            </div>
-
-            <div className="text-right">
-              <span className="inline-block rounded bg-zinc-100 px-2 py-1 font-mono font-bold text-xs text-zinc-800 uppercase tracking-wide">
-                {layout === 'commercial_vat' ? 'NBR Mushak-6.3 Tax Invoice' : 'Tax Invoice'}
-              </span>
-              <p className="mt-2 font-mono font-bold text-sm text-zinc-900">{inv.invoice_number}</p>
-              <p className="text-[11px] text-zinc-500">Date: {inv.invoice_date}</p>
-              <p className="text-[11px] text-zinc-500">
-                Payment Due: {inv.due_date ?? 'Immediate'}
-              </p>
-            </div>
-          </div>
-
-          {/* Customer Billed To */}
-          <div className="mt-4 grid grid-cols-2 gap-4 pb-4 border-b border-zinc-200">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                Billed To:
-              </p>
-              <p className="font-bold text-zinc-900 text-sm">{inv.customer_name}</p>
-              <p className="text-zinc-600 text-[11px]">Authorized Dealer / Client Account</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                Payment Status:
-              </p>
-              <span className="inline-block font-bold text-xs uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                {inv.status}
-              </span>
-            </div>
-          </div>
-
-          {/* Line Items Table */}
-          <div className="mt-4">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b-2 border-zinc-900 text-[11px] font-bold uppercase tracking-wider text-zinc-600">
-                  <th className="py-2">Item Description</th>
-                  <th className="py-2 text-right">Qty</th>
-                  <th className="py-2 text-right">Unit Price</th>
-                  {showTaxBreakdown && <th className="py-2 text-right">VAT (15%)</th>}
-                  <th className="py-2 text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100">
-                {inv.items?.map((item, idx) => (
-                  <tr key={idx}>
-                    <td className="py-2 font-medium text-zinc-800">{item.product_name}</td>
-                    <td className="py-2 text-right font-mono">
-                      {parseFloat(item.quantity).toFixed(0)}
-                    </td>
-                    <td className="py-2 text-right font-mono">
-                      {parseFloat(item.unit_price).toFixed(2)}
-                    </td>
-                    {showTaxBreakdown && (
-                      <td className="py-2 text-right font-mono text-zinc-600">
-                        {parseFloat(item.tax_amount || '0').toFixed(2)}
-                      </td>
-                    )}
-                    <td className="py-2 text-right font-mono font-bold text-zinc-900">
-                      {parseFloat(item.line_total).toFixed(2)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Summary Calculation */}
-          <div className="mt-6 flex justify-between items-start border-t border-zinc-200 pt-4">
-            {/* Left: Bank details & QR */}
-            <div className="space-y-3">
-              {showBankDetails && (
-                <div className="rounded bg-zinc-50 border border-zinc-200 p-3 text-[11px] max-w-xs">
-                  <p className="font-bold text-zinc-800 mb-1">Bank Remittance Details:</p>
-                  <p className="text-zinc-600">Bank: Eastern Bank PLC (Gulshan Branch)</p>
-                  <p className="text-zinc-600">Account Name: SliceMart Foods Co Ltd</p>
-                  <p className="text-zinc-600 font-mono">A/C: 104-102-98471203</p>
-                  <p className="text-zinc-600 font-mono">Routing: 095261723</p>
-                </div>
-              )}
-
-              {showQrCode && (
-                <div className="flex items-center gap-2 text-[10px] text-zinc-500">
-                  <div className="h-12 w-12 border border-zinc-300 rounded flex items-center justify-center font-mono text-[9px] bg-zinc-50">
-                    [QR CODE]
-                  </div>
-                  <div>
-                    <p className="font-bold text-zinc-700">Digital Mushak Verification</p>
-                    <p className="font-mono">NBR-HASH-9812A</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Right: Amounts */}
-            <div className="w-64 space-y-1.5 text-right font-mono text-xs">
-              <div className="flex justify-between text-zinc-600">
-                <span>Subtotal:</span>
-                <span>{parseFloat(inv.subtotal).toFixed(2)} BDT</span>
-              </div>
-              <div className="flex justify-between text-zinc-600">
-                <span>VAT / Tax (15%):</span>
-                <span>{parseFloat(inv.tax_amount).toFixed(2)} BDT</span>
-              </div>
-              <div className="flex justify-between text-zinc-600">
-                <span>Shipping / Freight:</span>
-                <span>{parseFloat(inv.shipping_amount).toFixed(2)} BDT</span>
-              </div>
-              <div className="flex justify-between border-t-2 border-zinc-900 pt-2 text-sm font-bold text-zinc-900">
-                <span>Grand Total:</span>
-                <span className="text-emerald-700">
-                  {parseFloat(inv.total_amount).toFixed(2)} BDT
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer Legal Terms */}
-          <div className="mt-8 border-t border-zinc-200 pt-4 text-center text-[10px] text-zinc-500">
-            <p>{footerNote}</p>
-            <p className="mt-1 font-mono">
-              Generated automatically via SliceMart FMS Enterprise Platform
-            </p>
-          </div>
+          {layout === 'thermal_80mm' ? (
+            <ThermalReceipt invoice={inv} businessConfig={businessConfig} paperWidth="80mm" />
+          ) : (
+            <SalesInvoiceDocument invoice={inv} businessConfig={businessConfig} copyType={copyType} />
+          )}
         </div>
       </div>
     </div>

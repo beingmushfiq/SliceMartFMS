@@ -14,7 +14,9 @@
    values (§3.3), each annotated below where it applies.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-.dark {
+html.dark,
+:root.dark,
+[data-theme='dark'] {
   /* ─── Surfaces ─────────────────────────────────────────────────────────────
      §3.3 RULE 1 — Elevation is expressed by lightness, not shadow.
 

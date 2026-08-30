@@ -5,7 +5,7 @@ import { api } from '../../../lib/api/client';
 
 export function SalesOrdersSection() {
   const [orders, setOrders] = useState<SalesOrder[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [channelFilter, setChannelFilter] = useState<string>('all');
   const [actionLoading, setActionLoading] = useState<number | null>(null);
@@ -36,7 +36,21 @@ export function SalesOrdersSection() {
   };
 
   useEffect(() => {
-    fetchOrders();
+    let ignore = false;
+    api.get<SalesOrder[]>('/sales/orders')
+      .then((res) => {
+        if (!ignore) setOrders(res.data ?? []);
+      })
+      .catch((err) => {
+        console.error('Failed to load sales orders', err);
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const handleApprove = async (orderId: number) => {
@@ -91,31 +105,31 @@ export function SalesOrdersSection() {
     switch (status) {
       case 'draft':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-zinc-800 text-zinc-300 border border-zinc-700">
-            <Clock className="h-3 w-3 text-zinc-400" /> Draft
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-surface-sunken text-muted border border-default">
+            <Clock className="size-3 text-muted" /> Draft
           </span>
         );
       case 'confirmed':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Confirmed
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+            <CheckCircle2 className="size-3 text-emerald-600 dark:text-emerald-400" /> Confirmed
           </span>
         );
       case 'delivered':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-            <Truck className="h-3 w-3 text-indigo-400" /> Delivered
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+            <Truck className="size-3 text-indigo-600 dark:text-indigo-400" /> Delivered
           </span>
         );
       case 'cancelled':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/20">
-            <XCircle className="h-3 w-3 text-rose-400" /> Cancelled
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+            <XCircle className="size-3 text-rose-600 dark:text-rose-400" /> Cancelled
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-zinc-800 text-zinc-400 border border-zinc-700">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-surface-sunken text-muted border border-default">
             {status}
           </span>
         );
@@ -124,16 +138,16 @@ export function SalesOrdersSection() {
 
   const getChannelBadge = (ch: SalesOrder['channel']) => {
     const colors: Record<string, string> = {
-      counter: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-      dealer: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-      phone: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-      field: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-      online: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+      counter: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+      dealer: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
+      phone: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+      field: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
+      online: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
     };
     return (
       <span
-        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase border ${
-          colors[ch] ?? 'bg-zinc-800 text-zinc-300 border-zinc-700'
+        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase border ${
+          colors[ch] ?? 'bg-surface-sunken text-muted border-default'
         }`}
       >
         {ch}

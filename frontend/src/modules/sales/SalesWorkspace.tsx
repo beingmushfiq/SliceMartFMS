@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { FileText, Receipt, ShoppingCart, Truck, Undo2 } from 'lucide-react';
+import { FileText, Receipt, ShoppingCart, Truck, Undo2, Users, Kanban } from 'lucide-react';
 import { SalesOrdersSection } from './sections/SalesOrdersSection';
 import { InvoicesSection } from './sections/InvoicesSection';
 import { DeliveriesSection } from './sections/DeliveriesSection';
 import { PaymentsSection } from './sections/PaymentsSection';
 import { SalesReturnsSection } from './sections/SalesReturnsSection';
+import { LeadsSection } from './sections/LeadsSection';
+import { CustomersSection } from './sections/CustomersSection';
 
-export type SalesTab = 'orders' | 'invoices' | 'deliveries' | 'payments' | 'returns';
+export type SalesTab = 'orders' | 'invoices' | 'deliveries' | 'payments' | 'returns' | 'leads' | 'customers';
 
 interface TabConfig {
   id: SalesTab;
@@ -45,6 +47,18 @@ const tabs: TabConfig[] = [
     label: 'Sales Returns (RMA)',
     icon: Undo2,
     description: 'Return merchandise authorization, credit notes & restock movements',
+  },
+  {
+    id: 'customers',
+    label: 'Customer CRM',
+    icon: Users,
+    description: 'Customer accounts directory, statements, credit limit approvals & loyalty points',
+  },
+  {
+    id: 'leads',
+    label: 'Commercial Leads',
+    icon: Kanban,
+    description: 'Opportunity pipeline, stage tracking, quotation follow-up & win/loss analytics',
   },
 ];
 
@@ -92,7 +106,7 @@ export default function SalesWorkspace() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 ${
+                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer ${
                   isActive
                     ? 'bg-surface text-default font-semibold shadow-xs border border-default/70'
                     : 'text-muted hover:text-default hover:bg-surface/50 border border-transparent'
@@ -113,6 +127,8 @@ export default function SalesWorkspace() {
         {activeTab === 'deliveries' && <DeliveriesSection />}
         {activeTab === 'payments' && <PaymentsSection />}
         {activeTab === 'returns' && <SalesReturnsSection />}
+        {activeTab === 'customers' && <CustomersSection />}
+        {activeTab === 'leads' && <LeadsSection />}
       </div>
     </div>
   );

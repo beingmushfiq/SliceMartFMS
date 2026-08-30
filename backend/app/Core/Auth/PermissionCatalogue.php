@@ -273,6 +273,20 @@ class PermissionCatalogue
         'integrations.webhook.manage',
         'integrations.import.view',
         'integrations.import.create',
+
+        // Document Templates & Printing Infrastructure
+        'documents.template.view',
+        'documents.template.create',
+        'documents.template.update',
+        'documents.template.delete',
+        'documents.template.manage',
+        'documents.paper_size.view',
+        'documents.paper_size.manage',
+        'documents.print_profile.view',
+        'documents.print_profile.manage',
+        'documents.numbering.manage',
+        'documents.document.print',
+        'documents.history.view',
     ];
 
     /**

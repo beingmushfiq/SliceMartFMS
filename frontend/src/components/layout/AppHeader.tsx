@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Building2,
@@ -20,6 +20,7 @@ import {
 import { useAuthStore } from '../../lib/auth/authStore';
 import { cn } from '../../lib/utils';
 import type { NotificationItem } from '../../types/api/notifications';
+import { api } from '../../lib/api/client';
 
 interface AppHeaderProps {
   onToggleSidebar: () => void;
@@ -80,6 +81,29 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
     return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
   });
 
+  useEffect(() => {
+    let ignore = false;
+    api.get<{ data: NotificationItem[] } | NotificationItem[]>('/notifications')
+      .then((res) => {
+        if (!ignore) {
+          const raw = res.data as unknown;
+          const list = Array.isArray(raw)
+            ? (raw as NotificationItem[])
+            : (((raw as Record<string, unknown>)?.data as NotificationItem[]) ?? []);
+          if (list.length > 0) {
+            setNotifications(list);
+          }
+        }
+      })
+      .catch(() => {
+        // Fallback to rich sample notifications
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
   const unreadCount = notifications.filter((n) => !n.read_at).length;
 
   const toggleTheme = () => {
@@ -98,11 +122,13 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
   const markAllAsRead = () => {
     const now = new Date().toISOString();
     setNotifications((prev) => prev.map((n) => ({ ...n, read_at: now })));
+    api.post('/notifications/read-all').catch(() => {});
   };
 
   const markSingleRead = (id: number) => {
     const now = new Date().toISOString();
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read_at: now } : n)));
+    api.post(`/notifications/${id}/read`).catch(() => {});
   };
 
   const getSeverityIcon = (severity: string) => {

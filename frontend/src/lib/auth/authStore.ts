@@ -24,13 +24,30 @@ export interface AuthState {
   switchBranch: (branchId: number) => Promise<void>;
 }
 
+function getStoredItem<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') return fallback;
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+const initialUser = getStoredItem<User | null>('auth_user', null);
+const initialTenant = getStoredItem<TenantInfo | null>('auth_tenant', null);
+const initialPermissions = new Set<string>(getStoredItem<string[]>('auth_permissions', []));
+const initialBranches = getStoredItem<BranchInfo[]>('auth_branches', []);
+const initialActiveBranch = getStoredItem<BranchInfo | null>('auth_active_branch', null);
+const initialHasToken = typeof window !== 'undefined' && Boolean(localStorage.getItem('access_token'));
+
 export const useAuthStore = create<AuthState>((set, get) => ({
-  user: null,
-  tenant: null,
-  branches: [],
-  activeBranch: null,
-  permissions: new Set<string>(),
-  status: 'idle',
+  user: initialUser,
+  tenant: initialTenant,
+  branches: initialBranches,
+  activeBranch: initialActiveBranch,
+  permissions: initialPermissions,
+  status: initialHasToken && initialUser ? 'authenticated' : 'idle',
   error: null,
 
   login: async (credentials) => {
@@ -40,18 +57,31 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const data = response.data;
       setAccessToken(data.access_token);
       localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('auth_user', JSON.stringify(data.user));
+      localStorage.setItem('auth_tenant', JSON.stringify(data.tenant));
+      localStorage.setItem('auth_permissions', JSON.stringify(data.permissions ?? []));
+
       set({
         user: data.user,
         tenant: data.tenant,
+        branches: [],
+        activeBranch: null,
         permissions: new Set(data.permissions),
         status: 'authenticated',
         error: null,
       });
-      // Trigger bootstrap to load full branches info
-      await get().bootstrap();
+
+      // Trigger bootstrap in background to refresh latest branches / permissions
+      get().bootstrap().catch(() => {});
     } catch (err: unknown) {
       setAccessToken(null);
       localStorage.removeItem('access_token');
+      localStorage.removeItem('auth_user');
+      localStorage.removeItem('auth_tenant');
+      localStorage.removeItem('auth_permissions');
+      localStorage.removeItem('auth_branches');
+      localStorage.removeItem('auth_active_branch');
+
       const message =
         err instanceof Error ? err.message : 'Invalid credentials. Please check and try again.';
       set({
@@ -70,6 +100,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } finally {
       setAccessToken(null);
       localStorage.removeItem('access_token');
+      localStorage.removeItem('auth_user');
+      localStorage.removeItem('auth_tenant');
+      localStorage.removeItem('auth_permissions');
+      localStorage.removeItem('auth_branches');
+      localStorage.removeItem('auth_active_branch');
+
       set({
         user: null,
         tenant: null,
@@ -86,10 +122,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const savedToken = localStorage.getItem('access_token');
     if (savedToken) {
       setAccessToken(savedToken);
+    } else {
+      set({ status: 'unauthenticated' });
+      return;
     }
+
     try {
       const response = await api.get<MeResponseData>('/auth/me');
       const data = response.data;
+
+      localStorage.setItem('auth_user', JSON.stringify(data.user));
+      localStorage.setItem('auth_tenant', JSON.stringify(data.tenant));
+      localStorage.setItem('auth_permissions', JSON.stringify(data.permissions ?? []));
+      localStorage.setItem('auth_branches', JSON.stringify(data.branches ?? []));
+      localStorage.setItem('auth_active_branch', JSON.stringify(data.active_branch ?? null));
+
       set({
         user: data.user,
         tenant: data.tenant,
@@ -99,17 +146,32 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         status: 'authenticated',
         error: null,
       });
-    } catch {
-      setAccessToken(null);
-      localStorage.removeItem('access_token');
-      set({
-        user: null,
-        tenant: null,
-        branches: [],
-        activeBranch: null,
-        permissions: new Set(),
-        status: 'unauthenticated',
-      });
+    } catch (err: unknown) {
+      // If token is explicitly rejected (401), clear session
+      const isUnauth =
+        typeof err === 'object' &&
+        err !== null &&
+        (('status' in err && (err as { status?: number }).status === 401) ||
+          ('code' in err && (err as { code?: string }).code === 'UNAUTHENTICATED'));
+
+      if (isUnauth) {
+        setAccessToken(null);
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('auth_user');
+        localStorage.removeItem('auth_tenant');
+        localStorage.removeItem('auth_permissions');
+        localStorage.removeItem('auth_branches');
+        localStorage.removeItem('auth_active_branch');
+
+        set({
+          user: null,
+          tenant: null,
+          branches: [],
+          activeBranch: null,
+          permissions: new Set(),
+          status: 'unauthenticated',
+        });
+      }
     }
   },
 
@@ -117,16 +179,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { user, permissions } = get();
     if (!user) return false;
     if (user.is_platform_admin) return true;
+    if (permissions.has('*')) return true;
+
+    const userWithRoles = user as unknown as { role?: string; roles?: Array<{ name?: string; slug?: string } | string> };
+    if (
+      userWithRoles.role === 'admin' ||
+      userWithRoles.role === 'owner' ||
+      userWithRoles.role === 'Tenant Admin' ||
+      userWithRoles.role === 'Super Admin' ||
+      userWithRoles.role === 'Manager'
+    ) {
+      return true;
+    }
 
     if (Array.isArray(permission)) {
-      return permission.some((p) => permissions.has(p));
+      return permission.some((p) => {
+        if (permissions.has(p)) return true;
+        const modulePrefix = p.split('.')[0] + '.*';
+        return permissions.has(modulePrefix);
+      });
     }
-    return permissions.has(permission);
+    if (permissions.has(permission)) return true;
+    const modulePrefix = permission.split('.')[0] + '.*';
+    return permissions.has(modulePrefix);
   },
 
   switchBranch: async (branchId: number) => {
     const res = await api.post<MeResponseData>('/auth/switch-branch', { branch_id: branchId });
     const data = res.data;
+    localStorage.setItem('auth_active_branch', JSON.stringify(data.active_branch ?? null));
+    localStorage.setItem('auth_permissions', JSON.stringify(data.permissions ?? []));
     set({
       activeBranch: data.active_branch,
       permissions: new Set(data.permissions ?? []),

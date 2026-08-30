@@ -8,7 +8,11 @@ import {
   CheckCircle,
   Calendar,
   Layers,
+  Printer,
 } from 'lucide-react';
+import { PrintPreviewModal } from '../../components/print/PrintPreviewModal';
+import { ReportPrintDocument } from '../../components/print/reports/ReportPrintDocument';
+import { useBusinessConfig } from '../../lib/document/useBusinessConfig';
 import type {
   ReportDefinition,
   ReportCategory,
@@ -210,6 +214,9 @@ export const ReportsWorkspace: React.FC = () => {
     }, 1200);
   };
 
+  const { config: businessConfig } = useBusinessConfig();
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -226,8 +233,15 @@ export const ReportsWorkspace: React.FC = () => {
         </div>
         <div className="flex items-center gap-3">
           <button
+            onClick={() => setIsPrintModalOpen(true)}
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
+          >
+            <Printer className="w-4 h-4" />
+            Print Report
+          </button>
+          <button
             onClick={() => setExportModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
           >
             <Download className="w-4 h-4" />
             Export Report
@@ -508,6 +522,47 @@ export const ReportsWorkspace: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Print Preview Modal */}
+      {isPrintModalOpen && reportResult && (
+        <PrintPreviewModal
+          isOpen={isPrintModalOpen}
+          onClose={() => setIsPrintModalOpen(false)}
+          title={`Print Report: ${activeDef?.name || 'Enterprise Ledger'}`}
+          documentNumber={`RPT-${selectedReportCode.toUpperCase()}`}
+          documentType="Official ERP Audit Report"
+          pageClass={
+            Object.keys(reportResult.columns).length > 5
+              ? 'print-page-a4-landscape'
+              : 'print-page-a4'
+          }
+        >
+          <ReportPrintDocument
+            reportTitle={activeDef?.name || 'Enterprise Analytical Report'}
+            reportCode={selectedReportCode}
+            moduleName={activeDef?.module || 'ERP Analytics'}
+            businessConfig={businessConfig}
+            periodText="Last 30 Days (Active Fiscal Quarter)"
+            filtersText={`Category: ${selectedCategory.toUpperCase()} | Saved View: ${selectedView}`}
+            columns={Object.entries(reportResult.columns).map(([k, col]) => ({
+              key: k,
+              label: col.label,
+              type: col.type === 'number' ? 'numeric' : (col.type as any),
+              align: (col.type === 'number' || (col.type as any) === 'currency') ? 'right' : 'left',
+            }))}
+            data={reportResult.data}
+            summaryCards={
+              reportResult.summary
+                ? Object.entries(reportResult.summary).map(([k, v]) => ({
+                    label: k.replace(/_/g, ' '),
+                    value: String(v),
+                  }))
+                : undefined
+            }
+            orientation={Object.keys(reportResult.columns).length > 5 ? 'landscape' : 'portrait'}
+          />
+        </PrintPreviewModal>
       )}
     </div>
   );

@@ -231,3 +231,42 @@ export interface SalesReturn {
   created_at?: string;
   items?: SalesReturnItem[];
 }
+
+export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'proposal' | 'negotiation' | 'won' | 'lost';
+export type LeadSource = 'website' | 'storefront' | 'referral' | 'cold_outreach' | 'event' | 'social_media';
+
+export interface Lead {
+  id: number;
+  uuid: string;
+  name: string;
+  company_name?: string | null;
+  email: string;
+  phone: string;
+  status: LeadStatus;
+  source: LeadSource;
+  deal_value: string;
+  currency_code: string;
+  assigned_to?: string | null;
+  notes?: string | null;
+  expected_close_date?: string | null;
+  converted_to_customer_id?: number | null;
+  created_at: string;
+}
+
+export interface CustomerCrm {
+  id: number;
+  uuid: string;
+  name: string;
+  type: 'retail' | 'wholesale' | 'dealer' | 'corporate';
+  email?: string | null;
+  phone: string;
+  address?: string | null;
+  city?: string | null;
+  credit_limit: string;
+  current_balance: string;
+  loyalty_points: number;
+  total_orders_count: number;
+  lifetime_value: string;
+  status: 'active' | 'inactive' | 'blocked';
+  created_at: string;
+}

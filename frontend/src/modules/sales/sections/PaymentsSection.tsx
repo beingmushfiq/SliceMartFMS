@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react';
-import { ArrowDownLeft, ArrowUpRight, Plus, RefreshCw, Search } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Plus, RefreshCw, Search, Printer } from 'lucide-react';
 import type { Payment } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
+import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
+import { PaymentReceiptDocument } from '../../../components/print/documents/PaymentReceiptDocument';
+import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
 
 export function PaymentsSection() {
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [directionFilter, setDirectionFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [printPayment, setPrintPayment] = useState<Payment | null>(null);
+  const { config: businessConfig } = useBusinessConfig();
 
   // Payment form state
   const [direction, setDirection] = useState<'in' | 'out'>('in');
@@ -33,7 +38,21 @@ export function PaymentsSection() {
   };
 
   useEffect(() => {
-    fetchPayments();
+    let ignore = false;
+    api.get<Payment[]>('/sales/payments')
+      .then((res) => {
+        if (!ignore) setPayments(res.data ?? []);
+      })
+      .catch((err) => {
+        console.error('Failed to load payments', err);
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const handleRecordPayment = async (e: React.FormEvent) => {
@@ -130,12 +149,13 @@ export function PaymentsSection() {
                 <th className="px-4 py-3.5">Total Amount</th>
                 <th className="px-4 py-3.5">Allocated</th>
                 <th className="px-4 py-3.5">Status</th>
+                <th className="px-4 py-3.5 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-default">
               {filteredPayments.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-muted">
+                  <td colSpan={9} className="px-4 py-8 text-center text-muted">
                     {loading ? 'Loading payments...' : 'No payments found.'}
                   </td>
                 </tr>
@@ -183,6 +203,17 @@ export function PaymentsSection() {
                       <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                         {p.status}
                       </span>
+                    </td>
+                    <td className="px-4 py-3.5 text-right">
+                      <button
+                        type="button"
+                        onClick={() => setPrintPayment(p)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-default text-muted hover:text-default hover:bg-surface text-xs transition-colors cursor-pointer"
+                        title="Print Money Receipt"
+                      >
+                        <Printer className="size-3.5 text-primary" />
+                        <span>Print</span>
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -293,6 +324,20 @@ export function PaymentsSection() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Print Payment Receipt Modal */}
+      {printPayment && (
+        <PrintPreviewModal
+          isOpen={Boolean(printPayment)}
+          onClose={() => setPrintPayment(null)}
+          title={`Money Receipt: ${printPayment.payment_number}`}
+          documentNumber={printPayment.payment_number}
+          documentType="Official Money Receipt Voucher"
+          pageClass="print-page-a4"
+        >
+          <PaymentReceiptDocument payment={printPayment} businessConfig={businessConfig} />
+        </PrintPreviewModal>
       )}
     </div>
   );

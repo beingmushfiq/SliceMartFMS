@@ -63,45 +63,54 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [settingsRes, prodRes] = await Promise.all([
-        api.get<{ data: StorefrontConfig }>('/storefront/settings'),
-        api.get<{ data: PublishedProductItem[] }>('/storefront/products'),
-      ]);
-
-      const conf = settingsRes.data.data ?? (settingsRes.data as any);
-      setProducts(prodRes.data.data ?? (prodRes.data as any) ?? []);
-
-      setForm({
-        name: conf.name ?? '',
-        subdomain: conf.subdomain ?? '',
-        currency: conf.currency ?? 'BDT',
-        primary_color: conf.theme?.primary_color ?? '#10b981',
-        accent_color: conf.theme?.accent_color ?? '#14b8a6',
-        hero_title: conf.theme?.hero_title ?? 'Factory Fresh Goods',
-        hero_subtitle:
-          conf.theme?.hero_subtitle ?? 'Industrial quality delivered straight to your door.',
-        meta_title: conf.meta_title ?? '',
-        meta_description: conf.meta_description ?? '',
-        guest_checkout_enabled: conf.guest_checkout_enabled ?? true,
-        cod_enabled: conf.cod_enabled ?? true,
-        online_payment_enabled: conf.online_payment_enabled ?? true,
-        whatsapp_number: conf.whatsapp_number ?? '+8801700000000',
-        whatsapp_ordering_enabled: conf.whatsapp_ordering_enabled ?? true,
-        min_order_amount: conf.min_order_amount ?? '',
-        status: conf.status ?? 'live',
-      });
-    } catch (err) {
-      console.error('Failed to load storefront settings', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadData();
+    let ignore = false;
+    Promise.all([
+      api.get<{ data: StorefrontConfig }>('/storefront/settings'),
+      api.get<{ data: PublishedProductItem[] }>('/storefront/products'),
+    ])
+      .then(([settingsRes, prodRes]) => {
+        if (!ignore) {
+          const settingsPayload = settingsRes.data as unknown as Record<string, unknown>;
+          const conf = (settingsPayload.data ?? settingsPayload) as StorefrontConfig;
+
+          const prodPayload = prodRes.data as unknown;
+          const prodList = Array.isArray(prodPayload)
+            ? (prodPayload as PublishedProductItem[])
+            : (((prodPayload as Record<string, unknown>)?.data as PublishedProductItem[]) ?? []);
+          setProducts(prodList);
+
+          setForm({
+            name: conf.name ?? '',
+            subdomain: conf.subdomain ?? '',
+            currency: conf.currency ?? 'BDT',
+            primary_color: conf.theme?.primary_color ?? '#10b981',
+            accent_color: conf.theme?.accent_color ?? '#14b8a6',
+            hero_title: conf.theme?.hero_title ?? 'Factory Fresh Goods',
+            hero_subtitle:
+              conf.theme?.hero_subtitle ?? 'Industrial quality delivered straight to your door.',
+            meta_title: conf.meta_title ?? '',
+            meta_description: conf.meta_description ?? '',
+            guest_checkout_enabled: conf.guest_checkout_enabled ?? true,
+            cod_enabled: conf.cod_enabled ?? true,
+            online_payment_enabled: conf.online_payment_enabled ?? true,
+            whatsapp_number: conf.whatsapp_number ?? '+8801700000000',
+            whatsapp_ordering_enabled: conf.whatsapp_ordering_enabled ?? true,
+            min_order_amount: conf.min_order_amount ?? '',
+            status: conf.status ?? 'live',
+          });
+        }
+      })
+      .catch((err: unknown) => {
+        console.error('Failed to load storefront settings', err);
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -129,8 +138,9 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
         status: form.status,
       });
       showToast('Storefront configuration saved successfully!');
-    } catch (err: any) {
-      alert(err.message ?? 'Failed to save settings');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to save settings';
+      alert(msg);
     } finally {
       setSaving(false);
     }
@@ -153,8 +163,9 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
           ? `Published "${product.name}" to storefront.`
           : `Unpublished "${product.name}".`
       );
-    } catch (err: any) {
-      alert(err.message ?? 'Failed to update publication status');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update publication status';
+      alert(msg);
     }
   };
 

@@ -1,24 +1,35 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Boxes, Plus, Search } from 'lucide-react';
+import { Boxes, Plus, Search, Eye, Edit2, Trash2 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
 import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
 import { isApiError } from '../../../lib/api/errors';
+import { notify } from '../../../components/ui/Toast';
 import type { Brand } from '../../../types/api/catalog';
 
-interface CreateBrandForm {
+interface BrandFormDraft {
   code: string;
   name: string;
   logo_path?: string | null;
+  is_active?: boolean;
 }
 
 export function BrandsSection() {
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
+  const [viewingBrand, setViewingBrand] = useState<Brand | null>(null);
+  const [deletingBrand, setDeletingBrand] = useState<Brand | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [draft, setDraft] = useState<CreateBrandForm>({ code: '', name: '', logo_path: null });
+
+  const [draft, setDraft] = useState<BrandFormDraft>({
+    code: '',
+    name: '',
+    logo_path: null,
+    is_active: true,
+  });
 
   const queryClient = useQueryClient();
 
@@ -32,12 +43,13 @@ export function BrandsSection() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (payload: CreateBrandForm) => api.post<Brand>('/brands', payload),
+    mutationFn: (payload: BrandFormDraft) => api.post<Brand>('/brands', payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['catalogue', 'brands'] });
       setIsCreateOpen(false);
-      setDraft({ code: '', name: '', logo_path: null });
+      setDraft({ code: '', name: '', logo_path: null, is_active: true });
       setErrorMsg(null);
+      notify.success('Brand registered successfully.');
     },
     onError: (err) => {
       if (isApiError(err)) {
@@ -49,19 +61,62 @@ export function BrandsSection() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<BrandFormDraft> }) =>
+      api.patch<Brand>(`/brands/${id}`, payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['catalogue', 'brands'] });
+      setEditingBrand(null);
+      setErrorMsg(null);
+      notify.success('Brand updated successfully.');
+    },
+    onError: (err) => {
+      if (isApiError(err)) {
+        setErrorMsg(err.message ?? 'Failed to update brand.');
+      } else {
+        setErrorMsg('Error updating brand.');
+      }
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/brands/${id}`),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['catalogue', 'brands'] });
+      setDeletingBrand(null);
+      notify.success('Brand deleted successfully.');
+    },
+    onError: (err) => {
+      const msg = isApiError(err) ? err.message : 'Failed to delete brand.';
+      notify.error(msg);
+    },
+  });
+
+  const handleOpenEdit = (brand: Brand) => {
+    setErrorMsg(null);
+    setDraft({
+      code: brand.code,
+      name: brand.name,
+      logo_path: brand.logo_path || null,
+      is_active: brand.is_active,
+    });
+    setEditingBrand(brand);
+  };
+
   const brands = brandsQuery.data?.data ?? [];
 
   return (
     <div className="space-y-6">
+      {/* Search and New Brand Bar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-sm">
           <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
           <input
             type="text"
-            placeholder="Search brands..."
+            placeholder="Search brands by code or name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl border border-default bg-surface-sunken py-2 pl-9 pr-3 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
+            className="w-full rounded-xl border border-default bg-surface py-2 pl-9 pr-3 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none transition-colors shadow-2xs"
           />
         </div>
 
@@ -69,9 +124,10 @@ export function BrandsSection() {
           variant="primary"
           onClick={() => {
             setErrorMsg(null);
+            setDraft({ code: '', name: '', logo_path: null, is_active: true });
             setIsCreateOpen(true);
           }}
-          className="flex items-center gap-1.5"
+          className="flex items-center gap-1.5 shadow-xs"
         >
           <Plus className="h-4 w-4" />
           <span>New Brand</span>
@@ -85,41 +141,70 @@ export function BrandsSection() {
         isFetching={brandsQuery.isFetching}
       >
         <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
-          <table className="w-full text-left text-xs text-default">
-            <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
+          <table className="w-full text-left text-xs text-default border-collapse">
+            <thead className="border-b border-default bg-surface-sunken/70 text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
                 <th className="py-3.5 pl-4 pr-3">Code</th>
-                <th className="py-3.5 px-3">Name</th>
+                <th className="py-3.5 px-3">Brand Name</th>
                 <th className="py-3.5 px-3">Status</th>
+                <th className="py-3.5 pr-4 pl-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-default">
               {brands.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="py-8 text-center text-muted">
+                  <td colSpan={4} className="py-10 text-center text-muted">
                     No brands found.
                   </td>
                 </tr>
               ) : (
                 brands.map((b) => (
-                  <tr key={b.id} className="hover:bg-surface-sunken/60 transition-colors">
-                    <td className="py-3.5 pl-4 pr-3 font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                  <tr key={b.id} className="hover:bg-surface-sunken/50 transition-colors">
+                    <td className="py-3.5 pl-4 pr-3 font-mono font-semibold text-primary">
                       {b.code}
                     </td>
-                    <td className="py-3.5 px-3 text-default font-medium flex items-center gap-2">
-                      <Boxes className="h-3.5 w-3.5 text-muted" />
+                    <td className="py-3.5 px-3 font-medium text-default flex items-center gap-1.5">
+                      <Boxes className="size-3.5 text-muted" />
                       <span>{b.name}</span>
                     </td>
                     <td className="py-3.5 px-3">
                       <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
                           b.is_active
                             ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                            : 'bg-surface-sunken text-muted border border-default'
+                            : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
                         }`}
                       >
                         {b.is_active ? 'Active' : 'Inactive'}
                       </span>
+                    </td>
+                    <td className="py-3.5 pr-4 pl-3 text-right">
+                      <div className="inline-flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setViewingBrand(b)}
+                          className="inline-flex items-center justify-center size-7 rounded-lg text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                          title="View Brand Details"
+                        >
+                          <Eye className="size-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEdit(b)}
+                          className="inline-flex items-center justify-center size-7 rounded-lg text-muted hover:text-primary hover:bg-surface-sunken transition-colors cursor-pointer"
+                          title="Edit Brand"
+                        >
+                          <Edit2 className="size-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeletingBrand(b)}
+                          className="inline-flex items-center justify-center size-7 rounded-lg text-muted hover:text-rose-600 dark:hover:text-rose-400 hover:bg-surface-sunken transition-colors cursor-pointer"
+                          title="Delete Brand"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -130,7 +215,11 @@ export function BrandsSection() {
       </QueryBoundary>
 
       {/* Create Modal */}
-      <Modal open={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create Brand">
+      <Modal
+        open={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        title="Register New Brand"
+      >
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -145,31 +234,31 @@ export function BrandsSection() {
           )}
 
           <div>
-            <label className="block text-xs font-medium text-default mb-1">Code *</label>
+            <label className="block text-xs font-semibold text-default mb-1">Brand Code *</label>
             <input
               required
               type="text"
-              placeholder="e.g. SLICE, WALTON"
+              placeholder="e.g. SLICEMART, ARTISAN"
               value={draft.code}
               onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase() })}
-              className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none uppercase"
+              className="w-full rounded-xl border border-default bg-surface px-3 py-2 text-xs text-default focus:border-primary focus:outline-none uppercase"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-default mb-1">Brand Name *</label>
+            <label className="block text-xs font-semibold text-default mb-1">Brand Name *</label>
             <input
               required
               type="text"
-              placeholder="e.g. Slice Premium"
+              placeholder="e.g. SliceMart Classic, Artisan Crust"
               value={draft.name}
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-              className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
+              className="w-full rounded-xl border border-default bg-surface px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-default">
-            <Button variant="secondary" onClick={() => setIsCreateOpen(false)}>
+          <div className="flex justify-end gap-2.5 pt-4 border-t border-default">
+            <Button variant="secondary" type="button" onClick={() => setIsCreateOpen(false)}>
               Cancel
             </Button>
             <Button variant="primary" type="submit" disabled={createMutation.isPending}>
@@ -178,6 +267,143 @@ export function BrandsSection() {
           </div>
         </form>
       </Modal>
+
+      {/* Edit Modal */}
+      {editingBrand && (
+        <Modal
+          open={Boolean(editingBrand)}
+          onClose={() => setEditingBrand(null)}
+          title={`Edit Brand: ${editingBrand.name}`}
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              updateMutation.mutate({
+                id: editingBrand.id,
+                payload: draft,
+              });
+            }}
+            className="space-y-4"
+          >
+            {errorMsg && (
+              <div className="rounded-lg bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                {errorMsg}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-semibold text-default mb-1">Brand Code *</label>
+              <input
+                required
+                type="text"
+                value={draft.code}
+                onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase() })}
+                className="w-full rounded-xl border border-default bg-surface px-3 py-2 text-xs text-default focus:border-primary focus:outline-none uppercase"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-default mb-1">Brand Name *</label>
+              <input
+                required
+                type="text"
+                value={draft.name}
+                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                className="w-full rounded-xl border border-default bg-surface px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <input
+                type="checkbox"
+                id="brand_edit_is_active"
+                checked={draft.is_active ?? true}
+                onChange={(e) => setDraft({ ...draft, is_active: e.target.checked })}
+                className="size-4 rounded border-default text-primary focus:ring-primary/20"
+              />
+              <label htmlFor="brand_edit_is_active" className="text-xs font-medium text-default">
+                Active Brand Status
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-2.5 pt-4 border-t border-default">
+              <Button variant="secondary" type="button" onClick={() => setEditingBrand(null)}>
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? 'Updating...' : 'Update Brand'}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* View Details Modal */}
+      {viewingBrand && (
+        <Modal
+          open={Boolean(viewingBrand)}
+          onClose={() => setViewingBrand(null)}
+          title={`Brand Details: ${viewingBrand.name}`}
+        >
+          <div className="space-y-4 text-xs">
+            <div className="grid grid-cols-2 gap-3 p-4 rounded-xl bg-surface-sunken/60 border border-default">
+              <div>
+                <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">Code</span>
+                <span className="font-mono font-bold text-primary text-sm">{viewingBrand.code}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">Name</span>
+                <span className="font-medium text-default">{viewingBrand.name}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">Status</span>
+                <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                  {viewingBrand.is_active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button variant="secondary" onClick={() => setViewingBrand(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingBrand && (
+        <Modal
+          open={Boolean(deletingBrand)}
+          onClose={() => setDeletingBrand(null)}
+          title="Delete Brand"
+        >
+          <div className="space-y-4 text-xs">
+            <p className="text-default">
+              Are you sure you want to delete brand{' '}
+              <strong className="text-primary font-mono">{deletingBrand.name}</strong> (
+              {deletingBrand.code})?
+            </p>
+            <p className="text-muted text-[11px]">
+              This operation cannot be undone if products are assigned to this trademark line.
+            </p>
+
+            <div className="flex justify-end gap-2.5 pt-4 border-t border-default">
+              <Button variant="secondary" onClick={() => setDeletingBrand(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => deleteMutation.mutate(deletingBrand.id)}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? 'Deleting...' : 'Confirm Delete'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

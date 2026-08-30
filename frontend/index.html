@@ -95,21 +95,23 @@
         }
 
         /* ── Theme ─────────────────────────────────────────────────────────── */
-        var theme = read('ui.theme') || 'system';
-        var dark = theme === 'dark' || (theme === 'system' && media('(prefers-color-scheme: dark)'));
-        if (dark) el.classList.add('dark');
-
-        /* Keep the browser chrome in step when the stored preference disagrees
-           with the OS. Without this the address bar is light while the app is
-           dark, which looks broken on Android. */
-        if (theme !== 'system') {
-          var tags = document.querySelectorAll('meta[name="theme-color"]');
-          for (var i = 0; i < tags.length; i++) tags[i].removeAttribute('media');
-          var chrome = document.createElement('meta');
-          chrome.setAttribute('name', 'theme-color');
-          chrome.setAttribute('content', dark ? '#020617' : '#f8fafc');
-          document.head.appendChild(chrome);
+        var theme = read('ui.theme') || read('theme') || 'light';
+        var dark = theme === 'dark';
+        if (dark) {
+          el.classList.add('dark');
+          el.setAttribute('data-theme', 'dark');
+        } else {
+          el.classList.remove('dark');
+          el.setAttribute('data-theme', 'light');
         }
+
+        /* Keep the browser chrome in step */
+        var tags = document.querySelectorAll('meta[name="theme-color"]');
+        for (var i = 0; i < tags.length; i++) tags[i].removeAttribute('media');
+        var chrome = document.createElement('meta');
+        chrome.setAttribute('name', 'theme-color');
+        chrome.setAttribute('content', dark ? '#020617' : '#f8fafc');
+        document.head.appendChild(chrome);
 
         /* ── Density ───────────────────────────────────────────────────────── */
         var density = read('ui.density');

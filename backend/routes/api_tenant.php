@@ -709,4 +709,94 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             Route::get('{id}', [App\Modules\Audit\Controllers\AuditLogController::class, 'show'])->name('show');
             Route::get('entity/{type}/{id}', [App\Modules\Audit\Controllers\AuditLogController::class, 'entityHistory'])->name('entity');
         });
+
+        // ── Centralized Document Templates & Printing Infrastructure ─
+        Route::prefix('documents')->name('documents.')->group(static function (): void {
+            // Template Resolution (Public within tenant)
+            Route::get('templates/resolve', [\App\Modules\Documents\Controllers\DocumentResolveController::class, 'resolve'])
+                ->name('templates.resolve');
+
+            // Document Templates CRUD & Versioning
+            Route::prefix('templates')->name('templates.')->group(static function (): void {
+                Route::get('/', [\App\Modules\Documents\Controllers\DocumentTemplateController::class, 'index'])
+                    ->middleware('permission:documents.template.view')
+                    ->name('index');
+                Route::post('/', [\App\Modules\Documents\Controllers\DocumentTemplateController::class, 'store'])
+                    ->middleware('permission:documents.template.create')
+                    ->name('store');
+                Route::get('{id}', [\App\Modules\Documents\Controllers\DocumentTemplateController::class, 'show'])
+                    ->middleware('permission:documents.template.view')
+                    ->name('show');
+                Route::put('{id}', [\App\Modules\Documents\Controllers\DocumentTemplateController::class, 'update'])
+                    ->middleware('permission:documents.template.update')
+                    ->name('update');
+                Route::delete('{id}', [\App\Modules\Documents\Controllers\DocumentTemplateController::class, 'destroy'])
+                    ->middleware('permission:documents.template.delete')
+                    ->name('destroy');
+                Route::post('{id}/set-default', [\App\Modules\Documents\Controllers\DocumentTemplateController::class, 'setDefault'])
+                    ->middleware('permission:documents.template.manage')
+                    ->name('set-default');
+                Route::post('{id}/duplicate', [\App\Modules\Documents\Controllers\DocumentTemplateController::class, 'duplicate'])
+                    ->middleware('permission:documents.template.create')
+                    ->name('duplicate');
+                Route::get('{id}/versions', [\App\Modules\Documents\Controllers\DocumentTemplateController::class, 'versions'])
+                    ->middleware('permission:documents.template.view')
+                    ->name('versions');
+                Route::post('{id}/versions/{version}/activate', [\App\Modules\Documents\Controllers\DocumentTemplateController::class, 'activateVersion'])
+                    ->middleware('permission:documents.template.manage')
+                    ->name('activate-version');
+            });
+
+            // Centralized Paper Sizes Registry
+            Route::prefix('paper-sizes')->name('paper-sizes.')->group(static function (): void {
+                Route::get('/', [\App\Modules\Documents\Controllers\PaperSizeController::class, 'index'])
+                    ->name('index');
+                Route::post('/', [\App\Modules\Documents\Controllers\PaperSizeController::class, 'store'])
+                    ->middleware('permission:documents.paper_size.manage')
+                    ->name('store');
+                Route::put('{id}', [\App\Modules\Documents\Controllers\PaperSizeController::class, 'update'])
+                    ->middleware('permission:documents.paper_size.manage')
+                    ->name('update');
+                Route::delete('{id}', [\App\Modules\Documents\Controllers\PaperSizeController::class, 'destroy'])
+                    ->middleware('permission:documents.paper_size.manage')
+                    ->name('destroy');
+            });
+
+            // Reusable Print Profiles
+            Route::prefix('print-profiles')->name('print-profiles.')->group(static function (): void {
+                Route::get('/', [\App\Modules\Documents\Controllers\PrintProfileController::class, 'index'])
+                    ->name('index');
+                Route::post('/', [\App\Modules\Documents\Controllers\PrintProfileController::class, 'store'])
+                    ->middleware('permission:documents.print_profile.manage')
+                    ->name('store');
+                Route::put('{id}', [\App\Modules\Documents\Controllers\PrintProfileController::class, 'update'])
+                    ->middleware('permission:documents.print_profile.manage')
+                    ->name('update');
+                Route::delete('{id}', [\App\Modules\Documents\Controllers\PrintProfileController::class, 'destroy'])
+                    ->middleware('permission:documents.print_profile.manage')
+                    ->name('destroy');
+            });
+
+            // Centralized Document Number Sequences
+            Route::prefix('numbering')->name('numbering.')->group(static function (): void {
+                Route::get('/', [\App\Modules\Documents\Controllers\DocumentNumberingController::class, 'index'])
+                    ->name('index');
+                Route::post('/', [\App\Modules\Documents\Controllers\DocumentNumberingController::class, 'store'])
+                    ->middleware('permission:documents.numbering.manage')
+                    ->name('store');
+                Route::put('{id}', [\App\Modules\Documents\Controllers\DocumentNumberingController::class, 'update'])
+                    ->middleware('permission:documents.numbering.manage')
+                    ->name('update');
+            });
+
+            // Print & Reprint History Audit Log
+            Route::prefix('print-history')->name('print-history.')->group(static function (): void {
+                Route::get('/', [\App\Modules\Documents\Controllers\DocumentPrintHistoryController::class, 'index'])
+                    ->middleware('permission:documents.history.view')
+                    ->name('index');
+                Route::post('/', [\App\Modules\Documents\Controllers\DocumentPrintHistoryController::class, 'store'])
+                    ->middleware('permission:documents.document.print')
+                    ->name('store');
+            });
+        });
     });

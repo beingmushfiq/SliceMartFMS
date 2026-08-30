@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { AlertOctagon, Microscope, Sliders } from 'lucide-react';
+import { AlertOctagon, Microscope, Sliders, RotateCcw } from 'lucide-react';
 import { QcInspectionsSection } from './sections/QcInspectionsSection';
 import { QcParametersSection } from './sections/QcParametersSection';
 import { WastageRecordsSection } from './sections/WastageRecordsSection';
+import { ReworkSection } from './sections/ReworkSection';
 
-export type QcTab = 'inspections' | 'parameters' | 'wastage';
+export type QcTab = 'inspections' | 'parameters' | 'wastage' | 'rework';
 
 interface TabConfig {
   id: QcTab;
@@ -20,6 +21,13 @@ const tabs: TabConfig[] = [
     icon: Microscope,
     description:
       'Incoming, in-process, and final inspection runs with multi-defect severity logging',
+  },
+  {
+    id: 'rework',
+    label: 'Rework & Salvage',
+    icon: RotateCcw,
+    description:
+      'Defect re-routing, secondary workstation corrections, salvage recovery yield & scrap auditing',
   },
   {
     id: 'parameters',
@@ -69,7 +77,7 @@ export default function QcWorkspace() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 ${
+                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer ${
                   isActive
                     ? 'bg-surface text-default font-semibold shadow-xs border border-default/70'
                     : 'text-muted hover:text-default hover:bg-surface/50 border border-transparent'
@@ -86,6 +94,7 @@ export default function QcWorkspace() {
       {/* Active Section Content */}
       <div className="pt-1">
         {activeTab === 'inspections' && <QcInspectionsSection />}
+        {activeTab === 'rework' && <ReworkSection />}
         {activeTab === 'parameters' && <QcParametersSection />}
         {activeTab === 'wastage' && <WastageRecordsSection />}
       </div>

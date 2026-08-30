@@ -1,0 +1,259 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   PRINT STYLESHEET — Document & Label Engine
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Page Definitions ─────────────────────────────────────────────────── */
+@page {
+  margin: 10mm;
+}
+
+@page a4-portrait {
+  size: A4 portrait;
+  margin: 12mm 15mm;
+}
+
+@page a4-landscape {
+  size: A4 landscape;
+  margin: 10mm 12mm;
+}
+
+@page a3-landscape {
+  size: A3 landscape;
+  margin: 12mm 15mm;
+}
+
+@page letter-portrait {
+  size: letter portrait;
+  margin: 0.5in;
+}
+
+@page thermal-80 {
+  size: 80mm auto;
+  margin: 2mm 3mm;
+}
+
+@page thermal-58 {
+  size: 58mm auto;
+  margin: 2mm 2mm;
+}
+
+@page label-sheet-a4 {
+  size: A4 portrait;
+  margin: 10mm 8mm;
+}
+
+@page label-roll-35x25 {
+  size: 35mm 25mm;
+  margin: 1mm;
+}
+
+@page label-roll-50x35 {
+  size: 50mm 35mm;
+  margin: 1.5mm;
+}
+
+/* ─── Print Engine Display Rules ───────────────────────────────────────── */
+@media screen {
+  #print-root {
+    display: none;
+  }
+}
+
+@media print {
+  /* Hide the entire web application root when printing through PrintPortal */
+  body.printing-active > #root {
+    display: none !important;
+  }
+
+  body.printing-active {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #print-root {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Page specific class bindings */
+  .print-page-a4 {
+    page: a4-portrait;
+  }
+
+  .print-page-a4-landscape {
+    page: a4-landscape;
+  }
+
+  .print-page-a3-landscape {
+    page: a3-landscape;
+  }
+
+  .print-page-thermal-80 {
+    page: thermal-80;
+    width: 74mm !important;
+    max-width: 74mm !important;
+    margin: 0 auto !important;
+  }
+
+  .print-page-thermal-58 {
+    page: thermal-58;
+    width: 52mm !important;
+    max-width: 52mm !important;
+    margin: 0 auto !important;
+  }
+
+  .print-page-label-sheet {
+    page: label-sheet-a4;
+  }
+
+  .print-page-label-35x25 {
+    page: label-roll-35x25;
+    width: 35mm !important;
+    height: 25mm !important;
+  }
+
+  .print-page-label-50x35 {
+    page: label-roll-50x35;
+    width: 50mm !important;
+    height: 35mm !important;
+  }
+
+  /* Page break rules */
+  .page-break-after {
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .page-break-before {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .page-break-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Document Typography for Ink Printers */
+  .print-doc {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+    color: #0f172a !important;
+    background: #ffffff !important;
+    font-size: 9.5pt;
+    line-height: 1.35;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-doc table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .print-doc thead {
+    display: table-header-group;
+  }
+
+  .print-doc tfoot {
+    display: table-footer-group;
+  }
+
+  .print-doc tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-doc th,
+  .print-doc td {
+    padding: 4pt 6pt;
+  }
+
+  /* Hide interactive / unnecessary print artifacts */
+  .no-print,
+  [data-print='hide'] {
+    display: none !important;
+  }
+}
+
+/* ─── Screen Preview Simulator Styles ──────────────────────────────────── */
+.document-preview-container {
+  background-color: #f1f5f9;
+  padding: 1.5rem;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.document-preview-sheet-a4 {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 15mm;
+  margin: 0 auto 2rem auto;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+  position: relative;
+}
+
+.document-preview-sheet-a4-landscape {
+  width: 297mm;
+  min-height: 210mm;
+  padding: 12mm 15mm;
+  margin: 0 auto 2rem auto;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+  position: relative;
+}
+
+.document-preview-thermal-80 {
+  width: 80mm;
+  min-height: 120mm;
+  padding: 4mm 5mm;
+  margin: 0 auto;
+  background: #ffffff;
+  color: #000000;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.document-preview-thermal-58 {
+  width: 58mm;
+  min-height: 100mm;
+  padding: 3mm 4mm;
+  margin: 0 auto;
+  background: #ffffff;
+  color: #000000;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.document-preview-label-35x25 {
+  width: 35mm;
+  height: 25mm;
+  padding: 1.5mm;
+  background: #ffffff;
+  color: #000000;
+  border: 1px dashed #cbd5e1;
+  box-sizing: border-box;
+}
+
+.document-preview-label-50x35 {
+  width: 50mm;
+  height: 35mm;
+  padding: 2mm;
+  background: #ffffff;
+  color: #000000;
+  border: 1px dashed #cbd5e1;
+  box-sizing: border-box;
+}

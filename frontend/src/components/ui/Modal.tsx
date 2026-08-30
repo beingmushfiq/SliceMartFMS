@@ -32,7 +32,7 @@ import React, { useEffect, useId, useRef, useCallback } from 'react';
 import { AnimatePresence, LazyMotion, domAnimation, m, type Variants } from 'framer-motion';
 import { X, TriangleAlert, CircleCheckBig } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { enterBase, exitFast } from '../../lib/motion/tokens';
+import { enterBase, exitFast, craft } from '../../lib/motion/tokens';
 import { Button } from './Button';
 
 // ── Motion tokens ───────────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ const scrimVariants: Variants = {
 const modalPanelVariants: Variants = {
   hidden: {
     opacity: 0,
-    scale: 'var(--motion-modal-scale-from)' as unknown as number,
+    scale: craft.modalScaleFrom,
     transition: exitFast,
   },
   visible: {

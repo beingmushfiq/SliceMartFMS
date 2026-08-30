@@ -55,6 +55,7 @@ import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import { Badge, StatusBadge } from '../../components/ui/Badge';
 import { Input, Select, SearchInput, FormGroup } from '../../components/ui/FormElements';
 import { notify } from '../../components/ui/Toast';
+import { DocumentsSection } from './documents/DocumentsSection';
 import type {
   SettingsSchemaDictionary,
   SettingItem,
@@ -64,6 +65,7 @@ import type { TenantDomainRecord } from '../../types/api/domains';
 
 const GROUP_ICONS: Record<string, React.ElementType> = {
   general: Building2,
+  documents: FileSpreadsheet,
   production: Factory,
   inventory: Package,
   purchase: ShoppingCart,
@@ -85,7 +87,7 @@ const GROUP_ICONS: Record<string, React.ElementType> = {
 const CATEGORIES = [
   {
     name: 'Enterprise Core',
-    groups: ['general', 'security', 'notifications', 'reports'],
+    groups: ['general', 'documents', 'security', 'notifications', 'reports'],
   },
   {
     name: 'Manufacturing & Stock',
@@ -638,7 +640,10 @@ export const SettingsCenterWorkspace: React.FC = () => {
               transition={enterFast}
               className="bg-surface rounded-(--card-radius) border border-default shadow-(--card-shadow) p-6 space-y-6"
             >
-              {activeGroup === 'custom_domains' ? (
+              {activeGroup === 'documents' ? (
+                /* Centralized Document Templates & Printing Infrastructure */
+                <DocumentsSection />
+              ) : activeGroup === 'custom_domains' ? (
                 /* Custom Domain Management Hub */
                 <div className="space-y-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-default">

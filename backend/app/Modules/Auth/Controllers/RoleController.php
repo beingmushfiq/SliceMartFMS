@@ -6,6 +6,7 @@ namespace App\Modules\Auth\Controllers;
 
 use App\Core\Audit\AuditLogger;
 use App\Core\Auth\PermissionCatalogue;
+use App\Core\Tenancy\TenantContext;
 use App\Http\Controllers\Controller;
 use App\Models\Permission;
 use App\Models\Role;
@@ -17,14 +18,37 @@ use Symfony\Component\HttpFoundation\Response;
 
 class RoleController extends Controller
 {
+    private function resolveTenantId(Request $request): ?int
+    {
+        if (TenantContext::isBound()) {
+            return TenantContext::current()->tenantId();
+        }
+
+        $user = $request->user();
+        if ($user && $user->tenant_id) {
+            return (int) $user->tenant_id;
+        }
+
+        $attr = $request->attributes->get('tenant_id');
+        if ($attr) {
+            return (int) $attr;
+        }
+
+        return null;
+    }
+
     public function index(Request $request): JsonResponse
     {
-        $tenantId = (int) $request->attributes->get('tenant_id');
+        $tenantId = $this->resolveTenantId($request);
 
         $roles = Role::query()
             ->where(function ($query) use ($tenantId) {
-                $query->where('tenant_id', $tenantId)
-                      ->orWhereNull('tenant_id');
+                if ($tenantId) {
+                    $query->where('tenant_id', $tenantId)
+                          ->orWhereNull('tenant_id');
+                } else {
+                    $query->whereNull('tenant_id');
+                }
             })
             ->withCount(['users', 'permissions'])
             ->with(['permissions:id,name,module,resource,action,description'])
@@ -91,12 +115,16 @@ class RoleController extends Controller
 
     public function show(int $id, Request $request): JsonResponse
     {
-        $tenantId = (int) $request->attributes->get('tenant_id');
+        $tenantId = $this->resolveTenantId($request);
 
         $role = Role::query()
             ->where(function ($query) use ($tenantId) {
-                $query->where('tenant_id', $tenantId)
-                      ->orWhereNull('tenant_id');
+                if ($tenantId) {
+                    $query->where('tenant_id', $tenantId)
+                          ->orWhereNull('tenant_id');
+                } else {
+                    $query->whereNull('tenant_id');
+                }
             })
             ->with(['permissions:id,name,module,resource,action,description'])
             ->withCount('users')
@@ -109,7 +137,7 @@ class RoleController extends Controller
 
     public function store(Request $request, AuditLogger $auditLogger): JsonResponse
     {
-        $tenantId = (int) $request->attributes->get('tenant_id');
+        $tenantId = $this->resolveTenantId($request);
 
         $validated = $request->validate([
             'name' => 'required|string|max:100',
@@ -125,7 +153,7 @@ class RoleController extends Controller
 
         // Ensure unique slug for this tenant
         $existing = Role::query()
-            ->where('tenant_id', $tenantId)
+            ->when($tenantId, fn ($q) => $q->where('tenant_id', $tenantId), fn ($q) => $q->whereNull('tenant_id'))
             ->where('slug', $slug)
             ->first();
 
@@ -175,17 +203,18 @@ class RoleController extends Controller
 
     public function update(int $id, Request $request, AuditLogger $auditLogger): JsonResponse
     {
-        $tenantId = (int) $request->attributes->get('tenant_id');
+        $tenantId = $this->resolveTenantId($request);
 
         $role = Role::query()
-            ->where('tenant_id', $tenantId)
+            ->where(function ($query) use ($tenantId) {
+                if ($tenantId) {
+                    $query->where('tenant_id', $tenantId)
+                          ->orWhereNull('tenant_id');
+                } else {
+                    $query->whereNull('tenant_id');
+                }
+            })
             ->findOrFail($id);
-
-        if ($role->is_system) {
-            return response()->json([
-                'message' => 'System standard roles cannot be modified.',
-            ], Response::HTTP_FORBIDDEN);
-        }
 
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:100',
@@ -202,12 +231,15 @@ class RoleController extends Controller
         ];
 
         DB::transaction(function () use ($role, $validated, $beforeState, $auditLogger, $tenantId, $request) {
-            $role->fill(array_filter([
-                'name' => $validated['name'] ?? null,
-                'slug' => !empty($validated['slug']) ? Str::slug($validated['slug'], '_') : null,
-                'description' => $validated['description'] ?? null,
-            ]));
-            $role->save();
+            // Update metadata for tenant-created roles
+            if (!$role->is_system && ($tenantId === null || $role->tenant_id === $tenantId)) {
+                $role->fill(array_filter([
+                    'name' => $validated['name'] ?? null,
+                    'slug' => !empty($validated['slug']) ? Str::slug($validated['slug'], '_') : null,
+                    'description' => $validated['description'] ?? null,
+                ]));
+                $role->save();
+            }
 
             if (isset($validated['permission_ids'])) {
                 $role->permissions()->sync($validated['permission_ids']);
@@ -241,10 +273,16 @@ class RoleController extends Controller
 
     public function destroy(int $id, Request $request, AuditLogger $auditLogger): JsonResponse
     {
-        $tenantId = (int) $request->attributes->get('tenant_id');
+        $tenantId = $this->resolveTenantId($request);
 
         $role = Role::query()
-            ->where('tenant_id', $tenantId)
+            ->where(function ($query) use ($tenantId) {
+                if ($tenantId) {
+                    $query->where('tenant_id', $tenantId);
+                } else {
+                    $query->whereNull('tenant_id');
+                }
+            })
             ->withCount('users')
             ->findOrFail($id);
 
@@ -261,19 +299,16 @@ class RoleController extends Controller
         }
 
         DB::transaction(function () use ($role, $auditLogger, $tenantId, $request) {
-            $before = [
-                'id' => $role->id,
-                'name' => $role->name,
-                'slug' => $role->slug,
-            ];
-
             $role->permissions()->detach();
             $role->delete();
 
             $auditLogger->record(
                 action: \App\Core\Audit\AuditAction::Deleted,
                 auditable: $role,
-                before: $before,
+                before: [
+                    'name' => $role->name,
+                    'slug' => $role->slug,
+                ],
                 after: null,
                 actor: $request->user(),
                 context: ['tenant_id' => $tenantId],
@@ -283,7 +318,7 @@ class RoleController extends Controller
         });
 
         return response()->json([
-            'message' => "Role '{$role->name}' deleted successfully.",
+            'message' => 'Role deleted successfully.',
         ]);
     }
 }

@@ -86,14 +86,27 @@ export const RolesManagementWorkspace: React.FC = () => {
     let ignore = false;
 
     Promise.all([
-      api.get<{ data: RoleData[] }>('/roles'),
-      api.get<{ data: { raw: PermissionItem[]; grouped: ModuleGroup[] } }>('/permissions'),
+      api.get<RoleData[]>('/roles'),
+      api.get<{ raw: PermissionItem[]; grouped: ModuleGroup[] }>('/permissions'),
     ])
       .then(([rolesRes, permsRes]) => {
         if (!ignore) {
-          setRoles(rolesRes.data.data ?? []);
-          setAllPermissions(permsRes.data.data?.raw ?? []);
-          setModulesList(permsRes.data.data?.grouped ?? []);
+          const rolesData = Array.isArray(rolesRes.data)
+            ? rolesRes.data
+            : ((rolesRes.data as unknown as { data?: RoleData[] })?.data ?? []);
+          setRoles(rolesData);
+
+          const permsPayload = permsRes.data as unknown as {
+            raw?: PermissionItem[];
+            grouped?: ModuleGroup[];
+            data?: { raw?: PermissionItem[]; grouped?: ModuleGroup[] };
+          };
+
+          const rawList = permsPayload.raw ?? permsPayload.data?.raw ?? [];
+          const groupedList = permsPayload.grouped ?? permsPayload.data?.grouped ?? [];
+
+          setAllPermissions(rawList);
+          setModulesList(groupedList);
           setLoading(false);
         }
       })
@@ -197,7 +210,7 @@ export const RolesManagementWorkspace: React.FC = () => {
     });
   };
 
-  // Preset: Select All
+  // Preset: Select All (Full Admin)
   const handleSelectAll = () => {
     const allIds = new Set(allPermissions.map((p) => p.id));
     setSelectedPermIds(allIds);
@@ -211,7 +224,9 @@ export const RolesManagementWorkspace: React.FC = () => {
   // Preset: Read-Only (View Only)
   const handlePresetReadOnly = () => {
     const viewIds = new Set(
-      allPermissions.filter((p) => p.action === 'view').map((p) => p.id)
+      allPermissions
+        .filter((p) => p.action === 'view' || p.name?.endsWith('.view'))
+        .map((p) => p.id)
     );
     setSelectedPermIds(viewIds);
   };
@@ -222,9 +237,12 @@ export const RolesManagementWorkspace: React.FC = () => {
       allPermissions
         .filter(
           (p) =>
-            ['view', 'create', 'update'].includes(p.action) &&
-            !p.module.includes('platform') &&
-            !p.module.includes('core')
+            (['view', 'create', 'update'].includes(p.action) ||
+             p.name?.endsWith('.view') ||
+             p.name?.endsWith('.create') ||
+             p.name?.endsWith('.update')) &&
+            !p.module?.includes('platform') &&
+            !p.name?.startsWith('platform.')
         )
         .map((p) => p.id)
     );

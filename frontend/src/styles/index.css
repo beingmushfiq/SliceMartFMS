@@ -24,10 +24,11 @@
 
 @import './tokens.primitive.css';
 @import './tokens.semantic.css';
-@import './tokens.semantic.dark.css';
 @import './tokens.component.css';
+@import './tokens.semantic.dark.css';
 @import './tokens.motion.css';
 @import './base.css';
+@import './print.css';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    DARK VARIANT — class-based, not media-based               UI_SYSTEM.md §3.1
