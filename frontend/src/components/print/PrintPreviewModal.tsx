@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Printer,
   FileDown,
   X,
   ZoomIn,
   ZoomOut,
-  Maximize2,
   FileText,
   RotateCcw,
 } from 'lucide-react';

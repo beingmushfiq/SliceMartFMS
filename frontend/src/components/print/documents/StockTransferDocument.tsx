@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import type { StockTransfer } from '../../../types/api/inventory';
 import type { BusinessConfig } from '../../../lib/document/useBusinessConfig';
 import { formatDocumentDate } from '../../../lib/document/formatters';

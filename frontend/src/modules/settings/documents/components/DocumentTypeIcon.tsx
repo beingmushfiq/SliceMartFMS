@@ -2,7 +2,6 @@
 // DOCUMENT TYPE ICON HELPER
 // ═══════════════════════════════════════════════════════════════════════════
 
-import React from 'react';
 import {
   FileText,
   Truck,

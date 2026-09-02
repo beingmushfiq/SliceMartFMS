@@ -7,12 +7,8 @@ import {
   Building2,
   Save,
   FileText,
-  Mail,
   Phone,
-  Globe,
-  MapPin,
   BadgePercent,
-  Check,
 } from 'lucide-react';
 import { api } from '../../../../lib/api/client';
 import { notify } from '../../../../components/ui/Toast';
@@ -38,11 +34,10 @@ export function BusinessIdentityTab() {
     signatureReceiver: 'Customer Acknowledgement',
   });
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
     api
       .get<Partial<BusinessConfig>>('/settings/company')
       .then((res) => {

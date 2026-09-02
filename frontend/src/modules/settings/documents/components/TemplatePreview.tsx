@@ -1,9 +1,7 @@
-// ═══════════════════════════════════════════════════════════════════════════
-// TEMPLATE PREVIEW — Proportional Live Layout Renderer
-// ═══════════════════════════════════════════════════════════════════════════
-
-import React from 'react';
 import type { DocumentType, DocumentTemplateLayoutConfig } from '../../../../types/api/documents';
+import type { Invoice, DeliveryOrder, Payment } from '../../../../types/api/sales';
+import type { PurchaseOrder, GoodsReceipt } from '../../../../types/api/purchasing';
+import type { LabelProductItem } from '../../../../lib/barcode/types';
 import { useBusinessConfig } from '../../../../lib/document/useBusinessConfig';
 import { SalesInvoiceDocument } from '../../../../components/print/documents/SalesInvoiceDocument';
 import { DeliveryChallanDocument } from '../../../../components/print/documents/DeliveryChallanDocument';
@@ -15,10 +13,10 @@ import { BarcodeLabel } from '../../../../components/print/labels/BarcodeLabel';
 
 export interface TemplatePreviewProps {
   documentType: DocumentType;
-  layoutConfig?: DocumentTemplateLayoutConfig;
-  paperCode?: string;
-  orientation?: 'portrait' | 'landscape';
-  scale?: number;
+  layoutConfig?: DocumentTemplateLayoutConfig | undefined;
+  paperCode?: string | undefined;
+  orientation?: ('portrait' | 'landscape') | undefined;
+  scale?: number | undefined;
 }
 
 export function TemplatePreview({
@@ -31,12 +29,12 @@ export function TemplatePreview({
   const { config: businessConfig } = useBusinessConfig();
 
   // Sample data payload
-  const sampleInvoice: any = {
+  const sampleInvoice: Invoice = {
     id: 1,
     uuid: 'sample-inv-uuid',
     invoice_number: 'INV-2026-000042',
-    customer_name: 'Apex Industrial Bakeries Ltd.',
     sales_order_number: 'SO-202608-019',
+    customer_name: 'Apex Industrial Bakeries Ltd.',
     invoice_date: '2026-08-31',
     due_date: '2026-09-30',
     subtotal: '45200.00',
@@ -47,14 +45,16 @@ export function TemplatePreview({
     total_amount: '51280.00',
     paid_amount: '25000.00',
     due_amount: '26280.00',
-    status: 'partial',
+    status: 'partially_paid',
+    printed_count: 1,
     items: [
       {
         id: 1,
+        uuid: 'inv-item-1',
+        invoice_id: 1,
+        product_id: 1,
         product_name: 'Organic Rye Flour (25kg Food Grade Sack)',
-        sku: 'ING-RYE-25K',
-        batch_number: 'B-202608-41',
-        unit: 'Sack',
+        description: 'ING-RYE-25K',
         quantity: '40',
         unit_price: '850.00',
         discount_amount: '500.00',
@@ -63,10 +63,11 @@ export function TemplatePreview({
       },
       {
         id: 2,
+        uuid: 'inv-item-2',
+        invoice_id: 1,
+        product_id: 2,
         product_name: 'Artisan Sourdough Culture (5L Liquid Master)',
-        sku: 'ING-SD-05L',
-        batch_number: 'B-202608-42',
-        unit: 'Pail',
+        description: 'ING-SD-05L',
         quantity: '6',
         unit_price: '1950.00',
         discount_amount: '700.00',
@@ -76,65 +77,147 @@ export function TemplatePreview({
     ],
   };
 
-  const sampleChallan: any = {
+  const sampleChallan: DeliveryOrder = {
     id: 1,
-    challan_number: 'CHL-2026-000018',
-    customer_name: 'Apex Industrial Bakeries Ltd.',
-    shipping_address: 'Plot 14, Gazipur Industrial Zone, Dhaka',
-    driver_name: 'Rafiqul Islam',
-    vehicle_number: 'DHAKA-METRO-TA-14-9821',
-    delivery_date: '2026-08-31',
-    total_packages: 46,
-    items: sampleInvoice.items,
+    uuid: 'sample-chl-uuid',
+    delivery_number: 'CHL-2026-000018',
+    sales_order_id: 1,
+    sales_order_number: 'SO-202608-019',
+    warehouse_id: 1,
+    recipient_name: 'Apex Industrial Bakeries Ltd.',
+    recipient_phone: '+880 1711-223344',
+    delivery_type: 'road_courier',
+    status: 'delivered',
+    cod_amount: '0.00',
+    cod_collected_amount: '0.00',
+    cod_status: 'none',
+    delivery_charge: '500.00',
+    package_count: 46,
+    items: [
+      {
+        id: 1,
+        uuid: 'chl-item-1',
+        delivery_order_id: 1,
+        product_id: 1,
+        product_name: 'Organic Rye Flour (25kg Food Grade Sack)',
+        batch_code: 'B-202608-41',
+        quantity: '40',
+        delivered_quantity: '40',
+        returned_quantity: '0',
+        unit_id: 1,
+      },
+    ],
   };
 
-  const samplePO: any = {
+  const samplePO: PurchaseOrder = {
     id: 1,
+    uuid: 'sample-po-uuid',
     po_number: 'PO-2026-000088',
-    vendor_name: 'National Grain Refineries Ltd.',
+    party_id: 1,
+    supplier_name: 'National Grain Refineries Ltd.',
+    warehouse_id: 1,
+    warehouse_name: 'Main Central Hub',
     order_date: '2026-08-31',
     expected_delivery_date: '2026-09-07',
-    subtotal: '85000.00',
+    currency_code: 'BDT',
+    exchange_rate: '1.0',
+    subtotal_amount: '85000.00',
+    discount_amount: '0.00',
     tax_amount: '12750.00',
-    total_amount: '97750.00',
+    grand_total: '97750.00',
+    received_value: '0.00',
+    billed_value: '0.00',
     status: 'approved',
-    items: sampleInvoice.items,
+    items: [
+      {
+        id: 1,
+        uuid: 'po-item-1',
+        purchase_order_id: 1,
+        product_id: 1,
+        product_name: 'Organic Rye Flour (25kg Food Grade Sack)',
+        quantity: '100',
+        unit_id: 1,
+        unit_code: 'Sack',
+        unit_price: '850.00',
+        discount_amount: '0.00',
+        tax_rate: '15.00',
+        tax_amount: '12750.00',
+        subtotal_amount: '85000.00',
+        total_amount: '97750.00',
+        received_quantity: '0',
+        billed_quantity: '0',
+      },
+    ],
   };
 
-  const samplePayment: any = {
+  const sampleGRN: GoodsReceipt = {
     id: 1,
-    receipt_number: 'REC-2026-000104',
+    uuid: 'sample-grn-uuid',
+    grn_number: 'GRN-2026-000031',
+    party_id: 1,
+    supplier_name: 'National Grain Refineries Ltd.',
+    warehouse_id: 1,
+    warehouse_name: 'Main Central Hub',
+    purchase_order_id: 1,
+    po_number: 'PO-2026-000088',
+    receipt_date: '2026-08-31',
+    status: 'completed',
+    items: [
+      {
+        id: 1,
+        uuid: 'grn-item-1',
+        goods_receipt_id: 1,
+        product_id: 1,
+        product_name: 'Organic Rye Flour (25kg Food Grade Sack)',
+        batch_code: 'B-202608-41',
+        received_quantity: '100',
+        rejected_quantity: '0',
+        accepted_quantity: '100',
+        unit_id: 1,
+        unit_code: 'Sack',
+        unit_cost: '850.00',
+        total_cost: '85000.00',
+      },
+    ],
+  };
+
+  const samplePayment: Payment = {
+    id: 1,
+    uuid: 'sample-pay-uuid',
+    payment_number: 'REC-2026-000104',
+    direction: 'in',
     customer_name: 'Apex Industrial Bakeries Ltd.',
     payment_date: '2026-08-31',
+    method: 'bank_transfer',
+    reference_number: 'TXN-EFTN-89214710',
     amount: '25000.00',
-    payment_method: 'Bank Transfer (EFTN)',
-    transaction_reference: 'TXN-EFTN-89214710',
+    allocated_amount: '25000.00',
+    unallocated_amount: '0.00',
+    currency_code: 'BDT',
+    status: 'posted',
     notes: 'Advance installment against INV-2026-000042',
   };
 
-  const sampleProduct: any = {
+  const sampleProduct: LabelProductItem = {
     id: 1,
     name: 'Artisan Sourdough Loaf (800g)',
     sku: 'FG-BRD-SOUR-01',
     barcode: '8901234567890',
-    selling_price: '450.00',
+    sale_price: '450.00',
     mfg_date: '2026-08-31',
     exp_date: '2026-09-04',
   };
 
   const getContainerClass = () => {
     switch (paperCode) {
-      case 'a4_landscape':
-      case 'a3_landscape':
-        return 'document-preview-sheet-a4-landscape';
-      case 'thermal_80':
-        return 'document-preview-thermal-80';
-      case 'thermal_58':
-        return 'document-preview-thermal-58';
-      case 'label_35x25':
-        return 'document-preview-label-35x25';
+      case 'pos_80mm':
+        return 'document-preview-sheet-80mm';
+      case 'pos_58mm':
+        return 'document-preview-sheet-58mm';
       case 'label_50x35':
-        return 'document-preview-label-50x35';
+        return 'document-preview-sheet-label';
+      case 'a5_portrait':
+        return orientation === 'landscape' ? 'document-preview-sheet-a5-landscape' : 'document-preview-sheet-a5';
       case 'a4_portrait':
       default:
         return orientation === 'landscape' ? 'document-preview-sheet-a4-landscape' : 'document-preview-sheet-a4';
@@ -144,20 +227,32 @@ export function TemplatePreview({
   const renderContent = () => {
     switch (documentType) {
       case 'sales_invoice':
-        return <SalesInvoiceDocument invoice={sampleInvoice} businessConfig={businessConfig} copyType="ORIGINAL" />;
+        return (
+          <SalesInvoiceDocument
+            invoice={sampleInvoice}
+            businessConfig={businessConfig}
+            copyType="ORIGINAL"
+            signatureLabels={{
+              preparedBy: layoutConfig?.signaturePreparedBy,
+              checkedBy: layoutConfig?.signatureCheckedBy,
+              authorizedBy: layoutConfig?.signatureAuthorizedBy,
+              receiver: layoutConfig?.signatureReceiver,
+            }}
+          />
+        );
       case 'delivery_challan':
-        return <DeliveryChallanDocument delivery={sampleChallan as any} businessConfig={businessConfig} />;
+        return <DeliveryChallanDocument delivery={sampleChallan} businessConfig={businessConfig} />;
       case 'purchase_order':
         return <PurchaseOrderDocument po={samplePO} businessConfig={businessConfig} />;
       case 'goods_receipt':
-        return <GoodsReceiptDocument grn={{ ...samplePO, grn_number: 'GRN-2026-000031' } as any} businessConfig={businessConfig} />;
+        return <GoodsReceiptDocument grn={sampleGRN} businessConfig={businessConfig} />;
       case 'payment_receipt':
-        return <PaymentReceiptDocument payment={samplePayment as any} businessConfig={businessConfig} />;
+        return <PaymentReceiptDocument payment={samplePayment} businessConfig={businessConfig} />;
       case 'pos_receipt_80mm':
       case 'pos_receipt_58mm':
         return <ThermalReceipt invoice={sampleInvoice} businessConfig={businessConfig} paperWidth={documentType === 'pos_receipt_58mm' ? '58mm' : '80mm'} />;
       case 'barcode_label':
-        return <BarcodeLabel product={sampleProduct as any} preset="standard_50x35" />;
+        return <BarcodeLabel product={sampleProduct} preset="standard_50x35" />;
       default:
         return <SalesInvoiceDocument invoice={sampleInvoice} businessConfig={businessConfig} copyType="ORIGINAL" />;
     }

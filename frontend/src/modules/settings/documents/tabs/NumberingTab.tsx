@@ -6,11 +6,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Binary,
   Edit2,
-  Save,
-  Plus,
-  ShieldCheck,
-  RefreshCw,
-  Layers,
 } from 'lucide-react';
 import { api } from '../../../../lib/api/client';
 import { notify } from '../../../../components/ui/Toast';
@@ -19,7 +14,6 @@ import type { DocumentNumberingSequence } from '../../../../types/api/documents'
 
 export function NumberingTab() {
   const [sequences, setSequences] = useState<DocumentNumberingSequence[]>([]);
-  const [loading, setLoading] = useState(false);
   const [editSeq, setEditSeq] = useState<DocumentNumberingSequence | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -32,16 +26,13 @@ export function NumberingTab() {
   const [isSaving, setIsSaving] = useState(false);
 
   const fetchSequences = useCallback(async () => {
-    setLoading(true);
     try {
       const res = await api.get<{ data: DocumentNumberingSequence[] }>('/documents/numbering');
       if (res.data?.data) {
         setSequences(res.data.data);
       }
     } catch {
-      notify.error('Failed to load document number sequences');
-    } finally {
-      setLoading(false);
+      notify.error('Failed to load numbering sequences');
     }
   }, []);
 
@@ -49,7 +40,7 @@ export function NumberingTab() {
     fetchSequences();
   }, [fetchSequences]);
 
-  const handleEdit = (seq: DocumentNumberingSequence) => {
+  const handleOpenEdit = (seq: DocumentNumberingSequence) => {
     setEditSeq(seq);
     setPrefix(seq.prefix || '');
     setSuffix(seq.suffix || '');
@@ -72,43 +63,50 @@ export function NumberingTab() {
         next_number: parseInt(nextNumber, 10) || 1,
         reset_period: resetPeriod,
       });
-      notify.success(`Sequence for "${editSeq.document_type}" updated`);
+      notify.success(`Sequence for ${editSeq.document_type} updated`);
       setIsModalOpen(false);
       fetchSequences();
     } catch {
-      notify.error('Failed to update number sequence');
+      notify.error('Failed to save numbering sequence');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const computeExampleNumber = (p: string, n: string, pad: string, s: string) => {
-    const padLen = parseInt(pad, 10) || 5;
-    const num = parseInt(n, 10) || 1;
-    const padded = String(num).padStart(padLen, '0');
-    return `${p}${padded}${s}`;
+  const calculateSampleNumber = (
+    p: string,
+    s: string,
+    pad: number,
+    num: number
+  ) => {
+    const year = new Date().getFullYear();
+    const month = String(new Date().getMonth() + 1).padStart(2, '0');
+    const processedPrefix = p
+      .replace('{YYYY}', String(year))
+      .replace('{YY}', String(year).slice(-2))
+      .replace('{MM}', month);
+    const numStr = String(num).padStart(pad, '0');
+    return `${processedPrefix}${numStr}${s ? `-${s}` : ''}`;
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h3 className="text-base font-bold text-white tracking-wide">Document Number Sequences</h3>
-          <p className="text-xs text-slate-400">
-            Authoritative server-side series counters. All document numbers are locked & issued in atomicity to prevent collisions.
-          </p>
-        </div>
+      <div>
+        <h3 className="text-base font-bold text-white tracking-wide">Document Numbering Sequences</h3>
+        <p className="text-xs text-slate-400">
+          Atomic server-side counter configurations preventing duplicate invoices, challans, POs, and voucher numbers.
+        </p>
       </div>
 
-      {/* Grid of Sequences */}
+      {/* Grid of Numbering Sequences */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {sequences.map((seq) => {
-          const sample = computeExampleNumber(
+          const sample = calculateSampleNumber(
             seq.prefix || '',
-            String(seq.next_number),
-            String(seq.padding),
-            seq.suffix || ''
+            seq.suffix || '',
+            seq.padding,
+            seq.next_number
           );
 
           return (
@@ -119,43 +117,51 @@ export function NumberingTab() {
               <div>
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2">
-                    <div className="flex size-8 items-center justify-center rounded-lg bg-sky-950/80 text-sky-400 border border-sky-800/60">
+                    <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-950/80 text-emerald-400 border border-emerald-800/60">
                       <Binary className="size-4" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-semibold text-white tracking-wide capitalize">
+                      <h4 className="text-sm font-semibold text-white capitalize tracking-wide">
                         {seq.document_type.replace(/_/g, ' ')}
                       </h4>
-                      <span className="font-mono text-[11px] text-slate-400">
-                        Prefix: <strong className="text-slate-200">{seq.prefix || 'None'}</strong>
+                      <span className="text-[11px] text-slate-400 font-mono">
+                        Reset: {seq.reset_period}
                       </span>
                     </div>
                   </div>
 
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-slate-700/60 text-slate-300 border border-slate-600">
-                    {seq.reset_period}
-                  </span>
+                  <button
+                    onClick={() => handleOpenEdit(seq)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors cursor-pointer"
+                    title="Edit Sequence"
+                  >
+                    <Edit2 className="size-3.5" />
+                  </button>
                 </div>
 
-                <div className="my-3 p-3 rounded-lg bg-slate-900/80 border border-slate-800 text-xs">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">
-                    Next Issued Identifier
+                <div className="my-3 p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 text-xs space-y-1.5">
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold">
+                    Next Generated Identifier
                   </span>
-                  <span className="font-mono text-sm font-bold text-emerald-400 tracking-wider block">
+                  <div className="font-mono text-sm font-bold text-emerald-400">
                     {sample}
-                  </span>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-slate-700/40 text-[11px] text-slate-400">
-                <span>Padding: {seq.padding} digits</span>
-                <button
-                  onClick={() => handleEdit(seq)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-700/60 text-slate-200 hover:bg-slate-700 hover:text-white transition-colors"
-                >
-                  <Edit2 className="size-3" />
-                  <span>Configure</span>
-                </button>
+              <div className="grid grid-cols-3 gap-1 pt-2 border-t border-slate-700/40 text-[10px] font-mono text-slate-400 text-center">
+                <div>
+                  <span className="text-slate-500 block">Prefix</span>
+                  <span className="text-slate-200">{seq.prefix}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block">Padding</span>
+                  <span className="text-slate-200">{seq.padding} digits</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block">Counter</span>
+                  <span className="text-slate-200">{seq.next_number}</span>
+                </div>
               </div>
             </div>
           );
@@ -164,7 +170,7 @@ export function NumberingTab() {
 
       {/* Edit Sequence Modal */}
       <Modal
-        isOpen={isModalOpen}
+        open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={`Configure Sequence: ${editSeq?.document_type.replace(/_/g, ' ') || ''}`}
         size="md"
@@ -179,9 +185,10 @@ export function NumberingTab() {
                 type="text"
                 value={prefix}
                 onChange={(e) => setPrefix(e.target.value)}
-                placeholder="e.g. INV-2026-"
-                className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 font-mono text-xs"
+                placeholder="e.g. INV-{YYYY}-"
+                className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs font-mono"
               />
+              <span className="text-[10px] text-slate-500 mt-1 block">Supports {'{YYYY}'}, {'{YY}'}, {'{MM}'}</span>
             </div>
             <div>
               <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
@@ -191,8 +198,8 @@ export function NumberingTab() {
                 type="text"
                 value={suffix}
                 onChange={(e) => setSuffix(e.target.value)}
-                placeholder="e.g. /BD"
-                className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 font-mono text-xs"
+                placeholder="e.g. BD"
+                className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs font-mono"
               />
             </div>
           </div>
@@ -205,7 +212,7 @@ export function NumberingTab() {
               <input
                 type="number"
                 min="1"
-                max="12"
+                max="10"
                 value={padding}
                 onChange={(e) => setPadding(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs"
@@ -220,34 +227,34 @@ export function NumberingTab() {
                 min="1"
                 value={nextNumber}
                 onChange={(e) => setNextNumber(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs"
+                className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs font-mono"
               />
             </div>
           </div>
 
           <div>
             <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
-              Reset Counter Schedule
+              Counter Reset Period
             </label>
             <select
               value={resetPeriod}
-              onChange={(e) => setResetPeriod(e.target.value as any)}
+              onChange={(e) => setResetPeriod(e.target.value as 'never' | 'yearly' | 'monthly')}
               className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs cursor-pointer"
             >
-              <option value="never">Never (Continuous counter)</option>
-              <option value="yearly">Financial / Calendar Year (Reset to 1)</option>
-              <option value="monthly">Monthly Reset</option>
+              <option value="yearly">Yearly Reset (Starts from 1 every Jan 1st)</option>
+              <option value="monthly">Monthly Reset (Starts from 1 each month)</option>
+              <option value="never">Never Reset (Continuous sequence)</option>
             </select>
           </div>
 
-          {/* Live Preview */}
+          {/* Sample Preview */}
           <div className="p-3 rounded-lg bg-slate-900 border border-slate-800">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">
-              Live Preview of Next Issued Document Number
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold mb-1">
+              Sample Formatted Identifier
             </span>
-            <span className="font-mono text-base font-bold text-emerald-400 tracking-wide">
-              {computeExampleNumber(prefix, nextNumber, padding, suffix)}
-            </span>
+            <div className="font-mono text-sm font-bold text-emerald-400">
+              {calculateSampleNumber(prefix, suffix, parseInt(padding, 10) || 5, parseInt(nextNumber, 10) || 1)}
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">

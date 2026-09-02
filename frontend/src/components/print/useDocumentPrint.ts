@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { notify } from '../../components/ui/Toast';
 
 let printRootElement: HTMLElement | null = null;
 let printReactRoot: Root | null = null;

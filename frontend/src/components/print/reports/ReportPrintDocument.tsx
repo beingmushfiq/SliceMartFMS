@@ -1,4 +1,3 @@
-import React from 'react';
 import type { BusinessConfig } from '../../../lib/document/useBusinessConfig';
 import { formatDocumentDate } from '../../../lib/document/formatters';
 
@@ -19,7 +18,7 @@ export interface ReportPrintDocumentProps {
   filtersText?: string | undefined;
   generatedBy?: string | undefined;
   columns: ReportColumnDef[];
-  data: Record<string, any>[];
+  data: Record<string, unknown>[];
   summaryCards?: Array<{ label: string; value: string }> | undefined;
   orientation?: ('portrait' | 'landscape') | undefined;
 }

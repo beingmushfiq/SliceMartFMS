@@ -230,7 +230,7 @@ export function PaperSizesTab() {
               </label>
               <select
                 value={unit}
-                onChange={(e) => setUnit(e.target.value as any)}
+                onChange={(e) => setUnit(e.target.value as 'mm' | 'inch')}
                 className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs cursor-pointer"
               >
                 <option value="mm">Millimeters (mm)</option>
@@ -243,7 +243,7 @@ export function PaperSizesTab() {
               </label>
               <select
                 value={orientation}
-                onChange={(e) => setOrientation(e.target.value as any)}
+                onChange={(e) => setOrientation(e.target.value as 'portrait' | 'landscape')}
                 className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs cursor-pointer"
               >
                 <option value="portrait">Portrait</option>
@@ -252,27 +252,49 @@ export function PaperSizesTab() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-4 gap-2">
             <div>
-              <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                Left Margin (mm)
+              <label className="block text-[10px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                Top (mm)
+              </label>
+              <input
+                type="number"
+                value={marginTop}
+                onChange={(e) => setMarginTop(e.target.value)}
+                className="w-full px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                Bottom (mm)
+              </label>
+              <input
+                type="number"
+                value={marginBottom}
+                onChange={(e) => setMarginBottom(e.target.value)}
+                className="w-full px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                Left (mm)
               </label>
               <input
                 type="number"
                 value={marginLeft}
                 onChange={(e) => setMarginLeft(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs"
+                className="w-full px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                Right Margin (mm)
+              <label className="block text-[10px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                Right (mm)
               </label>
               <input
                 type="number"
                 value={marginRight}
                 onChange={(e) => setMarginRight(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs"
+                className="w-full px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs"
               />
             </div>
           </div>

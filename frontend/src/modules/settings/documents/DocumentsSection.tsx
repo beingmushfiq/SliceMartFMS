@@ -2,7 +2,7 @@
 // DOCUMENTS SECTION — Settings → Documents & Printing Workspace
 // ═══════════════════════════════════════════════════════════════════════════
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   FileText,
   Ruler,
@@ -10,7 +10,6 @@ import {
   Binary,
   Building2,
   History,
-  Sparkles,
 } from 'lucide-react';
 import { TemplatesTab } from './tabs/TemplatesTab';
 import { TemplateEditorTab } from './tabs/TemplateEditorTab';

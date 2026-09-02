@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { generateBarcodeSvg } from '../../../lib/barcode/engine';
 import type {
   BarcodeFieldOptions,

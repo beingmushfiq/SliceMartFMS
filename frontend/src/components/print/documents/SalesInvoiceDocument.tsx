@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import type { Invoice } from '../../../types/api/sales';
 import type { BusinessConfig } from '../../../lib/document/useBusinessConfig';
 import {
@@ -11,13 +11,20 @@ import { generateBarcodeSvg } from '../../../lib/barcode/engine';
 export interface SalesInvoiceDocumentProps {
   invoice: Invoice;
   businessConfig: BusinessConfig;
-  copyType?: 'ORIGINAL' | 'DUPLICATE' | 'ACCOUNTS COPY' | 'CUSTOMER COPY';
+  copyType?: 'ORIGINAL' | 'DUPLICATE' | 'ACCOUNTS COPY' | 'CUSTOMER COPY' | undefined;
+  signatureLabels?: {
+    preparedBy?: string | undefined;
+    checkedBy?: string | undefined;
+    authorizedBy?: string | undefined;
+    receiver?: string | undefined;
+  } | undefined;
 }
 
 export function SalesInvoiceDocument({
   invoice,
   businessConfig,
   copyType = 'ORIGINAL',
+  signatureLabels,
 }: SalesInvoiceDocumentProps) {
   const qrSvg = useMemo(() => {
     return generateBarcodeSvg({
@@ -39,8 +46,6 @@ export function SalesInvoiceDocument({
   }, [invoice.invoice_number]);
 
   const items = invoice.items ?? [];
-  const totalAmountNum = parseFloat(invoice.total_amount || '0');
-  const paidAmountNum = parseFloat(invoice.paid_amount || '0');
   const dueAmountNum = parseFloat(invoice.due_amount || '0');
 
   return (
@@ -298,22 +303,22 @@ export function SalesInvoiceDocument({
       <div className="grid grid-cols-4 gap-4 pt-12 mt-4 border-t border-slate-200 text-center text-[7.5pt] break-inside-avoid">
         <div>
           <div className="border-t border-slate-400 pt-1 font-semibold text-slate-800">
-            {businessConfig.signaturePreparedBy}
+            {signatureLabels?.preparedBy || businessConfig.signaturePreparedBy}
           </div>
         </div>
         <div>
           <div className="border-t border-slate-400 pt-1 font-semibold text-slate-800">
-            {businessConfig.signatureCheckedBy}
+            {signatureLabels?.checkedBy || businessConfig.signatureCheckedBy}
           </div>
         </div>
         <div>
           <div className="border-t border-slate-400 pt-1 font-semibold text-slate-800">
-            {businessConfig.signatureAuthorized}
+            {signatureLabels?.authorizedBy || businessConfig.signatureAuthorized}
           </div>
         </div>
         <div>
           <div className="border-t border-slate-400 pt-1 font-semibold text-slate-800">
-            {businessConfig.signatureReceiver}
+            {signatureLabels?.receiver || businessConfig.signatureReceiver}
           </div>
         </div>
       </div>

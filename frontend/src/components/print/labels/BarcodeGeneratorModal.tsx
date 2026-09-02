@@ -1,16 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Tag,
   Printer,
-  FileDown,
-  X,
-  Plus,
   Trash2,
-  Settings2,
   Sliders,
   CheckSquare,
   Square,
-  QrCode,
   Layers,
 } from 'lucide-react';
 import { Modal } from '../../ui/Modal';
