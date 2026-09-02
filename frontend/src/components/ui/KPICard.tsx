@@ -73,7 +73,7 @@ export function KPICard({
         whileTap: { scale: craft.pressScale },
       })}
       className={cn(
-        'group relative overflow-hidden rounded-xl p-5 bg-surface/90 border border-white/8 shadow-sm backdrop-blur-md transition-all duration-200 hover:border-indigo-500/30 hover:shadow-[0_0_25px_rgba(99,102,241,0.08)]',
+        'group relative overflow-hidden rounded-xl p-4 sm:p-5 bg-surface/90 border border-white/8 shadow-sm backdrop-blur-md transition-all duration-200 hover:border-indigo-500/30 hover:shadow-[0_0_25px_rgba(99,102,241,0.08)]',
         alert && alertBorder[alert],
         isClickable && 'cursor-pointer',
         className
@@ -90,9 +90,12 @@ export function KPICard({
         aria-hidden="true"
       />
 
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-col gap-1 min-w-0">
-          <span className="text-[11px] font-bold tracking-wider uppercase text-muted truncate">
+      <div className="flex items-start justify-between gap-2.5">
+        <div className="flex flex-col gap-1 min-w-0 flex-1">
+          <span
+            title={label}
+            className="text-xs font-semibold text-slate-600 dark:text-slate-400 tracking-tight leading-snug line-clamp-1 group-hover:text-default transition-colors"
+          >
             {label}
           </span>
 
@@ -113,7 +116,14 @@ export function KPICard({
             </m.span>
           )}
 
-          {subValue && <span className="text-xs text-muted font-medium mt-0.5">{subValue}</span>}
+          {subValue && (
+            <span
+              className="text-[11px] text-muted font-normal leading-snug line-clamp-1 mt-0.5"
+              title={subValue}
+            >
+              {subValue}
+            </span>
+          )}
         </div>
 
         {icon && (
@@ -122,7 +132,7 @@ export function KPICard({
             animate={{ scale: 1, opacity: 1 }}
             transition={{ ...enterBase, delay: index * stagger + 0.15 }}
             className={cn(
-              'size-10 rounded-xl flex items-center justify-center shrink-0 border border-white/8 shadow-sm transition-transform duration-200 group-hover:scale-110',
+              'size-8 rounded-xl flex items-center justify-center shrink-0 border border-white/8 shadow-sm transition-transform duration-200 group-hover:scale-110',
               iconColor ?? 'bg-surface-sunken text-muted'
             )}
           >
@@ -137,18 +147,18 @@ export function KPICard({
           animate={{ opacity: 1 }}
           transition={{ delay: index * stagger + 0.25 }}
           className={cn(
-            'flex items-center gap-1.5 text-xs font-semibold mt-3 pt-2.5 border-t border-white/5',
+            'flex items-center gap-1.5 text-xs font-semibold mt-3 pt-2.5 border-t border-white/5 min-w-0',
             delta > 0 ? 'text-emerald-400' : delta < 0 ? 'text-rose-400' : 'text-muted'
           )}
         >
           {delta > 0 ? (
-            <TrendingUp className="w-3.5 h-3.5" aria-hidden="true" />
+            <TrendingUp className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
           ) : delta < 0 ? (
-            <TrendingDown className="w-3.5 h-3.5" aria-hidden="true" />
+            <TrendingDown className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
           ) : (
-            <Minus className="w-3.5 h-3.5" aria-hidden="true" />
+            <Minus className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
           )}
-          <span>
+          <span className="truncate">
             {delta > 0 ? '+' : ''}
             {delta}%{deltaLabel && <span className="text-muted font-normal ml-1">· {deltaLabel}</span>}
           </span>

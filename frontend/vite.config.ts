@@ -5,6 +5,22 @@ import react from '@vitejs/plugin-react';
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-dom/client',
+      'react/jsx-runtime',
+      'react/jsx-dev-runtime',
+      'zustand',
+      'react-router-dom',
+      'sonner',
+      '@tanstack/react-query',
+      'lucide-react',
+      'clsx',
+      'tailwind-merge',
+    ],
+  },
   server: {
     port: 5173,
     proxy: {

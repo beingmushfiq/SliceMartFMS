@@ -20,6 +20,7 @@ import { OrderFraudVerificationWorkspace } from '../modules/ecommerce/OrderFraud
 import { SettingsCenterWorkspace } from '../modules/settings/SettingsCenterWorkspace';
 import { TenantRoleDashboard } from '../pages/dashboard/TenantRoleDashboard';
 import { ProfileSettingsWorkspace } from '../pages/settings/ProfileSettingsWorkspace';
+import { OnboardingWizard } from '../modules/platform/OnboardingWizard';
 
 // Master SaaS Platform Admin imports
 import { PlatformProtectedRoute } from '../components/platform/PlatformProtectedRoute';
@@ -270,6 +271,10 @@ export const router = createBrowserRouter([
           {
             path: 'settings/profile',
             element: <ProfileSettingsWorkspace />,
+          },
+          {
+            path: 'onboarding',
+            element: <OnboardingWizard />,
           },
           {
             path: 'settings/:group',

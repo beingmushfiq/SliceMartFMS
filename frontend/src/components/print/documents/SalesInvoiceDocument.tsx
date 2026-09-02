@@ -249,7 +249,7 @@ export function SalesInvoiceDocument({
 
           <div className="pt-2">
             <div
-              className="max-w-[200px]"
+              className="max-w-50"
               dangerouslySetInnerHTML={{ __html: barcodeSvg }}
             />
           </div>

@@ -13,7 +13,6 @@ import {
   Info,
   CheckCircle2,
   Search,
-  Activity,
   Zap,
   User,
 } from 'lucide-react';
@@ -154,27 +153,6 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
         >
           <Menu className="size-5" />
         </button>
-
-        {/* Live Factory Line Status Pills (Desktop) */}
-        <div className="hidden xl:flex items-center gap-2">
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
-            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-semibold">Line 01 (Cut):</span>
-            <span>Running (98.4%)</span>
-          </div>
-
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[11px] font-medium text-blue-700 dark:text-blue-300">
-            <span className="size-1.5 rounded-full bg-blue-500 animate-pulse" />
-            <span className="font-semibold">Line 02 (Sew):</span>
-            <span>Batch PB-042</span>
-          </div>
-
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[11px] font-medium text-amber-700 dark:text-amber-300">
-            <Activity className="size-3" />
-            <span className="font-semibold">QC Gate:</span>
-            <span>Active</span>
-          </div>
-        </div>
 
         {/* Branch Selector Dropdown */}
         {branches && branches.length > 0 && (

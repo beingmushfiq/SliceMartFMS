@@ -1,4 +1,5 @@
 # Document Template & Layout Customization Guide
+
 **Document Identifier:** `DOC-GUIDE-2026-001`  
 **Location in ERP:** `Settings → Documents & Printing`  
 
@@ -6,9 +7,10 @@
 
 ## 1. Introduction
 
-The SliceMart FMS Centralized Document Engine decouples business data generation from physical output presentation. 
+The SliceMart FMS Centralized Document Engine decouples business data generation from physical output presentation.
 
-### Supported Document Types:
+### Supported Document Types
+
 1. **Sales Tax Invoice (`sales_invoice`)**: Multi-item commercial tax invoices with VAT breakdown, amount in words, and authorized signature blocks.
 2. **Delivery Challan (`delivery_challan`)**: Dispatch waybills containing vehicle number, driver details, packaging counts, and gate pass acknowledgements.
 3. **Purchase Order (`purchase_order`)**: Vendor procurement orders with terms and delivery deadlines.
@@ -26,7 +28,8 @@ The SliceMart FMS Centralized Document Engine decouples business data generation
 
 Navigate to **Settings → Documents & Printing → Document Templates** and click **Customize** on any template.
 
-### Builder Features:
+### Builder Features
+
 - **Left Panel (Parameters)**:
   - **Setup**: Template title, associated document type, physical paper size, and default profile.
   - **Fields & Layout**: Toggle logo, SKU, batch numbers, discount breakdown, VAT amount, and QR verification codes.

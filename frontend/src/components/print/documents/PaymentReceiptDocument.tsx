@@ -72,7 +72,7 @@ export function PaymentReceiptDocument({ payment, businessConfig }: PaymentRecei
 
         <div className="flex items-center justify-between border-b border-slate-200 pb-2">
           <span className="text-slate-600">The sum of amount:</span>
-          <span className="font-mono font-black text-slate-950 text-[11pt] text-emerald-800">
+          <span className="font-mono font-black text-[11pt] text-emerald-800">
             {formatCurrency(payment.amount, payment.currency_code === 'BDT' ? '৳' : payment.currency_code)}
           </span>
         </div>
@@ -114,7 +114,7 @@ export function PaymentReceiptDocument({ payment, businessConfig }: PaymentRecei
         <div className="text-[7.5pt] text-slate-500 italic max-w-sm">
           * Subject to realization in case of Cheque/Demand Draft. Computer generated receipt.
         </div>
-        <div className="max-w-[200px]" dangerouslySetInnerHTML={{ __html: barcodeSvg }} />
+        <div className="max-w-50" dangerouslySetInnerHTML={{ __html: barcodeSvg }} />
       </div>
 
       {/* Signatures */}

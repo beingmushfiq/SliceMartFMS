@@ -45,6 +45,7 @@ import {
   Check,
   AlertTriangle,
   CircleCheckBig,
+  Boxes,
 } from 'lucide-react';
 import { m, AnimatePresence } from 'framer-motion';
 import { api } from '../../lib/api/client';
@@ -56,6 +57,10 @@ import { Badge, StatusBadge } from '../../components/ui/Badge';
 import { Input, Select, SearchInput, FormGroup } from '../../components/ui/FormElements';
 import { notify } from '../../components/ui/Toast';
 import { DocumentsSection } from './documents/DocumentsSection';
+import { ModuleManagerSection } from './sections/ModuleManagerSection';
+import { ProductionStagesSection } from './sections/ProductionStagesSection';
+import { CustomFieldsManagerSection } from './sections/CustomFieldsManagerSection';
+import { TerminologySection } from './sections/TerminologySection';
 import type {
   SettingsSchemaDictionary,
   SettingItem,
@@ -65,6 +70,10 @@ import type { TenantDomainRecord } from '../../types/api/domains';
 
 const GROUP_ICONS: Record<string, React.ElementType> = {
   general: Building2,
+  modules: Boxes,
+  terminology: FileSpreadsheet,
+  production_stages: Factory,
+  custom_fields: Sparkles,
   documents: FileSpreadsheet,
   production: Factory,
   inventory: Package,
@@ -85,6 +94,10 @@ const GROUP_ICONS: Record<string, React.ElementType> = {
 };
 
 const CATEGORIES = [
+  {
+    name: 'Universal Architecture & Config',
+    groups: ['modules', 'terminology', 'production_stages', 'custom_fields'],
+  },
   {
     name: 'Enterprise Core',
     groups: ['general', 'documents', 'security', 'notifications', 'reports'],
@@ -283,6 +296,11 @@ export const SettingsCenterWorkspace: React.FC = () => {
   }, []);
 
   const loadGroupSettings = useCallback(async (group: string) => {
+    if (['modules', 'terminology', 'production_stages', 'custom_fields', 'documents'].includes(group)) {
+      setLoading(false);
+      return;
+    }
+
     if (group === 'custom_domains') {
       await loadDomains();
       return;
@@ -640,7 +658,19 @@ export const SettingsCenterWorkspace: React.FC = () => {
               transition={enterFast}
               className="bg-surface rounded-(--card-radius) border border-default shadow-(--card-shadow) p-6 space-y-6"
             >
-              {activeGroup === 'documents' ? (
+              {activeGroup === 'modules' ? (
+                /* Dynamic Module Ecosystem Activation */
+                <ModuleManagerSection />
+              ) : activeGroup === 'terminology' ? (
+                /* Dynamic Vocabulary & Terminology */
+                <TerminologySection />
+              ) : activeGroup === 'production_stages' ? (
+                /* Dynamic Production Stages & Routing */
+                <ProductionStagesSection />
+              ) : activeGroup === 'custom_fields' ? (
+                /* Custom Attributes & Extended Metadata */
+                <CustomFieldsManagerSection />
+              ) : activeGroup === 'documents' ? (
                 /* Centralized Document Templates & Printing Infrastructure */
                 <DocumentsSection />
               ) : activeGroup === 'custom_domains' ? (

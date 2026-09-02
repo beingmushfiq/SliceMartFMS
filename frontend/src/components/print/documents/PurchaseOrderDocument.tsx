@@ -163,7 +163,7 @@ export function PurchaseOrderDocument({ po, businessConfig }: PurchaseOrderDocum
               <p>{po.notes}</p>
             </div>
           )}
-          <div className="pt-2 max-w-[200px]" dangerouslySetInnerHTML={{ __html: barcodeSvg }} />
+          <div className="pt-2 max-w-50" dangerouslySetInnerHTML={{ __html: barcodeSvg }} />
         </div>
 
         <div className="col-span-5 border border-slate-300 rounded-lg overflow-hidden text-[8.5pt]">

@@ -151,6 +151,42 @@ final class TenantContext
         return $this->tenant['status'] === 'past_due';
     }
 
+    /**
+     * Business types configured for the tenant.
+     *
+     * @return list<string>
+     */
+    public function businessTypes(): array
+    {
+        $raw = $this->tenant['business_type_keys'] ?? null;
+        if (is_string($raw)) {
+            return (array) json_decode($raw, true);
+        }
+        return is_array($raw) ? $raw : ['manufacturing'];
+    }
+
+    /**
+     * Industry profile key configured for the tenant.
+     */
+    public function industryProfileKey(): ?string
+    {
+        return $this->tenant['industry_profile_key'] ?? null;
+    }
+
+    /**
+     * Terminology dictionary configured for the tenant.
+     *
+     * @return array<string, string>
+     */
+    public function terminology(): array
+    {
+        $raw = $this->tenant['terminology'] ?? null;
+        if (is_string($raw)) {
+            return (array) json_decode($raw, true);
+        }
+        return is_array($raw) ? $raw : [];
+    }
+
     // -------------------------------------------------------------------------
     // Scope accessors
     // -------------------------------------------------------------------------

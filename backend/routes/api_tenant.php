@@ -799,4 +799,42 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                     ->name('store');
             });
         });
+
+        // ── Platform Capability & Dynamic Tenant Configuration ────────
+        Route::prefix('tenant')->name('tenant.config.')->group(static function (): void {
+            // Capability Manifest (cached 5 min per tenant)
+            Route::get('manifest', [\App\Modules\Platform\Controllers\TenantCapabilityController::class, 'manifest'])->name('manifest');
+
+            // Dynamic Modules Enable/Disable
+            Route::get('modules', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'index'])->name('modules.index');
+            Route::put('modules/batch', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'batchUpdate'])->name('modules.batch');
+            Route::put('modules/{moduleKey}', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'update'])->name('modules.update');
+
+            // Dynamic Production Stages
+            Route::get('production-stages', [\App\Modules\Platform\Controllers\TenantProductionStageController::class, 'index'])->name('production-stages.index');
+            Route::post('production-stages', [\App\Modules\Platform\Controllers\TenantProductionStageController::class, 'store'])->name('production-stages.store');
+            Route::post('production-stages/reorder', [\App\Modules\Platform\Controllers\TenantProductionStageController::class, 'reorder'])->name('production-stages.reorder');
+            Route::put('production-stages/{id}', [\App\Modules\Platform\Controllers\TenantProductionStageController::class, 'update'])->name('production-stages.update');
+            Route::delete('production-stages/{id}', [\App\Modules\Platform\Controllers\TenantProductionStageController::class, 'destroy'])->name('production-stages.destroy');
+
+            // Custom Field Definitions
+            Route::get('custom-fields', [\App\Modules\Platform\Controllers\CustomFieldDefinitionController::class, 'index'])->name('custom-fields.index');
+            Route::post('custom-fields', [\App\Modules\Platform\Controllers\CustomFieldDefinitionController::class, 'store'])->name('custom-fields.store');
+            Route::put('custom-fields/{id}', [\App\Modules\Platform\Controllers\CustomFieldDefinitionController::class, 'update'])->name('custom-fields.update');
+            Route::delete('custom-fields/{id}', [\App\Modules\Platform\Controllers\CustomFieldDefinitionController::class, 'destroy'])->name('custom-fields.destroy');
+
+            // Industry Profile & Terminology Overrides
+            Route::post('apply-industry-profile', [\App\Modules\Platform\Controllers\IndustryProfileController::class, 'applyProfile'])->name('apply-profile');
+            Route::patch('terminology', [\App\Modules\Platform\Controllers\IndustryProfileController::class, 'updateTerminology'])->name('terminology.update');
+
+            // 10-Step Onboarding Engine
+            Route::get('onboarding/state', [\App\Modules\Platform\Controllers\TenantOnboardingController::class, 'state'])->name('onboarding.state');
+            Route::post('onboarding/step', [\App\Modules\Platform\Controllers\TenantOnboardingController::class, 'saveStep'])->name('onboarding.step');
+            Route::post('onboarding/complete', [\App\Modules\Platform\Controllers\TenantOnboardingController::class, 'complete'])->name('onboarding.complete');
+        });
+
+        // Industry Profiles & Business Types catalog
+        Route::get('industry-profiles', [\App\Modules\Platform\Controllers\IndustryProfileController::class, 'index'])->name('industry-profiles.index');
+        Route::get('industry-profiles/{key}', [\App\Modules\Platform\Controllers\IndustryProfileController::class, 'show'])->name('industry-profiles.show');
+        Route::get('business-types', [\App\Modules\Platform\Controllers\IndustryProfileController::class, 'businessTypes'])->name('business-types.index');
     });

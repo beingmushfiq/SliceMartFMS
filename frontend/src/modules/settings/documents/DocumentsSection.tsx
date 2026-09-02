@@ -65,7 +65,7 @@ export function DocumentsSection() {
   return (
     <div className="space-y-6">
       {/* Workspace Header banner */}
-      <div className="rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900/90 to-primary/10 p-5">
+      <div className="rounded-2xl border border-slate-800 bg-linear-to-r from-slate-900 via-slate-900/90 to-primary/10 p-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
             <div className="flex size-11 items-center justify-center rounded-xl bg-primary/20 text-primary border border-primary/30 shadow-inner">

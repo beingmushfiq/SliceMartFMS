@@ -96,6 +96,8 @@ interface ModalProps {
   onClose: () => void;
   /** Dialog accessible name. Also rendered as the visible h2 header. */
   title: string;
+  subtitle?: string;
+  icon?: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -112,6 +114,8 @@ export function Modal({
   open,
   onClose,
   title,
+  subtitle,
+  icon,
   children,
   footer,
   size = 'md',
@@ -206,13 +210,12 @@ export function Modal({
       <AnimatePresence>
         {open && (
           <div
-            className="fixed inset-0 z-(--z-overlay) flex items-center justify-center"
+            className="fixed inset-0 z-(--z-overlay) flex items-center justify-center p-4 sm:p-6"
             data-modal="true"
           >
-            {/* §4.2 defect 11 — z-(--z-overlay) on scrim, z-(--z-modal) on panel.
-                §10.2 — bg-overlay for the scrim colour. */}
+            {/* Scrim with Frosted Blur */}
             <m.div
-              className="fixed inset-0 bg-overlay"
+              className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs"
               variants={scrimVariants}
               initial="hidden"
               animate="visible"
@@ -221,9 +224,7 @@ export function Modal({
               aria-hidden="true"
             />
 
-            {/* §4.2 defect 11 — z-(--z-modal) on panel.
-                §10.2 defect 3 — no re-implemented focus ring: base.css
-                provides :focus-visible globally. */}
+            {/* Modal Dialog Panel */}
             <m.div
               ref={dialogRef}
               role="dialog"
@@ -231,10 +232,11 @@ export function Modal({
               aria-labelledby={titleId}
               tabIndex={-1}
               className={cn(
-                'relative z-(--z-modal) max-h-(--modal-max-height) overflow-y-auto',
-                'rounded-(--modal-radius) p-(--modal-padding)',
-                'bg-surface-raised shadow-overlay',
-                'outline-none',
+                'relative z-(--z-modal) max-h-[92vh] overflow-y-auto w-full',
+                'rounded-2xl p-5 sm:p-6',
+                'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100',
+                'border border-slate-200 dark:border-slate-800 shadow-2xl',
+                'outline-none transition-all',
                 sizeMap[size],
                 className
               )}
@@ -243,18 +245,34 @@ export function Modal({
               animate="visible"
               exit="hidden"
             >
-              {/* Header — hidden when hideHeader is true (ConfirmDialog renders
-                  its own heading inside the body, but title still provides the
-                  accessible name via the sr-only h2 below). */}
+              {/* Top Linear Gradient Glow Accent */}
+              <div
+                className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-linear-to-r from-primary via-indigo-500 to-emerald-500 rounded-t-2xl"
+                aria-hidden="true"
+              />
+
+              {/* Header */}
               {!hideHeader && (
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 id={titleId} className="text-md font-semibold text-default">
-                    {title}
-                  </h2>
+                <div className="mb-5 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3.5">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {icon && (
+                      <div className="size-8.5 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0 shadow-xs">
+                        {icon}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <h2 id={titleId} className="text-base font-bold text-slate-900 dark:text-white tracking-tight truncate">
+                        {title}
+                      </h2>
+                      {subtitle && (
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{subtitle}</p>
+                      )}
+                    </div>
+                  </div>
                   <button
                     type="button"
                     onClick={onClose}
-                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted transition-token-colors hover:bg-surface-sunken hover:text-default focus-visible:ring-focus"
+                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
                     aria-label="Close modal"
                   >
                     <X className="size-4" aria-hidden="true" />

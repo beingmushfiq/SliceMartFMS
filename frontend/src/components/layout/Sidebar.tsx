@@ -1,218 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  Boxes,
-  Building2,
-  ClipboardList,
-  Coins,
-  Factory,
-  FileSpreadsheet,
-  LayoutDashboard,
-  Microscope,
   Search,
-  Settings,
-  Shield,
-  ShieldCheck,
-  ShoppingBag,
-  ShoppingCart,
-  Store,
-  Truck,
-  Users,
-  Warehouse,
-  Activity,
   Layers,
 } from 'lucide-react';
 import { useAuthStore } from '../../lib/auth/authStore';
+import { useTenantCapabilityStore } from '../../lib/capabilities/tenantCapabilityStore';
+import { buildDynamicNavSections } from '../../lib/capabilities/navRegistry';
 import { cn } from '../../lib/utils';
-
-interface NavItem {
-  label: string;
-  to: string;
-  icon: typeof LayoutDashboard;
-  permission?: string | string[];
-  badge?: string;
-  badgeTone?: 'primary' | 'success' | 'amber' | 'neutral';
-}
-
-interface NavSection {
-  title: string;
-  items: NavItem[];
-}
-
-const navSections: NavSection[] = [
-  {
-    title: 'Operations & Execution',
-    items: [
-      {
-        label: 'Operations Dashboard',
-        to: '/dashboard',
-        icon: LayoutDashboard,
-      },
-      {
-        label: 'Catalogue & Master',
-        to: '/catalogue',
-        icon: Boxes,
-        permission: [
-          'catalog.product.view',
-          'catalog.unit.view',
-          'catalog.category.view',
-          'catalog.brand.view',
-          'catalog.bom.view',
-          'catalog.party.view',
-          'inventory.warehouse.view',
-        ],
-      },
-      {
-        label: 'Production Chain',
-        to: '/production',
-        icon: Factory,
-        permission: ['production.batch.view', 'production.plan.view', 'production.worker_entry.view'],
-      },
-      {
-        label: 'Quality Control (QC)',
-        to: '/qc',
-        icon: Microscope,
-        permission: ['qc.inspection.view', 'qc.parameter.view', 'qc.wastage.view'],
-      },
-      {
-        label: 'Stock & Inventory',
-        to: '/inventory',
-        icon: Warehouse,
-        permission: [
-          'inventory.stock.view',
-          'inventory.warehouse.view',
-          'inventory.movement.view',
-          'inventory.transfer.view',
-          'inventory.count.view',
-        ],
-      },
-    ],
-  },
-  {
-    title: 'Commerce & Supply Hub',
-    items: [
-      {
-        label: 'Point of Sale (POS)',
-        to: '/pos',
-        icon: ShoppingCart,
-        permission: ['pos.terminal.view', 'pos.session.view', 'pos.sale.create'],
-        badge: 'Fast',
-        badgeTone: 'primary',
-      },
-      {
-        label: 'Storefront CMS',
-        to: '/storefront',
-        icon: Store,
-        permission: ['ecommerce.storefront.view', 'ecommerce.storefront.manage'],
-        badge: 'Live',
-        badgeTone: 'success',
-      },
-      {
-        label: 'Sales & Invoices',
-        to: '/sales',
-        icon: ShoppingBag,
-        permission: [
-          'sales.order.view',
-          'sales.invoice.view',
-          'sales.lead.view',
-          'sales.return.view',
-        ],
-      },
-      {
-        label: 'Procurement (PO)',
-        to: '/purchasing',
-        icon: ClipboardList,
-        permission: [
-          'purchasing.order.view',
-          'purchasing.requisition.view',
-          'purchasing.grn.view',
-          'purchasing.bill.view',
-          'purchasing.return.view',
-        ],
-      },
-      {
-        label: 'Logistics & 3PL Courier',
-        to: '/logistics',
-        icon: Truck,
-        permission: [
-          'logistics.delivery_order.view',
-          'logistics.run_sheet.view',
-          'logistics.shipment.view',
-          'logistics.cod.view',
-        ],
-      },
-    ],
-  },
-  {
-    title: 'Finance & Workforce',
-    items: [
-      {
-        label: 'Finance & Accounts',
-        to: '/finance',
-        icon: Coins,
-        permission: [
-          'finance.account.view',
-          'finance.journal.view',
-          'finance.expense.view',
-          'finance.bank.view',
-          'finance.costing.view',
-        ],
-      },
-      {
-        label: 'Fixed Assets',
-        to: '/assets',
-        icon: Building2,
-        permission: ['assets.asset.view', 'assets.maintenance.view'],
-      },
-      {
-        label: 'Workforce & HR',
-        to: '/hr',
-        icon: Users,
-        permission: [
-          'hr.employee.view',
-          'hr.attendance.view',
-          'hr.leave.view',
-          'hr.payroll.view',
-          'hr.payslip.view',
-        ],
-      },
-    ],
-  },
-  {
-    title: 'Intelligence & System',
-    items: [
-      {
-        label: 'Reports & BI (RMS)',
-        to: '/reports',
-        icon: FileSpreadsheet,
-        permission: [
-          'reports.report.view',
-          'reports.dashboard.view',
-          'reports.analytics.view',
-          'reports.definition.view',
-        ],
-      },
-      {
-        label: 'Roles & RBAC',
-        to: '/settings/roles',
-        icon: Shield,
-        permission: ['core.role.view', 'core.role.manage', 'core.permission.view'],
-      },
-      {
-        label: 'Activity Log & Diffs',
-        to: '/activity-logs',
-        icon: ShieldCheck,
-        permission: ['core.audit_log.view'],
-      },
-      {
-        label: 'Settings Center',
-        to: '/settings',
-        icon: Settings,
-        permission: ['core.setting.view', 'core.setting.manage', 'core.setting.configure'],
-      },
-    ],
-  },
-];
 
 interface SidebarProps {
   isOpen: boolean;
@@ -222,8 +17,27 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const hasPermission = useAuthStore((state) => state.hasPermission);
   const tenant = useAuthStore((state) => state.tenant);
-  const activeBranch = useAuthStore((state) => state.activeBranch);
+  const isModuleEnabled = useTenantCapabilityStore((state) => state.isModuleEnabled);
+  const getTerm = useTenantCapabilityStore((state) => state.getTerm);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const navSections = useMemo(
+    () => buildDynamicNavSections(isModuleEnabled, hasPermission, getTerm),
+    [isModuleEnabled, hasPermission, getTerm]
+  );
+
+  const tenantName = tenant?.name;
+  const tenantDisplayName = tenantName || 'Production Cloud';
+  const tenantShortBadge = useMemo(() => {
+    if (!tenantName) return 'ERP';
+    const words = tenantName.trim().split(/\s+/);
+    const first = words[0];
+    const second = words[1];
+    if (words.length > 1 && first && second && first[0] && second[0]) {
+      return (first[0] + second[0]).toUpperCase();
+    }
+    return 'ERP';
+  }, [tenantName]);
 
   return (
     <>
@@ -266,16 +80,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="font-bold tracking-tight text-default text-sm truncate font-sans">
-                  SliceMart
+                  {tenantDisplayName}
                 </span>
                 <span className="inline-flex items-center rounded-md bg-indigo-500/15 px-1.5 py-0.5 text-[9px] font-bold text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 tracking-wider uppercase font-mono">
-                  FMS
+                  {tenantShortBadge}
                 </span>
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="text-[10px] font-medium text-muted truncate flex items-center gap-1">
                   <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
-                  {tenant?.name || 'Production Cloud'}
+                  Production Workspace
                 </span>
               </div>
             </div>
@@ -374,34 +188,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             );
           })}
         </nav>
-
-        {/* Footer Operator Telemetry Hub */}
-        <div className="border-t border-(--nav-border) p-3 shrink-0 bg-(--nav-bg-deep)">
-          <div className="rounded-xl p-2.5 border border-(--nav-border) bg-(--nav-bg) text-left hover:border-primary/40 transition-colors shadow-xs">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="size-7 rounded-lg bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-300 shrink-0">
-                  <Activity className="size-3.5" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-[11px] font-semibold text-default truncate">
-                    {activeBranch?.name || 'Dhaka Central Plant'}
-                  </div>
-                  <div className="text-[9px] text-muted truncate flex items-center gap-1 font-mono">
-                    <span className="size-1 rounded-full bg-emerald-500" />
-                    <span>Shift A · Active</span>
-                  </div>
-                </div>
-              </div>
-              <span className="inline-flex items-center justify-center size-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-            </div>
-
-            <div className="mt-2 pt-2 border-t border-(--nav-border) flex items-center justify-between text-[10px] text-muted font-mono">
-              <span>SaaS Core v2.6.4</span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-medium">99.99% Uptime</span>
-            </div>
-          </div>
-        </div>
       </aside>
     </>
   );

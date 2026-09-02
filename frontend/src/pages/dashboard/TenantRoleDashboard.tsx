@@ -14,7 +14,8 @@ import {
   Sparkles,
   FileSpreadsheet,
   Activity,
-  RefreshCw,
+  ChevronDown,
+  ChevronUp,
   AlertTriangle,
   ShieldAlert,
   X,
@@ -34,12 +35,13 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { m } from 'framer-motion';
 import { useAuthStore } from '../../lib/auth/authStore';
+import { useTenantCapabilityStore } from '../../lib/capabilities/tenantCapabilityStore';
 import { KPICard } from '../../components/ui/KPICard';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { enterBase } from '../../lib/motion/tokens';
+import { m } from 'framer-motion';
 
 const YIELD_DATA = [
   { day: 'Mon', output: 1420, target: 1350, scrap: 14, yieldPct: 98.4 },
@@ -133,41 +135,19 @@ const INITIAL_NOTICES: NoticeItem[] = [
 ];
 
 export const TenantRoleDashboard: React.FC = () => {
-  const { user, tenant, activeBranch, hasPermission } = useAuthStore();
+  const { user, tenant } = useAuthStore();
+  const isModuleEnabled = useTenantCapabilityStore((state) => state.isModuleEnabled);
+  const getTerm = useTenantCapabilityStore((state) => state.getTerm);
+  const manifest = useTenantCapabilityStore((state) => state.manifest);
+  const currency = manifest?.currency_code === 'USD' ? '$' : manifest?.currency_code === 'EUR' ? '€' : '৳';
+
   const [activeActivityFilter, setActiveActivityFilter] = useState<'all' | 'production' | 'qc' | 'sales'>('all');
-  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date());
-  const [isSyncing, setIsSyncing] = useState(false);
   const [notices, setNotices] = useState<NoticeItem[]>(INITIAL_NOTICES);
+  const [isNoticesExpanded, setIsNoticesExpanded] = useState(true);
 
   const dismissNotice = (id: string) => {
     setNotices((prev) => prev.filter((n) => n.id !== id));
   };
-
-  const handleManualSync = () => {
-    setIsSyncing(true);
-    setTimeout(() => {
-      setLastRefreshedAt(new Date());
-      setIsSyncing(false);
-    }, 600);
-  };
-
-  // Role persona detection
-  const isSuperOrAdmin =
-    hasPermission('platform.tenant.manage') ||
-    (hasPermission('production.batch.manage') && hasPermission('sales.order.manage'));
-  const isProductionLead = hasPermission('production.batch.view') || hasPermission('production.plan.view');
-  const isQcInspector = hasPermission('qc.inspection.view') || hasPermission('qc.inspection.manage');
-  const isInventoryClerk = hasPermission('inventory.stock.view') || hasPermission('inventory.transfer.manage');
-  const isSalesOfficer = hasPermission('sales.order.view') || hasPermission('pos.sales.view');
-  const isFinanceOfficer = hasPermission('finance.gl.view') || hasPermission('finance.invoice.manage');
-
-  let roleTitle = 'Operations Associate';
-  if (isSuperOrAdmin) roleTitle = 'Factory GM / Enterprise Admin';
-  else if (isProductionLead) roleTitle = 'Production Line Lead';
-  else if (isQcInspector) roleTitle = 'Quality Assurance Inspector';
-  else if (isInventoryClerk) roleTitle = 'Inventory & Warehouse Manager';
-  else if (isSalesOfficer) roleTitle = 'Commercial & POS Lead';
-  else if (isFinanceOfficer) roleTitle = 'Finance & Accounts Controller';
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto py-1">
@@ -188,31 +168,7 @@ export const TenantRoleDashboard: React.FC = () => {
         />
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-subtle px-3 py-0.5 text-xs font-semibold text-primary border border-primary/30 shadow-xs">
-                <Sparkles className="size-3" />
-                {roleTitle}
-              </span>
-              {activeBranch && (
-                <span className="inline-flex items-center rounded-full bg-surface-sunken px-3 py-0.5 text-xs font-medium text-muted border border-default">
-                  📍 {activeBranch.name}
-                </span>
-              )}
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-2xs font-semibold text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Shift A Active • Factory Line 100% Operational
-              </span>
-              <button
-                onClick={handleManualSync}
-                className="inline-flex items-center gap-1 text-[11px] font-mono text-muted hover:text-default transition-colors px-2 py-0.5 rounded bg-surface-sunken border border-default cursor-pointer"
-                title="Click to sync factory telemetry"
-              >
-                <RefreshCw className={`size-3 text-primary ${isSyncing ? 'animate-spin' : ''}`} />
-                <span>{lastRefreshedAt.toLocaleTimeString()}</span>
-              </button>
-            </div>
-
+          <div className="space-y-2">
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-default font-sans">
               Welcome, {user?.name || 'Operator'} • {tenant?.name || 'SliceMart Ltd'}
             </h1>
@@ -223,24 +179,30 @@ export const TenantRoleDashboard: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <Link to="/pos">
-              <Button variant="primary" size="md" className="shadow-md shadow-emerald-600/20 text-xs">
-                <ShoppingCart className="size-3.5 mr-1.5" />
-                Launch POS Register
-              </Button>
-            </Link>
-            <Link to="/production">
-              <Button variant="secondary" size="md" className="border border-default text-xs">
-                <Factory className="size-3.5 mr-1.5 text-emerald-500" />
-                Production Batches
-              </Button>
-            </Link>
-            <Link to="/storefront">
-              <Button variant="secondary" size="md" className="border border-default text-xs">
-                <Globe className="size-3.5 mr-1.5 text-blue-500" />
-                Storefront CMS
-              </Button>
-            </Link>
+            {isModuleEnabled('pos') && (
+              <Link to="/pos">
+                <Button variant="primary" size="md" className="shadow-md shadow-emerald-600/20 text-xs">
+                  <ShoppingCart className="size-3.5 mr-1.5" />
+                  Launch POS Register
+                </Button>
+              </Link>
+            )}
+            {isModuleEnabled('production') && (
+              <Link to="/production">
+                <Button variant="secondary" size="md" className="border border-default text-xs">
+                  <Factory className="size-3.5 mr-1.5 text-emerald-500" />
+                  {getTerm('production', 'Production')} Batches
+                </Button>
+              </Link>
+            )}
+            {isModuleEnabled('ecommerce') && (
+              <Link to="/storefront">
+                <Button variant="secondary" size="md" className="border border-default text-xs">
+                  <Globe className="size-3.5 mr-1.5 text-blue-500" />
+                  Storefront CMS
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </m.div>
@@ -255,15 +217,33 @@ export const TenantRoleDashboard: React.FC = () => {
                 Operational Alerts & Action Notices ({notices.length})
               </h2>
             </div>
-            <button
-              onClick={() => setNotices([])}
-              className="text-[11px] text-muted hover:text-default underline cursor-pointer"
-            >
-              Dismiss all
-            </button>
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsNoticesExpanded(!isNoticesExpanded)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-default hover:text-primary bg-surface-raised border border-default hover:bg-surface-sunken transition-token-colors cursor-pointer shadow-2xs"
+                title={isNoticesExpanded ? 'Collapse notices' : 'Expand notices'}
+                aria-expanded={isNoticesExpanded}
+              >
+                <span>{isNoticesExpanded ? 'Collapse' : 'Expand'}</span>
+                {isNoticesExpanded ? (
+                  <ChevronUp className="size-3.5 text-muted" aria-hidden="true" />
+                ) : (
+                  <ChevronDown className="size-3.5 text-muted" aria-hidden="true" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setNotices([])}
+                className="text-[11px] text-muted hover:text-default underline cursor-pointer"
+              >
+                Dismiss all
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-2.5">
+          {isNoticesExpanded && (
+            <div className="grid grid-cols-1 gap-2.5">
             {notices.map((notice) => (
               <div
                 key={notice.id}
@@ -307,78 +287,91 @@ export const TenantRoleDashboard: React.FC = () => {
               </div>
             ))}
           </div>
+          )}
         </div>
       )}
 
-      {/* 6 Executive Real-Time KPI Cards Deck */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <KPICard
-          label="Today's Factory Output"
-          value="1,720 pcs"
-          subValue="Target: 1,600 pcs (107.5%)"
-          delta={7.5}
-          deltaLabel="vs schedule"
-          icon={<Factory className="size-4 text-emerald-500" />}
-          iconColor="bg-emerald-500/15"
-          alert="success"
-          index={0}
-        />
+      {/* Executive Real-Time KPI Cards Deck */}
+      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        {isModuleEnabled('production') && (
+          <KPICard
+            label={`${getTerm('production', 'Factory')} Output`}
+            value="1,720 pcs"
+            subValue="Target: 1,600 pcs"
+            delta={7.5}
+            deltaLabel="vs schedule"
+            icon={<Factory className="size-4 text-emerald-500" />}
+            iconColor="bg-emerald-500/15"
+            alert="success"
+            index={0}
+          />
+        )}
 
-        <KPICard
-          label="Today's Omnichannel Gross"
-          value="৳ 211,100"
-          subValue="ERP + POS + Storefront"
-          delta={16.8}
-          deltaLabel="vs daily avg"
-          icon={<CreditCard className="size-4 text-indigo-500" />}
-          iconColor="bg-indigo-500/15"
-          index={1}
-        />
+        {isModuleEnabled('sales') && (
+          <KPICard
+            label="Gross Revenue"
+            value={`${currency} 211,100`}
+            subValue="Omnichannel Stream"
+            delta={16.8}
+            deltaLabel="vs daily avg"
+            icon={<CreditCard className="size-4 text-indigo-500" />}
+            iconColor="bg-indigo-500/15"
+            index={1}
+          />
+        )}
 
-        <KPICard
-          label="Quality First-Pass Yield"
-          value="99.2%"
-          subValue="Scrap loss: 0.8% (Target < 2%)"
-          delta={0.4}
-          deltaLabel="vs standard"
-          icon={<Microscope className="size-4 text-emerald-500" />}
-          iconColor="bg-emerald-500/15"
-          alert="success"
-          index={2}
-        />
+        {isModuleEnabled('qc') && (
+          <KPICard
+            label="Quality Pass Rate"
+            value="99.2%"
+            subValue="0.8% scrap loss"
+            delta={0.4}
+            deltaLabel="vs standard"
+            icon={<Microscope className="size-4 text-emerald-500" />}
+            iconColor="bg-emerald-500/15"
+            alert="success"
+            index={2}
+          />
+        )}
 
-        <KPICard
-          label="Online Storefront Orders"
-          value="28 orders"
-          subValue="৳ 38.4k volume today"
-          delta={24.0}
-          deltaLabel="conversion: 4.2%"
-          icon={<ShoppingBag className="size-4 text-purple-500" />}
-          iconColor="bg-purple-500/15"
-          index={3}
-        />
+        {isModuleEnabled('ecommerce') && (
+          <KPICard
+            label="Storefront Orders"
+            value="28 orders"
+            subValue={`${currency} 38.4k gross today`}
+            delta={24.0}
+            deltaLabel="conversion: 4.2%"
+            icon={<ShoppingBag className="size-4 text-purple-500" />}
+            iconColor="bg-purple-500/15"
+            index={3}
+          />
+        )}
 
-        <KPICard
-          label="Inventory Stockout Risks"
-          value="3 items"
-          subValue="Below buffer threshold"
-          delta={-1}
-          deltaLabel="PO placed for 2"
-          icon={<Warehouse className="size-4 text-amber-500" />}
-          iconColor="bg-amber-500/15"
-          index={4}
-        />
+        {isModuleEnabled('inventory') && (
+          <KPICard
+            label="Low Stock Items"
+            value="3 items"
+            subValue="Below buffer"
+            delta={-1}
+            deltaLabel="PO placed for 2"
+            icon={<Warehouse className="size-4 text-amber-500" />}
+            iconColor="bg-amber-500/15"
+            index={4}
+          />
+        )}
 
-        <KPICard
-          label="Line Operators on Duty"
-          value="34 staff"
-          subValue="3 lines full capacity"
-          delta={94.2}
-          deltaLabel="efficiency rate"
-          icon={<Users className="size-4 text-blue-500" />}
-          iconColor="bg-blue-500/15"
-          index={5}
-        />
+        {(isModuleEnabled('hr') || isModuleEnabled('production')) && (
+          <KPICard
+            label={`Active ${getTerm('worker', 'Operators')}`}
+            value="34 staff"
+            subValue="3 lines full capacity"
+            delta={94.2}
+            deltaLabel="efficiency rate"
+            icon={<Users className="size-4 text-blue-500" />}
+            iconColor="bg-blue-500/15"
+            index={5}
+          />
+        )}
       </div>
 
       {/* Analytics & Throughput Chart Grid */}
@@ -505,73 +498,75 @@ export const TenantRoleDashboard: React.FC = () => {
       </div>
 
       {/* Active Production Line Monitors */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Activity className="size-4 text-primary" />
-            <h2 className="text-sm font-bold text-default tracking-tight">Active Production Lines & Floor Telemetry</h2>
-          </div>
-          <Link to="/production" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
-            <span>Manage All Schedules</span>
-            <ArrowRight className="size-3" />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {LINE_MONITORS.map((line) => (
-            <div
-              key={line.id}
-              className="group relative overflow-hidden rounded-2xl border border-default bg-surface p-5 space-y-3 shadow-xs hover:border-primary/40 hover:shadow-md transition-all duration-200"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-default group-hover:text-primary transition-colors">{line.name}</span>
-                <span
-                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                    line.health === 'optimal'
-                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                      : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
-                  }`}
-                >
-                  {line.status}
-                </span>
-              </div>
-
-              <div className="space-y-1">
-                <div className="text-[11px] text-muted flex items-center justify-between">
-                  <span>Batch: <strong className="font-mono text-default">{line.batch}</strong></span>
-                  <span className="font-semibold text-default">{line.speed}</span>
-                </div>
-                <div className="text-xs font-semibold text-default truncate">{line.recipe}</div>
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] text-muted">
-                  <span>Yield Completion</span>
-                  <span className="font-mono font-bold text-default">{line.progress}%</span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-surface-sunken overflow-hidden p-0.5 border border-default">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      line.health === 'optimal'
-                        ? 'bg-linear-to-r from-emerald-500 to-teal-400'
-                        : 'bg-linear-to-r from-amber-500 to-orange-400'
-                    }`}
-                    style={{ width: `${line.progress}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-default flex items-center justify-between text-[11px] text-muted">
-                <span>Lead: {line.operator}</span>
-                <Link to="/production" className="text-primary hover:underline font-semibold flex items-center gap-1">
-                  <span>Manage</span>
-                  <ArrowRight className="size-3" />
-                </Link>
-              </div>
+      {isModuleEnabled('production') && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Activity className="size-4 text-primary" />
+              <h2 className="text-sm font-bold text-default tracking-tight">Active {getTerm('production', 'Production')} Lines & Floor Telemetry</h2>
             </div>
-          ))}
+            <Link to="/production" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+              <span>Manage All Schedules</span>
+              <ArrowRight className="size-3" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {LINE_MONITORS.map((line) => (
+              <div
+                key={line.id}
+                className="group relative overflow-hidden rounded-2xl border border-default bg-surface p-5 space-y-3 shadow-xs hover:border-primary/40 hover:shadow-md transition-all duration-200"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-default group-hover:text-primary transition-colors">{line.name}</span>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      line.health === 'optimal'
+                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                        : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                    }`}
+                  >
+                    {line.status}
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="text-[11px] text-muted flex items-center justify-between">
+                    <span>Batch: <strong className="font-mono text-default">{line.batch}</strong></span>
+                    <span className="font-semibold text-default">{line.speed}</span>
+                  </div>
+                  <div className="text-xs font-semibold text-default truncate">{line.recipe}</div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] text-muted">
+                    <span>Yield Completion</span>
+                    <span className="font-mono font-bold text-default">{line.progress}%</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-surface-sunken overflow-hidden p-0.5 border border-default">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        line.health === 'optimal'
+                          ? 'bg-linear-to-r from-emerald-500 to-teal-400'
+                          : 'bg-linear-to-r from-amber-500 to-orange-400'
+                      }`}
+                      style={{ width: `${line.progress}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-default flex items-center justify-between text-[11px] text-muted">
+                  <span>Lead: {line.operator}</span>
+                  <Link to="/production" className="text-primary hover:underline font-semibold flex items-center gap-1">
+                    <span>Manage</span>
+                    <ArrowRight className="size-3" />
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Operational Workspaces Quick Launcher */}
       <div className="space-y-3">

@@ -128,7 +128,7 @@ export function CreditNoteDocument({ salesReturn, businessConfig }: CreditNoteDo
               {numberToWords(salesReturn.total_amount, 'Taka', 'Paisa')}
             </p>
           </div>
-          <div className="max-w-[200px]" dangerouslySetInnerHTML={{ __html: barcodeSvg }} />
+          <div className="max-w-50" dangerouslySetInnerHTML={{ __html: barcodeSvg }} />
         </div>
 
         <div className="col-span-5 border border-slate-300 rounded-lg overflow-hidden text-[8.5pt]">

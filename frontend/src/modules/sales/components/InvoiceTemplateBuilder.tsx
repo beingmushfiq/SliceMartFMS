@@ -12,13 +12,14 @@ interface InvoiceTemplateBuilderProps {
 }
 
 export type InvoiceLayout = 'standard' | 'compact' | 'thermal_80mm' | 'commercial_vat';
+export type InvoiceCopyType = 'ORIGINAL' | 'DUPLICATE' | 'CUSTOMER COPY';
 
 export function InvoiceTemplateBuilder({ invoice, onClose }: InvoiceTemplateBuilderProps) {
   const { config: businessConfig } = useBusinessConfig();
   const { printDocument, isPrinting } = useDocumentPrint();
 
   const [layout, setLayout] = useState<InvoiceLayout>('standard');
-  const [copyType, setCopyType] = useState<'ORIGINAL' | 'DUPLICATE' | 'CUSTOMER COPY'>('ORIGINAL');
+  const [copyType, setCopyType] = useState<InvoiceCopyType>('ORIGINAL');
 
   // Sample or active invoice data
   const inv: Invoice = invoice ?? {
@@ -82,7 +83,7 @@ export function InvoiceTemplateBuilder({ invoice, onClose }: InvoiceTemplateBuil
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 p-4 bg-surface text-default min-h-[600px] rounded-2xl">
+    <div className="flex flex-col lg:flex-row gap-6 p-4 bg-surface text-default min-h-150 rounded-2xl">
       {/* Left: Customizer Sidebar */}
       <div className="w-full lg:w-80 space-y-5 rounded-2xl border border-default bg-surface-sunken p-5">
         <div className="flex items-center gap-2 border-b border-default pb-3">
@@ -126,7 +127,7 @@ export function InvoiceTemplateBuilder({ invoice, onClose }: InvoiceTemplateBuil
           </label>
           <select
             value={copyType}
-            onChange={(e) => setCopyType(e.target.value as any)}
+            onChange={(e) => setCopyType(e.target.value as InvoiceCopyType)}
             className="w-full rounded-xl border border-default bg-surface px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
           >
             <option value="ORIGINAL">ORIGINAL (Customer Copy)</option>

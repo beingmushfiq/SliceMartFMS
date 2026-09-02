@@ -146,7 +146,7 @@ export function DeliveryChallanDocument({ delivery, businessConfig }: DeliveryCh
           </p>
         </div>
         <div className="flex justify-end items-center">
-          <div className="max-w-[200px]" dangerouslySetInnerHTML={{ __html: barcodeSvg }} />
+          <div className="max-w-50" dangerouslySetInnerHTML={{ __html: barcodeSvg }} />
         </div>
       </div>
 

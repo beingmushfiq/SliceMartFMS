@@ -71,6 +71,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         error: null,
       });
 
+      // Trigger capability manifest fetch
+      import('../capabilities/tenantCapabilityStore').then(({ useTenantCapabilityStore }) => {
+        useTenantCapabilityStore.getState().bootstrap();
+      }).catch(() => {});
+
       // Trigger bootstrap in background to refresh latest branches / permissions
       get().bootstrap().catch(() => {});
     } catch (err: unknown) {
@@ -146,6 +151,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         status: 'authenticated',
         error: null,
       });
+
+      // Trigger capability manifest fetch
+      import('../capabilities/tenantCapabilityStore').then(({ useTenantCapabilityStore }) => {
+        useTenantCapabilityStore.getState().bootstrap();
+      }).catch(() => {});
     } catch (err: unknown) {
       // If token is explicitly rejected (401), clear session
       const isUnauth =

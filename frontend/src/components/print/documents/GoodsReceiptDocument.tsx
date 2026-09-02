@@ -126,7 +126,7 @@ export function GoodsReceiptDocument({ grn, businessConfig }: GoodsReceiptDocume
           <p className="text-slate-600">{grn.notes || 'All accepted items passed sensory and quality control screening. Routed to designated Silo Bin.'}</p>
         </div>
         <div className="flex justify-end items-center">
-          <div className="max-w-[200px]" dangerouslySetInnerHTML={{ __html: barcodeSvg }} />
+          <div className="max-w-50" dangerouslySetInnerHTML={{ __html: barcodeSvg }} />
         </div>
       </div>
 

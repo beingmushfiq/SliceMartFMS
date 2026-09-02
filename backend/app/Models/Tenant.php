@@ -53,6 +53,13 @@ class Tenant extends Model
         'number_format',
         'settings',
         'branding',
+        'business_type_keys',
+        'industry_profile_key',
+        'manufacturing_type',
+        'terminology',
+        'onboarding_completed_at',
+        'onboarding_step',
+        'onboarding_draft',
         'trial_ends_at',
         'activated_at',
         'suspended_at',
@@ -66,6 +73,46 @@ class Tenant extends Model
     public function users(): HasMany
     {
         return $this->hasMany(User::class, 'tenant_id');
+    }
+
+    /**
+     * Enabled/configured modules for this tenant.
+     *
+     * @return HasMany<TenantModule, $this>
+     */
+    public function modules(): HasMany
+    {
+        return $this->hasMany(TenantModule::class, 'tenant_id');
+    }
+
+    /**
+     * Production stages for this tenant.
+     *
+     * @return HasMany<TenantProductionStage, $this>
+     */
+    public function productionStages(): HasMany
+    {
+        return $this->hasMany(TenantProductionStage::class, 'tenant_id')->orderBy('sort_order');
+    }
+
+    /**
+     * QC templates for this tenant.
+     *
+     * @return HasMany<TenantQcTemplate, $this>
+     */
+    public function qcTemplates(): HasMany
+    {
+        return $this->hasMany(TenantQcTemplate::class, 'tenant_id');
+    }
+
+    /**
+     * Custom field definitions for this tenant.
+     *
+     * @return HasMany<CustomFieldDefinition, $this>
+     */
+    public function customFieldDefinitions(): HasMany
+    {
+        return $this->hasMany(CustomFieldDefinition::class, 'tenant_id')->orderBy('sort_order');
     }
 
     /**
@@ -84,6 +131,11 @@ class Tenant extends Model
         return [
             'settings' => 'array',
             'branding' => 'array',
+            'business_type_keys' => 'array',
+            'terminology' => 'array',
+            'onboarding_draft' => 'array',
+            'onboarding_completed_at' => 'datetime',
+            'onboarding_step' => 'integer',
             'trial_ends_at' => 'datetime',
             'grace_period_ends_at' => 'datetime',
             'suspended_at' => 'datetime',

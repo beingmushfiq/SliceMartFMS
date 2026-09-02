@@ -127,7 +127,7 @@ export function StockTransferDocument({ transfer, businessConfig }: StockTransfe
           <p className="text-slate-600">{transfer.notes || 'Inter-facility scheduled inventory transfer.'}</p>
         </div>
         <div className="flex justify-end items-center">
-          <div className="max-w-[200px]" dangerouslySetInnerHTML={{ __html: barcodeSvg }} />
+          <div className="max-w-50" dangerouslySetInnerHTML={{ __html: barcodeSvg }} />
         </div>
       </div>
 
