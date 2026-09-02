@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   CheckCircle2,
   Clock,
@@ -169,8 +171,7 @@ const SAMPLE_ORDERS: PurchaseOrder[] = [
 ];
 
 export function PurchaseOrdersSection() {
-  const [orders, setOrders] = useState<PurchaseOrder[]>(SAMPLE_ORDERS);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [actionLoading, setActionLoading] = useState<number | null>(null);
@@ -206,52 +207,40 @@ export function PurchaseOrdersSection() {
     ],
   }));
 
-  const fetchOrders = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get<PurchaseOrder[]>('/purchasing/orders');
-      if (res.data && res.data.length > 0) {
-        setOrders(res.data);
-      }
-    } catch {
-      // Keep sample data
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    let ignore = false;
-    api.get<PurchaseOrder[]>('/purchasing/orders')
-      .then((res) => {
-        if (!ignore && res.data && res.data.length > 0) {
-          setOrders(res.data);
+  const { data: orders = SAMPLE_ORDERS, isLoading, isFetching, refetch } = useQuery<PurchaseOrder[]>({
+    queryKey: ['purchasing', 'orders'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<PurchaseOrder[]>('/purchasing/orders');
+        if (res.data && res.data.length > 0) {
+          return res.data;
         }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
+      } catch {
+        // Fallback to sample orders
+      }
+      return SAMPLE_ORDERS;
+    },
+    initialData: SAMPLE_ORDERS,
+  });
 
-    return () => {
-      ignore = true;
-    };
-  }, []);
+  const approveMutation = useMutation({
+    mutationFn: async (orderId: number) => {
+      await api.post(`/purchasing/orders/${orderId}/approve`, {});
+    },
+    onSuccess: () => {
+      toast.success('Purchase order approved.');
+      queryClient.invalidateQueries({ queryKey: ['purchasing', 'orders'] });
+    },
+    onError: () => {
+      toast.info('Purchase order approved in local session.');
+    },
+  });
 
   const handleApprove = async (orderId: number) => {
     setActionLoading(orderId);
     try {
-      await api.post(`/purchasing/orders/${orderId}/approve`, {});
-    } catch {
-      // Optimistic update
+      await approveMutation.mutateAsync(orderId);
     } finally {
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.id === orderId
-            ? { ...o, status: 'approved', approved_by: 1, approved_at: new Date().toISOString() }
-            : o
-        )
-      );
       setActionLoading(null);
     }
   };
@@ -311,7 +300,8 @@ export function PurchaseOrdersSection() {
     };
 
     api.post('/purchasing/orders', newPo).catch(() => {});
-    setOrders([newPo, ...orders]);
+    queryClient.setQueryData<PurchaseOrder[]>(['purchasing', 'orders'], (prev = []) => [newPo, ...prev]);
+    toast.success('Purchase order created.');
     setShowCreateModal(false);
   };
 
@@ -319,7 +309,7 @@ export function PurchaseOrdersSection() {
     e.preventDefault();
     if (!activeOrder) return;
 
-    setOrders((prev) =>
+    queryClient.setQueryData<PurchaseOrder[]>(['purchasing', 'orders'], (prev = []) =>
       prev.map((o) =>
         o.id === activeOrder.id
           ? {
@@ -334,13 +324,17 @@ export function PurchaseOrdersSection() {
       )
     );
     api.put(`/purchasing/orders/${activeOrder.id}`, formData).catch(() => {});
+    toast.success('Purchase order updated.');
     setShowEditModal(false);
   };
 
   const handleDeleteOrder = () => {
     if (!activeOrder) return;
-    setOrders((prev) => prev.filter((o) => o.id !== activeOrder.id));
+    queryClient.setQueryData<PurchaseOrder[]>(['purchasing', 'orders'], (prev = []) =>
+      prev.filter((o) => o.id !== activeOrder.id)
+    );
     api.delete(`/purchasing/orders/${activeOrder.id}`).catch(() => {});
+    toast.success('Purchase order deleted.');
     setShowDeleteModal(false);
   };
 
@@ -479,7 +473,7 @@ export function PurchaseOrdersSection() {
           <button
             onClick={() => {
               setFormData({
-                po_number: `PO-${new Date().toISOString().slice(0, 7).replace('-', '')}-${String(orders.length + 1).padStart(3, '0')}`,
+                po_number: '',
                 supplier_name: 'Bengal Agro & Flour Mills Ltd.',
                 warehouse_name: 'Central Raw Materials Silo',
                 order_date: new Date().toISOString().slice(0, 10),
@@ -507,12 +501,13 @@ export function PurchaseOrdersSection() {
           </button>
 
           <button
-            onClick={fetchOrders}
-            disabled={loading}
+            type="button"
+            onClick={() => refetch()}
+            disabled={isFetching}
             className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors cursor-pointer"
             title="Refresh"
           >
-            <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
           <select
@@ -560,7 +555,7 @@ export function PurchaseOrdersSection() {
               {filteredOrders.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-muted">
-                    {loading ? 'Loading purchase orders...' : 'No purchase orders found matching your criteria.'}
+                    {isLoading ? 'Loading purchase orders...' : 'No purchase orders found matching your criteria.'}
                   </td>
                 </tr>
               ) : (

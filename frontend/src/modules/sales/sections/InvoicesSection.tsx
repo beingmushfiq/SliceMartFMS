@@ -1,64 +1,61 @@
-import { useState, useEffect } from 'react';
-import { Ban, CheckCircle2, Clock, Printer, RefreshCw, Search, Sliders } from 'lucide-react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Ban, CheckCircle2, Clock, Printer, RefreshCw, Search, Sliders, FileText } from 'lucide-react';
+import { toast } from 'sonner';
 import type { Invoice } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
 import { InvoiceTemplateBuilder } from '../components/InvoiceTemplateBuilder';
+import { formatCurrency } from '../../../lib/document/formatters';
 
 export function InvoicesSection() {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [showVoidModal, setShowVoidModal] = useState<number | null>(null);
   const [voidReason, setVoidReason] = useState('');
   const [previewInvoice, setPreviewInvoice] = useState<Invoice | null>(null);
   const [showDesigner, setShowDesigner] = useState(false);
 
-  const fetchInvoices = async () => {
-    setLoading(true);
-    try {
+  const { data: invoices = [], isLoading, isFetching, refetch } = useQuery<Invoice[]>({
+    queryKey: ['sales', 'invoices'],
+    queryFn: async () => {
       const res = await api.get<Invoice[]>('/sales/invoices');
-      setInvoices(res.data ?? []);
-    } catch (err) {
-      console.error('Failed to load invoices', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return res.data ?? [];
+    },
+  });
 
-  useEffect(() => {
-    fetchInvoices();
-  }, []);
-
-  const handleApprove = async (invoiceId: number) => {
-    setActionLoading(invoiceId);
-    try {
+  const approveMutation = useMutation({
+    mutationFn: async (invoiceId: number) => {
       await api.post(`/sales/invoices/${invoiceId}/approve`, {});
-      await fetchInvoices();
-    } catch (err) {
-      console.error('Failed to post invoice', err);
-    } finally {
-      setActionLoading(null);
-    }
-  };
+    },
+    onSuccess: () => {
+      toast.success('Invoice approved and posted to ledger.');
+      queryClient.invalidateQueries({ queryKey: ['sales', 'invoices'] });
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof Error ? err.message : 'Failed to post invoice');
+    },
+  });
 
-  const handleVoid = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!showVoidModal) return;
-    setActionLoading(showVoidModal);
-    try {
-      await api.post(`/sales/invoices/${showVoidModal}/void`, {
-        void_reason: voidReason,
-      });
+  const voidMutation = useMutation({
+    mutationFn: async ({ invoiceId, reason }: { invoiceId: number; reason: string }) => {
+      await api.post(`/sales/invoices/${invoiceId}/void`, { void_reason: reason });
+    },
+    onSuccess: () => {
+      toast.success('Invoice voided successfully.');
       setShowVoidModal(null);
       setVoidReason('');
-      await fetchInvoices();
-    } catch (err) {
-      console.error('Failed to void invoice', err);
-    } finally {
-      setActionLoading(null);
-    }
+      queryClient.invalidateQueries({ queryKey: ['sales', 'invoices'] });
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof Error ? err.message : 'Failed to void invoice');
+    },
+  });
+
+  const handleVoid = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!showVoidModal) return;
+    voidMutation.mutate({ invoiceId: showVoidModal, reason: voidReason });
   };
 
   const filteredInvoices = invoices.filter((inv) => {
@@ -126,7 +123,7 @@ export function InvoicesSection() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 rounded-xl border border-default bg-surface-sunken px-3 text-xs text-default focus:border-primary focus:outline-none"
+            className="h-9 rounded-xl border border-default bg-surface-sunken px-3 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
           >
             <option value="all">All Statuses</option>
             <option value="draft">Draft</option>
@@ -136,11 +133,11 @@ export function InvoicesSection() {
           </select>
 
           <button
-            onClick={fetchInvoices}
-            disabled={loading}
+            onClick={() => refetch()}
+            disabled={isFetching}
             className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface-sunken px-3 text-xs font-medium text-muted hover:bg-surface hover:text-default disabled:opacity-50 transition-colors cursor-pointer"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />
             Refresh
           </button>
         </div>
@@ -171,10 +168,22 @@ export function InvoicesSection() {
               </tr>
             </thead>
             <tbody className="divide-y divide-default">
-              {filteredInvoices.length === 0 ? (
+              {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-muted">
-                    {loading ? 'Loading invoices...' : 'No invoices found.'}
+                  <td colSpan={8} className="px-4 py-12 text-center text-muted">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <RefreshCw className="size-5 animate-spin text-primary" />
+                      <span>Loading invoices...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredInvoices.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-12 text-center text-muted">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <FileText className="size-8 text-muted/50" />
+                      <span className="font-medium">No sales invoices found.</span>
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -193,12 +202,12 @@ export function InvoicesSection() {
                         {inv.customer_name ?? 'Counter Customer'}
                       </td>
                       <td className="px-4 py-3.5 font-mono text-default">
-                        ৳ {subtotalNum.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        {formatCurrency(subtotalNum, '৳')}
                       </td>
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-1.5">
                           <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-xs">
-                            ৳ {grossProfit.toFixed(2)}
+                            {formatCurrency(grossProfit, '৳')}
                           </span>
                           <span className="text-[10px] text-muted font-mono">
                             ({marginPct.toFixed(1)}%)
@@ -209,9 +218,7 @@ export function InvoicesSection() {
                         </div>
                       </td>
                       <td className="px-4 py-3.5 font-mono font-medium text-default">
-                        ৳ {parseFloat(inv.total_amount || '0').toLocaleString('en-US', {
-                          minimumFractionDigits: 2,
-                        })}
+                        {formatCurrency(inv.total_amount, '৳')}
                       </td>
                       <td className="px-4 py-3.5">{getStatusBadge(inv.status)}</td>
                       <td className="px-4 py-3.5 text-right space-x-1.5">
@@ -223,11 +230,11 @@ export function InvoicesSection() {
                         </button>
                         {inv.status === 'draft' && (
                           <button
-                            onClick={() => handleApprove(inv.id)}
-                            disabled={actionLoading === inv.id}
+                            onClick={() => approveMutation.mutate(inv.id)}
+                            disabled={approveMutation.isPending}
                             className="rounded-xl bg-primary/10 border border-primary/20 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20 disabled:opacity-50 transition-colors cursor-pointer"
                           >
-                            {actionLoading === inv.id ? 'Posting...' : 'Post'}
+                            {approveMutation.isPending ? 'Posting...' : 'Post'}
                           </button>
                         )}
                         {inv.status !== 'void' && (
@@ -250,7 +257,7 @@ export function InvoicesSection() {
 
       {/* Void Confirmation Modal */}
       {showVoidModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-md rounded-2xl border border-default bg-surface p-6 shadow-xl">
             <h3 className="text-base font-semibold text-default">Void Invoice</h3>
             <p className="mt-1 text-xs text-muted">
@@ -282,10 +289,10 @@ export function InvoicesSection() {
                 </button>
                 <button
                   type="submit"
-                  disabled={actionLoading !== null}
+                  disabled={voidMutation.isPending}
                   className="rounded-xl bg-rose-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-rose-500 disabled:opacity-50 transition-colors cursor-pointer"
                 >
-                  {actionLoading !== null ? 'Voiding...' : 'Confirm Void'}
+                  {voidMutation.isPending ? 'Voiding...' : 'Confirm Void'}
                 </button>
               </div>
             </form>
@@ -295,7 +302,7 @@ export function InvoicesSection() {
 
       {/* Invoice Template Designer Modal */}
       {(showDesigner || previewInvoice) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 overflow-y-auto animate-in fade-in duration-150">
           <div className="w-full max-w-6xl max-h-[90vh] overflow-y-auto rounded-2xl border border-default bg-surface p-2 shadow-2xl">
             <InvoiceTemplateBuilder
               invoice={previewInvoice ?? undefined}

@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   CheckCircle2,
   Clock,
@@ -118,8 +120,7 @@ const SAMPLE_BILLS: PurchaseBill[] = [
 ];
 
 export function PurchaseBillsSection() {
-  const [bills, setBills] = useState<PurchaseBill[]>(SAMPLE_BILLS);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [actionLoading, setActionLoading] = useState<number | null>(null);
@@ -154,48 +155,55 @@ export function PurchaseBillsSection() {
     ],
   }));
 
-  const fetchBills = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get<PurchaseBill[]>('/purchasing/bills');
-      if (res.data && res.data.length > 0) {
-        setBills(res.data);
-      }
-    } catch {
-      // Keep sample data
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    let ignore = false;
-    api.get<PurchaseBill[]>('/purchasing/bills')
-      .then((res) => {
-        if (!ignore && res.data && res.data.length > 0) {
-          setBills(res.data);
+  const { data: bills = SAMPLE_BILLS, isLoading, isFetching, refetch } = useQuery<PurchaseBill[]>({
+    queryKey: ['purchasing', 'bills'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<PurchaseBill[]>('/purchasing/bills');
+        if (res.data && res.data.length > 0) {
+          return res.data;
         }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
+      } catch {
+        // Fallback to sample bills
+      }
+      return SAMPLE_BILLS;
+    },
+    initialData: SAMPLE_BILLS,
+  });
 
-    return () => {
-      ignore = true;
-    };
-  }, []);
+  const approveMutation = useMutation({
+    mutationFn: async (billId: number) => {
+      await api.post(`/purchasing/bills/${billId}/approve`, {});
+    },
+    onSuccess: () => {
+      toast.success('Purchase bill approved.');
+      queryClient.invalidateQueries({ queryKey: ['purchasing', 'bills'] });
+    },
+    onError: () => {
+      toast.info('Purchase bill approved in local session.');
+    },
+  });
+
+  const payMutation = useMutation({
+    mutationFn: async (billId: number) => {
+      await api.post(`/purchasing/bills/${billId}/pay`, {});
+    },
+    onSuccess: () => {
+      toast.success('Payment recorded for purchase bill.');
+      setShowPayModal(false);
+      queryClient.invalidateQueries({ queryKey: ['purchasing', 'bills'] });
+    },
+    onError: () => {
+      toast.info('Payment recorded in local session.');
+      setShowPayModal(false);
+    },
+  });
 
   const handleApprove = async (billId: number) => {
     setActionLoading(billId);
     try {
-      await api.post(`/purchasing/bills/${billId}/approve`, {});
-    } catch {
-      // Optimistic update
+      await approveMutation.mutateAsync(billId);
     } finally {
-      setBills((prev) =>
-        prev.map((b) => (b.id === billId ? { ...b, status: 'approved' } : b))
-      );
       setActionLoading(null);
     }
   };
@@ -203,19 +211,9 @@ export function PurchaseBillsSection() {
   const handleRecordPayment = async (billId: number) => {
     setActionLoading(billId);
     try {
-      await api.post(`/purchasing/bills/${billId}/pay`, {});
-    } catch {
-      // Optimistic update
+      await payMutation.mutateAsync(billId);
     } finally {
-      setBills((prev) =>
-        prev.map((b) =>
-          b.id === billId
-            ? { ...b, status: 'paid', payment_status: 'paid', paid_amount: b.grand_total }
-            : b
-        )
-      );
       setActionLoading(null);
-      setShowPayModal(false);
     }
   };
 
@@ -271,7 +269,8 @@ export function PurchaseBillsSection() {
     };
 
     api.post('/purchasing/bills', newBill).catch(() => {});
-    setBills([newBill, ...bills]);
+    queryClient.setQueryData<PurchaseBill[]>(['purchasing', 'bills'], (prev = []) => [newBill, ...prev]);
+    toast.success('Purchase bill created.');
     setShowCreateModal(false);
   };
 
@@ -279,7 +278,7 @@ export function PurchaseBillsSection() {
     e.preventDefault();
     if (!activeBill) return;
 
-    setBills((prev) =>
+    queryClient.setQueryData<PurchaseBill[]>(['purchasing', 'bills'], (prev = []) =>
       prev.map((b) =>
         b.id === activeBill.id
           ? {
@@ -293,13 +292,17 @@ export function PurchaseBillsSection() {
       )
     );
     api.put(`/purchasing/bills/${activeBill.id}`, formData).catch(() => {});
+    toast.success('Purchase bill updated.');
     setShowEditModal(false);
   };
 
   const handleDeleteBill = () => {
     if (!activeBill) return;
-    setBills((prev) => prev.filter((b) => b.id !== activeBill.id));
+    queryClient.setQueryData<PurchaseBill[]>(['purchasing', 'bills'], (prev = []) =>
+      prev.filter((b) => b.id !== activeBill.id)
+    );
     api.delete(`/purchasing/bills/${activeBill.id}`).catch(() => {});
+    toast.success('Purchase bill deleted.');
     setShowDeleteModal(false);
   };
 
@@ -468,12 +471,12 @@ export function PurchaseBillsSection() {
           </button>
 
           <button
-            onClick={fetchBills}
-            disabled={loading}
+            onClick={() => refetch()}
+            disabled={isFetching}
             className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors cursor-pointer"
             title="Refresh"
           >
-            <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
           <select
@@ -520,7 +523,7 @@ export function PurchaseBillsSection() {
               {filteredBills.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-muted">
-                    {loading ? 'Loading purchase bills...' : 'No bills found matching your criteria.'}
+                    {isLoading ? 'Loading purchase bills...' : 'No bills found matching your criteria.'}
                   </td>
                 </tr>
               ) : (

@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
-import { ArrowDownLeft, ArrowUpRight, Plus, RefreshCw, Search, Printer } from 'lucide-react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ArrowDownLeft, ArrowUpRight, Plus, RefreshCw, Search, Printer, DollarSign } from 'lucide-react';
+import { toast } from 'sonner';
 import type { Payment } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
 import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { PaymentReceiptDocument } from '../../../components/print/documents/PaymentReceiptDocument';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
+import { formatCurrency } from '../../../lib/document/formatters';
 
 export function PaymentsSection() {
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [directionFilter, setDirectionFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -25,40 +27,16 @@ export function PaymentsSection() {
   const [referenceNumber, setReferenceNumber] = useState('');
   const [notes, setNotes] = useState('');
 
-  const fetchPayments = async () => {
-    setLoading(true);
-    try {
+  const { data: payments = [], isLoading, isFetching, refetch } = useQuery<Payment[]>({
+    queryKey: ['sales', 'payments'],
+    queryFn: async () => {
       const res = await api.get<Payment[]>('/sales/payments');
-      setPayments(res.data ?? []);
-    } catch (err) {
-      console.error('Failed to load payments', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return res.data ?? [];
+    },
+  });
 
-  useEffect(() => {
-    let ignore = false;
-    api.get<Payment[]>('/sales/payments')
-      .then((res) => {
-        if (!ignore) setPayments(res.data ?? []);
-      })
-      .catch((err) => {
-        console.error('Failed to load payments', err);
-      })
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
-  const handleRecordPayment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
+  const recordPaymentMutation = useMutation({
+    mutationFn: async () => {
       await api.post('/sales/payments', {
         direction,
         method,
@@ -67,16 +45,23 @@ export function PaymentsSection() {
         reference_number: referenceNumber || undefined,
         notes: notes || undefined,
       });
+    },
+    onSuccess: () => {
+      toast.success('Payment recorded successfully.');
       setShowCreateModal(false);
       setAmount('');
       setReferenceNumber('');
       setNotes('');
-      await fetchPayments();
-    } catch (err) {
-      console.error('Failed to record payment', err);
-    } finally {
-      setLoading(false);
-    }
+      queryClient.invalidateQueries({ queryKey: ['sales', 'payments'] });
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof Error ? err.message : 'Failed to record payment');
+    },
+  });
+
+  const handleRecordPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    recordPaymentMutation.mutate();
   };
 
   const filteredPayments = payments.filter((p) => {
@@ -109,7 +94,7 @@ export function PaymentsSection() {
           <select
             value={directionFilter}
             onChange={(e) => setDirectionFilter(e.target.value)}
-            className="h-9 rounded-xl border border-default bg-surface-sunken px-3 text-xs text-default focus:border-primary focus:outline-none"
+            className="h-9 rounded-xl border border-default bg-surface-sunken px-3 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
           >
             <option value="all">All Directions</option>
             <option value="in">Inflow (Customer Receipts)</option>
@@ -117,18 +102,18 @@ export function PaymentsSection() {
           </select>
 
           <button
-            onClick={fetchPayments}
-            disabled={loading}
+            onClick={() => refetch()}
+            disabled={isFetching}
             className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface-sunken px-3 text-xs font-medium text-muted hover:bg-surface hover:text-default disabled:opacity-50 transition-colors cursor-pointer"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />
             Refresh
           </button>
         </div>
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-medium text-white shadow-xs hover:bg-primary-hover transition-colors cursor-pointer"
+          className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-medium text-primary-fg hover:opacity-90 transition-all cursor-pointer shadow-xs"
         >
           <Plus className="h-3.5 w-3.5" />
           Record Payment
@@ -141,63 +126,63 @@ export function PaymentsSection() {
           <table className="w-full text-left text-xs text-default">
             <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
-                <th className="px-4 py-3.5">Payment Number</th>
+                <th className="px-4 py-3.5">Payment #</th>
                 <th className="px-4 py-3.5">Date</th>
-                <th className="px-4 py-3.5">Direction</th>
+                <th className="px-4 py-3.5">Type</th>
                 <th className="px-4 py-3.5">Method</th>
+                <th className="px-4 py-3.5">Customer / Entity</th>
                 <th className="px-4 py-3.5">Reference</th>
-                <th className="px-4 py-3.5">Total Amount</th>
-                <th className="px-4 py-3.5">Allocated</th>
+                <th className="px-4 py-3.5">Amount</th>
                 <th className="px-4 py-3.5">Status</th>
-                <th className="px-4 py-3.5 text-right">Action</th>
+                <th className="px-4 py-3.5 text-right">Receipt</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-default">
-              {filteredPayments.length === 0 ? (
+              {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-muted">
-                    {loading ? 'Loading payments...' : 'No payments found.'}
+                  <td colSpan={9} className="px-4 py-12 text-center text-muted">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <RefreshCw className="size-5 animate-spin text-primary" />
+                      <span>Loading payments & receipts...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredPayments.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-4 py-12 text-center text-muted">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <DollarSign className="size-8 text-muted/50" />
+                      <span className="font-medium">No payments recorded.</span>
+                    </div>
                   </td>
                 </tr>
               ) : (
                 filteredPayments.map((p) => (
                   <tr key={p.id} className="hover:bg-surface-sunken/60 transition-colors">
-                    <td className="px-4 py-3.5 font-mono font-medium text-emerald-600 dark:text-emerald-400">
-                      {p.payment_number}
-                    </td>
+                    <td className="px-4 py-3.5 font-mono font-medium text-default">{p.payment_number}</td>
                     <td className="px-4 py-3.5 text-muted">{p.payment_date}</td>
                     <td className="px-4 py-3.5">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
-                          p.direction === 'in'
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                            : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
-                        }`}
-                      >
-                        {p.direction === 'in' ? (
-                          <ArrowDownLeft className="h-3 w-3" />
-                        ) : (
-                          <ArrowUpRight className="h-3 w-3" />
-                        )}
-                        {p.direction === 'in' ? 'Inflow' : 'Outflow'}
-                      </span>
+                      {p.direction === 'in' ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                          <ArrowDownLeft className="h-3.5 w-3.5" /> Inflow
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                          <ArrowUpRight className="h-3.5 w-3.5" /> Outflow
+                        </span>
+                      )}
                     </td>
-                    <td className="px-4 py-3.5 uppercase text-[10px] text-default font-medium">
+                    <td className="px-4 py-3.5 uppercase font-mono text-[11px] text-muted">
                       {p.method.replace('_', ' ')}
                     </td>
-                    <td className="px-4 py-3.5 text-muted font-mono">
-                      {p.reference_number ?? '-'}
+                    <td className="px-4 py-3.5 text-default font-medium">
+                      {p.customer_name ?? 'Counter Customer / Direct'}
                     </td>
-                    <td className="px-4 py-3.5 font-mono font-medium text-default">
-                      {parseFloat(p.amount || '0').toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                      })}{' '}
-                      <span className="text-[10px] text-muted">{p.currency_code}</span>
+                    <td className="px-4 py-3.5 font-mono text-muted text-[11px]">
+                      {p.reference_number || '-'}
                     </td>
-                    <td className="px-4 py-3.5 font-mono text-muted">
-                      {parseFloat(p.allocated_amount || '0').toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                      })}
+                    <td className="px-4 py-3.5 font-mono font-bold text-default">
+                      {formatCurrency(p.amount, '৳')}
                     </td>
                     <td className="px-4 py-3.5">
                       <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
@@ -225,7 +210,7 @@ export function PaymentsSection() {
 
       {/* Record Payment Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-md rounded-2xl border border-default bg-surface p-6 shadow-xl">
             <h3 className="text-base font-semibold text-default">Record Payment / Receipt</h3>
             <form onSubmit={handleRecordPayment} className="mt-4 space-y-4">
@@ -235,7 +220,7 @@ export function PaymentsSection() {
                   <select
                     value={direction}
                     onChange={(e) => setDirection(e.target.value as typeof direction)}
-                    className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
+                    className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
                   >
                     <option value="in">Customer Inflow (Receipt)</option>
                     <option value="out">Vendor Outflow (Payment)</option>
@@ -247,7 +232,7 @@ export function PaymentsSection() {
                   <select
                     value={method}
                     onChange={(e) => setMethod(e.target.value as typeof method)}
-                    className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
+                    className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
                   >
                     <option value="cash">Cash</option>
                     <option value="bank_transfer">Bank Transfer</option>
@@ -277,7 +262,7 @@ export function PaymentsSection() {
                   type="date"
                   value={paymentDate}
                   onChange={(e) => setPaymentDate(e.target.value)}
-                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
                 />
               </div>
 
@@ -315,10 +300,10 @@ export function PaymentsSection() {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="rounded-xl bg-primary px-4 py-1.5 text-xs font-medium text-white hover:bg-primary-hover disabled:opacity-50 transition-colors cursor-pointer"
+                  disabled={recordPaymentMutation.isPending}
+                  className="rounded-xl bg-primary px-4 py-1.5 text-xs font-medium text-primary-fg hover:opacity-90 disabled:opacity-50 transition-all cursor-pointer shadow-xs"
                 >
-                  {loading ? 'Recording...' : 'Record Payment'}
+                  {recordPaymentMutation.isPending ? 'Recording...' : 'Record Payment'}
                 </button>
               </div>
             </form>
