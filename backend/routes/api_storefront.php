@@ -51,4 +51,12 @@ Route::prefix('v1/storefront')->group(function (): void {
 
     // Contextual WhatsApp Quick Ordering
     Route::post('/whatsapp/order-link', [\App\Modules\Ecommerce\Controllers\StorefrontWhatsAppOrderController::class, 'generateOrderLink']);
+
+    // Dynamic Sitemaps & Search Engine Crawlability
+    Route::get('/sitemap.xml', [\App\Modules\Ecommerce\Controllers\StorefrontSitemapController::class, 'index']);
+    Route::get('/sitemap-products.xml', [\App\Modules\Ecommerce\Controllers\StorefrontSitemapController::class, 'products']);
+    Route::get('/sitemap-categories.xml', [\App\Modules\Ecommerce\Controllers\StorefrontSitemapController::class, 'categories']);
+    Route::get('/sitemap-pages.xml', [\App\Modules\Ecommerce\Controllers\StorefrontSitemapController::class, 'pages']);
+    Route::get('/robots.txt', \App\Modules\Ecommerce\Controllers\StorefrontRobotsController::class);
 });
+

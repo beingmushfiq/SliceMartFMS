@@ -7,6 +7,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
+import { SeoHead } from '../../components/seo/SeoHead';
 import type { StorefrontConfig } from '../../types/api/storefront';
 
 interface OutletContextType {
@@ -90,6 +91,13 @@ export const StorefrontOrderTrackingPage: React.FC = () => {
 
   return (
     <div className="max-w-3xl mx-auto space-y-8 py-4">
+      <SeoHead
+        title="Track Order Status"
+        description="Real-time live factory production batch and 3PL courier tracking"
+        noIndex={true}
+        brandName={config?.name ?? 'Slice Mart'}
+      />
+
       {/* Back Button */}
       <Link
         to={`/store/${subdomain}/products`}

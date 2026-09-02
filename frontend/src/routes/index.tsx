@@ -21,6 +21,7 @@ import { OrderFraudVerificationWorkspace } from '../modules/ecommerce/OrderFraud
 import { SettingsCenterWorkspace } from '../modules/settings/SettingsCenterWorkspace';
 import { TenantRoleDashboard } from '../pages/dashboard/TenantRoleDashboard';
 import { ProfileSettingsWorkspace } from '../pages/settings/ProfileSettingsWorkspace';
+import { SeoDiscoverabilityWorkspace } from '../pages/settings/SeoDiscoverabilityWorkspace';
 import { OnboardingWizard } from '../modules/platform/OnboardingWizard';
 import { NotFoundPage } from '../pages/errors/NotFoundPage';
 
@@ -289,6 +290,14 @@ export const router = createBrowserRouter([
           {
             path: 'settings/profile',
             element: <ProfileSettingsWorkspace />,
+          },
+          {
+            path: 'settings/seo',
+            element: <SeoDiscoverabilityWorkspace />,
+          },
+          {
+            path: 'seo',
+            element: <Navigate to="/settings/seo" replace />,
           },
           {
             path: 'onboarding',

@@ -5,6 +5,8 @@ import { useStorefrontCartStore } from '../../lib/storefront/storefrontCartStore
 import { StorefrontHeader } from './StorefrontHeader';
 import { StorefrontFooter } from './StorefrontFooter';
 import { StorefrontCartDrawer } from './StorefrontCartDrawer';
+import { SeoHead } from '../seo/SeoHead';
+import { JsonLdSchema } from '../seo/JsonLdSchema';
 import type { StorefrontConfig } from '../../types/api/storefront';
 
 export const StorefrontShell: React.FC = () => {
@@ -67,8 +69,19 @@ export const StorefrontShell: React.FC = () => {
     );
   }
 
+  const orgSchema = (config as any).seo?.organization_schema;
+  const websiteSchema = (config as any).seo?.website_schema;
+
   return (
     <div className="min-h-screen bg-zinc-950 font-sans text-zinc-100 flex flex-col justify-between selection:bg-emerald-500/30 selection:text-emerald-200">
+      <SeoHead
+        title={config.meta_title || config.name}
+        description={config.meta_description || 'Direct factory manufacturing and online commercial storefront.'}
+        brandName={config.name}
+      />
+      {orgSchema && <JsonLdSchema id="global-org-schema" schema={orgSchema} />}
+      {websiteSchema && <JsonLdSchema id="global-website-schema" schema={websiteSchema} />}
+
       <div>
         <StorefrontHeader config={config} subdomain={subdomain} />
         <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
@@ -81,3 +94,4 @@ export const StorefrontShell: React.FC = () => {
     </div>
   );
 };
+

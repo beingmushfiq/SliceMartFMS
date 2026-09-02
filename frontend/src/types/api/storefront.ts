@@ -12,6 +12,7 @@ export interface StorefrontConfig {
     accent_color: string;
     hero_title: string;
     hero_subtitle: string;
+    hero_image?: string | null;
   };
   meta_title: string;
   meta_description: string | null;
@@ -38,13 +39,16 @@ export interface StorefrontProduct {
   id: number;
   sku: string;
   name: string;
+  online_slug?: string | null;
   description: string | null;
   type: string;
   default_sale_price: string;
+  images?: { id?: number; url?: string; path?: string }[];
   category?: {
     id: number;
     name: string;
     code: string;
+    slug?: string;
   };
   brand?: {
     id: number;
@@ -57,6 +61,15 @@ export interface StorefrontProduct {
     code: string;
   };
   variants?: StorefrontProductVariant[];
+  seo?: {
+    title?: string;
+    description?: string;
+    canonical?: string;
+  };
+  schema?: {
+    product?: Record<string, unknown>;
+  };
+  breadcrumb_items?: { name: string; url: string }[];
 }
 
 export interface StorefrontCartItem {

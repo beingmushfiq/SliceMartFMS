@@ -75,7 +75,7 @@ final class IndustryProfileSeeder extends Seeder
                     ['name' => 'Seal & Expiry Label Check', 'input_type' => 'pass_fail', 'is_required' => true],
                 ],
                 'default_custom_fields' => [
-                    ['module' => 'catalogue', 'entity' => 'product', 'internal_key' => 'shelf_life_days', 'label' => 'Shelf Life (Days)', 'field_type' => 'number'],
+                    ['module' => 'catalogue', 'entity' => 'product', 'internal_key' => 'initial_stock', 'label' => 'Opening / Initial Stock', 'field_type' => 'number'],
                     ['module' => 'catalogue', 'entity' => 'product', 'internal_key' => 'storage_temperature', 'label' => 'Storage Temp (°C)', 'field_type' => 'text'],
                     ['module' => 'catalogue', 'entity' => 'product', 'internal_key' => 'allergens', 'label' => 'Allergen Warning', 'field_type' => 'text'],
                 ],

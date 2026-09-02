@@ -1,35 +1,53 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowDownLeft, ArrowUpRight, Boxes, Layers, RefreshCw, Search } from 'lucide-react';
 import type { StockMovement, StockBalance } from '../../../types/api/inventory';
 import { api } from '../../../lib/api/client';
 
 export function StockLedgerSection() {
   const [viewMode, setViewMode] = useState<'movements' | 'balances'>('balances');
-  const [movements, setMovements] = useState<StockMovement[]>([]);
-  const [balances, setBalances] = useState<StockBalance[]>([]);
-  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      if (viewMode === 'balances') {
-        const res = await api.get<StockBalance[]>('/inventory/balances');
-        setBalances(res.data ?? []);
-      } else {
-        const res = await api.get<StockMovement[]>('/inventory/movements');
-        setMovements(res.data ?? []);
-      }
-    } catch (err) {
-      console.error('Failed to load stock data', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [viewMode]);
+  const {
+    data: balances = [],
+    isLoading: balancesLoading,
+    isFetching: balancesFetching,
+    refetch: refetchBalances,
+  } = useQuery({
+    queryKey: ['inventory', 'balances'],
+    queryFn: async ({ signal }) => {
+      const res = await api.get<StockBalance[]>('/inventory/balances', { signal });
+      return res.data ?? [];
+    },
+    enabled: viewMode === 'balances',
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const {
+    data: movements = [],
+    isLoading: movementsLoading,
+    isFetching: movementsFetching,
+    refetch: refetchMovements,
+  } = useQuery({
+    queryKey: ['inventory', 'movements'],
+    queryFn: async ({ signal }) => {
+      const res = await api.get<StockMovement[]>('/inventory/movements', { signal });
+      return res.data ?? [];
+    },
+    enabled: viewMode === 'movements',
+  });
+
+  const loading =
+    viewMode === 'balances'
+      ? balancesLoading || balancesFetching
+      : movementsLoading || movementsFetching;
+
+  const handleRefresh = () => {
+    if (viewMode === 'balances') {
+      refetchBalances();
+    } else {
+      refetchMovements();
+    }
+  };
 
   const filteredBalances = balances.filter(
     (b) =>
@@ -78,7 +96,7 @@ export function StockLedgerSection() {
           </div>
 
           <button
-            onClick={fetchData}
+            onClick={handleRefresh}
             disabled={loading}
             className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors shadow-2xs"
             title="Refresh"

@@ -9,18 +9,32 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Storefront;
 use App\Models\StorefrontProduct;
+use App\Models\Tenant;
+use App\Modules\Ecommerce\Services\Seo\SeoMetadataService;
+use App\Modules\Ecommerce\Services\Seo\StructuredDataBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class StorefrontCatalogController extends Controller
 {
+    public function __construct(
+        protected SeoMetadataService $seoMetadataService = new SeoMetadataService(),
+        protected StructuredDataBuilder $structuredDataBuilder = new StructuredDataBuilder()
+    ) {}
+
     /**
-     * Get storefront configuration and branding.
+     * Get storefront configuration, branding, and organization structured data.
      */
     public function config(Request $request): JsonResponse
     {
         /** @var Storefront $storefront */
         $storefront = $request->attributes->get('storefront');
+        $tenantId = $storefront?->tenant_id ?? (int) tenant('id');
+        $tenant = Tenant::find($tenantId) ?? Tenant::first();
+
+        $seoSettings = $tenant ? $this->seoMetadataService->getTenantSeoSettings($tenant->id) : null;
+        $orgSchema = $tenant ? $this->structuredDataBuilder->buildOrganizationSchema($tenant, $storefront) : null;
+        $websiteSchema = $tenant ? $this->structuredDataBuilder->buildWebSiteSchema($tenant, $storefront) : null;
 
         return response()->json([
             'success' => true,
@@ -49,6 +63,11 @@ class StorefrontCatalogController extends Controller
                 'whatsapp_default_message' => $storefront->whatsapp_default_message,
                 'min_order_amount' => $storefront->min_order_amount,
                 'status' => $storefront->status,
+                'seo' => [
+                    'settings' => $seoSettings,
+                    'organization_schema' => $orgSchema,
+                    'website_schema' => $websiteSchema,
+                ],
             ],
         ]);
     }
@@ -64,7 +83,7 @@ class StorefrontCatalogController extends Controller
         $query = Product::query()
             ->where('status', 'active')
             ->where('type', '!=', 'raw_material')
-            ->with(['category:id,name,code', 'brand:id,name,code', 'baseUnit:id,name,code', 'variants']);
+            ->with(['category:id,name,code', 'brand:id,name,code', 'baseUnit:id,name,code', 'variants', 'images']);
 
         if ($request->filled('category_id')) {
             $query->where('category_id', $request->query('category_id'));
@@ -97,10 +116,15 @@ class StorefrontCatalogController extends Controller
     }
 
     /**
-     * Get a single product by ID or SKU.
+     * Get a single product by ID or SKU with full SEO & Schema.
      */
     public function product(Request $request, string $idOrSku): JsonResponse
     {
+        /** @var Storefront $storefront */
+        $storefront = $request->attributes->get('storefront');
+        $tenantId = $storefront?->tenant_id ?? (int) tenant('id');
+        $tenant = Tenant::find($tenantId) ?? Tenant::first();
+
         $product = Product::query()
             ->where('status', 'active')
             ->where(function ($q) use ($idOrSku): void {
@@ -110,7 +134,7 @@ class StorefrontCatalogController extends Controller
                     $q->where('sku', $idOrSku)->orWhere('online_slug', $idOrSku);
                 }
             })
-            ->with(['category', 'brand', 'baseUnit', 'variants'])
+            ->with(['category', 'brand', 'baseUnit', 'variants', 'images'])
             ->first();
 
         if (! $product) {
@@ -123,9 +147,32 @@ class StorefrontCatalogController extends Controller
             ], 404);
         }
 
+        $seoMeta = $tenant ? $this->seoMetadataService->generateProductMetadata($product, $tenant, $storefront) : [];
+        $productSchema = $tenant ? $this->structuredDataBuilder->buildProductSchema($product, $tenant, $storefront) : [];
+
+        $breadcrumbs = [
+            ['name' => 'Home', 'url' => '/'],
+            ['name' => 'All Products', 'url' => '/products'],
+        ];
+        if ($product->category) {
+            $catSlug = $product->category->slug ?? strtolower((string) preg_replace('/[^a-zA-Z0-9]+/', '-', $product->category->name));
+            $breadcrumbs[] = ['name' => $product->category->name, 'url' => '/collections/' . $catSlug];
+        }
+        $breadcrumbs[] = ['name' => $product->name, 'url' => '/products/' . ($product->online_slug ?: $product->sku)];
+
+        $breadcrumbSchema = $tenant ? $this->structuredDataBuilder->buildBreadcrumbSchema($breadcrumbs, $tenant, $storefront) : [];
+
+        $responseData = $product->toArray();
+        $responseData['seo'] = $seoMeta;
+        $responseData['schema'] = [
+            'product' => $productSchema,
+            'breadcrumbs' => $breadcrumbSchema,
+        ];
+        $responseData['breadcrumb_items'] = $breadcrumbs;
+
         return response()->json([
             'success' => true,
-            'data' => $product,
+            'data' => $responseData,
         ]);
     }
 
@@ -145,3 +192,4 @@ class StorefrontCatalogController extends Controller
         ]);
     }
 }
+

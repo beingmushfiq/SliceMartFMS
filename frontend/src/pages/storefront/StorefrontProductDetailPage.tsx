@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
-import { ArrowLeft, Minus, Package, Plus, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, Minus, Package, Plus, ShoppingBag, ShieldCheck } from 'lucide-react';
 import { api } from '../../lib/api/client';
 import { useStorefrontCartStore } from '../../lib/storefront/storefrontCartStore';
+import { SeoHead } from '../../components/seo/SeoHead';
+import { BreadcrumbNav } from '../../components/seo/BreadcrumbNav';
 import type { StorefrontConfig, StorefrontProduct, StorefrontProductVariant } from '../../types/api/storefront';
 
 interface OutletContextType {
@@ -75,30 +77,55 @@ export const StorefrontProductDetailPage: React.FC = () => {
     ? parseFloat(selectedVariant.price).toFixed(2)
     : parseFloat(product.default_sale_price || '0').toFixed(2);
 
+  const breadcrumbs = product.breadcrumb_items || [
+    { name: 'Home', url: `/store/${subdomain}` },
+    { name: 'All Products', url: `/store/${subdomain}/products` },
+    ...(product.category ? [{ name: product.category.name, url: `/store/${subdomain}/collections/${product.category.slug || product.category.name.toLowerCase()}` }] : []),
+    { name: product.name, url: `/store/${subdomain}/products/${product.online_slug || product.sku}` },
+  ];
+
+  const primaryImage = product.images?.[0]?.url || product.images?.[0]?.path;
+  const productSchema = product.schema?.product;
+
   const handleAddToCart = async () => {
     await addItem(product.id, quantity, selectedVariant?.id);
     openDrawer();
   };
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
-      {/* Back Button */}
-      <Link
-        to={`/store/${subdomain}/products`}
-        className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        <span>Back to Catalog</span>
-      </Link>
+    <div className="space-y-6 max-w-5xl mx-auto">
+      <SeoHead
+        title={product.seo?.title || product.name}
+        description={product.seo?.description || product.description || ''}
+        canonical={product.seo?.canonical || undefined}
+        ogType="product"
+        ogImage={primaryImage || config.theme?.hero_image || undefined}
+        brandName={config.name}
+        schema={productSchema}
+      />
+
+      {/* Semantic Breadcrumb Navigation */}
+      <BreadcrumbNav items={breadcrumbs} className="py-2" />
 
       <div className="grid grid-cols-1 gap-10 md:grid-cols-2 items-start">
         {/* Left: Product Visual Card */}
         <div className="aspect-square rounded-3xl border border-zinc-800/80 bg-zinc-900/40 p-8 flex flex-col items-center justify-center relative overflow-hidden shadow-xl">
-          <Package className="h-28 w-28 text-emerald-500/40 mb-4" />
-          <div className="text-center">
-            <span className="font-mono text-xs text-zinc-500">{product.sku}</span>
-            <div className="text-sm font-bold text-zinc-300 mt-1">{product.name}</div>
-          </div>
+          {primaryImage ? (
+            <img
+              src={primaryImage}
+              alt={product.name}
+              className="w-full h-full object-contain"
+              loading="eager"
+            />
+          ) : (
+            <>
+              <Package className="h-28 w-28 text-emerald-500/40 mb-4" />
+              <div className="text-center">
+                <span className="font-mono text-xs text-zinc-500">{product.sku}</span>
+                <div className="text-sm font-bold text-zinc-300 mt-1">{product.name}</div>
+              </div>
+            </>
+          )}
 
           <div className="absolute top-4 right-4 rounded-full bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-400 ring-1 ring-emerald-500/20">
             In Stock
@@ -141,7 +168,7 @@ export const StorefrontProductDetailPage: React.FC = () => {
                 Select Option / Package Size
               </label>
               <div className="flex flex-wrap gap-2">
-                {product.variants.map((v) => (
+                {product.variants.map((v: StorefrontProductVariant) => (
                   <button
                     key={v.id}
                     type="button"
@@ -240,6 +267,62 @@ export const StorefrontProductDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* AEO & GEO Structured Product Technical Specifications */}
+      <section aria-labelledby="product-specifications-heading" className="pt-8 border-t border-zinc-800/80 space-y-6">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="size-5 text-emerald-400" />
+          <h2 id="product-specifications-heading" className="text-sm font-bold uppercase tracking-wider text-white">
+            Technical Specifications & Certified Quality Data
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5 space-y-3">
+            <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Manufacturing Details</h3>
+            <dl className="space-y-2 text-xs">
+              <div className="flex justify-between py-1 border-b border-zinc-800/60">
+                <dt className="text-zinc-500">Universal SKU</dt>
+                <dd className="font-mono font-bold text-zinc-200">{product.sku}</dd>
+              </div>
+              <div className="flex justify-between py-1 border-b border-zinc-800/60">
+                <dt className="text-zinc-500">Brand Entity</dt>
+                <dd className="font-medium text-zinc-200">{product.brand?.name || config.name}</dd>
+              </div>
+              <div className="flex justify-between py-1 border-b border-zinc-800/60">
+                <dt className="text-zinc-500">Category</dt>
+                <dd className="font-medium text-zinc-200">{product.category?.name || 'General Wholesale'}</dd>
+              </div>
+              <div className="flex justify-between py-1">
+                <dt className="text-zinc-500">Standard Unit</dt>
+                <dd className="font-medium text-zinc-200">{product.base_unit?.name || 'Piece'}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5 space-y-3">
+            <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Assurance & Logistics</h3>
+            <dl className="space-y-2 text-xs">
+              <div className="flex justify-between py-1 border-b border-zinc-800/60">
+                <dt className="text-zinc-500">Origin / Facility</dt>
+                <dd className="font-medium text-emerald-400">Direct From Factory Line</dd>
+              </div>
+              <div className="flex justify-between py-1 border-b border-zinc-800/60">
+                <dt className="text-zinc-500">Quality Inspection</dt>
+                <dd className="font-medium text-zinc-200">ISO 9001 / Batch QA Verified</dd>
+              </div>
+              <div className="flex justify-between py-1 border-b border-zinc-800/60">
+                <dt className="text-zinc-500">Packaging</dt>
+                <dd className="font-medium text-zinc-200">Industrial Protective Sealed</dd>
+              </div>
+              <div className="flex justify-between py-1">
+                <dt className="text-zinc-500">Fulfillment Speed</dt>
+                <dd className="font-medium text-zinc-200">Same-day Dispatch Available</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

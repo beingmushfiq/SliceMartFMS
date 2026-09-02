@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   ShieldAlert,
   ShieldCheck,
@@ -53,8 +54,6 @@ interface FraudAssessment {
 }
 
 export const OrderFraudVerificationWorkspace: React.FC = () => {
-  const [assessments, setAssessments] = useState<FraudAssessment[]>([]);
-  const [loading, setLoading] = useState(true);
   const [riskFilter, setRiskFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,27 +74,24 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const loadQueue = async () => {
-    setLoading(true);
-    try {
+  const {
+    data: assessments = [],
+    isLoading: loading,
+    refetch: loadQueue,
+  } = useQuery({
+    queryKey: ['fraud-check', 'queue', riskFilter, statusFilter],
+    queryFn: async ({ signal }) => {
       const params = new URLSearchParams();
       if (riskFilter) params.append('risk_level', riskFilter);
       if (statusFilter) params.append('verification_status', statusFilter);
 
       const response = await api.get<{ data: FraudAssessment[] }>(
-        `/fraud-check/queue?${params.toString()}`
+        `/fraud-check/queue?${params.toString()}`,
+        { signal }
       );
-      setAssessments(response.data.data ?? []);
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadQueue();
-  }, [riskFilter, statusFilter]);
+      return response.data.data ?? [];
+    },
+  });
 
   const openReviewModal = (item: FraudAssessment) => {
     setSelectedItem(item);
@@ -118,8 +114,9 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
       showToast(`Order ${selectedItem.sales_order?.order_number} verified & released.`);
       setSelectedItem(null);
       loadQueue();
-    } catch (err: any) {
-      alert(err.message ?? 'Verification failed.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Verification failed.';
+      alert(msg);
     } finally {
       setActionLoading(false);
     }
@@ -138,8 +135,9 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
       showToast(`Order ${selectedItem.sales_order?.order_number} placed on hold.`);
       setSelectedItem(null);
       loadQueue();
-    } catch (err: any) {
-      alert(err.message ?? 'Failed to hold order.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to hold order.';
+      alert(msg);
     } finally {
       setActionLoading(false);
     }
@@ -161,8 +159,9 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
       showToast(`Order ${selectedItem.sales_order?.order_number} rejected & cancelled.`);
       setSelectedItem(null);
       loadQueue();
-    } catch (err: any) {
-      alert(err.message ?? 'Failed to reject order.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to reject order.';
+      alert(msg);
     } finally {
       setActionLoading(false);
     }
@@ -204,7 +203,7 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
         </div>
 
         <button
-          onClick={loadQueue}
+          onClick={() => { void loadQueue(); }}
           className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800/80 px-3.5 py-2 text-xs font-semibold text-zinc-200 hover:text-white hover:border-emerald-500 transition-all shadow-sm self-start sm:self-auto"
         >
           <RotateCcw className="h-3.5 w-3.5" />

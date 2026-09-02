@@ -4,12 +4,19 @@ import { AppHeader } from './AppHeader';
 import { Sidebar } from './Sidebar';
 import { ImpersonationBanner } from './ImpersonationBanner';
 import { OfflineBanner } from './OfflineBanner';
+import { SeoHead } from '../seo/SeoHead';
 
 export function AppShell() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
     <div className="flex min-h-dvh bg-base text-default font-sans antialiased flex-col">
+      <SeoHead
+        title="SliceMart ERP"
+        description="Private Tenant Enterprise Management Portal"
+        noIndex={true}
+        brandName="SliceMart ERP"
+      />
       <OfflineBanner />
       <ImpersonationBanner />
       <div className="flex flex-1 min-h-0">

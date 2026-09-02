@@ -672,7 +672,44 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::post('{id}/set-primary', [\App\Modules\Ecommerce\Controllers\TenantDomainController::class, 'setPrimary'])->name('set-primary');
                 Route::delete('{id}', [\App\Modules\Ecommerce\Controllers\TenantDomainController::class, 'destroy'])->name('destroy');
             });
+
+            // SEO, Sitemaps, Robots & Discoverability
+            Route::prefix('seo')->name('seo.')->group(static function (): void {
+                Route::get('settings', [\App\Modules\Ecommerce\Controllers\TenantSeoSettingsController::class, 'show'])->name('settings.show');
+                Route::put('settings', [\App\Modules\Ecommerce\Controllers\TenantSeoSettingsController::class, 'update'])->name('settings.update');
+                Route::get('audit', [\App\Modules\Ecommerce\Controllers\TenantSeoSettingsController::class, 'audit'])->name('audit');
+                Route::post('indexnow/ping', [\App\Modules\Ecommerce\Controllers\TenantSeoSettingsController::class, 'pingIndexNow'])->name('indexnow.ping');
+            });
+
+            // URL Redirect Management & 404 Error Log
+            Route::prefix('redirects')->name('redirects.')->group(static function (): void {
+                Route::get('/', [\App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'index'])->name('index');
+                Route::post('/', [\App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'store'])->name('store');
+                Route::put('{id}', [\App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'update'])->name('update');
+                Route::delete('{id}', [\App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'destroy'])->name('destroy');
+                Route::get('404-logs', [\App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'notFoundLogs'])->name('404-logs');
+                Route::post('404-logs/{id}/resolve', [\App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'resolveNotFound'])->name('404-logs.resolve');
+            });
         });
+
+        // ── Direct Top-Level SEO & Redirect Routes ──────────────────
+        Route::prefix('seo')->name('seo.')->group(static function (): void {
+            Route::get('settings', [\App\Modules\Ecommerce\Controllers\TenantSeoSettingsController::class, 'show'])->name('settings.show');
+            Route::put('settings', [\App\Modules\Ecommerce\Controllers\TenantSeoSettingsController::class, 'update'])->name('settings.update');
+            Route::get('audit', [\App\Modules\Ecommerce\Controllers\TenantSeoSettingsController::class, 'audit'])->name('audit');
+            Route::post('indexnow/ping', [\App\Modules\Ecommerce\Controllers\TenantSeoSettingsController::class, 'pingIndexNow'])->name('indexnow.ping');
+        });
+
+        Route::prefix('redirects')->name('redirects.')->group(static function (): void {
+            Route::get('/', [\App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'index'])->name('index');
+            Route::post('/', [\App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'store'])->name('store');
+            Route::put('{id}', [\App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'update'])->name('update');
+            Route::delete('{id}', [\App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'destroy'])->name('destroy');
+            Route::get('404-logs', [\App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'notFoundLogs'])->name('404-logs');
+            Route::post('404-logs/{id}/resolve', [\App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'resolveNotFound'])->name('404-logs.resolve');
+        });
+
+
 
         // ── Settings & Configuration System ─────────────────────────
         Route::prefix('settings')->name('settings.')->group(static function (): void {

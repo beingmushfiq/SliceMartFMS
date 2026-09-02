@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
 import { useStorefrontCartStore } from '../../lib/storefront/storefrontCartStore';
+import { SeoHead } from '../../components/seo/SeoHead';
+import { BreadcrumbNav } from '../../components/seo/BreadcrumbNav';
 import type { StorefrontConfig, StorefrontProduct } from '../../types/api/storefront';
 
 interface OutletContextType {
@@ -135,8 +137,42 @@ export const StorefrontCatalogPage: React.FC = () => {
   const currency = config?.currency ?? 'BDT';
   const whatsappNumber = config?.whatsapp_number?.replace(/[^0-9]/g, '') || '8801700000000';
 
+  const activeCategoryObj = categories.find((c) => c.id === selectedCategory);
+  const pageTitle = activeCategoryObj
+    ? `Buy ${activeCategoryObj.name} Online`
+    : searchQuery
+    ? `Search: "${searchQuery}"`
+    : 'All Products & Collections';
+
+  const breadcrumbs = [
+    { name: 'Home', url: `/store/${subdomain}` },
+    { name: 'All Products', url: `/store/${subdomain}/products` },
+    ...(activeCategoryObj ? [{ name: activeCategoryObj.name, url: `/store/${subdomain}/collections/${activeCategoryObj.code || activeCategoryObj.name.toLowerCase()}` }] : []),
+  ];
+
+  const itemListSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: pageTitle,
+    itemListElement: sortedProducts.slice(0, 30).map((p, idx) => ({
+      '@type': 'ListItem',
+      position: idx + 1,
+      name: p.name,
+      url: `${window.location.origin}/store/${subdomain}/products/${(p as any).online_slug || p.sku}`,
+    })),
+  };
+
   return (
-    <div className="space-y-8 py-4">
+    <div className="space-y-6 py-2">
+      <SeoHead
+        title={pageTitle}
+        description={`Explore genuine factory catalog for ${activeCategoryObj ? activeCategoryObj.name : 'wholesale and retail products'}. Fast direct delivery, instant WhatsApp ordering.`}
+        brandName={config?.name ?? 'Slice Mart'}
+        schema={itemListSchema}
+      />
+
+      <BreadcrumbNav items={breadcrumbs} className="py-1" />
+
       {/* Top Banner */}
       <div className="relative overflow-hidden rounded-3xl border border-emerald-500/20 bg-linear-to-r from-emerald-950/80 via-zinc-900 to-zinc-950 p-6 sm:p-10 shadow-xl">
         <div

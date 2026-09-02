@@ -20,6 +20,7 @@ import {
   Scale,
   FileCode,
   Sparkles,
+  Compass,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
@@ -33,6 +34,8 @@ import {
   ProductDescriptionEditor,
   RenderHtmlContent,
 } from '../components/ProductDescriptionEditor';
+import { SerpPreviewCard } from '../../../components/seo/SerpPreviewCard';
+import { DiscoverabilityChecklist } from '../../../components/seo/DiscoverabilityChecklist';
 import type { Product, Category, Brand } from '../../../types/api/catalog';
 import type { Unit } from '../../../types/api/unit';
 
@@ -57,6 +60,13 @@ interface ProductFormDraft {
   opening_stock?: string | null;
   warehouse_id?: string | null;
   tracking_mode?: string;
+  online_slug?: string | null;
+  online_meta?: {
+    meta_title?: string;
+    meta_description?: string;
+    canonical_url?: string;
+    [key: string]: unknown;
+  } | null;
   custom_attributes?: Record<string, unknown> | null;
 }
 
@@ -76,7 +86,7 @@ export function ProductsSection() {
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const [selectedLabelProduct, setSelectedLabelProduct] = useState<Product | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [activeFormTab, setActiveFormTab] = useState<'general' | 'pricing' | 'media' | 'custom'>('general');
+  const [activeFormTab, setActiveFormTab] = useState<'general' | 'pricing' | 'media' | 'seo' | 'custom'>('general');
 
   // Quick-Add Sub-Modal States
   const [isQuickUnitOpen, setIsQuickUnitOpen] = useState(false);
@@ -229,7 +239,11 @@ export function ProductsSection() {
     mutationFn: (payload: ProductFormDraft) => {
       const finalPayload = {
         ...payload,
-        online_meta: payload.image_url ? { image_url: payload.image_url } : null,
+        online_meta: {
+          ...(payload.online_meta || {}),
+          ...(payload.image_url ? { image_url: payload.image_url } : {}),
+        },
+        online_slug: payload.online_slug || null,
       };
       return api.post<Product>('/products', finalPayload);
     },
@@ -242,10 +256,9 @@ export function ProductsSection() {
     },
     onError: (err) => {
       if (isApiError(err)) {
-        if (err.code === 'DUPLICATE') setErrorMsg('SKU is already in use by another product.');
-        else setErrorMsg(err.message ?? 'Failed to create product.');
+        setErrorMsg(err.message ?? 'Failed to create product.');
       } else {
-        setErrorMsg('Error creating product. Please try again.');
+        setErrorMsg('Error creating product.');
       }
     },
   });
@@ -254,7 +267,11 @@ export function ProductsSection() {
     mutationFn: ({ id, payload }: { id: string; payload: Partial<ProductFormDraft> }) => {
       const finalPayload = {
         ...payload,
-        online_meta: payload.image_url ? { image_url: payload.image_url } : null,
+        online_meta: {
+          ...(payload.online_meta || {}),
+          ...(payload.image_url ? { image_url: payload.image_url } : {}),
+        },
+        online_slug: payload.online_slug || null,
       };
       return api.patch<Product>(`/products/${id}`, finalPayload);
     },
@@ -308,6 +325,8 @@ export function ProductsSection() {
       opening_stock: '0',
       warehouse_id: '',
       tracking_mode: 'batch',
+      online_slug: '',
+      online_meta: null,
     });
     setActiveFormTab('general');
   };
@@ -315,7 +334,7 @@ export function ProductsSection() {
   const handleOpenEdit = (p: Product) => {
     setErrorMsg(null);
     setActiveFormTab('general');
-    const onlineMeta = p.online_meta as { image_url?: string } | null;
+    const onlineMeta = p.online_meta as { image_url?: string; meta_title?: string; meta_description?: string; canonical_url?: string } | null;
     setDraft({
       sku: p.sku,
       name: p.name,
@@ -337,6 +356,8 @@ export function ProductsSection() {
       opening_stock: '0',
       warehouse_id: '',
       tracking_mode: p.tracking_mode || 'batch',
+      online_slug: p.online_slug || '',
+      online_meta: onlineMeta || null,
     });
     setEditingProduct(p);
   };
@@ -435,7 +456,7 @@ export function ProductsSection() {
                   is_sold: true,
                   has_variants: false,
                   tracking_mode: 'batch',
-                  shelf_life_days: 7,
+                  opening_stock: '100',
                   reorder_level: '10',
                   reorder_quantity: '50',
                   tax_profile_id: null,
@@ -675,6 +696,19 @@ export function ProductsSection() {
             >
               <FileCode className="size-3.5" />
               <span>Media & HTML Notes</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveFormTab('seo')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                activeFormTab === 'seo'
+                  ? 'bg-primary text-white shadow-sm shadow-primary/30'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+            >
+              <Compass className="size-3.5" />
+              <span>SEO & Discoverability</span>
             </button>
 
             <button
@@ -1192,6 +1226,99 @@ export function ProductsSection() {
             </div>
           )}
 
+          {/* TAB: SEO & Discoverability */}
+          {activeFormTab === 'seo' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Custom URL Slug (Product Path)
+                    </label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400">
+                        /products/
+                      </span>
+                      <input
+                        type="text"
+                        placeholder={draft.name ? draft.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'product-slug'}
+                        value={draft.online_slug ?? ''}
+                        onChange={(e) => setDraft({ ...draft, online_slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 pl-24 pr-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
+                      />
+                    </div>
+                    <span className="text-[11px] text-slate-500 mt-1 block">
+                      Clean, search-engine friendly slug. Defaults to product name or SKU if left empty.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Custom SEO Meta Title
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={draft.name ? `${draft.name} | Slice Mart` : 'Page Title Override'}
+                      value={draft.online_meta?.meta_title ?? ''}
+                      onChange={(e) =>
+                        setDraft({
+                          ...draft,
+                          online_meta: {
+                            ...(draft.online_meta || {}),
+                            meta_title: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Custom SEO Meta Description
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder={draft.description ? draft.description.replace(/<[^>]*>?/gm, '').slice(0, 150) : 'Concise product summary for Google & AI search engines...'}
+                      value={draft.online_meta?.meta_description ?? ''}
+                      onChange={(e) =>
+                        setDraft({
+                          ...draft,
+                          online_meta: {
+                            ...(draft.online_meta || {}),
+                            meta_description: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 p-3 text-xs text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs leading-relaxed"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <SerpPreviewCard
+                    title={draft.online_meta?.meta_title || (draft.name ? `${draft.name} | Slice Mart` : 'Product Title')}
+                    description={
+                      draft.online_meta?.meta_description ||
+                      (draft.description ? draft.description.replace(/<[^>]*>?/gm, '').slice(0, 150) : 'Direct factory manufacturing and wholesale catalog.')
+                    }
+                    urlPath={`/products/${draft.online_slug || draft.sku.toLowerCase() || 'item-sku'}`}
+                    imageUrl={draft.image_url || undefined}
+                  />
+
+                  <DiscoverabilityChecklist
+                    title={draft.online_meta?.meta_title || draft.name || ''}
+                    description={draft.online_meta?.meta_description || draft.description || ''}
+                    slug={draft.online_slug || undefined}
+                    hasImage={Boolean(draft.image_url)}
+                    imageAlt={draft.name}
+                    hasSchema={true}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* TAB 4: Custom Attributes */}
           {activeFormTab === 'custom' && (
             <div className="py-2">
@@ -1304,6 +1431,19 @@ export function ProductsSection() {
               >
                 <FileCode className="size-3.5" />
                 <span>Media & HTML Notes</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveFormTab('seo')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  activeFormTab === 'seo'
+                    ? 'bg-primary text-white shadow-sm shadow-primary/30'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                <Compass className="size-3.5" />
+                <span>SEO & Discoverability</span>
               </button>
             </div>
 
@@ -1569,6 +1709,55 @@ export function ProductsSection() {
                   </div>
                 </div>
 
+                {/* Initial / Opening Stock */}
+                <div className="p-3.5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/60 space-y-3">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-900 dark:text-indigo-200">
+                    <Package className="size-3.5 text-indigo-600 dark:text-indigo-400" />
+                    <span>Initial Opening Stock</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Opening / Initial Stock (Qty)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="0"
+                        min="0"
+                        step="any"
+                        value={draft.opening_stock ?? ''}
+                        onChange={(e) => setDraft({ ...draft, opening_stock: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
+                      />
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">
+                        Initial on-hand stock balance
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Opening Warehouse
+                      </label>
+                      <select
+                        value={draft.warehouse_id ?? ''}
+                        onChange={(e) => setDraft({ ...draft, warehouse_id: e.target.value || null })}
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs cursor-pointer font-medium"
+                      >
+                        <option value="">Default Main Warehouse</option>
+                        {warehouses.map((w: WarehouseOption) => (
+                          <option key={w.uuid || w.id} value={w.uuid || w.id}>
+                            {w.name} ({w.code})
+                          </option>
+                        ))}
+                      </select>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">
+                        Storage facility for opening inventory
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-slate-200 dark:border-slate-800">
                   <label className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                     <input
@@ -1737,6 +1926,99 @@ export function ProductsSection() {
                   placeholder="<h2>Product Overview</h2><p>Ingredients, allergen notices, packaging specs, custom styled tables...</p>"
                   rows={5}
                 />
+              </div>
+            </div>
+          )}
+
+          {/* TAB: SEO & Discoverability */}
+          {activeFormTab === 'seo' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Custom URL Slug (Product Path)
+                    </label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400">
+                        /products/
+                      </span>
+                      <input
+                        type="text"
+                        placeholder={draft.name ? draft.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'product-slug'}
+                        value={draft.online_slug ?? ''}
+                        onChange={(e) => setDraft({ ...draft, online_slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 pl-24 pr-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
+                      />
+                    </div>
+                    <span className="text-[11px] text-slate-500 mt-1 block">
+                      Clean, search-engine friendly slug. Defaults to product name or SKU if left empty.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Custom SEO Meta Title
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={draft.name ? `${draft.name} | Slice Mart` : 'Page Title Override'}
+                      value={draft.online_meta?.meta_title ?? ''}
+                      onChange={(e) =>
+                        setDraft({
+                          ...draft,
+                          online_meta: {
+                            ...(draft.online_meta || {}),
+                            meta_title: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Custom SEO Meta Description
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder={draft.description ? draft.description.replace(/<[^>]*>?/gm, '').slice(0, 150) : 'Concise product summary for Google & AI search engines...'}
+                      value={draft.online_meta?.meta_description ?? ''}
+                      onChange={(e) =>
+                        setDraft({
+                          ...draft,
+                          online_meta: {
+                            ...(draft.online_meta || {}),
+                            meta_description: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 p-3 text-xs text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs leading-relaxed"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <SerpPreviewCard
+                    title={draft.online_meta?.meta_title || (draft.name ? `${draft.name} | Slice Mart` : 'Product Title')}
+                    description={
+                      draft.online_meta?.meta_description ||
+                      (draft.description ? draft.description.replace(/<[^>]*>?/gm, '').slice(0, 150) : 'Direct factory manufacturing and wholesale catalog.')
+                    }
+                    urlPath={`/products/${draft.online_slug || draft.sku.toLowerCase() || 'item-sku'}`}
+                    imageUrl={draft.image_url || undefined}
+                  />
+
+                  <DiscoverabilityChecklist
+                    title={draft.online_meta?.meta_title || draft.name || ''}
+                    description={draft.online_meta?.meta_description || draft.description || ''}
+                    slug={draft.online_slug || undefined}
+                    hasImage={Boolean(draft.image_url)}
+                    imageAlt={draft.name}
+                    hasSchema={true}
+                  />
+                </div>
               </div>
             </div>
           )}

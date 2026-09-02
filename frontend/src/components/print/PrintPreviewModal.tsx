@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Printer,
   FileDown,
@@ -7,6 +7,7 @@ import {
   ZoomOut,
   FileText,
   RotateCcw,
+  ArrowLeft,
 } from 'lucide-react';
 import { useDocumentPrint } from './useDocumentPrint';
 
@@ -39,6 +40,20 @@ export function PrintPreviewModal({
 }: PrintPreviewModalProps) {
   const { printDocument, isPrinting } = useDocumentPrint();
   const [zoom, setZoom] = useState<number>(100);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -93,11 +108,24 @@ export function PrintPreviewModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-900/80 backdrop-blur-xs text-slate-800">
+    <div className="fixed inset-0 z-50 flex flex-col bg-slate-900/90 backdrop-blur-sm text-slate-800 animate-in fade-in duration-200">
       {/* Top Action Bar */}
-      <header className="flex h-14 items-center justify-between border-b border-slate-700 bg-slate-900 px-4 text-white">
+      <header className="flex h-14 items-center justify-between border-b border-slate-700 bg-slate-900 px-4 text-white shrink-0">
         <div className="flex items-center gap-3">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-primary/20 text-primary">
+          {/* Back button */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 text-xs font-bold text-slate-200 hover:text-white hover:bg-slate-700 border border-slate-700 transition-all cursor-pointer shadow-xs"
+            title="Return to Setup / Editor"
+          >
+            <ArrowLeft className="size-4 text-emerald-400" />
+            <span>Back to Setup</span>
+          </button>
+
+          <div className="h-5 w-px bg-slate-700 hidden sm:block" />
+
+          <div className="hidden sm:flex size-9 items-center justify-center rounded-lg bg-primary/20 text-primary">
             <FileText className="size-5" />
           </div>
           <div>
@@ -116,26 +144,29 @@ export function PrintPreviewModal({
         </div>
 
         {/* Center Zoom Controls */}
-        <div className="hidden sm:flex items-center gap-1.5 bg-slate-800/80 px-2 py-1 rounded-xl border border-slate-700 text-xs">
+        <div className="hidden md:flex items-center gap-1.5 bg-slate-800/80 px-2 py-1 rounded-xl border border-slate-700 text-xs">
           <button
+            type="button"
             onClick={() => setZoom((prev) => Math.max(50, prev - 15))}
-            className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700"
+            className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer"
             title="Zoom Out"
           >
             <ZoomOut className="size-3.5" />
           </button>
           <span className="font-mono w-12 text-center text-slate-200">{zoom}%</span>
           <button
+            type="button"
             onClick={() => setZoom((prev) => Math.min(200, prev + 15))}
-            className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700"
+            className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer"
             title="Zoom In"
           >
             <ZoomIn className="size-3.5" />
           </button>
           <div className="h-4 w-px bg-slate-700 mx-1" />
           <button
+            type="button"
             onClick={() => setZoom(100)}
-            className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700"
+            className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer"
             title="Reset Zoom"
           >
             <RotateCcw className="size-3.5" />
@@ -168,7 +199,7 @@ export function PrintPreviewModal({
             type="button"
             onClick={onClose}
             className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors ml-1 cursor-pointer"
-            title="Close Preview"
+            title="Close Preview (Esc)"
           >
             <X className="size-5" />
           </button>

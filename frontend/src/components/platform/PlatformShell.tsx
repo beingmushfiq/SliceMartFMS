@@ -3,10 +3,17 @@ import { Outlet } from 'react-router-dom';
 import { PlatformSidebar } from './PlatformSidebar';
 import { PlatformHeader } from './PlatformHeader';
 import { OfflineBanner } from '../layout/OfflineBanner';
+import { SeoHead } from '../seo/SeoHead';
 
 export const PlatformShell: React.FC = () => {
   return (
     <div className="min-h-screen bg-(--app-bg) text-default flex flex-col font-sans antialiased selection:bg-amber-500 selection:text-white relative">
+      <SeoHead
+        title="DevCenterPoint Superadmin Control Plane"
+        description="Master Platform Superadmin System"
+        noIndex={true}
+        brandName="DevCenterPoint Master Engine"
+      />
       <OfflineBanner />
       <div className="flex-1 flex min-w-0 h-screen overflow-hidden">
         {/* Platform Sidebar */}

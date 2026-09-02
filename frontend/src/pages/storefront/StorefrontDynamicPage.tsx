@@ -14,6 +14,8 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
+import { SeoHead } from '../../components/seo/SeoHead';
+import { BreadcrumbNav } from '../../components/seo/BreadcrumbNav';
 import type { StorefrontConfig } from '../../types/api/storefront';
 import type { PageBlock } from '../../modules/storefront/StorefrontPageBuilderWorkspace';
 
@@ -72,15 +74,20 @@ export const StorefrontDynamicPage: React.FC = () => {
 
   // 1. Custom CMS Page from Backend Database
   if (page && page.blocks && page.blocks.length > 0) {
+    const breadcrumbs = [
+      { name: 'Home', url: `/store/${subdomain}` },
+      { name: page.title, url: `/store/${subdomain}/pages/${page.slug}` },
+    ];
+
     return (
-      <div className="max-w-4xl mx-auto space-y-10 py-6">
-        <Link
-          to={`/store/${subdomain}/products`}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Back to Catalog</span>
-        </Link>
+      <div className="max-w-4xl mx-auto space-y-8 py-4">
+        <SeoHead
+          title={page.meta_title || page.title}
+          description={page.meta_description || config.meta_description || ''}
+          brandName={config.name}
+        />
+
+        <BreadcrumbNav items={breadcrumbs} className="py-1" />
 
         <div className="space-y-2 border-b border-zinc-800/80 pb-6">
           <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">{page.title}</h1>
@@ -148,15 +155,20 @@ export const StorefrontDynamicPage: React.FC = () => {
 
   // 2. Rich Fallback Template for: "about-us" / "about"
   if (slug === 'about-us' || slug === 'about') {
+    const breadcrumbs = [
+      { name: 'Home', url: `/store/${subdomain}` },
+      { name: 'About Our Factory', url: `/store/${subdomain}/pages/about-us` },
+    ];
+
     return (
-      <div className="max-w-4xl mx-auto space-y-12 py-6">
-        <Link
-          to={`/store/${subdomain}/products`}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Back to Catalog</span>
-        </Link>
+      <div className="max-w-4xl mx-auto space-y-10 py-4">
+        <SeoHead
+          title="About Our Factory & Manufacturing Standards"
+          description={`Learn about ${config?.name || 'SliceMart'} manufacturing facility, certified quality controls, automated production batching, and direct wholesale pricing.`}
+          brandName={config?.name ?? 'Slice Mart'}
+        />
+
+        <BreadcrumbNav items={breadcrumbs} className="py-1" />
 
         {/* Hero Section */}
         <div className="relative overflow-hidden rounded-3xl border border-emerald-500/20 bg-linear-to-br from-emerald-950/80 via-zinc-900 to-zinc-950 p-8 sm:p-12 shadow-2xl space-y-5">
@@ -266,15 +278,34 @@ export const StorefrontDynamicPage: React.FC = () => {
       },
     ];
 
+    const breadcrumbs = [
+      { name: 'Home', url: `/store/${subdomain}` },
+      { name: 'Frequently Asked Questions', url: `/store/${subdomain}/pages/faq` },
+    ];
+
+    const faqSchema = {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: FAQS.map((faq) => ({
+        '@type': 'Question',
+        name: faq.q,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: faq.a,
+        },
+      })),
+    };
+
     return (
-      <div className="max-w-3xl mx-auto space-y-10 py-6">
-        <Link
-          to={`/store/${subdomain}/products`}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Back to Catalog</span>
-        </Link>
+      <div className="max-w-3xl mx-auto space-y-8 py-4">
+        <SeoHead
+          title="Frequently Asked Questions & Customer Support"
+          description="Find answers to common questions about ordering direct from the factory, courier delivery charges, WhatsApp orders, and warranty replacements."
+          brandName={config?.name ?? 'Slice Mart'}
+          schema={faqSchema}
+        />
+
+        <BreadcrumbNav items={breadcrumbs} className="py-1" />
 
         <div className="text-center space-y-3">
           <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">
@@ -333,15 +364,20 @@ export const StorefrontDynamicPage: React.FC = () => {
 
   // 4. Rich Fallback Template for: "privacy-policy" / "privacy" / "terms"
   if (slug === 'privacy-policy' || slug === 'privacy' || slug === 'terms') {
+    const breadcrumbs = [
+      { name: 'Home', url: `/store/${subdomain}` },
+      { name: 'Privacy Policy & Terms', url: `/store/${subdomain}/pages/privacy-policy` },
+    ];
+
     return (
-      <div className="max-w-4xl mx-auto space-y-10 py-6">
-        <Link
-          to={`/store/${subdomain}/products`}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Back to Catalog</span>
-        </Link>
+      <div className="max-w-4xl mx-auto space-y-8 py-4">
+        <SeoHead
+          title="Privacy Policy, Order Terms & Data Protection"
+          description="Read our official data protection rules, secure payment handling, 7-day replacement warranty, and shipping guidelines."
+          brandName={config?.name ?? 'Slice Mart'}
+        />
+
+        <BreadcrumbNav items={breadcrumbs} className="py-1" />
 
         <div className="space-y-2 border-b border-zinc-800/80 pb-6">
           <div className="inline-flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-800/80 px-3 py-0.5 text-[11px] font-semibold text-zinc-300">
@@ -398,6 +434,11 @@ export const StorefrontDynamicPage: React.FC = () => {
   // 5. General Fallback for other custom slugs
   return (
     <div className="max-w-2xl mx-auto py-16 text-center space-y-5">
+      <SeoHead
+        title="Custom Page"
+        description="Official custom page"
+        brandName={config?.name ?? 'Slice Mart'}
+      />
       <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
         <FileText className="h-6 w-6" />
       </div>

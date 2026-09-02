@@ -40,7 +40,8 @@ export interface Product extends CatalogTimestamped {
   is_stock_tracked: boolean;
   has_variants: boolean;
   tracking_mode: string;
-  shelf_life_days: number | null;
+  opening_stock?: string | number | null;
+  shelf_life_days?: number | null;
   reorder_level: string | null;
   reorder_quantity: string | null;
   standard_cost: string;
