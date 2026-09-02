@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   ArrowDown,
   ArrowUp,
@@ -54,25 +54,23 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const loadPages = async () => {
+  const loadPages = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get<{ data: CmsPage[] }>('/storefront/cms/pages');
-      const list = res.data.data ?? (res.data as any) ?? [];
+      const list = res.data.data ?? (res.data as unknown as CmsPage[]) ?? [];
       setPages(list);
-      if (list.length > 0 && !selectedPage) {
-        setSelectedPage(list[0] ?? null);
-      }
+      setSelectedPage((prev) => (prev ? prev : (list[0] ?? null)));
     } catch (err) {
       console.error('Failed to fetch pages', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadPages();
-  }, []);
+  }, [loadPages]);
 
   const handleCreateNewPage = async (templateType: string) => {
     let title = 'New Custom Page';

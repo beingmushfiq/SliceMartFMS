@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   CheckCircle2,
   CreditCard,
@@ -40,8 +41,6 @@ interface CartSlot {
 }
 
 export function POSShell({ session, onExit }: POSShellProps) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(false);
   const [search, setSearch] = useState('');
   
   // Multi-cart slots (up to 5 concurrent held transactions)
@@ -65,7 +64,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
   const customerNameInputRef = useRef<HTMLInputElement>(null);
   const cashTenderedInputRef = useRef<HTMLInputElement>(null);
 
-  const updateCurrentSlot = (updater: Partial<CartSlot> | ((prev: CartSlot) => CartSlot)) => {
+  const updateCurrentSlot = useCallback((updater: Partial<CartSlot> | ((prev: CartSlot) => CartSlot)) => {
     setSlots((prev) =>
       prev.map((s, idx) => {
         if (idx === activeSlotIndex) {
@@ -74,23 +73,15 @@ export function POSShell({ session, onExit }: POSShellProps) {
         return s;
       })
     );
-  };
+  }, [activeSlotIndex]);
 
-  const fetchProducts = async () => {
-    setLoadingProducts(true);
-    try {
+  const { data: products = [], isLoading: loadingProducts, isFetching: fetchingProducts, refetch: refetchProducts } = useQuery<Product[]>({
+    queryKey: ['catalog', 'products', 'pos'],
+    queryFn: async () => {
       const res = await api.get<Product[]>('/catalog/products');
-      setProducts(res.data ?? []);
-    } catch (err) {
-      console.error('Failed to load products for POS', err);
-    } finally {
-      setLoadingProducts(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+      return res.data ?? [];
+    },
+  });
 
   // Global Keyboard Shortcuts for POS Cashier Velocity
   useEffect(() => {
@@ -117,7 +108,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tenderMethod, activeSlotIndex]);
+  }, [tenderMethod, updateCurrentSlot]);
 
   const addToCart = (product: Product) => {
     updateCurrentSlot((prev) => {
@@ -289,11 +280,12 @@ export function POSShell({ session, onExit }: POSShellProps) {
               />
             </div>
             <button
-              onClick={fetchProducts}
-              disabled={loadingProducts}
+              onClick={() => refetchProducts()}
+              disabled={fetchingProducts}
               className="flex h-11 items-center gap-1 rounded-xl border border-default bg-surface-sunken px-3 text-muted hover:text-default cursor-pointer transition-colors"
+              title="Refresh Products"
             >
-              <RefreshCw className={`h-4 w-4 ${loadingProducts ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-4 w-4 ${fetchingProducts ? 'animate-spin' : ''}`} />
             </button>
           </div>
 

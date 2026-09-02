@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import {
   User as UserIcon,
@@ -63,7 +63,7 @@ export const StorefrontAccountPage: React.FC = () => {
     password: '',
   });
 
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     if (!token) return;
     setLoadingOrders(true);
     try {
@@ -80,13 +80,13 @@ export const StorefrontAccountPage: React.FC = () => {
     } finally {
       setLoadingOrders(false);
     }
-  };
+  }, [token, subdomain, logout]);
 
   useEffect(() => {
     if (token) {
       loadOrders();
     }
-  }, [token, subdomain]);
+  }, [token, loadOrders]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
