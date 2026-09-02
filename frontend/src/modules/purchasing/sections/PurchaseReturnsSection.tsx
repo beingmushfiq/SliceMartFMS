@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   CheckCircle2,
   Clock,
@@ -95,8 +97,7 @@ const SAMPLE_RETURNS: PurchaseReturn[] = [
 ];
 
 export function PurchaseReturnsSection() {
-  const [returns, setReturns] = useState<PurchaseReturn[]>(SAMPLE_RETURNS);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [actionLoading, setActionLoading] = useState<number | null>(null);
@@ -127,46 +128,31 @@ export function PurchaseReturnsSection() {
     ],
   });
 
-  const fetchReturns = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get<PurchaseReturn[]>('/purchasing/returns');
-      if (res.data && res.data.length > 0) {
-        setReturns(res.data);
-      }
-    } catch {
-      // Keep sample data
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    let ignore = false;
-    api.get<PurchaseReturn[]>('/purchasing/returns')
-      .then((res) => {
-        if (!ignore && res.data && res.data.length > 0) {
-          setReturns(res.data);
+  const { data: returns = SAMPLE_RETURNS, isLoading, isFetching, refetch } = useQuery<PurchaseReturn[]>({
+    queryKey: ['purchasing', 'returns'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<PurchaseReturn[]>('/purchasing/returns');
+        if (res.data && res.data.length > 0) {
+          return res.data;
         }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
+      } catch {
+        // Keep sample data
+      }
+      return SAMPLE_RETURNS;
+    },
+    initialData: SAMPLE_RETURNS,
+  });
 
   const handleCompleteReturn = async (returnId: number) => {
     setActionLoading(returnId);
     try {
       await api.post(`/purchasing/returns/${returnId}/complete`, {});
+      toast.success('Purchase return completed & debit note issued.');
     } catch {
-      // Optimistic update
+      toast.success('Return marked as completed (offline mode).');
     } finally {
-      setReturns((prev) =>
+      queryClient.setQueryData<PurchaseReturn[]>(['purchasing', 'returns'], (prev = []) =>
         prev.map((r) => (r.id === returnId ? { ...r, status: 'completed' } : r))
       );
       setActionLoading(null);
@@ -186,6 +172,8 @@ export function PurchaseReturnsSection() {
       return_number:
         formData.return_number ||
         `PRT-${new Date().toISOString().slice(0, 7).replace('-', '')}-${String(returns.length + 1).padStart(3, '0')}`,
+      purchase_order_id: 1,
+      goods_receipt_id: null,
       party_id: 1,
       supplier_name: formData.supplier_name,
       warehouse_id: 1,
@@ -206,14 +194,15 @@ export function PurchaseReturnsSection() {
         unit_id: 1,
         unit_code: it.unit_code,
         unit_price: it.unit_price,
-        total_amount: (parseFloat(it.quantity) * parseFloat(it.unit_price)).toFixed(2),
+        total_amount: (parseFloat(it.quantity || '0') * parseFloat(it.unit_price || '0')).toFixed(2),
         notes: it.notes,
       })),
       created_at: new Date().toISOString(),
     };
 
     api.post('/purchasing/returns', newReturn).catch(() => {});
-    setReturns([newReturn, ...returns]);
+    queryClient.setQueryData<PurchaseReturn[]>(['purchasing', 'returns'], (prev = []) => [newReturn, ...prev]);
+    toast.success('Purchase return drafted.');
     setShowCreateModal(false);
   };
 
@@ -221,7 +210,7 @@ export function PurchaseReturnsSection() {
     e.preventDefault();
     if (!activeReturn) return;
 
-    setReturns((prev) =>
+    queryClient.setQueryData<PurchaseReturn[]>(['purchasing', 'returns'], (prev = []) =>
       prev.map((r) =>
         r.id === activeReturn.id
           ? {
@@ -233,13 +222,17 @@ export function PurchaseReturnsSection() {
       )
     );
     api.put(`/purchasing/returns/${activeReturn.id}`, formData).catch(() => {});
+    toast.success('Purchase return updated.');
     setShowEditModal(false);
   };
 
   const handleDeleteReturn = () => {
     if (!activeReturn) return;
-    setReturns((prev) => prev.filter((r) => r.id !== activeReturn.id));
+    queryClient.setQueryData<PurchaseReturn[]>(['purchasing', 'returns'], (prev = []) =>
+      prev.filter((r) => r.id !== activeReturn.id)
+    );
     api.delete(`/purchasing/returns/${activeReturn.id}`).catch(() => {});
+    toast.success('Purchase return deleted.');
     setShowDeleteModal(false);
   };
 
@@ -391,12 +384,12 @@ export function PurchaseReturnsSection() {
           </button>
 
           <button
-            onClick={fetchReturns}
-            disabled={loading}
+            onClick={() => refetch()}
+            disabled={isFetching}
             className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors cursor-pointer"
             title="Refresh"
           >
-            <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
           <select
@@ -441,7 +434,7 @@ export function PurchaseReturnsSection() {
               {filteredReturns.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center text-muted">
-                    {loading ? 'Loading returns...' : 'No purchase returns found matching your criteria.'}
+                    {isLoading ? 'Loading returns...' : 'No purchase returns found matching your criteria.'}
                   </td>
                 </tr>
               ) : (

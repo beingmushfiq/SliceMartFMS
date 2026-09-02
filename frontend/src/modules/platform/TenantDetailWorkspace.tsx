@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { api } from '../../lib/api/client';
 import type { PlatformTenant, PlatformPlan } from '../../types/api/platform';
 import {
@@ -13,9 +15,7 @@ import {
 
 export const TenantDetailWorkspace: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [tenant, setTenant] = useState<PlatformTenant | null>(null);
-  const [plans, setPlans] = useState<PlatformPlan[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'overview' | 'billing' | 'users' | 'usage'>('overview');
 
   // Action Modals
@@ -26,35 +26,37 @@ export const TenantDetailWorkspace: React.FC = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const fetchTenant = React.useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    try {
-      const response = await api.get<PlatformTenant>(`/platform/tenants/${id}`);
-      setTenant(response.data);
-      if (response.data.plan_id) {
-        setNewPlanId(response.data.plan_id);
+  const { data: tenant, isLoading: tenantLoading } = useQuery<PlatformTenant | null>({
+    queryKey: ['platform', 'tenant', id],
+    queryFn: async () => {
+      if (!id) return null;
+      try {
+        const response = await api.get<PlatformTenant>(`/platform/tenants/${id}`);
+        return response.data;
+      } catch {
+        return null;
       }
-    } catch {
-      // Error
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
+    },
+    enabled: Boolean(id),
+  });
 
-  const fetchPlans = React.useCallback(async () => {
-    try {
-      const res = await api.get<PlatformPlan[]>('/platform/plans');
-      setPlans(res.data);
-    } catch {
-      // Best-effort
-    }
-  }, []);
+  const { data: plans = [] } = useQuery<PlatformPlan[]>({
+    queryKey: ['platform', 'plans'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<PlatformPlan[]>('/platform/plans');
+        return res.data;
+      } catch {
+        return [];
+      }
+    },
+  });
 
   useEffect(() => {
-    fetchTenant();
-    fetchPlans();
-  }, [fetchTenant, fetchPlans]);
+    if (tenant?.plan_id) {
+      setNewPlanId(tenant.plan_id);
+    }
+  }, [tenant?.plan_id]);
 
   const handleUpdateStatus = async (newStatus: 'active' | 'suspended') => {
     if (!tenant) return;
@@ -67,9 +69,12 @@ export const TenantDetailWorkspace: React.FC = () => {
       });
       setModalType(null);
       setActionReason('');
-      fetchTenant();
+      toast.success(`Tenant status updated to ${newStatus}`);
+      queryClient.invalidateQueries({ queryKey: ['platform', 'tenant', id] });
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Action failed');
+      const msg = err instanceof Error ? err.message : 'Action failed';
+      setActionError(msg);
+      toast.error(msg);
     } finally {
       setActionLoading(false);
     }
@@ -89,9 +94,12 @@ export const TenantDetailWorkspace: React.FC = () => {
 
       await api.post(`/platform/tenants/${tenant.id}/manage-subscription`, payload);
       setModalType(null);
-      fetchTenant();
+      toast.success(action === 'extend' ? `Subscription extended by ${extendDays} days` : 'Subscription plan updated');
+      queryClient.invalidateQueries({ queryKey: ['platform', 'tenant', id] });
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Subscription update failed');
+      const msg = err instanceof Error ? err.message : 'Subscription update failed';
+      setActionError(msg);
+      toast.error(msg);
     } finally {
       setActionLoading(false);
     }
@@ -117,14 +125,15 @@ export const TenantDetailWorkspace: React.FC = () => {
       localStorage.setItem('impersonator_email', res.data.data.impersonator.email);
 
       window.location.href = '/catalogue';
-    } catch (err: any) {
-      alert(err.message ?? 'Impersonation failed');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Impersonation failed';
+      toast.error(msg);
     } finally {
       setActionLoading(false);
     }
   };
 
-  if (loading && !tenant) {
+  if (tenantLoading && !tenant) {
     return (
       <div className="p-12 text-center text-slate-400 text-xs font-mono animate-pulse">
         Loading tenant dossier #{id}...

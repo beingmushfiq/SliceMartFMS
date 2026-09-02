@@ -2,16 +2,18 @@
 // TEMPLATES TAB — Template Management & List
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   Plus,
+  RefreshCw,
   Search,
   Filter,
   Layers,
   CheckCircle2,
 } from 'lucide-react';
 import { api } from '../../../../lib/api/client';
-import { notify } from '../../../../components/ui/Toast';
 import { Modal, ConfirmDialog } from '../../../../components/ui/Modal';
 import { TemplateCard } from '../components/TemplateCard';
 import type { DocumentTemplate, DocumentTemplateVersion } from '../../../../types/api/documents';
@@ -22,8 +24,7 @@ interface TemplatesTabProps {
 }
 
 export function TemplatesTab({ onEditTemplate, onCreateTemplate }: TemplatesTabProps) {
-  const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
 
@@ -35,31 +36,28 @@ export function TemplatesTab({ onEditTemplate, onCreateTemplate }: TemplatesTabP
   // Archive Confirm state
   const [archiveTarget, setArchiveTarget] = useState<DocumentTemplate | null>(null);
 
-  const fetchTemplates = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.get<{ data: DocumentTemplate[] }>('/documents/templates');
-      if (res.data?.data) {
-        setTemplates(res.data.data);
+  const { data: templates = [], isLoading, isFetching, refetch } = useQuery<DocumentTemplate[]>({
+    queryKey: ['documents', 'templates'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{ data: DocumentTemplate[] }>('/documents/templates');
+        if (res.data?.data) {
+          return res.data.data;
+        }
+      } catch {
+        // Fallback
       }
-    } catch {
-      notify.error('Failed to load document templates');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchTemplates();
-  }, [fetchTemplates]);
+      return [];
+    },
+  });
 
   const handleSetDefault = async (template: DocumentTemplate) => {
     try {
       await api.post(`/documents/templates/${template.id}/set-default`);
-      notify.success(`"${template.name}" set as default for ${template.document_type}`);
-      fetchTemplates();
+      toast.success(`"${template.name}" set as default for ${template.document_type}`);
+      queryClient.invalidateQueries({ queryKey: ['documents', 'templates'] });
     } catch {
-      notify.error('Failed to set default template');
+      toast.error('Failed to set default template');
     }
   };
 
@@ -67,10 +65,10 @@ export function TemplatesTab({ onEditTemplate, onCreateTemplate }: TemplatesTabP
     const newName = `${template.name} (Copy)`;
     try {
       await api.post(`/documents/templates/${template.id}/duplicate`, { name: newName });
-      notify.success(`Template cloned as "${newName}"`);
-      fetchTemplates();
+      toast.success(`Template cloned as "${newName}"`);
+      queryClient.invalidateQueries({ queryKey: ['documents', 'templates'] });
     } catch {
-      notify.error('Failed to clone template');
+      toast.error('Failed to clone template');
     }
   };
 
@@ -78,11 +76,11 @@ export function TemplatesTab({ onEditTemplate, onCreateTemplate }: TemplatesTabP
     if (!archiveTarget) return;
     try {
       await api.delete(`/documents/templates/${archiveTarget.id}`);
-      notify.success(`Template "${archiveTarget.name}" archived`);
+      toast.success(`Template "${archiveTarget.name}" archived`);
       setArchiveTarget(null);
-      fetchTemplates();
+      queryClient.invalidateQueries({ queryKey: ['documents', 'templates'] });
     } catch {
-      notify.error('Failed to archive template');
+      toast.error('Failed to archive template');
     }
   };
 
@@ -95,7 +93,7 @@ export function TemplatesTab({ onEditTemplate, onCreateTemplate }: TemplatesTabP
         setVersions(res.data.data);
       }
     } catch {
-      notify.error('Failed to load version history');
+      toast.error('Failed to load version history');
     } finally {
       setVersionsLoading(false);
     }
@@ -105,11 +103,11 @@ export function TemplatesTab({ onEditTemplate, onCreateTemplate }: TemplatesTabP
     if (!historyTemplate) return;
     try {
       await api.post(`/documents/templates/${historyTemplate.id}/versions/${version}/activate`);
-      notify.success(`Version ${version} activated for "${historyTemplate.name}"`);
+      toast.success(`Version ${version} activated for "${historyTemplate.name}"`);
       setHistoryTemplate(null);
-      fetchTemplates();
+      queryClient.invalidateQueries({ queryKey: ['documents', 'templates'] });
     } catch {
-      notify.error('Failed to activate version');
+      toast.error('Failed to activate version');
     }
   };
 
@@ -138,18 +136,28 @@ export function TemplatesTab({ onEditTemplate, onCreateTemplate }: TemplatesTabP
           </p>
         </div>
 
-        <button
-          onClick={onCreateTemplate}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-fg hover:opacity-90 shadow-sm transition-all cursor-pointer"
-        >
-          <Plus className="size-4" />
-          <span>New Template</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl border border-slate-700 transition-colors cursor-pointer"
+            title="Refresh Templates"
+          >
+            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            onClick={onCreateTemplate}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-fg hover:opacity-90 shadow-sm transition-all cursor-pointer"
+          >
+            <Plus className="size-4" />
+            <span>New Template</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter & Search Bar */}
       <div className="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs">
-        <div className="relative flex-1 min-w-[200px]">
+        <div className="relative flex-1 min-w-50">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-slate-400" />
           <input
             type="text"
@@ -178,7 +186,7 @@ export function TemplatesTab({ onEditTemplate, onCreateTemplate }: TemplatesTabP
       </div>
 
       {/* Templates Grid */}
-      {loading ? (
+      {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((n) => (
             <div key={n} className="h-44 rounded-xl bg-slate-800/40 animate-pulse border border-slate-700/40" />
@@ -223,7 +231,7 @@ export function TemplatesTab({ onEditTemplate, onCreateTemplate }: TemplatesTabP
           {versionsLoading ? (
             <div className="py-8 text-center text-xs text-slate-400">Loading version logs...</div>
           ) : (
-            <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
+            <div className="space-y-2.5 max-h-90 overflow-y-auto pr-1">
               {versions.map((ver) => {
                 const isCurrentActive = ver.id === historyTemplate?.active_version_id;
                 return (

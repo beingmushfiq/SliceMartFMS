@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { api } from '../../lib/api/client';
 import type { PlatformAuditLog } from '../../types/api/platform';
 import {
@@ -8,42 +10,37 @@ import {
 } from 'lucide-react';
 
 export const PlatformAuditWorkspace: React.FC = () => {
-  const [logs, setLogs] = useState<PlatformAuditLog[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedLog, setSelectedLog] = useState<PlatformAuditLog | null>(null);
 
   // Filters
   const [entityType, setEntityType] = useState<string>('all');
   const [actionFilter, setActionFilter] = useState<string>('all');
 
-  const fetchLogs = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const params: Record<string, string> = {};
-      if (entityType !== 'all') params['entity_type'] = entityType;
-      if (actionFilter !== 'all') params['action'] = actionFilter;
+  const { data: logs = [], isLoading, isFetching, refetch } = useQuery<PlatformAuditLog[]>({
+    queryKey: ['platform', 'audit-logs', entityType, actionFilter],
+    queryFn: async () => {
+      try {
+        const params: Record<string, string> = {};
+        if (entityType !== 'all') params['entity_type'] = entityType;
+        if (actionFilter !== 'all') params['action'] = actionFilter;
 
-      const response = await api.get<{
-        data: PlatformAuditLog[];
-        meta: { pagination: { total: number; current_page: number } };
-      }>('/platform/audit-logs', { params });
+        const response = await api.get<{
+          data: PlatformAuditLog[];
+          meta: { pagination: { total: number; current_page: number } };
+        }>('/platform/audit-logs', { params });
 
-      // Handle envelope structure
-      if (Array.isArray(response.data)) {
-        setLogs(response.data as any);
-      } else if (response.data && Array.isArray((response.data as any).data)) {
-        setLogs((response.data as any).data);
+        // Handle envelope structure
+        if (Array.isArray(response.data)) {
+          return response.data as PlatformAuditLog[];
+        } else if (response.data && Array.isArray((response.data as { data?: PlatformAuditLog[] }).data)) {
+          return (response.data as { data: PlatformAuditLog[] }).data;
+        }
+      } catch {
+        // Error fallback
       }
-    } catch {
-      // Error
-    } finally {
-      setLoading(false);
-    }
-  }, [entityType, actionFilter]);
-
-  useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+      return [];
+    },
+  });
 
   return (
     <div className="space-y-6 font-sans">
@@ -57,10 +54,14 @@ export const PlatformAuditWorkspace: React.FC = () => {
         </div>
 
         <button
-          onClick={fetchLogs}
-          className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono flex items-center gap-1.5 self-start sm:self-auto transition-colors"
+          onClick={() => {
+            refetch();
+            toast.success('Audit ledger refreshed.');
+          }}
+          disabled={isFetching}
+          className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono flex items-center gap-1.5 self-start sm:self-auto transition-colors cursor-pointer"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
           <span>Refresh Ledger</span>
         </button>
       </div>
@@ -101,7 +102,7 @@ export const PlatformAuditWorkspace: React.FC = () => {
 
       {/* Table */}
       <div className="rounded-2xl bg-slate-900 border border-slate-800 shadow-xl overflow-hidden">
-        {loading ? (
+        {isLoading ? (
           <div className="p-12 text-center text-slate-400 text-xs font-mono animate-pulse">
             Loading immutable audit trail...
           </div>

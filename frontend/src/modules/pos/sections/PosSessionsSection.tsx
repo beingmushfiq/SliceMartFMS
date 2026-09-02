@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   CheckCircle2,
   Clock,
@@ -78,8 +80,7 @@ const SAMPLE_SESSIONS: PosSession[] = [
 ];
 
 export function PosSessionsSection({ onLaunchPOS }: PosSessionsSectionProps) {
-  const [sessions, setSessions] = useState<PosSession[]>(SAMPLE_SESSIONS);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -104,38 +105,21 @@ export function PosSessionsSection({ onLaunchPOS }: PosSessionsSectionProps) {
     notes: '',
   });
 
-  const fetchSessions = async () => {
-    setLoading(true);
-    try {
-      const sessRes = await api.get<PosSession[]>('/pos/sessions');
-      if (sessRes.data && sessRes.data.length > 0) {
-        setSessions(sessRes.data);
-      }
-    } catch {
-      // Keep sample data
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    let ignore = false;
-    api
-      .get<PosSession[]>('/pos/sessions')
-      .then((sessRes) => {
-        if (!ignore && sessRes.data && sessRes.data.length > 0) {
-          setSessions(sessRes.data);
+  const { data: sessions = SAMPLE_SESSIONS, isLoading, isFetching, refetch } = useQuery<PosSession[]>({
+    queryKey: ['pos', 'sessions'],
+    queryFn: async () => {
+      try {
+        const sessRes = await api.get<PosSession[]>('/pos/sessions');
+        if (sessRes.data && sessRes.data.length > 0) {
+          return sessRes.data;
         }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
+      } catch {
+        // Keep sample data
+      }
+      return SAMPLE_SESSIONS;
+    },
+    initialData: SAMPLE_SESSIONS,
+  });
 
   const handleOpenSession = (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,7 +154,8 @@ export function PosSessionsSection({ onLaunchPOS }: PosSessionsSectionProps) {
     };
 
     api.post('/pos/sessions', newSess).catch(() => {});
-    setSessions([newSess, ...sessions]);
+    queryClient.setQueryData<PosSession[]>(['pos', 'sessions'], (prev = []) => [newSess, ...prev]);
+    toast.success('Cashier shift opened.');
     setShowOpenModal(false);
   };
 
@@ -182,7 +167,7 @@ export function PosSessionsSection({ onLaunchPOS }: PosSessionsSectionProps) {
     const expected = parseFloat(activeSession.expected_cash || '0');
     const variance = (counted - expected).toFixed(2);
 
-    setSessions((prev) =>
+    queryClient.setQueryData<PosSession[]>(['pos', 'sessions'], (prev = []) =>
       prev.map((s) =>
         s.id === activeSession.id
           ? {
@@ -202,6 +187,7 @@ export function PosSessionsSection({ onLaunchPOS }: PosSessionsSectionProps) {
       notes: closeFormData.notes,
     }).catch(() => {});
 
+    toast.success('Shift closed & Z-Report generated.');
     setShowCloseModal(false);
   };
 
@@ -315,12 +301,12 @@ export function PosSessionsSection({ onLaunchPOS }: PosSessionsSectionProps) {
           </button>
 
           <button
-            onClick={fetchSessions}
-            disabled={loading}
+            onClick={() => refetch()}
+            disabled={isFetching}
             className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors cursor-pointer"
             title="Refresh"
           >
-            <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
           <select
@@ -365,7 +351,7 @@ export function PosSessionsSection({ onLaunchPOS }: PosSessionsSectionProps) {
               {filteredSessions.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-muted">
-                    {loading ? 'Loading sessions...' : 'No POS cashier sessions found matching your criteria.'}
+                    {isLoading ? 'Loading sessions...' : 'No POS cashier sessions found matching your criteria.'}
                   </td>
                 </tr>
               ) : (

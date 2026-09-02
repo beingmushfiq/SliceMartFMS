@@ -2,22 +2,23 @@
 // PRINT PROFILES TAB — Output Device Profiles
 // ═══════════════════════════════════════════════════════════════════════════
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   Plus,
   Printer,
   Trash2,
   Edit2,
   Star,
+  RefreshCw,
 } from 'lucide-react';
 import { api } from '../../../../lib/api/client';
-import { notify } from '../../../../components/ui/Toast';
 import { Modal, ConfirmDialog } from '../../../../components/ui/Modal';
 import type { PrintProfile, PaperSize } from '../../../../types/api/documents';
 
 export function PrintProfilesTab() {
-  const [profiles, setProfiles] = useState<PrintProfile[]>([]);
-  const [paperSizes, setPaperSizes] = useState<PaperSize[]>([]);
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editProfile, setEditProfile] = useState<PrintProfile | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PrintProfile | null>(null);
@@ -36,23 +37,35 @@ export function PrintProfilesTab() {
   const [isDefault, setIsDefault] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const fetchProfiles = useCallback(async () => {
-    try {
-      const res = await api.get<{ data: PrintProfile[] }>('/documents/print-profiles');
-      if (res.data?.data) {
-        setProfiles(res.data.data);
+  const { data: profiles = [], isLoading, isFetching, refetch } = useQuery<PrintProfile[]>({
+    queryKey: ['documents', 'print-profiles'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{ data: PrintProfile[] }>('/documents/print-profiles');
+        if (res.data?.data) {
+          return res.data.data;
+        }
+      } catch {
+        // Fallback
       }
-    } catch {
-      notify.error('Failed to load print profiles');
-    }
-  }, []);
+      return [];
+    },
+  });
 
-  useEffect(() => {
-    fetchProfiles();
-    api.get<{ data: PaperSize[] }>('/documents/paper-sizes').then((res) => {
-      if (res.data?.data) setPaperSizes(res.data.data);
-    });
-  }, [fetchProfiles]);
+  const { data: paperSizes = [] } = useQuery<PaperSize[]>({
+    queryKey: ['documents', 'paper-sizes'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{ data: PaperSize[] }>('/documents/paper-sizes');
+        if (res.data?.data) {
+          return res.data.data;
+        }
+      } catch {
+        // Fallback
+      }
+      return [];
+    },
+  });
 
   const handleOpenCreate = () => {
     setEditProfile(null);
@@ -89,7 +102,7 @@ export function PrintProfilesTab() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      notify.error('Profile name is required');
+      toast.error('Profile name is required');
       return;
     }
 
@@ -111,15 +124,15 @@ export function PrintProfilesTab() {
 
       if (editProfile) {
         await api.put(`/documents/print-profiles/${editProfile.id}`, payload);
-        notify.success(`Profile "${name}" updated`);
+        toast.success(`Profile "${name}" updated`);
       } else {
         await api.post('/documents/print-profiles', payload);
-        notify.success(`Profile "${name}" created`);
+        toast.success(`Profile "${name}" created`);
       }
       setIsModalOpen(false);
-      fetchProfiles();
+      queryClient.invalidateQueries({ queryKey: ['documents', 'print-profiles'] });
     } catch {
-      notify.error('Failed to save print profile');
+      toast.error('Failed to save print profile');
     } finally {
       setIsSaving(false);
     }
@@ -129,11 +142,11 @@ export function PrintProfilesTab() {
     if (!deleteTarget) return;
     try {
       await api.delete(`/documents/print-profiles/${deleteTarget.id}`);
-      notify.success(`Print profile "${deleteTarget.name}" removed`);
+      toast.success(`Print profile "${deleteTarget.name}" removed`);
       setDeleteTarget(null);
-      fetchProfiles();
+      queryClient.invalidateQueries({ queryKey: ['documents', 'print-profiles'] });
     } catch {
-      notify.error('Failed to delete print profile');
+      toast.error('Failed to delete print profile');
     }
   };
 
@@ -148,17 +161,42 @@ export function PrintProfilesTab() {
           </p>
         </div>
 
-        <button
-          onClick={handleOpenCreate}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-fg hover:opacity-90 shadow-sm transition-all cursor-pointer"
-        >
-          <Plus className="size-4" />
-          <span>New Profile</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl border border-slate-700 transition-colors cursor-pointer"
+            title="Refresh Print Profiles"
+          >
+            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            onClick={handleOpenCreate}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-fg hover:opacity-90 shadow-sm transition-all cursor-pointer"
+          >
+            <Plus className="size-4" />
+            <span>New Profile</span>
+          </button>
+        </div>
       </div>
 
       {/* Profiles Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="h-44 rounded-xl bg-slate-800/40 animate-pulse border border-slate-700/40" />
+          ))}
+        </div>
+      ) : profiles.length === 0 ? (
+        <div className="text-center py-12 rounded-xl border border-dashed border-slate-800 bg-slate-900/30">
+          <Printer className="size-8 text-slate-600 mx-auto mb-2" />
+          <h4 className="text-sm font-semibold text-slate-300">No Print Profiles Configured</h4>
+          <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+            Create profiles to customize orientation, margins, and paper sizes for printers.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {profiles.map((p) => (
           <div
             key={p.id}
@@ -222,7 +260,8 @@ export function PrintProfilesTab() {
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
 
       {/* Modal for Create/Edit */}
       <Modal

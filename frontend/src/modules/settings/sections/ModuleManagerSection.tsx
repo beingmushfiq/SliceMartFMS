@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { api } from '../../../lib/api/client';
 import { useTenantCapabilityStore } from '../../../lib/capabilities/tenantCapabilityStore';
 import { Button } from '../../../components/ui/Button';
-import { notify } from '../../../components/ui/Toast';
 import {
   Boxes,
   Building2,
@@ -67,28 +68,24 @@ const MODULE_DESCRIPTIONS: Record<string, string> = {
 };
 
 export const ModuleManagerSection: React.FC = () => {
-  const [modules, setModules] = useState<ModuleItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const invalidateManifest = useTenantCapabilityStore((state) => state.invalidate);
 
-  const fetchModules = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get<{ success: boolean; data: ModuleItem[] }>('/tenant/modules');
-      if (res.data?.data) {
-        setModules(res.data.data);
+  const { data: modules = [], isLoading, isFetching, refetch } = useQuery<ModuleItem[]>({
+    queryKey: ['tenant', 'modules'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{ success: boolean; data: ModuleItem[] }>('/tenant/modules');
+        if (res.data?.data) {
+          return res.data.data;
+        }
+      } catch {
+        // Fallback
       }
-    } catch {
-      notify.error('Failed to load module configuration.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchModules();
-  }, []);
+      return [];
+    },
+  });
 
   const toggleModule = async (moduleKey: string, currentEnabled: boolean) => {
     setSavingKey(moduleKey);
@@ -97,19 +94,19 @@ export const ModuleManagerSection: React.FC = () => {
       await api.put(`/tenant/modules/${moduleKey}`, {
         enabled: newStatus,
       });
-      setModules((prev) =>
+      queryClient.setQueryData<ModuleItem[]>(['tenant', 'modules'], (prev = []) =>
         prev.map((m) => (m.module_key === moduleKey ? { ...m, enabled: newStatus } : m))
       );
       await invalidateManifest();
-      notify.success(`Module '${moduleKey}' ${newStatus ? 'enabled' : 'disabled'}.`);
+      toast.success(`Module '${moduleKey}' ${newStatus ? 'enabled' : 'disabled'}.`);
     } catch {
-      notify.error(`Failed to update module '${moduleKey}'.`);
+      toast.error(`Failed to update module '${moduleKey}'.`);
     } finally {
       setSavingKey(null);
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
         <RefreshCw className="size-6 animate-spin text-primary" />
@@ -135,6 +132,14 @@ export const ModuleManagerSection: React.FC = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors cursor-pointer"
+              title="Refresh Module States"
+            >
+              <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </button>
             <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
               {enabledCount} of {modules.length} Modules Active
             </span>

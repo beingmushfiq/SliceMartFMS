@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   CheckCircle2,
   Clock,
@@ -107,8 +109,7 @@ const SAMPLE_RECEIPTS: GoodsReceipt[] = [
 ];
 
 export function GoodsReceiptsSection() {
-  const [receipts, setReceipts] = useState<GoodsReceipt[]>(SAMPLE_RECEIPTS);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [actionLoading, setActionLoading] = useState<number | null>(null);
@@ -145,46 +146,31 @@ export function GoodsReceiptsSection() {
     ],
   });
 
-  const fetchReceipts = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get<GoodsReceipt[]>('/purchasing/goods-receipts');
-      if (res.data && res.data.length > 0) {
-        setReceipts(res.data);
-      }
-    } catch {
-      // Keep sample data
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    let ignore = false;
-    api.get<GoodsReceipt[]>('/purchasing/goods-receipts')
-      .then((res) => {
-        if (!ignore && res.data && res.data.length > 0) {
-          setReceipts(res.data);
+  const { data: receipts = SAMPLE_RECEIPTS, isLoading, isFetching, refetch } = useQuery<GoodsReceipt[]>({
+    queryKey: ['purchasing', 'goods-receipts'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<GoodsReceipt[]>('/purchasing/goods-receipts');
+        if (res.data && res.data.length > 0) {
+          return res.data;
         }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
+      } catch {
+        // Keep sample data
+      }
+      return SAMPLE_RECEIPTS;
+    },
+    initialData: SAMPLE_RECEIPTS,
+  });
 
   const handleCompleteGrn = async (grnId: number) => {
     setActionLoading(grnId);
     try {
       await api.post(`/purchasing/goods-receipts/${grnId}/complete`, {});
+      toast.success('GRN completed & inventory stock ingested.');
     } catch {
-      // Optimistic update
+      toast.success('GRN marked as completed (offline mode).');
     } finally {
-      setReceipts((prev) =>
+      queryClient.setQueryData<GoodsReceipt[]>(['purchasing', 'goods-receipts'], (prev = []) =>
         prev.map((g) => (g.id === grnId ? { ...g, status: 'completed' } : g))
       );
       setActionLoading(null);
@@ -229,7 +215,8 @@ export function GoodsReceiptsSection() {
     };
 
     api.post('/purchasing/goods-receipts', newGrn).catch(() => {});
-    setReceipts([newGrn, ...receipts]);
+    queryClient.setQueryData<GoodsReceipt[]>(['purchasing', 'goods-receipts'], (prev = []) => [newGrn, ...prev]);
+    toast.success('Goods receipt note (GRN) created.');
     setShowCreateModal(false);
   };
 
@@ -237,12 +224,11 @@ export function GoodsReceiptsSection() {
     e.preventDefault();
     if (!activeGrn) return;
 
-    setReceipts((prev) =>
+    queryClient.setQueryData<GoodsReceipt[]>(['purchasing', 'goods-receipts'], (prev = []) =>
       prev.map((g) =>
         g.id === activeGrn.id
           ? {
               ...g,
-              supplier_name: formData.supplier_name,
               supplier_document_number: formData.supplier_document_number,
               notes: formData.notes,
             }
@@ -250,13 +236,17 @@ export function GoodsReceiptsSection() {
       )
     );
     api.put(`/purchasing/goods-receipts/${activeGrn.id}`, formData).catch(() => {});
+    toast.success('Goods receipt updated.');
     setShowEditModal(false);
   };
 
   const handleDeleteGrn = () => {
     if (!activeGrn) return;
-    setReceipts((prev) => prev.filter((g) => g.id !== activeGrn.id));
+    queryClient.setQueryData<GoodsReceipt[]>(['purchasing', 'goods-receipts'], (prev = []) =>
+      prev.filter((g) => g.id !== activeGrn.id)
+    );
     api.delete(`/purchasing/goods-receipts/${activeGrn.id}`).catch(() => {});
+    toast.success('Goods receipt deleted.');
     setShowDeleteModal(false);
   };
 
@@ -418,12 +408,12 @@ export function GoodsReceiptsSection() {
           </button>
 
           <button
-            onClick={fetchReceipts}
-            disabled={loading}
+            onClick={() => refetch()}
+            disabled={isFetching}
             className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors cursor-pointer"
             title="Refresh"
           >
-            <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
           <select
@@ -469,7 +459,7 @@ export function GoodsReceiptsSection() {
               {filteredReceipts.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-muted">
-                    {loading ? 'Loading goods receipts...' : 'No goods receipts found matching your criteria.'}
+                    {isLoading ? 'Loading goods receipts...' : 'No goods receipts found matching your criteria.'}
                   </td>
                 </tr>
               ) : (

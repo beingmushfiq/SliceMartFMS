@@ -3,65 +3,78 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import React, { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   Building2,
   Save,
   FileText,
   Phone,
   BadgePercent,
+  RefreshCw,
 } from 'lucide-react';
 import { api } from '../../../../lib/api/client';
-import { notify } from '../../../../components/ui/Toast';
 import type { BusinessConfig } from '../../../../lib/document/useBusinessConfig';
 
-export function BusinessIdentityTab() {
-  const [form, setForm] = useState<BusinessConfig>({
-    name: '',
-    tagline: '',
-    address: '',
-    phone: '',
-    email: '',
-    website: '',
-    vatNumber: '',
-    tinNumber: '',
-    tradeLicense: '',
-    currencySymbol: '৳',
-    currencyCode: 'BDT',
-    invoiceTerms: '',
-    signaturePreparedBy: 'Prepared By (Billing Desk)',
-    signatureCheckedBy: 'Verified By (Accounts & Audit)',
-    signatureAuthorized: 'Authorized Representative',
-    signatureReceiver: 'Customer Acknowledgement',
-  });
+const DEFAULT_BUSINESS_CONFIG: BusinessConfig = {
+  name: '',
+  tagline: '',
+  address: '',
+  phone: '',
+  email: '',
+  website: '',
+  vatNumber: '',
+  tinNumber: '',
+  tradeLicense: '',
+  currencySymbol: '৳',
+  currencyCode: 'BDT',
+  invoiceTerms: '',
+  signaturePreparedBy: 'Prepared By (Billing Desk)',
+  signatureCheckedBy: 'Verified By (Accounts & Audit)',
+  signatureAuthorized: 'Authorized Representative',
+  signatureReceiver: 'Customer Acknowledgement',
+};
 
-  const [loading, setLoading] = useState(true);
+export function BusinessIdentityTab() {
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState<BusinessConfig>(DEFAULT_BUSINESS_CONFIG);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    api
-      .get<Partial<BusinessConfig>>('/settings/company')
-      .then((res) => {
+  const { data: serverConfig, isLoading, isFetching, refetch } = useQuery<Partial<BusinessConfig>>({
+    queryKey: ['settings', 'company'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<Partial<BusinessConfig>>('/settings/company');
         if (res.data) {
-          setForm((prev) => ({ ...prev, ...res.data }));
+          return res.data;
         }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+      } catch {
+        // Fallback
+      }
+      return {};
+    },
+  });
+
+  useEffect(() => {
+    if (serverConfig) {
+      setForm((prev) => ({ ...prev, ...serverConfig }));
+    }
+  }, [serverConfig]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) {
-      notify.error('Company legal name is required');
+      toast.error('Company legal name is required');
       return;
     }
 
     setSaving(true);
     try {
       await api.put('/settings/company', form);
-      notify.success('Business identity & document branding saved successfully');
+      toast.success('Business identity & document branding saved successfully');
+      queryClient.invalidateQueries({ queryKey: ['settings', 'company'] });
     } catch {
-      notify.error('Failed to save business settings');
+      toast.error('Failed to save business settings');
     } finally {
       setSaving(false);
     }
@@ -71,7 +84,7 @@ export function BusinessIdentityTab() {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  if (loading) {
+  if (isLoading) {
     return <div className="py-12 text-center text-xs text-slate-400">Loading business identity profile...</div>;
   }
 
@@ -85,14 +98,25 @@ export function BusinessIdentityTab() {
           </p>
         </div>
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-fg hover:opacity-90 shadow-sm transition-all cursor-pointer"
-        >
-          <Save className="size-4" />
-          <span>{saving ? 'Saving...' : 'Save Profile'}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl border border-slate-700 transition-colors cursor-pointer"
+            title="Refresh Business Profile"
+          >
+            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-fg hover:opacity-90 shadow-sm transition-all cursor-pointer"
+          >
+            <Save className="size-4" />
+            <span>{saving ? 'Saving...' : 'Save Profile'}</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

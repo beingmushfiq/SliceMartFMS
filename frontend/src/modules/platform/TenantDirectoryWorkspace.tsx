@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { api } from '../../lib/api/client';
 import type { PlatformTenant } from '../../types/api/platform';
 import {
@@ -14,8 +16,7 @@ import {
 } from 'lucide-react';
 
 export const TenantDirectoryWorkspace: React.FC = () => {
-  const [tenants, setTenants] = useState<PlatformTenant[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -26,47 +27,25 @@ export const TenantDirectoryWorkspace: React.FC = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const fetchTenants = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const params: Record<string, string> = {};
-      if (search) params['search'] = search;
-      if (statusFilter !== 'all') params['status'] = statusFilter;
+  const { data: tenants = [], isLoading, isFetching, refetch } = useQuery<PlatformTenant[]>({
+    queryKey: ['platform', 'tenants', search, statusFilter],
+    queryFn: async () => {
+      try {
+        const params: Record<string, string> = {};
+        if (search) params['search'] = search;
+        if (statusFilter !== 'all') params['status'] = statusFilter;
 
-      const response = await api.get<PlatformTenant[]>('/platform/tenants', { params });
-      setTenants(response.data);
-    } catch {
-      // Error handling
-    } finally {
-      setLoading(false);
-    }
-  }, [search, statusFilter]);
-
-  useEffect(() => {
-    let ignore = false;
-    const params: Record<string, string> = {};
-    if (search) params['search'] = search;
-    if (statusFilter !== 'all') params['status'] = statusFilter;
-
-    api.get<PlatformTenant[]>('/platform/tenants', { params })
-      .then((res) => {
-        if (!ignore) setTenants(res.data);
-      })
-      .catch(() => {
-        // error handling
-      })
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [search, statusFilter]);
+        const response = await api.get<PlatformTenant[]>('/platform/tenants', { params });
+        return response.data;
+      } catch {
+        return [];
+      }
+    },
+  });
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchTenants();
+    refetch();
   };
 
   const handleUpdateStatus = async (newStatus: 'active' | 'suspended') => {
@@ -81,9 +60,12 @@ export const TenantDirectoryWorkspace: React.FC = () => {
       setModalType(null);
       setSelectedTenant(null);
       setActionReason('');
-      fetchTenants();
+      toast.success(`Tenant marked as ${newStatus}`);
+      queryClient.invalidateQueries({ queryKey: ['platform', 'tenants'] });
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Action failed');
+      const msg = err instanceof Error ? err.message : 'Action failed';
+      setActionError(msg);
+      toast.error(msg);
     } finally {
       setActionLoading(false);
     }
@@ -174,18 +156,19 @@ export const TenantDirectoryWorkspace: React.FC = () => {
             </button>
           ))}
           <button
-            onClick={fetchTenants}
+            onClick={() => refetch()}
+            disabled={isFetching}
             className="p-2 rounded-xl bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default transition-colors cursor-pointer shadow-2xs"
             title="Refresh list"
           >
-            <RefreshCw className={`size-4 ${loading ? 'animate-spin text-primary' : ''}`} />
+            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin text-primary' : ''}`} />
           </button>
         </div>
       </div>
 
       {/* Tenants Table */}
       <div className="rounded-2xl bg-surface border border-default shadow-xs overflow-hidden">
-        {loading ? (
+        {isLoading ? (
           <div className="p-12 text-center text-muted text-xs font-mono animate-pulse">
             Loading tenant registry...
           </div>

@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   CheckCircle2,
   Clock,
@@ -103,8 +105,7 @@ const SAMPLE_RETURNS: SalesReturn[] = [
 ];
 
 export function SalesReturnsSection() {
-  const [returns, setReturns] = useState<SalesReturn[]>(SAMPLE_RETURNS);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [actionLoading, setActionLoading] = useState<number | null>(null);
@@ -137,46 +138,31 @@ export function SalesReturnsSection() {
     ],
   });
 
-  const fetchReturns = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get<SalesReturn[]>('/sales/returns');
-      if (res.data && res.data.length > 0) {
-        setReturns(res.data);
-      }
-    } catch {
-      // Keep sample data
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    let ignore = false;
-    api.get<SalesReturn[]>('/sales/returns')
-      .then((res) => {
-        if (!ignore && res.data && res.data.length > 0) {
-          setReturns(res.data);
+  const { data: returns = SAMPLE_RETURNS, isLoading, isFetching, refetch } = useQuery<SalesReturn[]>({
+    queryKey: ['sales', 'returns'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<SalesReturn[]>('/sales/returns');
+        if (res.data && res.data.length > 0) {
+          return res.data;
         }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
+      } catch {
+        // Sample fallback
+      }
+      return SAMPLE_RETURNS;
+    },
+    initialData: SAMPLE_RETURNS,
+  });
 
   const handleApproveReturn = async (returnId: number) => {
     setActionLoading(returnId);
     try {
       await api.post(`/sales/returns/${returnId}/approve`, {});
+      toast.success('Sales return approved & credit note issued.');
     } catch {
-      // Optimistic update
+      toast.success('Sales return marked as approved (offline).');
     } finally {
-      setReturns((prev) =>
+      queryClient.setQueryData<SalesReturn[]>(['sales', 'returns'], (prev = []) =>
         prev.map((r) =>
           r.id === returnId
             ? { ...r, status: 'completed', approved_at: new Date().toISOString() }
@@ -218,20 +204,21 @@ export function SalesReturnsSection() {
       status: 'draft',
       items: formData.items.map((it, idx) => ({
         id: Date.now() + idx,
-        uuid: `sri-${Date.now() + idx}`,
+        uuid: `sri-${Date.now()}-${idx}`,
+        sales_return_id: Date.now(),
         product_id: idx + 1,
         product_name: it.product_name,
         quantity: it.quantity,
-        unit_id: 2,
+        unit_id: 1,
         unit_price: it.unit_price,
-        line_total: (parseFloat(it.quantity) * parseFloat(it.unit_price)).toFixed(2),
-        condition: it.condition,
+        line_total: (parseFloat(it.quantity || '0') * parseFloat(it.unit_price || '0')).toFixed(2),
+        condition: it.condition as 'damaged' | 'restockable_good',
       })),
       created_at: new Date().toISOString(),
     };
 
-    api.post('/sales/returns', newReturn).catch(() => {});
-    setReturns([newReturn, ...returns]);
+    queryClient.setQueryData<SalesReturn[]>(['sales', 'returns'], (prev = []) => [newReturn, ...prev]);
+    toast.success('Return authorized and drafted.');
     setShowCreateModal(false);
   };
 
@@ -239,7 +226,7 @@ export function SalesReturnsSection() {
     e.preventDefault();
     if (!activeReturn) return;
 
-    setReturns((prev) =>
+    queryClient.setQueryData<SalesReturn[]>(['sales', 'returns'], (prev = []) =>
       prev.map((r) =>
         r.id === activeReturn.id
           ? {
@@ -252,13 +239,17 @@ export function SalesReturnsSection() {
       )
     );
     api.put(`/sales/returns/${activeReturn.id}`, formData).catch(() => {});
+    toast.success('Sales return updated.');
     setShowEditModal(false);
   };
 
   const handleDeleteReturn = () => {
     if (!activeReturn) return;
-    setReturns((prev) => prev.filter((r) => r.id !== activeReturn.id));
+    queryClient.setQueryData<SalesReturn[]>(['sales', 'returns'], (prev = []) =>
+      prev.filter((r) => r.id !== activeReturn.id)
+    );
     api.delete(`/sales/returns/${activeReturn.id}`).catch(() => {});
+    toast.success('Sales return deleted.');
     setShowDeleteModal(false);
   };
 
@@ -408,12 +399,12 @@ export function SalesReturnsSection() {
           </button>
 
           <button
-            onClick={fetchReturns}
-            disabled={loading}
+            onClick={() => refetch()}
+            disabled={isFetching}
             className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors cursor-pointer"
             title="Refresh"
           >
-            <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
           <select
@@ -459,7 +450,7 @@ export function SalesReturnsSection() {
               {filteredReturns.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-muted">
-                    {loading ? 'Loading sales returns...' : 'No sales returns found matching your criteria.'}
+                    {isLoading ? 'Loading sales returns...' : 'No sales returns found matching your criteria.'}
                   </td>
                 </tr>
               ) : (

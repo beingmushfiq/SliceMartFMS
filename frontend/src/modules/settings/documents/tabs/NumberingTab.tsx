@@ -2,18 +2,20 @@
 // NUMBERING TAB — Centralized Server-Side Document Number Sequences
 // ═══════════════════════════════════════════════════════════════════════════
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   Binary,
   Edit2,
+  RefreshCw,
 } from 'lucide-react';
 import { api } from '../../../../lib/api/client';
-import { notify } from '../../../../components/ui/Toast';
 import { Modal } from '../../../../components/ui/Modal';
 import type { DocumentNumberingSequence } from '../../../../types/api/documents';
 
 export function NumberingTab() {
-  const [sequences, setSequences] = useState<DocumentNumberingSequence[]>([]);
+  const queryClient = useQueryClient();
   const [editSeq, setEditSeq] = useState<DocumentNumberingSequence | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -25,20 +27,20 @@ export function NumberingTab() {
   const [resetPeriod, setResetPeriod] = useState<'never' | 'yearly' | 'monthly'>('yearly');
   const [isSaving, setIsSaving] = useState(false);
 
-  const fetchSequences = useCallback(async () => {
-    try {
-      const res = await api.get<{ data: DocumentNumberingSequence[] }>('/documents/numbering');
-      if (res.data?.data) {
-        setSequences(res.data.data);
+  const { data: sequences = [], isLoading, isFetching, refetch } = useQuery<DocumentNumberingSequence[]>({
+    queryKey: ['documents', 'numbering'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{ data: DocumentNumberingSequence[] }>('/documents/numbering');
+        if (res.data?.data) {
+          return res.data.data;
+        }
+      } catch {
+        // Fallback
       }
-    } catch {
-      notify.error('Failed to load numbering sequences');
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchSequences();
-  }, [fetchSequences]);
+      return [];
+    },
+  });
 
   const handleOpenEdit = (seq: DocumentNumberingSequence) => {
     setEditSeq(seq);
@@ -63,11 +65,11 @@ export function NumberingTab() {
         next_number: parseInt(nextNumber, 10) || 1,
         reset_period: resetPeriod,
       });
-      notify.success(`Sequence for ${editSeq.document_type} updated`);
+      toast.success(`Sequence for ${editSeq.document_type} updated`);
       setIsModalOpen(false);
-      fetchSequences();
+      queryClient.invalidateQueries({ queryKey: ['documents', 'numbering'] });
     } catch {
-      notify.error('Failed to save numbering sequence');
+      toast.error('Failed to save numbering sequence');
     } finally {
       setIsSaving(false);
     }
@@ -92,15 +94,41 @@ export function NumberingTab() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h3 className="text-base font-bold text-white tracking-wide">Document Numbering Sequences</h3>
-        <p className="text-xs text-slate-400">
-          Atomic server-side counter configurations preventing duplicate invoices, challans, POs, and voucher numbers.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h3 className="text-base font-bold text-white tracking-wide">Document Numbering Sequences</h3>
+          <p className="text-xs text-slate-400">
+            Atomic server-side counter configurations preventing duplicate invoices, challans, POs, and voucher numbers.
+          </p>
+        </div>
+
+        <button
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl border border-slate-700 transition-colors cursor-pointer self-start sm:self-auto"
+          title="Refresh Sequences"
+        >
+          <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
+        </button>
       </div>
 
       {/* Grid of Numbering Sequences */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="h-44 rounded-xl bg-slate-800/40 animate-pulse border border-slate-700/40" />
+          ))}
+        </div>
+      ) : sequences.length === 0 ? (
+        <div className="text-center py-12 rounded-xl border border-dashed border-slate-800 bg-slate-900/30">
+          <Binary className="size-8 text-slate-600 mx-auto mb-2" />
+          <h4 className="text-sm font-semibold text-slate-300">No Numbering Sequences</h4>
+          <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+            No active numbering sequences found.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {sequences.map((seq) => {
           const sample = calculateSampleNumber(
             seq.prefix || '',
@@ -166,7 +194,8 @@ export function NumberingTab() {
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {/* Edit Sequence Modal */}
       <Modal

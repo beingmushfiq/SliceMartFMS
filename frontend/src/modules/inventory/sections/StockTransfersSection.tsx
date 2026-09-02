@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   ArrowRight,
   CheckCircle2,
@@ -99,10 +101,10 @@ const SAMPLE_TRANSFERS: StockTransfer[] = [
     from_warehouse_id: 1,
     from_warehouse_name: 'Central Raw Materials Silo',
     to_warehouse_id: 4,
-    to_warehouse_name: 'Chittagong Regional Depot',
+    to_warehouse_name: 'Retail Display Shelf Storefront',
     transfer_date: '2026-08-31',
     status: 'draft',
-    notes: 'Scheduled inter-district bulk ingredients restock.',
+    notes: 'Packaging and merchandise restock request.',
     items: [
       {
         id: 803,
@@ -111,19 +113,19 @@ const SAMPLE_TRANSFERS: StockTransfer[] = [
         product_id: 3,
         product_name: 'Refined Cane Sugar (Fine Grain)',
         product_sku: 'RM-SUGAR-01',
-        batch_code: 'BAT-SUG-2608',
-        sent_quantity: '1000.00',
+        batch_code: 'BAT-SUG-3108',
+        sent_quantity: '100.00',
+        received_quantity: '0.00',
         unit_id: 1,
         unit_code: 'KG',
       },
     ],
-    created_at: '2026-08-30T17:00:00Z',
+    created_at: '2026-08-31T09:00:00Z',
   },
 ];
 
 export function StockTransfersSection() {
-  const [transfers, setTransfers] = useState<StockTransfer[]>(SAMPLE_TRANSFERS);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [actionLoading, setActionLoading] = useState<number | null>(null);
@@ -154,46 +156,31 @@ export function StockTransfersSection() {
     ],
   });
 
-  const fetchTransfers = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get<StockTransfer[]>('/inventory/transfers');
-      if (res.data && res.data.length > 0) {
-        setTransfers(res.data);
-      }
-    } catch {
-      // Keep sample data
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    let ignore = false;
-    api.get<StockTransfer[]>('/inventory/transfers')
-      .then((res) => {
-        if (!ignore && res.data && res.data.length > 0) {
-          setTransfers(res.data);
+  const { data: transfers = SAMPLE_TRANSFERS, isLoading, isFetching, refetch } = useQuery<StockTransfer[]>({
+    queryKey: ['inventory', 'transfers'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<StockTransfer[]>('/inventory/transfers');
+        if (res.data && res.data.length > 0) {
+          return res.data;
         }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
+      } catch {
+        // Keep sample data
+      }
+      return SAMPLE_TRANSFERS;
+    },
+    initialData: SAMPLE_TRANSFERS,
+  });
 
   const handleDispatch = async (transferId: number) => {
     setActionLoading(transferId);
     try {
       await api.post(`/inventory/transfers/${transferId}/dispatch`, {});
+      toast.success('Stock transfer dispatched and marked in-transit.');
     } catch {
-      // Optimistic update
+      toast.success('Transfer marked in-transit (offline mode).');
     } finally {
-      setTransfers((prev) =>
+      queryClient.setQueryData<StockTransfer[]>(['inventory', 'transfers'], (prev = []) =>
         prev.map((t) =>
           t.id === transferId
             ? { ...t, status: 'in_transit', dispatched_at: new Date().toISOString() }
@@ -208,10 +195,11 @@ export function StockTransfersSection() {
     setActionLoading(transferId);
     try {
       await api.post(`/inventory/transfers/${transferId}/receive`, {});
+      toast.success('Stock transfer received & inventory updated.');
     } catch {
-      // Optimistic update
+      toast.success('Transfer marked as received (offline mode).');
     } finally {
-      setTransfers((prev) =>
+      queryClient.setQueryData<StockTransfer[]>(['inventory', 'transfers'], (prev = []) =>
         prev.map((t) =>
           t.id === transferId
             ? { ...t, status: 'received', received_at: new Date().toISOString() }
@@ -253,7 +241,8 @@ export function StockTransfersSection() {
     };
 
     api.post('/inventory/transfers', newTr).catch(() => {});
-    setTransfers([newTr, ...transfers]);
+    queryClient.setQueryData<StockTransfer[]>(['inventory', 'transfers'], (prev = []) => [newTr, ...prev]);
+    toast.success('Stock transfer created.');
     setShowCreateModal(false);
   };
 
@@ -261,7 +250,7 @@ export function StockTransfersSection() {
     e.preventDefault();
     if (!activeTransfer) return;
 
-    setTransfers((prev) =>
+    queryClient.setQueryData<StockTransfer[]>(['inventory', 'transfers'], (prev = []) =>
       prev.map((t) =>
         t.id === activeTransfer.id
           ? {
@@ -274,13 +263,17 @@ export function StockTransfersSection() {
       )
     );
     api.put(`/inventory/transfers/${activeTransfer.id}`, formData).catch(() => {});
+    toast.success('Stock transfer updated.');
     setShowEditModal(false);
   };
 
   const handleDeleteTransfer = () => {
     if (!activeTransfer) return;
-    setTransfers((prev) => prev.filter((t) => t.id !== activeTransfer.id));
+    queryClient.setQueryData<StockTransfer[]>(['inventory', 'transfers'], (prev = []) =>
+      prev.filter((t) => t.id !== activeTransfer.id)
+    );
     api.delete(`/inventory/transfers/${activeTransfer.id}`).catch(() => {});
+    toast.success('Stock transfer deleted.');
     setShowDeleteModal(false);
   };
 
@@ -429,12 +422,12 @@ export function StockTransfersSection() {
           </button>
 
           <button
-            onClick={fetchTransfers}
-            disabled={loading}
+            onClick={() => refetch()}
+            disabled={isFetching}
             className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors cursor-pointer"
             title="Refresh"
           >
-            <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
           <select
@@ -480,7 +473,7 @@ export function StockTransfersSection() {
               {filteredTransfers.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center text-muted">
-                    {loading ? 'Loading transfers...' : 'No stock transfers found matching your criteria.'}
+                    {isLoading ? 'Loading transfers...' : 'No stock transfers found matching your criteria.'}
                   </td>
                 </tr>
               ) : (

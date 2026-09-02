@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { api } from '../../../lib/api/client';
 import { useTenantCapabilityStore } from '../../../lib/capabilities/tenantCapabilityStore';
 import { Button } from '../../../components/ui/Button';
 import { Modal } from '../../../components/ui/Modal';
-import { notify } from '../../../components/ui/Toast';
 import {
   Sparkles,
   Plus,
@@ -37,9 +38,8 @@ const FIELD_TYPES = [
 ];
 
 export const CustomFieldsManagerSection: React.FC = () => {
+  const queryClient = useQueryClient();
   const [selectedTarget, setSelectedTarget] = useState(ENTITY_TARGETS[0] ?? { module: 'catalogue', entity: 'product', label: 'Products & Finished Goods' });
-  const [fields, setFields] = useState<CustomFieldDefinitionRecord[]>([]);
-  const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingField, setEditingField] = useState<CustomFieldDefinitionRecord | null>(null);
   const [formData, setFormData] = useState({
@@ -54,34 +54,22 @@ export const CustomFieldsManagerSection: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const invalidateManifest = useTenantCapabilityStore((state) => state.invalidate);
 
-  const fetchFields = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.get<{ success: boolean; data: CustomFieldDefinitionRecord[] }>(
-        `/tenant/custom-fields?module=${selectedTarget.module}&entity=${selectedTarget.entity}`
-      );
-      if (res.data?.data) {
-        setFields(res.data.data);
+  const { data: fields = [], isLoading, isFetching, refetch } = useQuery<CustomFieldDefinitionRecord[]>({
+    queryKey: ['tenant', 'custom-fields', selectedTarget.module, selectedTarget.entity],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{ success: boolean; data: CustomFieldDefinitionRecord[] }>(
+          `/tenant/custom-fields?module=${selectedTarget.module}&entity=${selectedTarget.entity}`
+        );
+        if (res.data?.data) {
+          return res.data.data;
+        }
+      } catch {
+        // Return empty on error or sample
       }
-    } catch {
-      notify.error('Failed to load custom fields.');
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedTarget.module, selectedTarget.entity]);
-
-  useEffect(() => {
-    let ignore = false;
-    const execute = async () => {
-      if (!ignore) {
-        await fetchFields();
-      }
-    };
-    void execute();
-    return () => {
-      ignore = true;
-    };
-  }, [fetchFields]);
+      return [];
+    },
+  });
 
   const openAddModal = () => {
     setEditingField(null);
@@ -129,7 +117,7 @@ export const CustomFieldsManagerSection: React.FC = () => {
           help_text: formData.help_text || null,
           options: parsedOptions,
         });
-        notify.success('Field updated successfully.');
+        toast.success('Field updated successfully.');
       } else {
         await api.post('/tenant/custom-fields', {
           module: selectedTarget.module,
@@ -142,13 +130,13 @@ export const CustomFieldsManagerSection: React.FC = () => {
           help_text: formData.help_text || null,
           options: parsedOptions,
         });
-        notify.success('Custom field created successfully.');
+        toast.success('Custom field created successfully.');
       }
       setModalOpen(false);
-      await fetchFields();
+      queryClient.invalidateQueries({ queryKey: ['tenant', 'custom-fields'] });
       await invalidateManifest();
     } catch {
-      notify.error('Failed to save custom field.');
+      toast.error('Failed to save custom field.');
     } finally {
       setSubmitting(false);
     }
@@ -159,11 +147,11 @@ export const CustomFieldsManagerSection: React.FC = () => {
     if (!confirm('Archive this custom field? Existing values on records will remain intact.')) return;
     try {
       await api.delete(`/tenant/custom-fields/${id}`);
-      notify.success('Custom field archived.');
-      await fetchFields();
+      toast.success('Custom field archived.');
+      queryClient.invalidateQueries({ queryKey: ['tenant', 'custom-fields'] });
       await invalidateManifest();
     } catch {
-      notify.error('Failed to archive custom field.');
+      toast.error('Failed to archive custom field.');
     }
   };
 
@@ -181,10 +169,20 @@ export const CustomFieldsManagerSection: React.FC = () => {
               Extend standard entities with industry-specific metadata fields (e.g. Fabric GSM for Garments, Voltage for Electronics, Expiry/Flavor for Foods).
             </p>
           </div>
-          <Button variant="primary" size="md" onClick={openAddModal} className="text-xs shadow-md shadow-indigo-600/20">
-            <Plus className="size-3.5 mr-1.5" />
-            Add Custom Field
-          </Button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors cursor-pointer"
+              title="Refresh Fields"
+            >
+              <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </button>
+            <Button variant="primary" size="md" onClick={openAddModal} className="text-xs shadow-md shadow-indigo-600/20">
+              <Plus className="size-3.5 mr-1.5" />
+              Add Custom Field
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -210,7 +208,7 @@ export const CustomFieldsManagerSection: React.FC = () => {
       </div>
 
       {/* Fields List */}
-      {loading ? (
+      {isLoading ? (
         <div className="flex h-48 items-center justify-center">
           <RefreshCw className="size-6 animate-spin text-primary" />
         </div>

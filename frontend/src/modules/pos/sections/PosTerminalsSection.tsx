@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   CheckCircle2,
   Plus,
@@ -73,8 +75,7 @@ const SAMPLE_TERMINALS: PosTerminal[] = [
 ];
 
 export function PosTerminalsSection() {
-  const [terminals, setTerminals] = useState<PosTerminal[]>(SAMPLE_TERMINALS);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [actionLoading, setActionLoading] = useState<number | null>(null);
@@ -98,46 +99,31 @@ export function PosTerminalsSection() {
     is_active: true,
   });
 
-  const fetchTerminals = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get<PosTerminal[]>('/pos/terminals');
-      if (res.data && res.data.length > 0) {
-        setTerminals(res.data);
-      }
-    } catch {
-      // Keep sample data
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    let ignore = false;
-    api.get<PosTerminal[]>('/pos/terminals')
-      .then((res) => {
-        if (!ignore && res.data && res.data.length > 0) {
-          setTerminals(res.data);
+  const { data: terminals = SAMPLE_TERMINALS, isLoading, isFetching, refetch } = useQuery<PosTerminal[]>({
+    queryKey: ['pos', 'terminals'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<PosTerminal[]>('/pos/terminals');
+        if (res.data && res.data.length > 0) {
+          return res.data;
         }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
+      } catch {
+        // Keep sample data
+      }
+      return SAMPLE_TERMINALS;
+    },
+    initialData: SAMPLE_TERMINALS,
+  });
 
   const handleToggleActive = async (termId: number) => {
     setActionLoading(termId);
     try {
       await api.post(`/pos/terminals/${termId}/toggle-active`, {});
+      toast.success('Terminal status updated.');
     } catch {
-      // Optimistic update
+      toast.success('Terminal status updated (offline mode).');
     } finally {
-      setTerminals((prev) =>
+      queryClient.setQueryData<PosTerminal[]>(['pos', 'terminals'], (prev = []) =>
         prev.map((t) => (t.id === termId ? { ...t, is_active: !t.is_active } : t))
       );
       setActionLoading(null);
@@ -166,7 +152,8 @@ export function PosTerminalsSection() {
     };
 
     api.post('/pos/terminals', newTerm).catch(() => {});
-    setTerminals([newTerm, ...terminals]);
+    queryClient.setQueryData<PosTerminal[]>(['pos', 'terminals'], (prev = []) => [newTerm, ...prev]);
+    toast.success('POS Terminal registered.');
     setShowCreateModal(false);
   };
 
@@ -174,7 +161,7 @@ export function PosTerminalsSection() {
     e.preventDefault();
     if (!activeTerminal) return;
 
-    setTerminals((prev) =>
+    queryClient.setQueryData<PosTerminal[]>(['pos', 'terminals'], (prev = []) =>
       prev.map((t) =>
         t.id === activeTerminal.id
           ? {
@@ -195,13 +182,17 @@ export function PosTerminalsSection() {
       )
     );
     api.put(`/pos/terminals/${activeTerminal.id}`, formData).catch(() => {});
+    toast.success('POS Terminal updated.');
     setShowEditModal(false);
   };
 
   const handleDeleteTerminal = () => {
     if (!activeTerminal) return;
-    setTerminals((prev) => prev.filter((t) => t.id !== activeTerminal.id));
+    queryClient.setQueryData<PosTerminal[]>(['pos', 'terminals'], (prev = []) =>
+      prev.filter((t) => t.id !== activeTerminal.id)
+    );
     api.delete(`/pos/terminals/${activeTerminal.id}`).catch(() => {});
+    toast.success('POS Terminal deleted.');
     setShowDeleteModal(false);
   };
 
@@ -289,12 +280,12 @@ export function PosTerminalsSection() {
           </button>
 
           <button
-            onClick={fetchTerminals}
-            disabled={loading}
+            onClick={() => refetch()}
+            disabled={isFetching}
             className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors cursor-pointer"
             title="Refresh"
           >
-            <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
           <select
@@ -338,7 +329,7 @@ export function PosTerminalsSection() {
               {filteredTerminals.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center text-muted">
-                    {loading ? 'Loading terminals...' : 'No POS terminals found matching your criteria.'}
+                    {isLoading ? 'Loading terminals...' : 'No POS terminals found matching your criteria.'}
                   </td>
                 </tr>
               ) : (

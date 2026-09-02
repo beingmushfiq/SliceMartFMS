@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   Plus,
   Search,
@@ -10,6 +12,7 @@ import {
   TrendingUp,
   AlertCircle,
   FileText,
+  RefreshCw,
 } from 'lucide-react';
 import type { CustomerCrm } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
@@ -98,7 +101,7 @@ const SAMPLE_CUSTOMERS: CustomerCrm[] = [
     total_orders_count: 4,
     lifetime_value: '310000.00',
     status: 'blocked',
-    created_at: '2026-02-14',
+    created_at: '2026-03-01',
   },
 ];
 
@@ -113,15 +116,15 @@ interface PartyRaw {
   city?: string | null;
   credit_limit?: string | null;
   current_balance?: string | null;
-  loyalty_points?: number | null;
-  total_orders_count?: number | null;
+  loyalty_points?: number;
+  total_orders_count?: number;
   lifetime_value?: string | null;
-  status?: string | null;
+  status?: string;
   created_at?: string | null;
 }
 
 export function CustomersSection() {
-  const [customers, setCustomers] = useState<CustomerCrm[]>(SAMPLE_CUSTOMERS);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -150,13 +153,14 @@ export function CustomersSection() {
     status: 'active',
   });
 
-  useEffect(() => {
-    let ignore = false;
-    api.get<PartyRaw[]>('/parties?type=customer')
-      .then((res) => {
-        if (!ignore && res.data && res.data.length > 0) {
+  const { data: customers = SAMPLE_CUSTOMERS, isFetching, refetch } = useQuery<CustomerCrm[]>({
+    queryKey: ['sales', 'customers'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<PartyRaw[]>('/parties?type=customer');
+        if (res.data && res.data.length > 0) {
           const rawList = res.data as PartyRaw[];
-          const adapted: CustomerCrm[] = rawList.map((p) => {
+          return rawList.map((p) => {
             const validTier = (['retail', 'wholesale', 'dealer', 'corporate'].includes(p.customer_tier || '')
               ? p.customer_tier
               : 'retail') as 'retail' | 'wholesale' | 'dealer' | 'corporate';
@@ -182,16 +186,14 @@ export function CustomersSection() {
               created_at: p.created_at?.slice(0, 10) ?? '2026-01-01',
             };
           });
-          setCustomers(adapted);
         }
-      })
-      .catch(() => {
-        // Use rich sample data
-      });
-    return () => {
-      ignore = true;
-    };
-  }, []);
+      } catch {
+        // Fallback to sample customers
+      }
+      return SAMPLE_CUSTOMERS;
+    },
+    initialData: SAMPLE_CUSTOMERS,
+  });
 
   const handleCreateCustomer = (e: React.FormEvent) => {
     e.preventDefault();
@@ -213,7 +215,8 @@ export function CustomersSection() {
       created_at: new Date().toISOString().slice(0, 10),
     };
 
-    setCustomers([newCustomer, ...customers]);
+    queryClient.setQueryData<CustomerCrm[]>(['sales', 'customers'], (prev = []) => [newCustomer, ...prev]);
+    toast.success('Customer registered successfully.');
     setShowCreateModal(false);
     setFormData({
       name: '',
@@ -357,6 +360,16 @@ export function CustomersSection() {
             <option value="inactive">Inactive</option>
             <option value="blocked">Blocked / Over-limit</option>
           </select>
+
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface px-3 text-xs font-medium text-muted hover:text-default disabled:opacity-50 transition-colors cursor-pointer"
+            title="Refresh Customers"
+          >
+            <RefreshCw className={`size-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+          </button>
         </div>
 
         <button

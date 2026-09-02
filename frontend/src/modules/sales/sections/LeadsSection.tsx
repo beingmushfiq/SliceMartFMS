@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   Plus,
   Search,
@@ -9,6 +11,7 @@ import {
   CheckCircle2,
   Clock,
   TrendingUp,
+  RefreshCw,
 } from 'lucide-react';
 import type { Lead, LeadStatus, LeadSource } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
@@ -98,22 +101,22 @@ const SAMPLE_LEADS: Lead[] = [
 
 const STAGES: { id: LeadStatus; label: string; tone: string; badgeBg: string }[] = [
   { id: 'new', label: 'New Inquiries', tone: 'text-sky-600 dark:text-sky-400', badgeBg: 'bg-sky-500/10 border-sky-500/20' },
-  { id: 'contacted', label: 'Contacted', tone: 'text-indigo-600 dark:text-indigo-400', badgeBg: 'bg-indigo-500/10 border-indigo-500/20' },
-  { id: 'qualified', label: 'Qualified', tone: 'text-purple-600 dark:text-purple-400', badgeBg: 'bg-purple-500/10 border-purple-500/20' },
-  { id: 'proposal', label: 'Proposal Sent', tone: 'text-amber-600 dark:text-amber-400', badgeBg: 'bg-amber-500/10 border-amber-500/20' },
-  { id: 'negotiation', label: 'Negotiation', tone: 'text-orange-600 dark:text-orange-400', badgeBg: 'bg-orange-500/10 border-orange-500/20' },
+  { id: 'contacted', label: 'Contacted', tone: 'text-blue-600 dark:text-blue-400', badgeBg: 'bg-blue-500/10 border-blue-500/20' },
+  { id: 'qualified', label: 'Qualified', tone: 'text-indigo-600 dark:text-indigo-400', badgeBg: 'bg-indigo-500/10 border-indigo-500/20' },
+  { id: 'proposal', label: 'Proposal Sent', tone: 'text-purple-600 dark:text-purple-400', badgeBg: 'bg-purple-500/10 border-purple-500/20' },
+  { id: 'negotiation', label: 'Negotiation', tone: 'text-amber-600 dark:text-amber-400', badgeBg: 'bg-amber-500/10 border-amber-500/20' },
   { id: 'won', label: 'Closed Won', tone: 'text-emerald-600 dark:text-emerald-400', badgeBg: 'bg-emerald-500/10 border-emerald-500/20' },
   { id: 'lost', label: 'Closed Lost', tone: 'text-rose-600 dark:text-rose-400', badgeBg: 'bg-rose-500/10 border-rose-500/20' },
 ];
 
 export function LeadsSection() {
-  const [leads, setLeads] = useState<Lead[]>(SAMPLE_LEADS);
+  const queryClient = useQueryClient();
+  const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
   const [search, setSearch] = useState('');
   const [stageFilter, setStageFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  // Form State for Add / Edit
+  // Form State
   const [formData, setFormData] = useState<{
     name: string;
     company_name: string;
@@ -138,21 +141,21 @@ export function LeadsSection() {
     notes: '',
   });
 
-  useEffect(() => {
-    let ignore = false;
-    api.get<Lead[]>('/crm/leads')
-      .then((res) => {
-        if (!ignore && res.data && res.data.length > 0) {
-          setLeads(res.data);
+  const { data: leads = SAMPLE_LEADS, isFetching, refetch } = useQuery<Lead[]>({
+    queryKey: ['crm', 'leads'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<Lead[]>('/crm/leads');
+        if (res.data && res.data.length > 0) {
+          return res.data;
         }
-      })
-      .catch(() => {
+      } catch {
         // Fallback to sample data
-      });
-    return () => {
-      ignore = true;
-    };
-  }, []);
+      }
+      return SAMPLE_LEADS;
+    },
+    initialData: SAMPLE_LEADS,
+  });
 
   const handleCreateLead = (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,7 +176,8 @@ export function LeadsSection() {
       created_at: new Date().toISOString().slice(0, 10),
     };
 
-    setLeads([newLead, ...leads]);
+    queryClient.setQueryData<Lead[]>(['crm', 'leads'], (prev = []) => [newLead, ...prev]);
+    toast.success('Lead captured successfully.');
     setShowCreateModal(false);
     setFormData({
       name: '',
@@ -190,9 +194,10 @@ export function LeadsSection() {
   };
 
   const handleUpdateStage = (id: number, newStage: LeadStatus) => {
-    setLeads((prev) =>
+    queryClient.setQueryData<Lead[]>(['crm', 'leads'], (prev = []) =>
       prev.map((l) => (l.id === id ? { ...l, status: newStage } : l))
     );
+    toast.success(`Lead moved to ${newStage}.`);
   };
 
   const filteredLeads = leads.filter((l) => {
@@ -312,6 +317,16 @@ export function LeadsSection() {
               </option>
             ))}
           </select>
+
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface px-3 text-xs font-medium text-muted hover:text-default disabled:opacity-50 transition-colors cursor-pointer"
+            title="Refresh Leads"
+          >
+            <RefreshCw className={`size-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+          </button>
         </div>
 
         <div className="flex items-center gap-2">

@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -93,8 +95,7 @@ const SAMPLE_ADJUSTMENTS: StockAdjustment[] = [
 ];
 
 export function StockAdjustmentsSection() {
-  const [adjustments, setAdjustments] = useState<StockAdjustment[]>(SAMPLE_ADJUSTMENTS);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [actionLoading, setActionLoading] = useState<number | null>(null);
@@ -112,7 +113,7 @@ export function StockAdjustmentsSection() {
     warehouse_name: 'Central Raw Materials Silo',
     adjustment_date: new Date().toISOString().slice(0, 10),
     reason_name: 'Physical stock discrepancy adjustment',
-    reason_code: 'VARIANCE',
+    reason_code: 'EXPIRY',
     notes: '',
     items: [
       {
@@ -126,46 +127,31 @@ export function StockAdjustmentsSection() {
     ],
   });
 
-  const fetchAdjustments = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get<StockAdjustment[]>('/inventory/adjustments');
-      if (res.data && res.data.length > 0) {
-        setAdjustments(res.data);
-      }
-    } catch {
-      // Keep sample data
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    let ignore = false;
-    api.get<StockAdjustment[]>('/inventory/adjustments')
-      .then((res) => {
-        if (!ignore && res.data && res.data.length > 0) {
-          setAdjustments(res.data);
+  const { data: adjustments = SAMPLE_ADJUSTMENTS, isLoading, isFetching, refetch } = useQuery<StockAdjustment[]>({
+    queryKey: ['inventory', 'adjustments'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<StockAdjustment[]>('/inventory/adjustments');
+        if (res.data && res.data.length > 0) {
+          return res.data;
         }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
+      } catch {
+        // Keep sample data
+      }
+      return SAMPLE_ADJUSTMENTS;
+    },
+    initialData: SAMPLE_ADJUSTMENTS,
+  });
 
   const handleApprove = async (adjId: number) => {
     setActionLoading(adjId);
     try {
       await api.post(`/inventory/adjustments/${adjId}/approve`, {});
+      toast.success('Stock adjustment approved & posted to ledger.');
     } catch {
-      // Optimistic update
+      toast.success('Adjustment approved (offline mode).');
     } finally {
-      setAdjustments((prev) =>
+      queryClient.setQueryData<StockAdjustment[]>(['inventory', 'adjustments'], (prev = []) =>
         prev.map((a) =>
           a.id === adjId
             ? { ...a, status: 'approved', approved_at: new Date().toISOString() }
@@ -203,14 +189,15 @@ export function StockAdjustmentsSection() {
         quantity: it.quantity,
         unit_id: 1,
         unit_cost: it.unit_cost,
-        total_cost: (parseFloat(it.quantity) * parseFloat(it.unit_cost)).toFixed(2),
+        total_cost: (parseFloat(it.quantity || '0') * parseFloat(it.unit_cost || '0')).toFixed(2),
         batch_code: it.batch_code,
       })),
       created_at: new Date().toISOString(),
     };
 
     api.post('/inventory/adjustments', newAdj).catch(() => {});
-    setAdjustments([newAdj, ...adjustments]);
+    queryClient.setQueryData<StockAdjustment[]>(['inventory', 'adjustments'], (prev = []) => [newAdj, ...prev]);
+    toast.success('Stock adjustment created.');
     setShowCreateModal(false);
   };
 
@@ -218,7 +205,7 @@ export function StockAdjustmentsSection() {
     e.preventDefault();
     if (!activeAdjustment) return;
 
-    setAdjustments((prev) =>
+    queryClient.setQueryData<StockAdjustment[]>(['inventory', 'adjustments'], (prev = []) =>
       prev.map((a) =>
         a.id === activeAdjustment.id
           ? {
@@ -231,13 +218,17 @@ export function StockAdjustmentsSection() {
       )
     );
     api.put(`/inventory/adjustments/${activeAdjustment.id}`, formData).catch(() => {});
+    toast.success('Stock adjustment updated.');
     setShowEditModal(false);
   };
 
   const handleDeleteAdjustment = () => {
     if (!activeAdjustment) return;
-    setAdjustments((prev) => prev.filter((a) => a.id !== activeAdjustment.id));
+    queryClient.setQueryData<StockAdjustment[]>(['inventory', 'adjustments'], (prev = []) =>
+      prev.filter((a) => a.id !== activeAdjustment.id)
+    );
     api.delete(`/inventory/adjustments/${activeAdjustment.id}`).catch(() => {});
+    toast.success('Stock adjustment deleted.');
     setShowDeleteModal(false);
   };
 
@@ -384,12 +375,12 @@ export function StockAdjustmentsSection() {
           </button>
 
           <button
-            onClick={fetchAdjustments}
-            disabled={loading}
+            onClick={() => refetch()}
+            disabled={isFetching}
             className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors cursor-pointer"
             title="Refresh"
           >
-            <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
           <select
@@ -434,7 +425,7 @@ export function StockAdjustmentsSection() {
               {filteredAdjustments.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center text-muted">
-                    {loading ? 'Loading adjustments...' : 'No stock adjustments found matching your criteria.'}
+                    {isLoading ? 'Loading adjustments...' : 'No stock adjustments found matching your criteria.'}
                   </td>
                 </tr>
               ) : (

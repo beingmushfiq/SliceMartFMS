@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { api } from '../../lib/api/client';
 import type { PlatformPlan } from '../../types/api/platform';
 import {
@@ -8,11 +10,11 @@ import {
   Users,
   HardDrive,
   ShoppingBag,
+  RefreshCw,
 } from 'lucide-react';
 
 export const PlanManagerWorkspace: React.FC = () => {
-  const [plans, setPlans] = useState<PlatformPlan[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [isCreating, setIsCreating] = useState(false);
 
   // New Plan Form
@@ -36,21 +38,17 @@ export const PlanManagerWorkspace: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPlans = async () => {
-    setLoading(true);
-    try {
-      const response = await api.get<PlatformPlan[]>('/platform/plans');
-      setPlans(response.data);
-    } catch {
-      // Error
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchPlans();
-  }, []);
+  const { data: plans = [], isLoading, isFetching, refetch } = useQuery<PlatformPlan[]>({
+    queryKey: ['platform', 'plans'],
+    queryFn: async () => {
+      try {
+        const response = await api.get<PlatformPlan[]>('/platform/plans');
+        return response.data;
+      } catch {
+        return [];
+      }
+    },
+  });
 
   const handleCreatePlan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,10 +76,13 @@ export const PlanManagerWorkspace: React.FC = () => {
         },
       });
 
+      toast.success('Subscription plan tier created.');
       setIsCreating(false);
-      fetchPlans();
+      queryClient.invalidateQueries({ queryKey: ['platform', 'plans'] });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to create plan');
+      const msg = err instanceof Error ? err.message : 'Failed to create plan';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -98,18 +99,28 @@ export const PlanManagerWorkspace: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsCreating(true)}
-          className="px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all self-start sm:self-auto font-mono"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create Plan Tier</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg border border-slate-700 transition-colors cursor-pointer"
+            title="Refresh Plans"
+          >
+            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin text-amber-500' : ''}`} />
+          </button>
+          <button
+            onClick={() => setIsCreating(true)}
+            className="px-4 py-2 rounded-lg bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all self-start sm:self-auto font-mono cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create Plan Tier</span>
+          </button>
+        </div>
       </div>
 
       {/* Plan Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {loading ? (
+        {isLoading ? (
           <div className="col-span-full py-12 text-center text-slate-400 text-xs font-mono animate-pulse">
             Loading subscription catalog...
           </div>
@@ -123,7 +134,7 @@ export const PlanManagerWorkspace: React.FC = () => {
               key={plan.id}
               className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl flex flex-col justify-between relative overflow-hidden"
             >
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-600 to-amber-400" />
+              <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-amber-600 to-amber-400" />
 
               <div>
                 <div className="flex items-center justify-between mb-3">
@@ -136,7 +147,7 @@ export const PlanManagerWorkspace: React.FC = () => {
                 </div>
 
                 <h3 className="text-xl font-bold text-slate-100">{plan.name}</h3>
-                <p className="text-xs text-slate-400 mt-1 min-h-[32px]">
+                <p className="text-xs text-slate-400 mt-1 min-h-8">
                   {plan.description || 'Full SaaS industrial operational suite.'}
                 </p>
 

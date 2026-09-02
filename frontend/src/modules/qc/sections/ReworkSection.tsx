@@ -1,6 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   Plus,
+  RefreshCw,
   Search,
   RotateCcw,
   AlertTriangle,
@@ -112,7 +115,7 @@ const SAMPLE_REWORK_ORDERS: ReworkOrder[] = [
 ];
 
 export function ReworkSection() {
-  const [reworkOrders, setReworkOrders] = useState<ReworkOrder[]>(SAMPLE_REWORK_ORDERS);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -139,21 +142,21 @@ export function ReworkSection() {
     actual_cost: '',
   });
 
-  useEffect(() => {
-    let ignore = false;
-    api.get<ReworkOrder[]>('/qc/rework-orders')
-      .then((res) => {
-        if (!ignore && res.data && res.data.length > 0) {
-          setReworkOrders(res.data);
+  const { data: reworkOrders = SAMPLE_REWORK_ORDERS, isLoading, isFetching, refetch } = useQuery<ReworkOrder[]>({
+    queryKey: ['qc', 'rework-orders'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<ReworkOrder[]>('/qc/rework-orders');
+        if (res.data && res.data.length > 0) {
+          return res.data;
         }
-      })
-      .catch(() => {
+      } catch {
         // Fallback to sample data
-      });
-    return () => {
-      ignore = true;
-    };
-  }, []);
+      }
+      return SAMPLE_REWORK_ORDERS;
+    },
+    initialData: SAMPLE_REWORK_ORDERS,
+  });
 
   const handleCreateOrder = (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,7 +180,9 @@ export function ReworkSection() {
       created_at: new Date().toISOString().slice(0, 10),
     };
 
-    setReworkOrders([newOrder, ...reworkOrders]);
+    api.post('/qc/rework-orders', newOrder).catch(() => {});
+    queryClient.setQueryData<ReworkOrder[]>(['qc', 'rework-orders'], (prev = []) => [newOrder, ...prev]);
+    toast.success('Rework order created.');
     setShowCreateModal(false);
     setFormData({
       batch_number: '',
@@ -193,13 +198,15 @@ export function ReworkSection() {
   };
 
   const handleStartRework = (id: number) => {
-    setReworkOrders((prev) =>
+    api.post(`/qc/rework-orders/${id}/start`, {}).catch(() => {});
+    queryClient.setQueryData<ReworkOrder[]>(['qc', 'rework-orders'], (prev = []) =>
       prev.map((o) =>
         o.id === id
           ? { ...o, status: 'in_rework', started_at: new Date().toISOString().slice(0, 16).replace('T', ' ') }
           : o
       )
     );
+    toast.success('Rework order started.');
   };
 
   const handleCompleteRework = (e: React.FormEvent) => {
@@ -209,7 +216,13 @@ export function ReworkSection() {
     const salvage = parseInt(completeData.salvage_qty) || 0;
     const scrap = parseInt(completeData.scrap_qty) || 0;
 
-    setReworkOrders((prev) =>
+    api.post(`/qc/rework-orders/${selectedOrder.id}/complete`, {
+      salvage_qty: salvage,
+      scrap_qty: scrap,
+      rework_cost: completeData.actual_cost || selectedOrder.rework_cost,
+    }).catch(() => {});
+
+    queryClient.setQueryData<ReworkOrder[]>(['qc', 'rework-orders'], (prev = []) =>
       prev.map((o) =>
         o.id === selectedOrder.id
           ? {
@@ -224,6 +237,7 @@ export function ReworkSection() {
       )
     );
 
+    toast.success('Rework batch processed.');
     setShowCompleteModal(false);
     setSelectedOrder(null);
   };
@@ -330,6 +344,15 @@ export function ReworkSection() {
             />
           </div>
 
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors cursor-pointer"
+            title="Refresh"
+          >
+            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
+          </button>
+
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -373,7 +396,7 @@ export function ReworkSection() {
               {filteredOrders.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-8 text-center text-muted">
-                    No rework orders found matching criteria.
+                    {isLoading ? 'Loading rework orders...' : 'No rework orders found matching criteria.'}
                   </td>
                 </tr>
               ) : (
@@ -394,7 +417,7 @@ export function ReworkSection() {
                         {order.defect_category}
                       </span>
                       {order.defect_notes && (
-                        <div className="text-[11px] text-muted line-clamp-1 mt-1 max-w-[200px]">
+                        <div className="text-[11px] text-muted line-clamp-1 mt-1 max-w-50">
                           {order.defect_notes}
                         </div>
                       )}

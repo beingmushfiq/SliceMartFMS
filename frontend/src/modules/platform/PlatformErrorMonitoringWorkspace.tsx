@@ -14,6 +14,7 @@ import {
   Copy,
   Check,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { getLogs, clearLogs, subscribeToLogs, type LogEntry } from '../../lib/observability/logger';
 import { Button } from '../../components/ui/Button';
 
@@ -34,12 +35,14 @@ export function PlatformErrorMonitoringWorkspace() {
 
   const handleRefresh = useCallback(() => {
     setLogs(getLogs());
+    toast.success('Diagnostics buffer refreshed.');
   }, []);
 
   const handleClearLogs = () => {
     if (confirm('Clear all logged errors from the diagnostics buffer?')) {
       clearLogs();
       setLogs([]);
+      toast.success('Error log buffer cleared.');
     }
   };
 
@@ -51,11 +54,13 @@ export function PlatformErrorMonitoringWorkspace() {
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
+    toast.success('Logs exported to JSON file.');
   };
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
+    toast.success('Trace copied to clipboard.');
     setTimeout(() => setCopiedId(null), 2000);
   };
 

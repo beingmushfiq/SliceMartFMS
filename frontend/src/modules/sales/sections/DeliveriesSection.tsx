@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   CheckCircle2,
   Clock,
@@ -54,7 +56,7 @@ const SAMPLE_DELIVERIES: DeliveryOrder[] = [
         delivery_order_id: 1,
         product_id: 1,
         product_name: 'Artisan Sourdough Loaf 500g',
-        quantity: '100.00',
+        quantity: '50.00',
         delivered_quantity: '0.00',
         returned_quantity: '0.00',
         unit_id: 2,
@@ -65,13 +67,13 @@ const SAMPLE_DELIVERIES: DeliveryOrder[] = [
         delivery_order_id: 1,
         product_id: 2,
         product_name: 'Butter Croissant Pack (6 pcs)',
-        quantity: '50.00',
+        quantity: '30.00',
         delivered_quantity: '0.00',
         returned_quantity: '0.00',
         unit_id: 2,
       },
     ],
-    created_at: '2026-08-30T09:00:00Z',
+    created_at: '2026-08-30T10:00:00Z',
   },
   {
     id: 2,
@@ -82,31 +84,31 @@ const SAMPLE_DELIVERIES: DeliveryOrder[] = [
     warehouse_id: 1,
     warehouse_name: 'Main Distribution Hub (Dhaka)',
     recipient_name: 'Shwapno Superstore Gulshan',
-    recipient_phone: '+880 1819-338291',
+    recipient_phone: '+880 1819-332211',
     delivery_type: 'own_fleet',
-    scheduled_date: '2026-08-29',
+    scheduled_date: '2026-08-30',
     status: 'delivered',
+    delivered_at: '2026-08-30T15:30:00Z',
     cod_amount: '0.00',
     cod_collected_amount: '0.00',
-    cod_status: 'collected',
+    cod_status: 'none',
     delivery_charge: '0.00',
     package_count: 12,
-    delivered_at: '2026-08-29T15:45:00Z',
-    special_instructions: 'Deliver to rear loading bay gate #4.',
+    special_instructions: 'Deliver to loading bay 3.',
     items: [
       {
         id: 603,
         uuid: 'doi-603',
         delivery_order_id: 2,
         product_id: 3,
-        product_name: 'Chocolate Fudge Brownie Tray',
-        quantity: '200.00',
-        delivered_quantity: '200.00',
+        product_name: 'Chocolate Chip Cookies (Tin 400g)',
+        quantity: '100.00',
+        delivered_quantity: '100.00',
         returned_quantity: '0.00',
         unit_id: 2,
       },
     ],
-    created_at: '2026-08-29T10:00:00Z',
+    created_at: '2026-08-30T11:30:00Z',
   },
   {
     id: 3,
@@ -115,18 +117,18 @@ const SAMPLE_DELIVERIES: DeliveryOrder[] = [
     sales_order_id: 3,
     sales_order_number: 'SO-202608-003',
     warehouse_id: 2,
-    warehouse_name: 'Chittagong Regional Depot',
-    recipient_name: 'Bakehouse Cafe Nasirabad',
-    recipient_phone: '+880 1912-884019',
-    delivery_type: 'standard_courier',
+    warehouse_name: 'Chittagong Regional Hub',
+    recipient_name: 'Agora Departmental Store',
+    recipient_phone: '+880 1912-778899',
+    delivery_type: 'third_party_logistics',
     scheduled_date: '2026-08-31',
     status: 'pending',
-    cod_amount: '18500.00',
+    cod_amount: '12400.00',
     cod_collected_amount: '0.00',
     cod_status: 'pending',
-    delivery_charge: '150.00',
-    package_count: 2,
-    special_instructions: 'Call recipient 30 mins before arrival.',
+    delivery_charge: '180.00',
+    package_count: 3,
+    special_instructions: 'Customer requested evening delivery.',
     items: [
       {
         id: 604,
@@ -145,8 +147,7 @@ const SAMPLE_DELIVERIES: DeliveryOrder[] = [
 ];
 
 export function DeliveriesSection() {
-  const [deliveries, setDeliveries] = useState<DeliveryOrder[]>(SAMPLE_DELIVERIES);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [actionLoading, setActionLoading] = useState<number | null>(null);
@@ -181,46 +182,31 @@ export function DeliveriesSection() {
     ],
   });
 
-  const fetchDeliveries = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get<DeliveryOrder[]>('/sales/deliveries');
-      if (res.data && res.data.length > 0) {
-        setDeliveries(res.data);
-      }
-    } catch {
-      // Keep sample data
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    let ignore = false;
-    api.get<DeliveryOrder[]>('/sales/deliveries')
-      .then((res) => {
-        if (!ignore && res.data && res.data.length > 0) {
-          setDeliveries(res.data);
+  const { data: deliveries = SAMPLE_DELIVERIES, isLoading, isFetching, refetch } = useQuery<DeliveryOrder[]>({
+    queryKey: ['sales', 'deliveries'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<DeliveryOrder[]>('/sales/deliveries');
+        if (res.data && res.data.length > 0) {
+          return res.data;
         }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
+      } catch {
+        // Keep sample data
+      }
+      return SAMPLE_DELIVERIES;
+    },
+    initialData: SAMPLE_DELIVERIES,
+  });
 
   const handleDispatch = async (deliveryId: number) => {
     setActionLoading(deliveryId);
     try {
       await api.post(`/sales/deliveries/${deliveryId}/dispatch`, {});
+      toast.success('Challan dispatched for delivery.');
     } catch {
-      // Optimistic update
+      toast.success('Dispatched updated (offline mode).');
     } finally {
-      setDeliveries((prev) =>
+      queryClient.setQueryData<DeliveryOrder[]>(['sales', 'deliveries'], (prev = []) =>
         prev.map((d) => (d.id === deliveryId ? { ...d, status: 'in_transit' } : d))
       );
       setActionLoading(null);
@@ -231,10 +217,11 @@ export function DeliveriesSection() {
     setActionLoading(deliveryId);
     try {
       await api.post(`/sales/deliveries/${deliveryId}/deliver`, {});
+      toast.success('Delivery marked as completed and COD collected.');
     } catch {
-      // Optimistic update
+      toast.success('Delivery completed (offline mode).');
     } finally {
-      setDeliveries((prev) =>
+      queryClient.setQueryData<DeliveryOrder[]>(['sales', 'deliveries'], (prev = []) =>
         prev.map((d) =>
           d.id === deliveryId
             ? {
@@ -289,7 +276,8 @@ export function DeliveriesSection() {
     };
 
     api.post('/sales/deliveries', newDel).catch(() => {});
-    setDeliveries([newDel, ...deliveries]);
+    queryClient.setQueryData<DeliveryOrder[]>(['sales', 'deliveries'], (prev = []) => [newDel, ...prev]);
+    toast.success('Dispatch challan created.');
     setShowCreateModal(false);
   };
 
@@ -297,7 +285,7 @@ export function DeliveriesSection() {
     e.preventDefault();
     if (!activeDelivery) return;
 
-    setDeliveries((prev) =>
+    queryClient.setQueryData<DeliveryOrder[]>(['sales', 'deliveries'], (prev = []) =>
       prev.map((d) =>
         d.id === activeDelivery.id
           ? {
@@ -312,13 +300,17 @@ export function DeliveriesSection() {
       )
     );
     api.put(`/sales/deliveries/${activeDelivery.id}`, formData).catch(() => {});
+    toast.success('Dispatch challan updated.');
     setShowEditModal(false);
   };
 
   const handleDeleteDelivery = () => {
     if (!activeDelivery) return;
-    setDeliveries((prev) => prev.filter((d) => d.id !== activeDelivery.id));
+    queryClient.setQueryData<DeliveryOrder[]>(['sales', 'deliveries'], (prev = []) =>
+      prev.filter((d) => d.id !== activeDelivery.id)
+    );
     api.delete(`/sales/deliveries/${activeDelivery.id}`).catch(() => {});
+    toast.success('Dispatch challan deleted.');
     setShowDeleteModal(false);
   };
 
@@ -480,12 +472,12 @@ export function DeliveriesSection() {
           </button>
 
           <button
-            onClick={fetchDeliveries}
-            disabled={loading}
+            onClick={() => refetch()}
+            disabled={isFetching}
             className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors cursor-pointer"
             title="Refresh"
           >
-            <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
           <select
@@ -532,7 +524,7 @@ export function DeliveriesSection() {
               {filteredDeliveries.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-muted">
-                    {loading ? 'Loading deliveries...' : 'No delivery dispatches found matching your criteria.'}
+                    {isLoading ? 'Loading deliveries...' : 'No delivery dispatches found matching your criteria.'}
                   </td>
                 </tr>
               ) : (

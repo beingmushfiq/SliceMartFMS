@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api/client';
 import type { PlatformDashboardData } from '../../types/api/platform';
 import {
@@ -16,42 +17,15 @@ import {
 } from 'lucide-react';
 
 export const PlatformDashboardWorkspace: React.FC = () => {
-  const [data, setData] = useState<PlatformDashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchDashboard = React.useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
+  const { data, isLoading, isFetching, refetch, error } = useQuery<PlatformDashboardData | null>({
+    queryKey: ['platform', 'dashboard', 'kpis'],
+    queryFn: async () => {
       const response = await api.get<PlatformDashboardData>('/platform/dashboard/kpis');
-      setData(response.data);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch platform metrics');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return response.data;
+    },
+  });
 
-  useEffect(() => {
-    let ignore = false;
-    api.get<PlatformDashboardData>('/platform/dashboard/kpis')
-      .then((response) => {
-        if (!ignore) setData(response.data);
-      })
-      .catch((err: unknown) => {
-        if (!ignore) setError(err instanceof Error ? err.message : 'Failed to fetch platform metrics');
-      })
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
-  if (loading && !data) {
+  if (isLoading && !data) {
     return (
       <div className="space-y-8 animate-pulse">
         <div className="h-10 bg-surface-sunken rounded-2xl w-1/3 border border-default" />
@@ -86,12 +60,12 @@ export const PlatformDashboardWorkspace: React.FC = () => {
 
         <div className="flex items-center gap-3 shrink-0">
           <button
-            onClick={fetchDashboard}
-            disabled={loading}
+            onClick={() => refetch()}
+            disabled={isFetching}
             className="px-3.5 py-2 rounded-xl bg-surface-sunken hover:bg-surface border border-default text-xs font-semibold text-default flex items-center gap-2 transition-all shadow-2xs disabled:opacity-50 cursor-pointer"
             title="Refresh Metrics"
           >
-            <RefreshCw className={`size-3.5 ${loading ? 'animate-spin text-primary' : ''}`} />
+            <RefreshCw className={`size-3.5 ${isFetching ? 'animate-spin text-primary' : ''}`} />
             <span>Refresh</span>
           </button>
           <Link
@@ -107,7 +81,7 @@ export const PlatformDashboardWorkspace: React.FC = () => {
       {error && (
         <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-3">
           <AlertTriangle className="size-4 shrink-0" />
-          <span>{error}</span>
+          <span>{error instanceof Error ? error.message : 'Failed to fetch platform metrics'}</span>
         </div>
       )}
 

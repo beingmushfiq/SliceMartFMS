@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react';
-import { CheckCircle2, Clock, Plus, RefreshCw, Search, Truck, XCircle } from 'lucide-react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { CheckCircle2, Clock, Plus, RefreshCw, Search, XCircle, ShoppingCart } from 'lucide-react';
+import { toast } from 'sonner';
 import type { SalesOrder } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
+import { formatCurrency } from '../../../lib/document/formatters';
 
 export function SalesOrdersSection() {
-  const [orders, setOrders] = useState<SalesOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [channelFilter, setChannelFilter] = useState<string>('all');
-  const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   // New Order Form state
@@ -23,52 +24,29 @@ export function SalesOrdersSection() {
     Array<{ product_id: number; quantity: string; unit_id: number; unit_price: string }>
   >([{ product_id: 1, quantity: '1.0000', unit_id: 1, unit_price: '100.0000' }]);
 
-  const fetchOrders = async () => {
-    setLoading(true);
-    try {
+  const { data: orders = [], isLoading, isFetching, refetch } = useQuery<SalesOrder[]>({
+    queryKey: ['sales', 'orders'],
+    queryFn: async () => {
       const res = await api.get<SalesOrder[]>('/sales/orders');
-      setOrders(res.data ?? []);
-    } catch (err) {
-      console.error('Failed to load sales orders', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return res.data ?? [];
+    },
+  });
 
-  useEffect(() => {
-    let ignore = false;
-    api.get<SalesOrder[]>('/sales/orders')
-      .then((res) => {
-        if (!ignore) setOrders(res.data ?? []);
-      })
-      .catch((err) => {
-        console.error('Failed to load sales orders', err);
-      })
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
-  const handleApprove = async (orderId: number) => {
-    setActionLoading(orderId);
-    try {
+  const approveMutation = useMutation({
+    mutationFn: async (orderId: number) => {
       await api.post(`/sales/orders/${orderId}/approve`, {});
-      await fetchOrders();
-    } catch (err) {
-      console.error('Failed to approve sales order', err);
-    } finally {
-      setActionLoading(null);
-    }
-  };
+    },
+    onSuccess: () => {
+      toast.success('Sales order confirmed successfully.');
+      queryClient.invalidateQueries({ queryKey: ['sales', 'orders'] });
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof Error ? err.message : 'Failed to confirm sales order');
+    },
+  });
 
-  const handleCreateOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
+  const createOrderMutation = useMutation({
+    mutationFn: async () => {
       await api.post('/sales/orders', {
         channel,
         customer_name: customerName || undefined,
@@ -77,17 +55,23 @@ export function SalesOrdersSection() {
         notes: notes || undefined,
         items,
       });
+    },
+    onSuccess: () => {
+      toast.success('Sales order created.');
       setShowCreateModal(false);
-      // reset form
       setCustomerName('');
       setCustomerPhone('');
       setNotes('');
-      await fetchOrders();
-    } catch (err) {
-      console.error('Failed to create sales order', err);
-    } finally {
-      setLoading(false);
-    }
+      queryClient.invalidateQueries({ queryKey: ['sales', 'orders'] });
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof Error ? err.message : 'Failed to create sales order');
+    },
+  });
+
+  const handleCreateOrder = (e: React.FormEvent) => {
+    e.preventDefault();
+    createOrderMutation.mutate();
   };
 
   const filteredOrders = orders.filter((o) => {
@@ -105,31 +89,40 @@ export function SalesOrdersSection() {
     switch (status) {
       case 'draft':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-surface-sunken text-muted border border-default">
-            <Clock className="size-3 text-muted" /> Draft
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-zinc-800 text-zinc-300 border border-zinc-700">
+            <Clock className="h-3 w-3 text-zinc-400" /> Draft
           </span>
         );
       case 'confirmed':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-            <CheckCircle2 className="size-3 text-emerald-600 dark:text-emerald-400" /> Confirmed
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20">
+            <CheckCircle2 className="h-3 w-3 text-blue-400" /> Confirmed
           </span>
         );
+      case 'allocated':
+      case 'picking':
+      case 'packed':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <RefreshCw className="h-3 w-3 text-amber-400 animate-spin" /> {status}
+          </span>
+        );
+      case 'dispatched':
       case 'delivered':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-            <Truck className="size-3 text-indigo-600 dark:text-indigo-400" /> Delivered
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <CheckCircle2 className="h-3 w-3 text-emerald-400" /> {status}
           </span>
         );
       case 'cancelled':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-            <XCircle className="size-3 text-rose-600 dark:text-rose-400" /> Cancelled
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/20">
+            <XCircle className="h-3 w-3 text-rose-400" /> Cancelled
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-surface-sunken text-muted border border-default">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-surface-sunken text-muted border border-default">
             {status}
           </span>
         );
@@ -137,22 +130,20 @@ export function SalesOrdersSection() {
   };
 
   const getChannelBadge = (ch: SalesOrder['channel']) => {
-    const colors: Record<string, string> = {
-      counter: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-      dealer: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
-      phone: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-      field: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
-      online: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
-    };
-    return (
-      <span
-        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase border ${
-          colors[ch] ?? 'bg-surface-sunken text-muted border-default'
-        }`}
-      >
-        {ch}
-      </span>
-    );
+    switch (ch) {
+      case 'counter':
+        return <span className="text-muted font-medium">Counter POS</span>;
+      case 'dealer':
+        return <span className="text-blue-500 font-medium">B2B Dealer</span>;
+      case 'phone':
+        return <span className="text-purple-500 font-medium">Telesales</span>;
+      case 'field':
+        return <span className="text-amber-500 font-medium">Field DSR</span>;
+      case 'online':
+        return <span className="text-emerald-500 font-medium">E-Commerce</span>;
+      default:
+        return <span className="text-muted">{ch}</span>;
+    }
   };
 
   return (
@@ -174,29 +165,29 @@ export function SalesOrdersSection() {
           <select
             value={channelFilter}
             onChange={(e) => setChannelFilter(e.target.value)}
-            className="h-9 rounded-xl border border-default bg-surface-sunken px-3 text-xs text-default focus:border-primary focus:outline-none"
+            className="h-9 rounded-xl border border-default bg-surface-sunken px-3 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
           >
             <option value="all">All Channels</option>
-            <option value="dealer">Dealer</option>
-            <option value="counter">Counter</option>
-            <option value="phone">Phone</option>
-            <option value="field">Field</option>
-            <option value="online">Online</option>
+            <option value="dealer">B2B Dealer</option>
+            <option value="counter">Counter POS</option>
+            <option value="phone">Telesales</option>
+            <option value="field">Field DSR</option>
+            <option value="online">E-Commerce</option>
           </select>
 
           <button
-            onClick={fetchOrders}
-            disabled={loading}
+            onClick={() => refetch()}
+            disabled={isFetching}
             className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface-sunken px-3 text-xs font-medium text-muted hover:bg-surface hover:text-default disabled:opacity-50 transition-colors cursor-pointer"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />
             Refresh
           </button>
         </div>
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-medium text-white shadow-xs hover:bg-primary-hover transition-colors cursor-pointer"
+          className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-medium text-primary-fg hover:opacity-90 shadow-xs transition-all cursor-pointer"
         >
           <Plus className="h-3.5 w-3.5" />
           New Sales Order
@@ -220,10 +211,22 @@ export function SalesOrdersSection() {
               </tr>
             </thead>
             <tbody className="divide-y divide-default">
-              {filteredOrders.length === 0 ? (
+              {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-muted">
-                    {loading ? 'Loading sales orders...' : 'No sales orders found.'}
+                  <td colSpan={8} className="px-4 py-12 text-center text-muted">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <RefreshCw className="size-5 animate-spin text-primary" />
+                      <span>Loading sales orders...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-12 text-center text-muted">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <ShoppingCart className="size-8 text-muted/50" />
+                      <span className="font-medium">No sales orders found.</span>
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -238,10 +241,7 @@ export function SalesOrdersSection() {
                       {order.customer_name ?? 'Walk-in / Direct'}
                     </td>
                     <td className="px-4 py-3.5 font-mono font-medium text-default">
-                      {parseFloat(order.total_amount || '0').toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                      })}{' '}
-                      <span className="text-[10px] text-muted">{order.currency_code}</span>
+                      {formatCurrency(order.total_amount, '৳')}
                     </td>
                     <td className="px-4 py-3.5">{getStatusBadge(order.status)}</td>
                     <td className="px-4 py-3.5">
@@ -260,11 +260,11 @@ export function SalesOrdersSection() {
                     <td className="px-4 py-3.5 text-right">
                       {order.status === 'draft' && (
                         <button
-                          onClick={() => handleApprove(order.id)}
-                          disabled={actionLoading === order.id}
-                          className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50 cursor-pointer"
+                          onClick={() => approveMutation.mutate(order.id)}
+                          disabled={approveMutation.isPending}
+                          className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50 cursor-pointer transition-colors"
                         >
-                          {actionLoading === order.id ? 'Confirming...' : 'Confirm'}
+                          {approveMutation.isPending ? 'Confirming...' : 'Confirm'}
                         </button>
                       )}
                     </td>
@@ -278,7 +278,7 @@ export function SalesOrdersSection() {
 
       {/* Quick Create Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-md rounded-2xl border border-default bg-surface p-6 shadow-xl">
             <h3 className="text-base font-semibold text-default">Create New Sales Order</h3>
             <form onSubmit={handleCreateOrder} className="mt-4 space-y-4">
@@ -287,7 +287,7 @@ export function SalesOrdersSection() {
                 <select
                   value={channel}
                   onChange={(e) => setChannel(e.target.value as typeof channel)}
-                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
                 >
                   <option value="dealer">Dealer</option>
                   <option value="counter">Counter</option>
@@ -325,7 +325,7 @@ export function SalesOrdersSection() {
                   type="date"
                   value={orderDate}
                   onChange={(e) => setOrderDate(e.target.value)}
-                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
                 />
               </div>
 
@@ -352,10 +352,10 @@ export function SalesOrdersSection() {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="rounded-xl bg-primary px-4 py-1.5 text-xs font-medium text-white hover:bg-primary-hover disabled:opacity-50 transition-colors cursor-pointer"
+                  disabled={createOrderMutation.isPending}
+                  className="rounded-xl bg-primary px-4 py-1.5 text-xs font-medium text-primary-fg hover:opacity-90 disabled:opacity-50 transition-all cursor-pointer shadow-xs"
                 >
-                  {loading ? 'Creating...' : 'Create Order'}
+                  {createOrderMutation.isPending ? 'Creating...' : 'Create Order'}
                 </button>
               </div>
             </form>

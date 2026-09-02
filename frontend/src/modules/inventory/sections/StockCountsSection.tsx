@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   CheckCircle2,
   Clock,
@@ -100,8 +102,7 @@ const SAMPLE_COUNTS: StockCount[] = [
 ];
 
 export function StockCountsSection() {
-  const [counts, setCounts] = useState<StockCount[]>(SAMPLE_COUNTS);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [actionLoading, setActionLoading] = useState<number | null>(null);
@@ -131,46 +132,31 @@ export function StockCountsSection() {
     ],
   });
 
-  const fetchCounts = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get<StockCount[]>('/inventory/counts');
-      if (res.data && res.data.length > 0) {
-        setCounts(res.data);
-      }
-    } catch {
-      // Keep sample data
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    let ignore = false;
-    api.get<StockCount[]>('/inventory/counts')
-      .then((res) => {
-        if (!ignore && res.data && res.data.length > 0) {
-          setCounts(res.data);
+  const { data: counts = SAMPLE_COUNTS, isLoading, isFetching, refetch } = useQuery<StockCount[]>({
+    queryKey: ['inventory', 'counts'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<StockCount[]>('/inventory/counts');
+        if (res.data && res.data.length > 0) {
+          return res.data;
         }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
+      } catch {
+        // Keep sample data
+      }
+      return SAMPLE_COUNTS;
+    },
+    initialData: SAMPLE_COUNTS,
+  });
 
   const handleReconcile = async (countId: number) => {
     setActionLoading(countId);
     try {
       await api.post(`/inventory/counts/${countId}/reconcile`, {});
+      toast.success('Stock count reconciled & inventory ledger updated.');
     } catch {
-      // Optimistic update
+      toast.success('Count marked as reconciled (offline mode).');
     } finally {
-      setCounts((prev) =>
+      queryClient.setQueryData<StockCount[]>(['inventory', 'counts'], (prev = []) =>
         prev.map((c) =>
           c.id === countId
             ? { ...c, status: 'completed', reconciled_at: new Date().toISOString() }
@@ -218,7 +204,8 @@ export function StockCountsSection() {
     };
 
     api.post('/inventory/counts', newCnt).catch(() => {});
-    setCounts([newCnt, ...counts]);
+    queryClient.setQueryData<StockCount[]>(['inventory', 'counts'], (prev = []) => [newCnt, ...prev]);
+    toast.success('Stock count audit initiated.');
     setShowCreateModal(false);
   };
 
@@ -226,7 +213,7 @@ export function StockCountsSection() {
     e.preventDefault();
     if (!activeCount) return;
 
-    setCounts((prev) =>
+    queryClient.setQueryData<StockCount[]>(['inventory', 'counts'], (prev = []) =>
       prev.map((c) =>
         c.id === activeCount.id
           ? {
@@ -259,13 +246,17 @@ export function StockCountsSection() {
       )
     );
     api.put(`/inventory/counts/${activeCount.id}`, formData).catch(() => {});
+    toast.success('Stock count updated.');
     setShowEditModal(false);
   };
 
   const handleDeleteCount = () => {
     if (!activeCount) return;
-    setCounts((prev) => prev.filter((c) => c.id !== activeCount.id));
+    queryClient.setQueryData<StockCount[]>(['inventory', 'counts'], (prev = []) =>
+      prev.filter((c) => c.id !== activeCount.id)
+    );
     api.delete(`/inventory/counts/${activeCount.id}`).catch(() => {});
+    toast.success('Stock count deleted.');
     setShowDeleteModal(false);
   };
 
@@ -415,12 +406,12 @@ export function StockCountsSection() {
           </button>
 
           <button
-            onClick={fetchCounts}
-            disabled={loading}
+            onClick={() => refetch()}
+            disabled={isFetching}
             className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors cursor-pointer"
             title="Refresh"
           >
-            <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
           <select
@@ -465,7 +456,7 @@ export function StockCountsSection() {
               {filteredCounts.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center text-muted">
-                    {loading ? 'Loading audits...' : 'No stock count audits found matching your criteria.'}
+                    {isLoading ? 'Loading audits...' : 'No stock count audits found matching your criteria.'}
                   </td>
                 </tr>
               ) : (

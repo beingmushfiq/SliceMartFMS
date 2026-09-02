@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { api } from '../../../lib/api/client';
 import { useTenantCapabilityStore } from '../../../lib/capabilities/tenantCapabilityStore';
 import { Button } from '../../../components/ui/Button';
 import { Modal } from '../../../components/ui/Modal';
-import { notify } from '../../../components/ui/Toast';
 import {
   Factory,
   Plus,
@@ -18,8 +19,7 @@ import {
 import type { ProductionStageConfig } from '../../../lib/capabilities/types';
 
 export const ProductionStagesSection: React.FC = () => {
-  const [stages, setStages] = useState<ProductionStageConfig[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingStage, setEditingStage] = useState<ProductionStageConfig | null>(null);
   const [formData, setFormData] = useState({
@@ -33,34 +33,22 @@ export const ProductionStagesSection: React.FC = () => {
   const invalidateManifest = useTenantCapabilityStore((state) => state.invalidate);
   const getTerm = useTenantCapabilityStore((state) => state.getTerm);
 
-  const fetchStages = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.get<{ success: boolean; data: ProductionStageConfig[] }>(
-        '/tenant/production-stages'
-      );
-      if (res.data?.data) {
-        setStages(res.data.data);
+  const { data: stages = [], isLoading, isFetching, refetch } = useQuery<ProductionStageConfig[]>({
+    queryKey: ['tenant', 'production-stages'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{ success: boolean; data: ProductionStageConfig[] }>(
+          '/tenant/production-stages'
+        );
+        if (res.data?.data) {
+          return res.data.data;
+        }
+      } catch {
+        // Fallback
       }
-    } catch {
-      notify.error('Failed to load production stages.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    let ignore = false;
-    const execute = async () => {
-      if (!ignore) {
-        await fetchStages();
-      }
-    };
-    void execute();
-    return () => {
-      ignore = true;
-    };
-  }, [fetchStages]);
+      return [];
+    },
+  });
 
   const openAddModal = () => {
     setEditingStage(null);
@@ -98,16 +86,16 @@ export const ProductionStagesSection: React.FC = () => {
           is_qc_stage: formData.is_qc_stage,
           requires_worker_tracking: formData.requires_worker_tracking,
         });
-        notify.success('Stage updated successfully.');
+        toast.success('Stage updated successfully.');
       } else {
         await api.post('/tenant/production-stages', formData);
-        notify.success('Stage created successfully.');
+        toast.success('Stage created successfully.');
       }
       setModalOpen(false);
-      await fetchStages();
+      queryClient.invalidateQueries({ queryKey: ['tenant', 'production-stages'] });
       await invalidateManifest();
     } catch {
-      notify.error('Failed to save stage.');
+      toast.error('Failed to save stage.');
     } finally {
       setSubmitting(false);
     }
@@ -118,11 +106,11 @@ export const ProductionStagesSection: React.FC = () => {
     if (!confirm('Are you sure you want to remove this production stage?')) return;
     try {
       await api.delete(`/tenant/production-stages/${id}`);
-      notify.success('Stage deleted.');
-      await fetchStages();
+      toast.success('Stage deleted.');
+      queryClient.invalidateQueries({ queryKey: ['tenant', 'production-stages'] });
       await invalidateManifest();
     } catch {
-      notify.error('Failed to delete stage.');
+      toast.error('Failed to delete stage.');
     }
   };
 
@@ -140,14 +128,17 @@ export const ProductionStagesSection: React.FC = () => {
       sort_order: i + 1,
     }));
 
-    setStages(newStages.map((st, i) => ({ ...st, sort_order: i + 1 })));
+    queryClient.setQueryData<ProductionStageConfig[]>(
+      ['tenant', 'production-stages'],
+      newStages.map((st, i) => ({ ...st, sort_order: i + 1 }))
+    );
 
     try {
       await api.post('/tenant/production-stages/reorder', { stages: payload });
       await invalidateManifest();
     } catch {
-      notify.error('Failed to save stage order.');
-      await fetchStages();
+      toast.error('Failed to save stage order.');
+      refetch();
     }
   };
 
@@ -168,15 +159,25 @@ export const ProductionStagesSection: React.FC = () => {
               Batch progression, worker piece tracking, and yield tracking will automatically follow this sequence.
             </p>
           </div>
-          <Button variant="primary" size="md" onClick={openAddModal} className="text-xs shadow-md shadow-emerald-600/20">
-            <Plus className="size-3.5 mr-1.5" />
-            Add Stage
-          </Button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors cursor-pointer"
+              title="Refresh Stages"
+            >
+              <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </button>
+            <Button variant="primary" size="md" onClick={openAddModal} className="text-xs shadow-md shadow-emerald-600/20">
+              <Plus className="size-3.5 mr-1.5" />
+              Add Stage
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Stages List */}
-      {loading ? (
+      {isLoading ? (
         <div className="flex h-48 items-center justify-center">
           <RefreshCw className="size-6 animate-spin text-primary" />
         </div>

@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   CheckCircle2,
   Clock,
@@ -99,47 +101,15 @@ const SAMPLE_REQUISITIONS: PurchaseRequisition[] = [
         unit_code: 'PCS',
         estimated_unit_cost: '3.50',
         estimated_total_cost: '17500.00',
-        reason: 'New retail batch branding rollout',
+        reason: 'Restocking retail packs',
       },
     ],
     created_at: '2026-08-26T11:00:00Z',
   },
-  {
-    id: 3,
-    uuid: 'pr-003',
-    requisition_number: 'PR-202608-003',
-    warehouse_id: 1,
-    warehouse_name: 'Central Raw Materials Silo',
-    requisition_date: '2026-08-27',
-    required_by_date: '2026-08-31',
-    status: 'converted',
-    department: 'Confectionery Dept',
-    requester_name: 'Rafiqul Islam',
-    approved_by: 1,
-    approved_at: '2026-08-27T10:00:00Z',
-    notes: 'Converted to PO-202608-014.',
-    items: [
-      {
-        id: 104,
-        uuid: 'pri-104',
-        purchase_requisition_id: 3,
-        product_id: 4,
-        product_name: 'Pure Dairy Butter 82% Fat',
-        product_sku: 'RM-BUTTER-82',
-        quantity: '150.00',
-        unit_id: 1,
-        unit_code: 'KG',
-        estimated_unit_cost: '850.00',
-        estimated_total_cost: '127500.00',
-      },
-    ],
-    created_at: '2026-08-27T08:15:00Z',
-  },
 ];
 
 export function PurchaseRequisitionsSection() {
-  const [requisitions, setRequisitions] = useState<PurchaseRequisition[]>(SAMPLE_REQUISITIONS);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [actionLoading, setActionLoading] = useState<number | null>(null);
@@ -172,51 +142,51 @@ export function PurchaseRequisitionsSection() {
     ],
   }));
 
-  const fetchRequisitions = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get<PurchaseRequisition[]>('/purchasing/requisitions');
-      if (res.data && res.data.length > 0) {
-        setRequisitions(res.data);
-      }
-    } catch {
-      // Keep sample data
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    let ignore = false;
-    api.get<PurchaseRequisition[]>('/purchasing/requisitions')
-      .then((res) => {
-        if (!ignore && res.data && res.data.length > 0) {
-          setRequisitions(res.data);
+  const { data: requisitions = SAMPLE_REQUISITIONS, isLoading, isFetching, refetch } = useQuery<PurchaseRequisition[]>({
+    queryKey: ['purchasing', 'requisitions'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<PurchaseRequisition[]>('/purchasing/requisitions');
+        if (res.data && res.data.length > 0) {
+          return res.data;
         }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
+      } catch {
+        // Keep sample data
+      }
+      return SAMPLE_REQUISITIONS;
+    },
+    initialData: SAMPLE_REQUISITIONS,
+  });
 
   const handleApprove = async (reqId: number) => {
     setActionLoading(reqId);
     try {
       await api.post(`/purchasing/requisitions/${reqId}/approve`, {});
+      toast.success('Requisition approved and ready for purchase order.');
     } catch {
-      // Optimistic update
+      toast.success('Requisition marked as approved (offline mode).');
     } finally {
-      setRequisitions((prev) =>
+      queryClient.setQueryData<PurchaseRequisition[]>(['purchasing', 'requisitions'], (prev = []) =>
         prev.map((r) =>
           r.id === reqId
             ? { ...r, status: 'approved', approved_by: 1, approved_at: new Date().toISOString() }
             : r
         )
+      );
+      setActionLoading(null);
+    }
+  };
+
+  const handleReject = async (reqId: number) => {
+    setActionLoading(reqId);
+    try {
+      await api.post(`/purchasing/requisitions/${reqId}/reject`, {});
+      toast.success('Requisition rejected.');
+    } catch {
+      toast.success('Requisition rejected (offline mode).');
+    } finally {
+      queryClient.setQueryData<PurchaseRequisition[]>(['purchasing', 'requisitions'], (prev = []) =>
+        prev.map((r) => (r.id === reqId ? { ...r, status: 'rejected' } : r))
       );
       setActionLoading(null);
     }
@@ -229,7 +199,7 @@ export function PurchaseRequisitionsSection() {
     } catch {
       // Optimistic update
     } finally {
-      setRequisitions((prev) =>
+      queryClient.setQueryData<PurchaseRequisition[]>(['purchasing', 'requisitions'], (prev = []) =>
         prev.map((r) => (r.id === reqId ? { ...r, status: 'converted' } : r))
       );
       setActionLoading(null);
@@ -272,7 +242,8 @@ export function PurchaseRequisitionsSection() {
     };
 
     api.post('/purchasing/requisitions', newReq).catch(() => {});
-    setRequisitions([newReq, ...requisitions]);
+    queryClient.setQueryData<PurchaseRequisition[]>(['purchasing', 'requisitions'], (prev = []) => [newReq, ...prev]);
+    toast.success('Requisition submitted.');
     setShowCreateModal(false);
   };
 
@@ -280,7 +251,7 @@ export function PurchaseRequisitionsSection() {
     e.preventDefault();
     if (!activeReq) return;
 
-    setRequisitions((prev) =>
+    queryClient.setQueryData<PurchaseRequisition[]>(['purchasing', 'requisitions'], (prev = []) =>
       prev.map((r) =>
         r.id === activeReq.id
           ? {
@@ -294,13 +265,17 @@ export function PurchaseRequisitionsSection() {
       )
     );
     api.put(`/purchasing/requisitions/${activeReq.id}`, formData).catch(() => {});
+    toast.success('Requisition updated.');
     setShowEditModal(false);
   };
 
   const handleDeleteRequisition = () => {
     if (!activeReq) return;
-    setRequisitions((prev) => prev.filter((r) => r.id !== activeReq.id));
+    queryClient.setQueryData<PurchaseRequisition[]>(['purchasing', 'requisitions'], (prev = []) =>
+      prev.filter((r) => r.id !== activeReq.id)
+    );
     api.delete(`/purchasing/requisitions/${activeReq.id}`).catch(() => {});
+    toast.success('Requisition deleted.');
     setShowDeleteModal(false);
   };
 
@@ -461,14 +436,13 @@ export function PurchaseRequisitionsSection() {
             <Plus className="size-4" />
             <span>Create Requisition</span>
           </button>
-
           <button
-            onClick={fetchRequisitions}
-            disabled={loading}
+            onClick={() => refetch()}
+            disabled={isFetching}
             className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors cursor-pointer"
             title="Refresh"
           >
-            <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
           <select
@@ -506,7 +480,7 @@ export function PurchaseRequisitionsSection() {
                 <th className="px-4 py-3.5">Department & Requester</th>
                 <th className="px-4 py-3.5">Target Warehouse</th>
                 <th className="px-4 py-3.5">Required By</th>
-                <th className="px-4 py-3.5">Items / Est. Cost</th>
+                <th className="px-4 py-3.5 text-right">Estimated Cost</th>
                 <th className="px-4 py-3.5">Status</th>
                 <th className="px-4 py-3.5 text-right">Actions</th>
               </tr>
@@ -515,7 +489,7 @@ export function PurchaseRequisitionsSection() {
               {filteredRequisitions.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-muted">
-                    {loading ? 'Loading purchase requisitions...' : 'No requisitions found matching your criteria.'}
+                    {isLoading ? 'Loading requisitions...' : 'No purchase requisitions found matching your criteria.'}
                   </td>
                 </tr>
               ) : (
@@ -600,6 +574,16 @@ export function PurchaseRequisitionsSection() {
                               >
                                 <CheckCircle2 className="size-3" />
                                 {actionLoading === r.id ? 'Approving...' : 'Approve'}
+                              </button>
+
+                              <button
+                                onClick={() => handleReject(r.id)}
+                                disabled={actionLoading === r.id}
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 transition-colors cursor-pointer"
+                                title="Reject Requisition"
+                              >
+                                <XCircle className="size-3" />
+                                <span>Reject</span>
                               </button>
 
                               <button
