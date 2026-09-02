@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Globe,
   ShieldCheck,
@@ -37,7 +37,7 @@ export const DomainSettingsTab: React.FC = () => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [selectedInstructionDomain, setSelectedInstructionDomain] = useState<TenantDomainRecord | null>(null);
 
-  const fetchDomains = async () => {
+  const fetchDomains = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -45,15 +45,35 @@ export const DomainSettingsTab: React.FC = () => {
       if (Array.isArray(res.data)) {
         setDomains(res.data);
       }
-    } catch (err: any) {
-      setError(err?.message || 'Failed to load domains');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load domains');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchDomains();
+    let isMounted = true;
+    const loadInitialDomains = async () => {
+      try {
+        const res = await api.get<TenantDomainRecord[]>('/storefront/domains');
+        if (isMounted && Array.isArray(res.data)) {
+          setDomains(res.data);
+        }
+      } catch (err: unknown) {
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'Failed to load domains');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+    void loadInitialDomains();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleAddDomain = async (e: React.FormEvent) => {
@@ -75,8 +95,8 @@ export const DomainSettingsTab: React.FC = () => {
         setSelectedInstructionDomain(res.data);
         await fetchDomains();
       }
-    } catch (err: any) {
-      setAddError(err?.message || 'Failed to add domain');
+    } catch (err: unknown) {
+      setAddError(err instanceof Error ? err.message : 'Failed to add domain');
     } finally {
       setIsSubmitting(false);
     }
@@ -94,8 +114,8 @@ export const DomainSettingsTab: React.FC = () => {
         setSuccessMsg('Domain verified successfully!');
         await fetchDomains();
       }
-    } catch (err: any) {
-      setError(err?.message || 'DNS verification failed. Check DNS records.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'DNS verification failed. Check DNS records.');
       await fetchDomains();
     } finally {
       setVerifyingId(null);
@@ -114,8 +134,8 @@ export const DomainSettingsTab: React.FC = () => {
         setSuccessMsg('Primary domain updated.');
         await fetchDomains();
       }
-    } catch (err: any) {
-      setError(err?.message || 'Failed to set primary domain');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to set primary domain');
     } finally {
       setSettingPrimaryId(null);
     }
@@ -130,8 +150,8 @@ export const DomainSettingsTab: React.FC = () => {
       await api.delete(`/storefront/domains/${id}`);
       setSuccessMsg('Custom domain removed.');
       await fetchDomains();
-    } catch (err: any) {
-      setError(err?.message || 'Failed to remove domain');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to remove domain');
     } finally {
       setDeletingId(null);
     }
@@ -151,7 +171,7 @@ export const DomainSettingsTab: React.FC = () => {
       {error && (
         <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 flex items-center justify-between text-sm shadow-sm animate-fadeIn">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-rose-600 flex-shrink-0" />
+            <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
             <span>{error}</span>
           </div>
           <button onClick={() => setError(null)} className="text-rose-500 hover:text-rose-700 font-bold text-lg leading-none">
@@ -163,7 +183,7 @@ export const DomainSettingsTab: React.FC = () => {
       {successMsg && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 flex items-center justify-between text-sm shadow-sm animate-fadeIn">
           <div className="flex items-center gap-3">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
             <span>{successMsg}</span>
           </div>
           <button onClick={() => setSuccessMsg(null)} className="text-emerald-500 hover:text-emerald-700 font-bold text-lg leading-none">
@@ -173,7 +193,7 @@ export const DomainSettingsTab: React.FC = () => {
       )}
 
       {/* Header & Primary Domain Status Banner */}
-      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-xl border border-indigo-800/30">
+      <div className="bg-linear-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-xl border border-indigo-800/30">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
@@ -528,7 +548,7 @@ export const DomainSettingsTab: React.FC = () => {
               )}
 
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs flex items-center gap-2">
-                <Clock className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                <Clock className="w-4 h-4 text-amber-600 shrink-0" />
                 <span>DNS changes typically take 1 to 15 minutes to propagate worldwide.</span>
               </div>
             </div>
@@ -583,7 +603,7 @@ export const DomainSettingsTab: React.FC = () => {
             <form onSubmit={handleAddDomain} className="p-6 space-y-4">
               {addError && (
                 <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
                   <span>{addError}</span>
                 </div>
               )}

@@ -8,7 +8,7 @@ export interface NotificationItem {
   channel: string;
   title_key: string;
   body_key: string;
-  params?: Record<string, any>;
+  params?: Record<string, unknown>;
   severity: NotificationSeverity;
   action_url?: string;
   sent_at?: string;

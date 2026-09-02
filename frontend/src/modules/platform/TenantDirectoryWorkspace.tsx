@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { api } from '../../lib/api/client';
+import { api, setAccessToken } from '../../lib/api/client';
 import type { PlatformTenant } from '../../types/api/platform';
+import { PlatformPulseLoader } from '../../components/platform/PlatformPulseLoader';
 import {
   Building2,
   Search,
@@ -13,21 +15,28 @@ import {
   XCircle,
   Clock,
   RefreshCw,
+  Trash2,
+  TrendingUp,
+  Eye,
+  LogIn,
+  Filter,
 } from 'lucide-react';
 
 export const TenantDirectoryWorkspace: React.FC = () => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [planFilter, setPlanFilter] = useState<string>('all');
 
   // Action Modals State
   const [selectedTenant, setSelectedTenant] = useState<PlatformTenant | null>(null);
-  const [modalType, setModalType] = useState<'status' | null>(null);
+  const [modalType, setModalType] = useState<'status' | 'delete' | null>(null);
+  const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
   const [actionReason, setActionReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const { data: tenants = [], isLoading, isFetching, refetch } = useQuery<PlatformTenant[]>({
+  const { data: rawTenants = [], isLoading, isFetching, refetch } = useQuery<PlatformTenant[]>({
     queryKey: ['platform', 'tenants', search, statusFilter],
     queryFn: async () => {
       try {
@@ -36,12 +45,38 @@ export const TenantDirectoryWorkspace: React.FC = () => {
         if (statusFilter !== 'all') params['status'] = statusFilter;
 
         const response = await api.get<PlatformTenant[]>('/platform/tenants', { params });
-        return response.data;
+        if (Array.isArray(response.data)) {
+          return response.data;
+        } else if (response.data && Array.isArray((response.data as { data?: PlatformTenant[] }).data)) {
+          return (response.data as { data: PlatformTenant[] }).data;
+        }
+        return [];
       } catch {
         return [];
       }
     },
   });
+
+  // Client-side plan filter
+  const tenants = useMemo(() => {
+    if (planFilter === 'all') return rawTenants;
+    return rawTenants.filter((t) => String(t.plan_id) === planFilter || t.plan?.code === planFilter);
+  }, [rawTenants, planFilter]);
+
+  // Derived Statistics
+  const stats = useMemo(() => {
+    const total = rawTenants.length;
+    const active = rawTenants.filter((t) => t.status === 'active').length;
+    const trial = rawTenants.filter((t) => t.status === 'trial').length;
+    const suspended = rawTenants.filter((t) => t.status === 'suspended').length;
+    const totalUsers = rawTenants.reduce((acc, t) => acc + (t.users_count || 0), 0);
+    const estimatedMrr = rawTenants.reduce((acc, t) => {
+      if (t.status !== 'active') return acc;
+      return acc + (t.plan?.price ?? (t.subscription?.amount || 0));
+    }, 0);
+
+    return { total, active, trial, suspended, totalUsers, estimatedMrr };
+  }, [rawTenants]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,18 +106,82 @@ export const TenantDirectoryWorkspace: React.FC = () => {
     }
   };
 
+  const handleDeleteTenant = async () => {
+    if (!selectedTenant) return;
+    if (deleteConfirmationInput !== selectedTenant.slug) {
+      setActionError(`Type "${selectedTenant.slug}" to confirm deletion.`);
+      return;
+    }
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      await api.delete(`/platform/tenants/${selectedTenant.id}`);
+      setModalType(null);
+      setSelectedTenant(null);
+      setDeleteConfirmationInput('');
+      toast.success(`Tenant ${selectedTenant.name} removed from active registry.`);
+      queryClient.invalidateQueries({ queryKey: ['platform', 'tenants'] });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Deletion failed';
+      setActionError(msg);
+      toast.error(msg);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleImpersonate = async (tenant: PlatformTenant) => {
+    if (!confirm(`Launch diagnostic super-admin session for "${tenant.name}"?`)) return;
+    try {
+      const res = await api.post<{
+        token: string;
+        tenant: { id: number; name: string; slug: string };
+        user: { id: number; name: string; email: string };
+        impersonator: { id: number; name: string; email: string };
+      }>(`/platform/tenants/${tenant.id}/impersonate`);
+
+      const payload = (res.data as unknown as { data?: typeof res.data })?.data ?? res.data;
+      const token = payload?.token;
+      const targetTenant = payload?.tenant;
+      const targetUser = payload?.user;
+      const impersonator = payload?.impersonator;
+
+      if (token) {
+        setAccessToken(token);
+        localStorage.setItem('access_token', token);
+      }
+      localStorage.setItem('is_impersonating', 'true');
+      localStorage.setItem('impersonated_tenant_name', targetTenant?.name ?? tenant.name);
+      localStorage.setItem('impersonated_tenant_id', String(targetTenant?.id ?? tenant.id));
+      localStorage.setItem('impersonator_email', impersonator?.email ?? '');
+      if (targetUser) {
+        localStorage.setItem('auth_user', JSON.stringify(targetUser));
+      }
+      if (targetTenant) {
+        localStorage.setItem('auth_tenant', JSON.stringify(targetTenant));
+      }
+
+      toast.success(`Impersonating ${tenant.name}`);
+      window.location.assign('/catalogue');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Impersonation failed';
+      toast.error(msg);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
         return (
           <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold uppercase flex items-center gap-1.5 w-fit">
+            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
             <CheckCircle className="size-3" />
             <span>Active</span>
           </span>
         );
       case 'trial':
         return (
-          <span className="px-2.5 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold uppercase flex items-center gap-1.5 w-fit">
+          <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 text-[10px] font-mono font-bold uppercase flex items-center gap-1.5 w-fit">
             <Clock className="size-3" />
             <span>Trial</span>
           </span>
@@ -96,7 +195,7 @@ export const TenantDirectoryWorkspace: React.FC = () => {
         );
       default:
         return (
-          <span className="px-2.5 py-0.5 rounded-full bg-surface-sunken text-muted border border-default text-[10px] font-mono font-bold uppercase w-fit">
+          <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 text-[10px] font-mono font-bold uppercase w-fit">
             {status}
           </span>
         );
@@ -104,175 +203,313 @@ export const TenantDirectoryWorkspace: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-default pb-5">
+    <div className="space-y-6 font-sans">
+      {/* Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800 pb-5">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
-              Tenant Management
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+              Platform Master Authority
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-default">Tenant Directory</h1>
-          <p className="mt-1.5 text-xs text-muted max-w-2xl leading-relaxed">
-            Provision, monitor, configure subscription tiers, and enforce multi-tenant lifecycle states across DevCenterPoint.
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-100">
+            Tenant Fleet Directory
+          </h1>
+          <p className="mt-1 text-xs text-slate-400 max-w-2xl leading-relaxed font-mono">
+            Provision, monitor, override module capabilities, enforce quotas, and control multi-tenant isolation states.
           </p>
         </div>
 
-        <Link
-          to="/platform/tenants/new"
-          className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all self-start sm:self-auto cursor-pointer"
-        >
-          <UserPlus className="size-4" />
-          <span>Provision Tenant</span>
-        </Link>
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 text-xs font-mono flex items-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+            title="Refresh Directory"
+          >
+            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin text-amber-400' : ''}`} />
+          </button>
+          <Link
+            to="/platform/tenants/new"
+            className="px-4 py-2.5 rounded-xl bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-lg shadow-amber-500/20 transition-all font-mono"
+          >
+            <UserPlus className="size-4" />
+            <span>Provision Tenant</span>
+          </Link>
+        </div>
       </div>
 
-      {/* Filters Bar */}
-      <div className="p-4 rounded-2xl bg-surface border border-default shadow-xs flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
-        <form onSubmit={handleSearchSubmit} className="flex-1 relative">
-          <Search className="size-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
+      {/* KPI Stats Strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-md relative overflow-hidden"
+        >
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[10px] font-mono uppercase tracking-wider">Total Tenants</span>
+            <Building2 className="size-4 text-amber-400" />
+          </div>
+          <div className="text-2xl font-bold font-mono text-slate-100 mt-1">{stats.total}</div>
+          <div className="text-[10px] font-mono text-slate-500 mt-1">{stats.totalUsers} Scoped Users</div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, delay: 0.04 }}
+          className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-md"
+        >
+          <div className="flex items-center justify-between text-emerald-400">
+            <span className="text-[10px] font-mono uppercase tracking-wider">Active Status</span>
+            <CheckCircle className="size-4" />
+          </div>
+          <div className="text-2xl font-bold font-mono text-emerald-400 mt-1">{stats.active}</div>
+          <div className="text-[10px] font-mono text-slate-500 mt-1">Operational</div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, delay: 0.08 }}
+          className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-md"
+        >
+          <div className="flex items-center justify-between text-cyan-400">
+            <span className="text-[10px] font-mono uppercase tracking-wider">In Trial</span>
+            <Clock className="size-4" />
+          </div>
+          <div className="text-2xl font-bold font-mono text-cyan-400 mt-1">{stats.trial}</div>
+          <div className="text-[10px] font-mono text-slate-500 mt-1">Evaluating SaaS</div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, delay: 0.12 }}
+          className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-md"
+        >
+          <div className="flex items-center justify-between text-rose-400">
+            <span className="text-[10px] font-mono uppercase tracking-wider">Suspended</span>
+            <XCircle className="size-4" />
+          </div>
+          <div className="text-2xl font-bold font-mono text-rose-400 mt-1">{stats.suspended}</div>
+          <div className="text-[10px] font-mono text-slate-500 mt-1">Access Blocked</div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, delay: 0.16 }}
+          className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-md col-span-2 sm:col-span-1"
+        >
+          <div className="flex items-center justify-between text-amber-400">
+            <span className="text-[10px] font-mono uppercase tracking-wider">Estimated MRR</span>
+            <TrendingUp className="size-4" />
+          </div>
+          <div className="text-2xl font-bold font-mono text-slate-100 mt-1">${stats.estimatedMrr.toLocaleString()}</div>
+          <div className="text-[10px] font-mono text-slate-500 mt-1">Active Subscriptions</div>
+        </motion.div>
+      </div>
+
+      {/* Filter Toolbar */}
+      <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-md flex flex-wrap gap-3 items-center justify-between font-mono text-xs">
+        <form onSubmit={handleSearchSubmit} className="relative flex-1 min-w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-500" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by business name, slug (e.g. slicemart), or domain..."
-            className="w-full bg-surface-sunken border border-default rounded-xl pl-10 pr-4 py-2 text-xs text-default placeholder:text-muted focus:outline-none focus:border-amber-500 font-mono transition-colors shadow-2xs"
+            placeholder="Search by tenant name, subdomain, or slug..."
+            className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder:text-slate-500 focus:outline-hidden focus:border-amber-500 transition-all text-xs"
           />
         </form>
 
-        <div className="flex items-center gap-2">
-          {['all', 'active', 'trial', 'suspended'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setStatusFilter(tab)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-mono capitalize transition-all cursor-pointer ${
-                statusFilter === tab
-                  ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
-                  : 'bg-surface-sunken text-muted hover:text-default hover:bg-surface border border-default'
-              }`}
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
+            <Filter className="size-3.5 text-slate-500" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 focus:outline-hidden focus:border-amber-500 text-xs cursor-pointer"
             >
-              {tab}
-            </button>
-          ))}
-          <button
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="p-2 rounded-xl bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default transition-colors cursor-pointer shadow-2xs"
-            title="Refresh list"
+              <option value="all">All Statuses</option>
+              <option value="active">Active Only</option>
+              <option value="trial">Trial Only</option>
+              <option value="suspended">Suspended Only</option>
+            </select>
+          </div>
+
+          <select
+            value={planFilter}
+            onChange={(e) => setPlanFilter(e.target.value)}
+            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 focus:outline-hidden focus:border-amber-500 text-xs cursor-pointer"
           >
-            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin text-primary' : ''}`} />
-          </button>
+            <option value="all">All Plans</option>
+            <option value="starter">Starter</option>
+            <option value="professional">Professional</option>
+            <option value="enterprise">Enterprise</option>
+          </select>
         </div>
       </div>
 
-      {/* Tenants Table */}
-      <div className="rounded-2xl bg-surface border border-default shadow-xs overflow-hidden">
+      {/* Directory Table */}
+      <div className="rounded-2xl border border-slate-800 bg-slate-900 shadow-xl overflow-hidden">
         {isLoading ? (
-          <div className="p-12 text-center text-muted text-xs font-mono animate-pulse">
-            Loading tenant registry...
+          <div className="p-16">
+            <PlatformPulseLoader
+              label="Syncing Tenant Isolation Mesh..."
+              sublabel="Fetching real-time multi-tenant telemetry and billing quotas"
+            />
           </div>
         ) : tenants.length === 0 ? (
-          <div className="p-12 text-center text-muted text-xs font-mono">
-            No tenants matched your query.
+          <div className="p-16 text-center font-mono">
+            <Building2 className="size-10 text-slate-600 mx-auto mb-3" />
+            <div className="text-sm font-bold text-slate-300 font-sans">No Tenants Found</div>
+            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+              No active or registered tenants match your current filter criteria.
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-default">
-              <thead className="bg-surface-sunken/70 border-b border-default text-muted uppercase font-mono text-[10px]">
+            <table className="w-full text-left text-xs text-slate-300 font-mono">
+              <thead className="bg-slate-950/80 border-b border-slate-800 text-slate-400 uppercase text-[10px]">
                 <tr>
-                  <th className="py-3.5 pl-6">Tenant Name & Subdomain</th>
+                  <th className="py-3.5 pl-6">Tenant Organization</th>
                   <th className="py-3.5 px-4">Plan Tier</th>
-                  <th className="py-3.5 px-4">Status</th>
-                  <th className="py-3.5 px-4">Currency / Locale</th>
-                  <th className="py-3.5 px-4">Onboarded</th>
-                  <th className="py-3.5 pr-6 text-right">Actions</th>
+                  <th className="py-3.5 px-4">State</th>
+                  <th className="py-3.5 px-4">Region & Currency</th>
+                  <th className="py-3.5 px-4">Provisioned</th>
+                  <th className="py-3.5 pr-6 text-right">Master Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-default font-mono">
-                {tenants.map((t) => (
-                  <tr key={t.id} className="hover:bg-surface-sunken/40 transition-colors">
-                    <td className="py-4 pl-6">
-                      <div className="flex items-center gap-3">
-                        <div className="size-9 rounded-xl bg-surface-sunken border border-default flex items-center justify-center text-amber-600 dark:text-amber-400 font-bold shrink-0">
-                          <Building2 className="size-4" />
-                        </div>
-                        <div>
-                          <Link
-                            to={`/platform/tenants/${t.id}`}
-                            className="font-bold text-default hover:text-amber-600 dark:hover:text-amber-400 transition-colors text-sm font-sans"
-                          >
-                            {t.name}
-                          </Link>
-                          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted">
-                            <span>{t.slug}.devcenterpoint.com</span>
-                            <a
-                              href={`https://${t.slug}.devcenterpoint.com`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-muted hover:text-default"
+              <tbody className="divide-y divide-slate-800/60">
+                <AnimatePresence>
+                  {tenants.map((t) => (
+                    <motion.tr
+                      key={t.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="hover:bg-slate-800/30 transition-colors"
+                    >
+                      <td className="py-4 pl-6">
+                        <div className="flex items-center gap-3">
+                          <div className="size-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 font-bold shrink-0 shadow-inner">
+                            <Building2 className="size-5" />
+                          </div>
+                          <div>
+                            <Link
+                              to={`/platform/tenants/${t.id}`}
+                              className="font-bold text-slate-100 hover:text-amber-400 transition-colors text-sm font-sans block"
                             >
-                              <ExternalLink className="size-3" />
-                            </a>
+                              {t.name}
+                            </Link>
+                            <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400">
+                              <span className="text-amber-400/80">#{t.id}</span>
+                              <span>•</span>
+                              <span>{t.slug}.devcenterpoint.com</span>
+                              <a
+                                href={`https://${t.slug}.devcenterpoint.com`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-slate-500 hover:text-amber-400 transition-colors"
+                                title="Open Tenant Portal"
+                              >
+                                <ExternalLink className="size-3" />
+                              </a>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    <td className="py-4 px-4 text-default">
-                      <div>
-                        <span className="font-semibold text-default">{t.plan?.name ?? 'Standard'}</span>
-                        <div className="text-[10px] text-muted font-mono">${t.plan?.price ?? 0}/mo</div>
-                      </div>
-                    </td>
+                      <td className="py-4 px-4">
+                        <div className="space-y-0.5">
+                          <span className="font-bold text-slate-200">
+                            {t.plan?.name ?? 'Standard SaaS'}
+                          </span>
+                          <div className="text-[10px] text-slate-400">
+                            ${t.plan?.price ?? (t.subscription?.amount || 0)}/{t.plan?.billing_period ?? 'mo'}
+                          </div>
+                        </div>
+                      </td>
 
-                    <td className="py-4 px-4">{getStatusBadge(t.status)}</td>
+                      <td className="py-4 px-4">{getStatusBadge(t.status)}</td>
 
-                    <td className="py-4 px-4 text-muted text-[11px]">
-                      <div className="font-bold text-default">{t.currency_code}</div>
-                      <div className="text-[10px] text-muted">{t.timezone}</div>
-                    </td>
+                      <td className="py-4 px-4 text-slate-400 text-[11px]">
+                        <div className="font-bold text-slate-200">{t.currency_code}</div>
+                        <div className="text-[10px] text-slate-500">{t.timezone}</div>
+                      </td>
 
-                    <td className="py-4 px-4 text-muted text-[11px]">
-                      {new Date(t.created_at).toLocaleDateString()}
-                    </td>
+                      <td className="py-4 px-4 text-slate-400 text-[11px]">
+                        <div>{new Date(t.created_at).toLocaleDateString()}</div>
+                        <div className="text-[10px] text-slate-500">{t.users_count || 0} user(s)</div>
+                      </td>
 
-                    <td className="py-4 pr-6 text-right">
-                      <div className="inline-flex items-center gap-2">
-                        <Link
-                          to={`/platform/tenants/${t.id}`}
-                          className="px-3 py-1.5 rounded-xl bg-surface-sunken hover:bg-surface text-default border border-default text-xs font-sans font-semibold transition-all shadow-2xs"
-                        >
-                          View Details
-                        </Link>
+                      <td className="py-4 pr-6 text-right">
+                        <div className="inline-flex items-center gap-1.5 font-sans">
+                          {/* Impersonate Button */}
+                          <button
+                            onClick={() => handleImpersonate(t)}
+                            className="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                            title="Impersonate Tenant"
+                          >
+                            <LogIn className="size-3" />
+                            <span>Impersonate</span>
+                          </button>
 
-                        {t.status === 'active' ? (
+                          {/* View Details */}
+                          <Link
+                            to={`/platform/tenants/${t.id}`}
+                            className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition-all flex items-center gap-1"
+                          >
+                            <Eye className="size-3" />
+                            <span>Dossier</span>
+                          </Link>
+
+                          {/* Suspend / Reactivate */}
+                          {t.status === 'active' ? (
+                            <button
+                              onClick={() => {
+                                setSelectedTenant(t);
+                                setModalType('status');
+                              }}
+                              className="px-2 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/40 text-xs font-semibold transition-all cursor-pointer"
+                              title="Suspend Access"
+                            >
+                              Suspend
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setSelectedTenant(t);
+                                setModalType('status');
+                              }}
+                              className="px-2 py-1.5 rounded-lg bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-800/40 text-xs font-semibold transition-all cursor-pointer"
+                              title="Reactivate Access"
+                            >
+                              Activate
+                            </button>
+                          )}
+
+                          {/* Delete Tenant */}
                           <button
                             onClick={() => {
                               setSelectedTenant(t);
-                              setModalType('status');
+                              setModalType('delete');
+                              setDeleteConfirmationInput('');
+                              setActionError(null);
                             }}
-                            className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30 text-xs font-sans font-semibold transition-all shadow-2xs cursor-pointer"
-                            title="Suspend Tenant Access"
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/30 transition-all cursor-pointer"
+                            title="Delete Tenant"
                           >
-                            Suspend
+                            <Trash2 className="size-3.5" />
                           </button>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              setSelectedTenant(t);
-                              setModalType('status');
-                            }}
-                            className="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-sans font-semibold transition-all shadow-2xs cursor-pointer"
-                            title="Reactivate Tenant"
-                          >
-                            Reactivate
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
               </tbody>
             </table>
           </div>
@@ -281,61 +518,108 @@ export const TenantDirectoryWorkspace: React.FC = () => {
 
       {/* Status Modal */}
       {modalType === 'status' && selectedTenant && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-surface border border-default rounded-2xl p-6 max-w-md w-full shadow-xl">
-            <h2 className="text-lg font-bold text-default font-sans">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs">
+            <h2 className="text-base font-bold text-slate-100 font-sans">
               {selectedTenant.status === 'active' ? 'Suspend Tenant Access' : 'Reactivate Tenant'}
             </h2>
-            <p className="text-xs text-muted mt-1 font-mono">
-              Target Tenant: <strong className="text-default">{selectedTenant.name}</strong> ({selectedTenant.slug})
+            <p className="text-slate-400 mt-1">
+              Target Tenant: <strong className="text-slate-100">{selectedTenant.name}</strong> ({selectedTenant.slug})
             </p>
 
             {actionError && (
-              <div className="mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs">
+              <div className="mt-4 p-3 rounded-xl bg-rose-950/50 border border-rose-800 text-rose-300">
                 {actionError}
               </div>
             )}
 
             <div className="mt-4">
-              <label className="block text-xs font-mono text-muted mb-1">
-                Reason for state change (Logged in platform audit trail)
+              <label className="block text-slate-300 mb-1">
+                Reason for state change (Logged in Platform Audit Trail)
               </label>
               <textarea
                 value={actionReason}
                 onChange={(e) => setActionReason(e.target.value)}
-                placeholder="e.g. Non-payment of subscription fee or SLA terms violation"
-                className="w-full bg-surface-sunken border border-default rounded-xl p-3 text-xs text-default placeholder:text-muted focus:outline-none focus:border-amber-500 font-mono shadow-2xs"
+                placeholder="e.g. Terms violation, billing default, or administrative reactivation."
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-200 focus:outline-hidden focus:border-amber-500"
                 rows={3}
               />
             </div>
 
-            <div className="mt-6 flex items-center justify-end gap-3 font-mono">
+            <div className="mt-6 flex items-center justify-end gap-3">
               <button
                 onClick={() => {
                   setModalType(null);
                   setSelectedTenant(null);
                 }}
-                className="px-4 py-2 rounded-xl bg-surface-sunken hover:bg-surface text-default border border-default text-xs transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
-              {selectedTenant.status === 'active' ? (
-                <button
-                  onClick={() => handleUpdateStatus('suspended')}
-                  disabled={actionLoading}
-                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
-                >
-                  {actionLoading ? 'Suspending...' : 'Confirm Suspension'}
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleUpdateStatus('active')}
-                  disabled={actionLoading}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
-                >
-                  {actionLoading ? 'Reactivating...' : 'Confirm Reactivation'}
-                </button>
-              )}
+              <button
+                onClick={() => handleUpdateStatus(selectedTenant.status === 'active' ? 'suspended' : 'active')}
+                disabled={actionLoading}
+                className={`px-4 py-2 rounded-xl text-white font-bold transition-all shadow-md cursor-pointer ${
+                  selectedTenant.status === 'active'
+                    ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-600/20'
+                    : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/20'
+                }`}
+              >
+                {actionLoading ? 'Updating...' : selectedTenant.status === 'active' ? 'Confirm Suspension' : 'Approve Activation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Tenant Modal */}
+      {modalType === 'delete' && selectedTenant && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-rose-900/60 rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs">
+            <div className="flex items-center gap-2 text-rose-400 font-bold text-base font-sans">
+              <Trash2 className="size-5" />
+              <span>Delete Tenant</span>
+            </div>
+            <p className="text-slate-400 mt-2 leading-relaxed">
+              This action will soft-delete <strong className="text-slate-100">{selectedTenant.name}</strong> and revoke all tenant user access.
+            </p>
+
+            <div className="my-4 p-3 rounded-xl bg-rose-950/40 border border-rose-800/40 text-rose-300">
+              Please type <strong className="text-white select-all">{selectedTenant.slug}</strong> to confirm deletion.
+            </div>
+
+            {actionError && (
+              <div className="mb-4 p-3 rounded-xl bg-rose-950/50 border border-rose-800 text-rose-300">
+                {actionError}
+              </div>
+            )}
+
+            <input
+              type="text"
+              value={deleteConfirmationInput}
+              onChange={(e) => setDeleteConfirmationInput(e.target.value)}
+              placeholder={selectedTenant.slug}
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:outline-hidden focus:border-rose-500"
+            />
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                onClick={() => {
+                  setModalType(null);
+                  setSelectedTenant(null);
+                  setDeleteConfirmationInput('');
+                }}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteTenant}
+                disabled={actionLoading || deleteConfirmationInput !== selectedTenant.slug}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold transition-all shadow-md shadow-rose-600/20 disabled:opacity-40 cursor-pointer"
+              >
+                {actionLoading ? 'Purging...' : 'Confirm Deletion'}
+              </button>
             </div>
           </div>
         </div>
@@ -343,4 +627,5 @@ export const TenantDirectoryWorkspace: React.FC = () => {
     </div>
   );
 };
+
 export default TenantDirectoryWorkspace;

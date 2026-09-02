@@ -83,9 +83,17 @@ export const StorefrontAccountPage: React.FC = () => {
   }, [token, subdomain, logout]);
 
   useEffect(() => {
-    if (token) {
-      loadOrders();
-    }
+    if (!token) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      if (!cancelled) {
+        void loadOrders();
+      }
+    }, 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [token, loadOrders]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -113,8 +121,8 @@ export const StorefrontAccountPage: React.FC = () => {
 
       setAuth(response.data.data.token, response.data.data.customer);
       setSuccessMessage('Welcome back!');
-    } catch (err: any) {
-      setErrorMessage(err.message ?? 'Invalid credentials. Please verify phone and password.');
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : 'Invalid credentials. Please verify phone and password.');
     } finally {
       setAuthLoading(false);
     }
@@ -147,8 +155,8 @@ export const StorefrontAccountPage: React.FC = () => {
 
       setAuth(response.data.data.token, response.data.data.customer);
       setSuccessMessage('Account created successfully!');
-    } catch (err: any) {
-      setErrorMessage(err.message ?? 'Failed to register account.');
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to register account.');
     } finally {
       setAuthLoading(false);
     }
@@ -159,7 +167,7 @@ export const StorefrontAccountPage: React.FC = () => {
     return (
       <div className="max-w-5xl mx-auto py-6 space-y-8">
         {/* Account Header Card */}
-        <div className="rounded-3xl border border-zinc-800/80 bg-gradient-to-r from-zinc-900 via-zinc-900 to-zinc-950 p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-2xl">
+        <div className="rounded-3xl border border-zinc-800/80 bg-linear-to-r from-zinc-900 via-zinc-900 to-zinc-950 p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-2xl">
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-xl">
               {customer.name.charAt(0).toUpperCase()}

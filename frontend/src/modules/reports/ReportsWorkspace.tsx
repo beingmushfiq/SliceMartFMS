@@ -184,7 +184,7 @@ export const ReportsWorkspace: React.FC = () => {
     },
   });
 
-  const categories = [
+  const categories: Array<{ id: ReportCategory | 'all'; label: string }> = [
     { id: 'all', label: 'All Reports' },
     { id: 'operational', label: 'Operational' },
     { id: 'analytical', label: 'Analytical' },
@@ -254,7 +254,7 @@ export const ReportsWorkspace: React.FC = () => {
         {categories.map((cat) => (
           <button
             key={cat.id}
-            onClick={() => setSelectedCategory(cat.id as any)}
+            onClick={() => setSelectedCategory(cat.id)}
             className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
               selectedCategory === cat.id
                 ? 'bg-indigo-600 text-white shadow-sm'
@@ -271,7 +271,8 @@ export const ReportsWorkspace: React.FC = () => {
         {filteredDefinitions.map((def) => {
           const isSelected = def.code === selectedReportCode;
           return (
-            <div
+            <button
+              type="button"
               key={def.code}
               onClick={() => setSelectedReportCode(def.code)}
               className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${
@@ -288,7 +289,7 @@ export const ReportsWorkspace: React.FC = () => {
               </div>
               <h3 className="text-sm font-semibold text-slate-900 line-clamp-1">{def.name}</h3>
               <p className="text-xs text-slate-500 line-clamp-2 mt-1">{def.description}</p>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -545,12 +546,26 @@ export const ReportsWorkspace: React.FC = () => {
             businessConfig={businessConfig}
             periodText="Last 30 Days (Active Fiscal Quarter)"
             filtersText={`Category: ${selectedCategory.toUpperCase()} | Saved View: ${selectedView}`}
-            columns={Object.entries(reportResult.columns).map(([k, col]) => ({
-              key: k,
-              label: col.label,
-              type: col.type === 'number' ? 'numeric' : (col.type as any),
-              align: (col.type === 'number' || (col.type as any) === 'currency') ? 'right' : 'left',
-            }))}
+            columns={Object.entries(reportResult.columns).map(([k, col]) => {
+              const mappedType =
+                col.type === 'number'
+                  ? ('numeric' as const)
+                  : col.type === 'percentage'
+                  ? ('percentage' as const)
+                  : col.type === 'currency'
+                  ? ('currency' as const)
+                  : col.type === 'date'
+                  ? ('date' as const)
+                  : col.type === 'badge'
+                  ? ('badge' as const)
+                  : ('text' as const);
+              return {
+                key: k,
+                label: col.label,
+                type: mappedType,
+                align: (mappedType === 'numeric' || mappedType === 'currency' || mappedType === 'percentage') ? ('right' as const) : ('left' as const),
+              };
+            })}
             data={reportResult.data}
             summaryCards={
               reportResult.summary

@@ -42,7 +42,16 @@ export function useReprintHistory(initialFilters?: ReprintHistoryFilter) {
   }, [filters]);
 
   useEffect(() => {
-    fetchHistory();
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      if (!cancelled) {
+        void fetchHistory();
+      }
+    }, 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [fetchHistory]);
 
   const recordPrintEvent = useCallback(

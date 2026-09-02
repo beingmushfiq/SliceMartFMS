@@ -7,6 +7,7 @@ namespace App\Models;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -64,6 +65,16 @@ class Tenant extends Model
         'activated_at',
         'suspended_at',
     ];
+
+    /**
+     * Subscription plan assigned to this tenant.
+     *
+     * @return BelongsTo<Plan, $this>
+     */
+    public function plan(): BelongsTo
+    {
+        return $this->belongsTo(Plan::class, 'plan_id');
+    }
 
     /**
      * Users associated with this tenant.
@@ -137,6 +148,7 @@ class Tenant extends Model
             'onboarding_completed_at' => 'datetime',
             'onboarding_step' => 'integer',
             'trial_ends_at' => 'datetime',
+            'activated_at' => 'datetime',
             'grace_period_ends_at' => 'datetime',
             'suspended_at' => 'datetime',
         ];

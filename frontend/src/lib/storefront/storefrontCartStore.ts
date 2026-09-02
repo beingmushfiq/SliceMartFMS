@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api } from '../api/client';
+import { isApiError } from '../api/errors';
 import type { StorefrontCart } from '../../types/api/storefront';
 
 interface StorefrontCartState {
@@ -145,8 +146,14 @@ export const useStorefrontCartStore = create<StorefrontCartState>((set, get) => 
       );
       set({ cart: response.data });
       return null;
-    } catch (err: any) {
-      return err.message ?? 'Failed to apply coupon';
+    } catch (err) {
+      if (isApiError(err)) {
+        return err.message;
+      }
+      if (err instanceof Error) {
+        return err.message;
+      }
+      return 'Failed to apply coupon';
     } finally {
       set({ loading: false });
     }

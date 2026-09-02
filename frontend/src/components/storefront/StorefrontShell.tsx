@@ -32,8 +32,8 @@ export const StorefrontShell: React.FC = () => {
           },
         });
         setConfig(response.data);
-      } catch (err: any) {
-        setError(err.message ?? 'Storefront could not be loaded');
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Storefront could not be loaded');
       } finally {
         setLoading(false);
       }
@@ -69,8 +69,14 @@ export const StorefrontShell: React.FC = () => {
     );
   }
 
-  const orgSchema = (config as any).seo?.organization_schema;
-  const websiteSchema = (config as any).seo?.website_schema;
+  const extendedConfig = config as StorefrontConfig & {
+    seo?: {
+      organization_schema?: Record<string, unknown>;
+      website_schema?: Record<string, unknown>;
+    };
+  };
+  const orgSchema = extendedConfig.seo?.organization_schema;
+  const websiteSchema = extendedConfig.seo?.website_schema;
 
   return (
     <div className="min-h-screen bg-zinc-950 font-sans text-zinc-100 flex flex-col justify-between selection:bg-emerald-500/30 selection:text-emerald-200">

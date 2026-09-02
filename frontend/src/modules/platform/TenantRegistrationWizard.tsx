@@ -96,7 +96,8 @@ export const TenantRegistrationWizard: React.FC = () => {
         owner: { name: string; email: string };
       }>('/platform/tenants', payload);
 
-      setProvisionedData(response.data);
+      const unwrapped = ((response.data as unknown as { data?: typeof response.data })?.data ?? response.data);
+      setProvisionedData(unwrapped);
       setStep(4);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Provisioning failed. Check slug uniqueness and form data.');
@@ -202,7 +203,7 @@ export const TenantRegistrationWizard: React.FC = () => {
                         slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''),
                       })
                     }
-                    className="w-full bg-slate-950 border border-slate-700 rounded-l-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-amber-500 text-amber-400"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-l-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-amber-500"
                   />
                   <span className="bg-slate-800 border border-l-0 border-slate-700 rounded-r-xl px-3 py-2.5 text-slate-400 text-xs">
                     .devcenterpoint.com
@@ -282,10 +283,11 @@ export const TenantRegistrationWizard: React.FC = () => {
                 {plans.map((p) => {
                   const isSelected = formData.plan_id === p.id;
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={p.id}
                       onClick={() => setFormData({ ...formData, plan_id: p.id })}
-                      className={`p-5 rounded-2xl border cursor-pointer transition-all ${
+                      className={`w-full text-left p-5 rounded-2xl border cursor-pointer transition-all ${
                         isSelected
                           ? 'bg-amber-500/10 border-amber-500 shadow-md shadow-amber-500/10'
                           : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
@@ -303,7 +305,7 @@ export const TenantRegistrationWizard: React.FC = () => {
                         <div>• Max Factories: {p.limits?.max_factories ?? 'Unlimited'}</div>
                         <div>• Max Warehouses: {p.limits?.max_warehouses ?? 'Unlimited'}</div>
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -412,7 +414,7 @@ export const TenantRegistrationWizard: React.FC = () => {
                 type="button"
                 disabled={submitting || !formData.owner_name || !formData.owner_email || !formData.password}
                 onClick={handleProvision}
-                className="px-8 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold shadow-lg shadow-amber-500/20 flex items-center gap-2 transition-all disabled:opacity-50"
+                className="px-8 py-3 rounded-xl bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold shadow-lg shadow-amber-500/20 flex items-center gap-2 transition-all disabled:opacity-50"
               >
                 {submitting ? (
                   <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
@@ -443,19 +445,19 @@ export const TenantRegistrationWizard: React.FC = () => {
             <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800 text-left font-mono text-xs space-y-3 max-w-lg mx-auto">
               <div className="flex justify-between border-b border-slate-800 pb-2">
                 <span className="text-slate-400">Tenant Name:</span>
-                <span className="text-slate-200 font-bold">{provisionedData.tenant.name}</span>
+                <span className="text-slate-200 font-bold">{provisionedData?.tenant?.name || 'Provisioned Tenant'}</span>
               </div>
               <div className="flex justify-between border-b border-slate-800 pb-2">
                 <span className="text-slate-400">Subdomain:</span>
-                <span className="text-amber-400">{provisionedData.tenant.slug}.devcenterpoint.com</span>
+                <span className="text-amber-400">{provisionedData?.tenant?.slug || 'workspace'}.devcenterpoint.com</span>
               </div>
               <div className="flex justify-between border-b border-slate-800 pb-2">
                 <span className="text-slate-400">Tenant Admin:</span>
-                <span className="text-slate-200">{provisionedData.owner.email}</span>
+                <span className="text-slate-200">{provisionedData?.owner?.email || 'Admin'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Tenant ID:</span>
-                <span className="text-slate-200">#{provisionedData.tenant.id}</span>
+                <span className="text-slate-200">#{provisionedData?.tenant?.id ?? '—'}</span>
               </div>
             </div>
 

@@ -1,11 +1,18 @@
 export type SettingValueType = 'string' | 'number' | 'boolean' | 'json' | 'date';
 
+export type SettingValue =
+  | string
+  | number
+  | boolean
+  | string[]
+  | Record<string, unknown>;
+
 export interface SettingFieldSchema {
   label: string;
   type: SettingValueType;
-  default: any;
+  default: SettingValue;
   sensitive: boolean;
-  options?: Array<{ label: string; value: any }>;
+  options?: Array<{ label: string; value: SettingValue }>;
 }
 
 export interface SettingGroupSchema {
@@ -20,8 +27,8 @@ export interface SettingItem {
   key: string;
   label: string;
   type: SettingValueType;
-  value: any;
-  default: any;
+  value: SettingValue;
+  default: SettingValue;
   sensitive: boolean;
 }
 

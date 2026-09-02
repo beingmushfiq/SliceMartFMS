@@ -7,10 +7,47 @@ import type {
   ProductCost,
 } from '../../types/api/finance';
 
+type FinanceTab = 'coa' | 'journal' | 'banking' | 'expenses' | 'costing' | 'statements';
+
+function createManualJournalEntry(
+  entryIndex: number,
+  narration: string,
+  totalDebit: number,
+  totalCredit: number,
+  lines: Array<{ account_id: number; debit: string; credit: string; narration: string }>,
+  accounts: ChartOfAccount[]
+): JournalEntry {
+  const now = new Date();
+  const idStr = String(entryIndex).padStart(4, '0');
+  const monthStr = now.toISOString().slice(0, 7).replace('-', '');
+  return {
+    id: entryIndex,
+    uuid: `je-auto-${now.getTime()}`,
+    entry_number: `JE-${monthStr}-${idStr}`,
+    entry_date: now.toISOString().slice(0, 10),
+    entry_type: 'manual',
+    source_module: 'general_ledger',
+    narration: narration || 'Manual double-entry adjustment',
+    total_debit: totalDebit.toFixed(4),
+    total_credit: totalCredit.toFixed(4),
+    status: 'posted',
+    posted_at: now.toISOString(),
+    lines: lines.map((l, idx) => {
+      const acc = accounts.find((a) => a.id === l.account_id);
+      return {
+        id: idx + 1,
+        account_id: l.account_id,
+        account: acc,
+        debit_amount: parseFloat(l.debit || '0').toFixed(4),
+        credit_amount: parseFloat(l.credit || '0').toFixed(4),
+        narration: l.narration,
+      };
+    }),
+  };
+}
+
 export const FinanceWorkspace: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<
-    'coa' | 'journal' | 'banking' | 'expenses' | 'costing' | 'statements'
-  >('journal');
+  const [activeTab, setActiveTab] = useState<FinanceTab>('journal');
 
   // Chart of Accounts State
   const [accounts] = useState<ChartOfAccount[]>([
@@ -317,30 +354,14 @@ export const FinanceWorkspace: React.FC = () => {
       return;
     }
 
-    const createdEntry: JournalEntry = {
-      id: journalEntries.length + 1,
-      uuid: `je-auto-${Date.now()}`,
-      entry_number: `JE-${new Date().toISOString().slice(0, 7).replace('-', '')}-${String(journalEntries.length + 1).padStart(4, '0')}`,
-      entry_date: new Date().toISOString().slice(0, 10),
-      entry_type: 'manual',
-      source_module: 'general_ledger',
-      narration: newNarration || 'Manual double-entry adjustment',
-      total_debit: totalNewDebit.toFixed(4),
-      total_credit: totalNewCredit.toFixed(4),
-      status: 'posted',
-      posted_at: new Date().toISOString(),
-      lines: newLines.map((l, idx) => {
-        const acc = accounts.find((a) => a.id === l.account_id);
-        return {
-          id: idx + 1,
-          account_id: l.account_id,
-          account: acc,
-          debit_amount: parseFloat(l.debit || '0').toFixed(4),
-          credit_amount: parseFloat(l.credit || '0').toFixed(4),
-          narration: l.narration,
-        };
-      }),
-    };
+    const createdEntry = createManualJournalEntry(
+      journalEntries.length + 1,
+      newNarration,
+      totalNewDebit,
+      totalNewCredit,
+      newLines,
+      accounts
+    );
 
     setJournalEntries([createdEntry, ...journalEntries]);
     setShowNewJournalModal(false);
@@ -424,19 +445,19 @@ export const FinanceWorkspace: React.FC = () => {
       {/* Segmented Navigation Tabs Tray */}
       <div className="flex overflow-x-auto p-1.5 bg-surface-sunken rounded-2xl border border-default shadow-2xs">
         <div className="flex gap-1.5 min-w-full sm:min-w-0">
-          {[
+          {([
             { id: 'journal', label: 'General Ledger & Journals', count: journalEntries.length },
             { id: 'coa', label: 'Chart of Accounts', count: accounts.length },
             { id: 'statements', label: 'Financial Statements & P&L', count: 'Live' },
             { id: 'banking', label: 'Banking & Treasury', count: bankAccounts.length },
             { id: 'expenses', label: 'Operating Expenses', count: expenses.length },
             { id: 'costing', label: 'Product Cost Rollup', count: productCosts.length },
-          ].map((tab) => {
+          ] as const).map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 ${
                   isActive
                     ? 'bg-surface text-default font-semibold shadow-xs border border-default/70'

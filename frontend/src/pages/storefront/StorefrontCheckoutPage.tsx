@@ -58,7 +58,7 @@ export const StorefrontCheckoutPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.post<{ data: StorefrontOrderConfirmation }>(
+      const response = await api.post<StorefrontOrderConfirmation | { data: StorefrontOrderConfirmation }>(
         '/storefront/checkout',
         {
           ...form,
@@ -72,13 +72,20 @@ export const StorefrontCheckoutPage: React.FC = () => {
         }
       );
 
-      const orderData = response.data.data ?? (response.data as any);
+      const orderData =
+        'data' in response.data && response.data.data
+          ? response.data.data
+          : (response.data as StorefrontOrderConfirmation);
       clearCart();
       navigate(`/store/${subdomain}/order-confirmed`, {
         state: { order: orderData },
       });
-    } catch (err: any) {
-      setError(err.message ?? 'Checkout could not be completed. Please verify your details.');
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Checkout could not be completed. Please verify your details.';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -281,7 +288,7 @@ export const StorefrontCheckoutPage: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-3 text-xs font-bold text-zinc-950 shadow-lg shadow-emerald-500/20 hover:from-emerald-400 hover:to-teal-400 transition-all cursor-pointer disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-linear-to-r from-emerald-500 to-teal-500 py-3 text-xs font-bold text-zinc-950 shadow-lg shadow-emerald-500/20 hover:from-emerald-400 hover:to-teal-400 transition-all cursor-pointer disabled:opacity-50"
             >
               {loading ? (
                 <span>Placing Order...</span>

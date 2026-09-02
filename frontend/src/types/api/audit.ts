@@ -10,10 +10,10 @@ export interface AuditLogItem {
   action: string;
   auditable_type: string;
   auditable_id?: number | string;
-  before?: Record<string, any>;
-  after?: Record<string, any>;
+  before?: Record<string, unknown>;
+  after?: Record<string, unknown>;
   changed_fields?: string[];
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   ip?: string;
   user_agent?: string;
   correlation_id?: string;

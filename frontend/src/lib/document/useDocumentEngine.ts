@@ -8,7 +8,7 @@ import type { DocumentType, DocumentRenderRequest } from '../../types/api/docume
 export interface DocumentEngineState {
   isOpen: boolean;
   documentType: DocumentType;
-  data: any;
+  data: Record<string, unknown> | null;
   documentNumber?: string | undefined;
   title?: string | undefined;
   templateId?: number | undefined;

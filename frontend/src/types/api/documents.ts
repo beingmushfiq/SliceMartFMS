@@ -174,7 +174,7 @@ export interface DocumentPrintHistory {
 
 export interface DocumentRenderRequest {
   type: DocumentType;
-  data: any;
+  data: Record<string, unknown>;
   templateId?: number;
   printProfileId?: number;
   documentNumber?: string;

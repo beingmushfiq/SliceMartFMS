@@ -30,10 +30,12 @@ export interface ReportFreshnessMeta {
   stale: boolean;
 }
 
-export interface ReportDataResponse<T = Record<string, any>> {
+export type ReportCellValue = string | number | boolean | null | undefined;
+
+export interface ReportDataResponse<T = Record<string, ReportCellValue>> {
   data: T[];
   columns: Record<string, ReportColumnDefinition>;
-  summary?: Record<string, any>;
+  summary?: Record<string, ReportCellValue>;
   pagination: {
     total: number;
     current_page: number;
@@ -50,7 +52,7 @@ export interface ReportSavedView {
   uuid: string;
   report_definition_id: number;
   name: string;
-  filters: Record<string, any>;
+  filters: Record<string, unknown>;
   columns: string[];
   sort_field?: string;
   sort_direction?: 'asc' | 'desc';

@@ -6,10 +6,10 @@ import type {
   MaintenanceOrder,
 } from '../../types/api/assets';
 
+type AssetTab = 'assets' | 'depreciation' | 'categories' | 'maintenance';
+
 export const AssetsWorkspace: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<
-    'assets' | 'depreciation' | 'categories' | 'maintenance'
-  >('assets');
+  const [activeTab, setActiveTab] = useState<AssetTab>('assets');
 
   // Asset Categories State
   const [categories] = useState<AssetCategory[]>([
@@ -290,19 +290,21 @@ export const AssetsWorkspace: React.FC = () => {
 
       {/* Navigation Tabs */}
       <div className="flex border-b border-gray-200 dark:border-gray-700 space-x-6">
-        {[
-          { id: 'assets', label: '📋 Fixed Asset Register', count: assets.length },
-          {
-            id: 'depreciation',
-            label: '📉 Monthly Depreciation Logs',
-            count: depreciationEntries.length,
-          },
-          { id: 'maintenance', label: '🛠️ Maintenance & Repairs', count: maintenanceOrders.length },
-          { id: 'categories', label: '🏷️ Asset Categories', count: categories.length },
-        ].map((tab) => (
+        {(
+          [
+            { id: 'assets', label: '📋 Fixed Asset Register', count: assets.length },
+            {
+              id: 'depreciation',
+              label: '📉 Monthly Depreciation Logs',
+              count: depreciationEntries.length,
+            },
+            { id: 'maintenance', label: '🛠️ Maintenance & Repairs', count: maintenanceOrders.length },
+            { id: 'categories', label: '🏷️ Asset Categories', count: categories.length },
+          ] as { id: AssetTab; label: string; count: number }[]
+        ).map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => setActiveTab(tab.id)}
             className={`pb-3 text-sm font-medium transition flex items-center gap-2 relative ${
               activeTab === tab.id
                 ? 'text-indigo-600 dark:text-indigo-400 font-semibold border-b-2 border-indigo-600 dark:border-indigo-400'

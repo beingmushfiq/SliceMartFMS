@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { useState, useEffect, useMemo, useRef } from 'react';
+import type { ComponentProps } from 'react';
 import {
   Printer,
   FileDown,
@@ -36,7 +37,7 @@ export interface DocumentEnginePortalProps {
   isOpen: boolean;
   onClose: () => void;
   documentType: DocumentType;
-  data: any;
+  data: Record<string, unknown>;
   documentNumber?: string | undefined;
   title?: string | undefined;
   templateId?: number | undefined;
@@ -172,39 +173,47 @@ export function DocumentEnginePortal({
     'Business Document'
   );
 
-  const activeDocNumber = documentNumber || data?.invoice_number || data?.po_number || data?.challan_number || data?.transfer_number || data?.receipt_number || 'DOC-001';
+  const activeDocNumber = String(
+    documentNumber ||
+    data?.invoice_number ||
+    data?.po_number ||
+    data?.challan_number ||
+    data?.transfer_number ||
+    data?.receipt_number ||
+    'DOC-001'
+  );
 
   // Render the appropriate inner document based on type
   const renderDocumentContent = () => {
     switch (documentType) {
       case 'sales_invoice':
-        return <SalesInvoiceDocument invoice={data} businessConfig={businessConfig} copyType={copyType} />;
+        return <SalesInvoiceDocument invoice={data as unknown as ComponentProps<typeof SalesInvoiceDocument>['invoice']} businessConfig={businessConfig} copyType={copyType} />;
       case 'delivery_challan':
-        return <DeliveryChallanDocument delivery={data} businessConfig={businessConfig} />;
+        return <DeliveryChallanDocument delivery={data as unknown as ComponentProps<typeof DeliveryChallanDocument>['delivery']} businessConfig={businessConfig} />;
       case 'purchase_order':
-        return <PurchaseOrderDocument po={data} businessConfig={businessConfig} />;
+        return <PurchaseOrderDocument po={data as unknown as ComponentProps<typeof PurchaseOrderDocument>['po']} businessConfig={businessConfig} />;
       case 'goods_receipt':
-        return <GoodsReceiptDocument grn={data} businessConfig={businessConfig} />;
+        return <GoodsReceiptDocument grn={data as unknown as ComponentProps<typeof GoodsReceiptDocument>['grn']} businessConfig={businessConfig} />;
       case 'credit_note':
-        return <CreditNoteDocument salesReturn={data} businessConfig={businessConfig} />;
+        return <CreditNoteDocument salesReturn={data as unknown as ComponentProps<typeof CreditNoteDocument>['salesReturn']} businessConfig={businessConfig} />;
       case 'payment_receipt':
-        return <PaymentReceiptDocument payment={data} businessConfig={businessConfig} />;
+        return <PaymentReceiptDocument payment={data as unknown as ComponentProps<typeof PaymentReceiptDocument>['payment']} businessConfig={businessConfig} />;
       case 'stock_transfer':
-        return <StockTransferDocument transfer={data} businessConfig={businessConfig} />;
+        return <StockTransferDocument transfer={data as unknown as ComponentProps<typeof StockTransferDocument>['transfer']} businessConfig={businessConfig} />;
       case 'pos_receipt_80mm':
       case 'pos_receipt_58mm':
-        return <ThermalReceipt invoice={data} businessConfig={businessConfig} paperWidth={documentType === 'pos_receipt_58mm' ? '58mm' : '80mm'} />;
+        return <ThermalReceipt invoice={data as unknown as ComponentProps<typeof ThermalReceipt>['invoice']} businessConfig={businessConfig} paperWidth={documentType === 'pos_receipt_58mm' ? '58mm' : '80mm'} />;
       case 'barcode_label':
-        return <BarcodeLabel product={data} preset="standard_50x35" />;
+        return <BarcodeLabel product={data as unknown as ComponentProps<typeof BarcodeLabel>['product']} preset="standard_50x35" />;
       case 'report':
         return (
           <ReportPrintDocument
-            reportTitle={data?.title || 'System Report'}
-            reportCode={data?.code}
-            moduleName={data?.moduleName}
-            filtersText={data?.filtersSummary}
-            columns={data?.columns || []}
-            data={data?.rows || data?.data || []}
+            reportTitle={typeof data?.title === 'string' ? data.title : 'System Report'}
+            reportCode={typeof data?.code === 'string' ? data.code : undefined}
+            moduleName={typeof data?.moduleName === 'string' ? data.moduleName : undefined}
+            filtersText={typeof data?.filtersSummary === 'string' ? data.filtersSummary : undefined}
+            columns={(data?.columns as unknown as ComponentProps<typeof ReportPrintDocument>['columns']) || []}
+            data={(data?.rows || data?.data || []) as unknown as Record<string, unknown>[]}
             businessConfig={businessConfig}
           />
         );

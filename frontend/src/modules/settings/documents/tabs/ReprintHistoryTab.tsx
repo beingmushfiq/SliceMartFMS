@@ -75,7 +75,7 @@ export function ReprintHistoryTab() {
 
       {/* Filter Toolbar */}
       <div className="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs">
-        <form onSubmit={handleSearch} className="relative flex-1 min-w-[200px]">
+        <form onSubmit={handleSearch} className="relative flex-1 min-w-50">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-slate-400" />
           <input
             type="text"

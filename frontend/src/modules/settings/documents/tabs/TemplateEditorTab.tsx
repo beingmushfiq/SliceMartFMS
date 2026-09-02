@@ -184,17 +184,17 @@ export function TemplateEditorTab({ template, onBack, onSaved }: TemplateEditorT
         <div className="lg:col-span-5 space-y-4">
           {/* Sub-nav tabs */}
           <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-900/80 border border-slate-800 text-xs">
-            {[
+            {([
               { id: 'general', label: 'Setup', icon: Sliders },
               { id: 'visibility', label: 'Fields & Layout', icon: Eye },
               { id: 'signatures', label: 'Signatures', icon: FileSignature },
               { id: 'terms', label: 'Terms & Notes', icon: FileText },
-            ].map((tab) => {
+            ] as const).map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id)}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg font-medium transition-all ${
                     activeTab === tab.id
                       ? 'bg-primary text-primary-fg font-semibold shadow-xs'
@@ -442,7 +442,7 @@ export function TemplateEditorTab({ template, onBack, onSaved }: TemplateEditorT
         </div>
 
         {/* Right Column: Live Proportional Preview */}
-        <div className="lg:col-span-7 rounded-xl border border-slate-800 bg-slate-900/40 flex flex-col h-[680px] overflow-hidden">
+        <div className="lg:col-span-7 rounded-xl border border-slate-800 bg-slate-900/40 flex flex-col h-170 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-800 bg-slate-900/80 text-xs">
             <div className="flex items-center gap-2">
               <Sparkles className="size-3.5 text-primary" />

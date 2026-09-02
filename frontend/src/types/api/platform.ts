@@ -59,10 +59,17 @@ export interface PlatformTenant {
   currency_code: string;
   timezone: string;
   plan_id: number;
+  users_count?: number;
   trial_ends_at?: string | null;
   suspended_at?: string | null;
   settings?: Record<string, unknown> | null;
   created_at: string;
+  subscription?: {
+    status: string;
+    amount: number;
+    starts_at?: string;
+    ends_at?: string;
+  } | null;
   plan?: {
     id: number;
     name: string;

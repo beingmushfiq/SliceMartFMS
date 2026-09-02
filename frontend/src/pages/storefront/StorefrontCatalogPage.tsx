@@ -158,7 +158,7 @@ export const StorefrontCatalogPage: React.FC = () => {
       '@type': 'ListItem',
       position: idx + 1,
       name: p.name,
-      url: `${window.location.origin}/store/${subdomain}/products/${(p as any).online_slug || p.sku}`,
+      url: `${window.location.origin}/store/${subdomain}/products/${(p as StorefrontProduct & { online_slug?: string }).online_slug || p.sku}`,
     })),
   };
 

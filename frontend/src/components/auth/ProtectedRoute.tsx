@@ -17,24 +17,22 @@ export function ProtectedRoute() {
 
   // Safety net: if auth bootstrap takes > 5 seconds, present honest recovery options instead of infinite spinning
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    if (status === 'idle' || status === 'authenticating') {
-      timer = setTimeout(() => {
-        setShowEscalation(true);
-      }, 5000);
-    } else {
-      setShowEscalation(false);
-    }
+    if (status !== 'idle' && status !== 'authenticating') return;
+    const timer = setTimeout(() => {
+      setShowEscalation(true);
+    }, 5000);
     return () => {
-      if (timer) clearTimeout(timer);
+      clearTimeout(timer);
     };
   }, [status]);
+
+  const isStuck = showEscalation && (status === 'idle' || status === 'authenticating');
 
   if (status === 'idle' || status === 'authenticating') {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center bg-slate-950 text-slate-300 p-6 text-center animate-in fade-in duration-200">
         <div className="relative flex flex-col items-center max-w-sm">
-          {!showEscalation ? (
+          {!isStuck ? (
             <>
               <div className="h-10 w-10 animate-spin rounded-full border-3 border-emerald-500/20 border-t-emerald-500 mb-4" />
               <p className="text-xs font-semibold tracking-wider text-slate-400 uppercase font-mono">

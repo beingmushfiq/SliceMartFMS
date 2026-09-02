@@ -308,7 +308,7 @@ export function PrintProfilesTab() {
               </label>
               <select
                 value={orientation}
-                onChange={(e) => setOrientation(e.target.value as any)}
+                onChange={(e) => setOrientation(e.target.value as 'portrait' | 'landscape')}
                 className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs cursor-pointer"
               >
                 <option value="portrait">Portrait</option>

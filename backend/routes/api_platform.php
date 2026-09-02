@@ -35,8 +35,12 @@ Route::prefix('v1/platform')
             Route::post('tenants', [PlatformTenantController::class, 'store'])->name('tenants.store');
             Route::get('tenants/{id}', [PlatformTenantController::class, 'show'])->name('tenants.show');
             Route::patch('tenants/{id}', [PlatformTenantController::class, 'update'])->name('tenants.update');
+            Route::delete('tenants/{id}', [PlatformTenantController::class, 'destroy'])->name('tenants.destroy');
             Route::post('tenants/{id}/status', [PlatformTenantController::class, 'updateStatus'])->name('tenants.status');
             Route::post('tenants/{id}/manage-subscription', [PlatformTenantController::class, 'manageSubscription'])->name('tenants.manage-subscription');
+            Route::post('tenants/{id}/override-capabilities', [PlatformTenantController::class, 'overrideCapabilities'])->name('tenants.override-capabilities');
+            Route::post('tenants/{id}/override-quotas', [PlatformTenantController::class, 'overrideQuotas'])->name('tenants.override-quotas');
+            Route::post('tenants/{id}/reset-password', [PlatformTenantController::class, 'resetOwnerPassword'])->name('tenants.reset-password');
             Route::post('tenants/{id}/impersonate', [PlatformImpersonationController::class, 'impersonate'])->name('tenants.impersonate');
 
             // Platform-wide Custom Domain Management
@@ -52,6 +56,7 @@ Route::prefix('v1/platform')
             Route::get('plans', [PlatformPlanController::class, 'index'])->name('plans.index');
             Route::post('plans', [PlatformPlanController::class, 'store'])->name('plans.store');
             Route::patch('plans/{id}', [PlatformPlanController::class, 'update'])->name('plans.update');
+            Route::delete('plans/{id}', [PlatformPlanController::class, 'destroy'])->name('plans.destroy');
 
             // Platform-wide System Audit Logs
             Route::get('audit-logs', [PlatformAuditController::class, 'index'])->name('audit-logs.index');

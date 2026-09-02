@@ -100,6 +100,7 @@ class PlatformPlanController extends Controller
 
         $validated = $request->validate([
             'name' => 'nullable|string|max:191',
+            'code' => 'nullable|string|max:64|unique:plans,code,' . $id,
             'price' => 'nullable|numeric|min:0',
             'billing_period' => 'nullable|string|in:monthly,yearly',
             'limits' => 'nullable|array',
@@ -121,6 +122,44 @@ class PlatformPlanController extends Controller
                 'limits' => $plan->limits,
                 'features' => $plan->features,
                 'is_active' => $plan->is_active,
+            ],
+            'meta' => [
+                'correlation_id' => (string) $request->header('X-Correlation-Id', ''),
+                'timestamp' => Carbon::now()->toIso8601String(),
+            ],
+        ]);
+    }
+
+    /**
+     * Delete / archive a plan tier.
+     */
+    public function destroy(int $id, Request $request): JsonResponse
+    {
+        $plan = Plan::withCount('tenants')->findOrFail($id);
+
+        if ($plan->tenants_count > 0) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'PLAN_IN_USE',
+                    'message' => "Cannot delete tier '{$plan->name}' because {$plan->tenants_count} tenant(s) are currently subscribed to it. Please migrate tenants or set tier to inactive.",
+                ],
+                'meta' => [
+                    'correlation_id' => (string) $request->header('X-Correlation-Id', ''),
+                    'timestamp' => Carbon::now()->toIso8601String(),
+                ],
+            ], 422);
+        }
+
+        $name = $plan->name;
+        $plan->delete();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $id,
+                'name' => $name,
+                'deleted' => true,
             ],
             'meta' => [
                 'correlation_id' => (string) $request->header('X-Correlation-Id', ''),

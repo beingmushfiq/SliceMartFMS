@@ -44,7 +44,16 @@ export function PaperSizesTab() {
   }, []);
 
   useEffect(() => {
-    fetchSizes();
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      if (!cancelled) {
+        void fetchSizes();
+      }
+    }, 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [fetchSizes]);
 
   const handleSaveCustom = async (e: React.FormEvent) => {

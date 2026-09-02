@@ -17,23 +17,21 @@ export const PlatformProtectedRoute: React.FC = () => {
 
   // Safety escalation timer for platform admin session
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    if (status === 'idle' || status === 'authenticating') {
-      timer = setTimeout(() => {
-        setShowEscalation(true);
-      }, 5000);
-    } else {
-      setShowEscalation(false);
-    }
+    if (status !== 'idle' && status !== 'authenticating') return;
+    const timer = setTimeout(() => {
+      setShowEscalation(true);
+    }, 5000);
     return () => {
-      if (timer) clearTimeout(timer);
+      clearTimeout(timer);
     };
   }, [status]);
+
+  const isStuck = showEscalation && (status === 'idle' || status === 'authenticating');
 
   if (status === 'idle' || status === 'authenticating') {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-200 p-6 text-center">
-        {!showEscalation ? (
+        {!isStuck ? (
           <div className="flex flex-col items-center">
             <div className="w-10 h-10 border-3 border-amber-500/20 border-t-amber-500 rounded-full animate-spin mb-4" />
             <p className="text-xs font-mono tracking-widest text-slate-400 uppercase">

@@ -69,7 +69,16 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    loadPages();
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      if (!cancelled) {
+        void loadPages();
+      }
+    }, 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [loadPages]);
 
   const handleCreateNewPage = async (templateType: string) => {
@@ -140,12 +149,12 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
         blocks,
       });
 
-      const newPage = res.data.data ?? (res.data as any);
+      const newPage = res.data.data ?? (res.data as unknown as CmsPage);
       setPages([...pages, newPage]);
       setSelectedPage(newPage);
       showToast(`Created page "${title}"`);
-    } catch (err: any) {
-      alert(err.message ?? 'Failed to create page');
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to create page');
     }
   };
 
@@ -163,12 +172,12 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
         blocks: selectedPage.blocks,
       });
 
-      const updated = res.data.data ?? (res.data as any);
+      const updated = res.data.data ?? (res.data as unknown as CmsPage);
       setSelectedPage(updated);
       setPages(pages.map((p) => (p.id === updated.id ? updated : p)));
       showToast(`Page "${updated.title}" saved as ${statusToSave}!`);
-    } catch (err: any) {
-      alert(err.message ?? 'Failed to save page');
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to save page');
     } finally {
       setSaving(false);
     }

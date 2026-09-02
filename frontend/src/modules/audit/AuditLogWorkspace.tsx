@@ -151,7 +151,7 @@ export const AuditLogWorkspace: React.FC = () => {
       {/* Filter Toolbar */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3 flex-1">
-          <div className="relative flex-1 min-w-[240px]">
+          <div className="relative flex-1 min-w-60">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
@@ -291,7 +291,7 @@ export const AuditLogWorkspace: React.FC = () => {
                 <span className="text-xs font-semibold text-rose-700 flex items-center gap-1">
                   Before Mutation
                 </span>
-                <pre className="p-3 bg-rose-50/50 border border-rose-200 rounded-lg font-mono text-[11px] text-slate-800 overflow-x-auto min-h-[160px]">
+                <pre className="p-3 bg-rose-50/50 border border-rose-200 rounded-lg font-mono text-[11px] text-slate-800 overflow-x-auto min-h-40">
                   {JSON.stringify(selectedLog.before, null, 2)}
                 </pre>
               </div>
@@ -300,7 +300,7 @@ export const AuditLogWorkspace: React.FC = () => {
                 <span className="text-xs font-semibold text-emerald-700 flex items-center gap-1">
                   After Mutation
                 </span>
-                <pre className="p-3 bg-emerald-50/50 border border-emerald-200 rounded-lg font-mono text-[11px] text-slate-800 overflow-x-auto min-h-[160px]">
+                <pre className="p-3 bg-emerald-50/50 border border-emerald-200 rounded-lg font-mono text-[11px] text-slate-800 overflow-x-auto min-h-40">
                   {JSON.stringify(selectedLog.after, null, 2)}
                 </pre>
               </div>

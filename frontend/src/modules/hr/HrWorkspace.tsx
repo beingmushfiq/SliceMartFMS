@@ -11,10 +11,11 @@ import type {
   Payslip,
 } from '../../types/api/hr';
 
+type HrTab = 'employees' | 'attendance' | 'leaves' | 'payroll';
+type EmploymentType = 'permanent' | 'contract' | 'daily_wage' | 'piece_rate';
+
 export const HrWorkspace: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'employees' | 'attendance' | 'leaves' | 'payroll'>(
-    'payroll'
-  );
+  const [activeTab, setActiveTab] = useState<HrTab>('payroll');
   const [selectedEmployeeForBadge, setSelectedEmployeeForBadge] = useState<Employee | null>(null);
 
   // Master Reference Data
@@ -414,7 +415,7 @@ export const HrWorkspace: React.FC = () => {
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => setActiveTab(tab.id as HrTab)}
             className={`pb-3 text-sm font-medium transition flex items-center gap-2 relative ${
               activeTab === tab.id
                 ? 'text-indigo-600 dark:text-indigo-400 font-semibold border-b-2 border-indigo-600 dark:border-indigo-400'
@@ -889,7 +890,7 @@ export const HrWorkspace: React.FC = () => {
                   </label>
                   <select
                     value={newEmpType}
-                    onChange={(e) => setNewEmpType(e.target.value as any)}
+                    onChange={(e) => setNewEmpType(e.target.value as EmploymentType)}
                     className="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700 text-sm"
                   >
                     <option value="piece_rate">Piece-Rate Worker</option>

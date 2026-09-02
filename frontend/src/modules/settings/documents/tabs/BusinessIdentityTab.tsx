@@ -56,8 +56,11 @@ export function BusinessIdentityTab() {
   });
 
   useEffect(() => {
-    if (serverConfig) {
-      setForm((prev) => ({ ...prev, ...serverConfig }));
+    if (serverConfig && Object.keys(serverConfig).length > 0) {
+      const timer = setTimeout(() => {
+        setForm((prev) => ({ ...prev, ...serverConfig }));
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [serverConfig]);
 

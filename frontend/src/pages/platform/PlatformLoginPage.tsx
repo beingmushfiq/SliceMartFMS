@@ -25,7 +25,7 @@ export const PlatformLoginPage: React.FC = () => {
       <div className="w-full max-w-md">
         {/* Brand Banner */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-600 to-amber-400 text-slate-950 shadow-xl shadow-amber-500/20 mb-4">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-linear-to-tr from-amber-600 to-amber-400 text-slate-950 shadow-xl shadow-amber-500/20 mb-4">
             <Layers className="w-7 h-7 stroke-[2.5]" />
           </div>
           <h1 className="text-2xl font-bold text-slate-100 tracking-tight">
@@ -38,7 +38,7 @@ export const PlatformLoginPage: React.FC = () => {
 
         {/* Card */}
         <div className="bg-slate-900 border border-slate-800/90 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-600 via-amber-400 to-amber-600" />
+          <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-amber-600 via-amber-400 to-amber-600" />
 
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-mono mb-6">
             <ShieldCheck className="w-4 h-4 shrink-0" />
@@ -93,7 +93,7 @@ export const PlatformLoginPage: React.FC = () => {
             <button
               type="submit"
               disabled={status === 'authenticating'}
-              className="w-full mt-2 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="w-full mt-2 py-3 px-4 rounded-xl bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {status === 'authenticating' ? (
                 <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />

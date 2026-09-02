@@ -63,8 +63,21 @@ interface NotFoundLogItem {
   created_at: string;
 }
 
+interface AuditCheck {
+  name: string;
+  passed: boolean;
+  message: string;
+}
+
+interface SeoAuditResult {
+  score: number;
+  checks: AuditCheck[];
+}
+
+type SeoTab = 'metadata' | 'nap' | 'redirects' | '404s' | 'indexnow' | 'audit';
+
 export const SeoDiscoverabilityWorkspace: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'metadata' | 'nap' | 'redirects' | '404s' | 'indexnow' | 'audit'>('metadata');
+  const [activeTab, setActiveTab] = useState<SeoTab>('metadata');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -97,7 +110,7 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
   // Redirects and 404 Logs
   const [redirects, setRedirects] = useState<RedirectItem[]>([]);
   const [notFoundLogs, setNotFoundLogs] = useState<NotFoundLogItem[]>([]);
-  const [auditResult, setAuditResult] = useState<any>(null);
+  const [auditResult, setAuditResult] = useState<SeoAuditResult | null>(null);
 
   // New Redirect Modal/State
   const [newSource, setNewSource] = useState('');
@@ -117,7 +130,7 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
         api.get<{ data: SeoSettingsState }>('/tenant/seo/settings'),
         api.get<{ data: RedirectItem[] }>('/tenant/redirects'),
         api.get<{ data: NotFoundLogItem[] }>('/tenant/redirects/not-found-logs'),
-        api.get<{ data: any }>('/tenant/seo/audit'),
+        api.get<{ data: SeoAuditResult }>('/tenant/seo/audit'),
       ]);
 
       if (settingsRes.status === 'fulfilled' && settingsRes.value.data.data) {
@@ -140,7 +153,16 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchAllData();
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      if (!cancelled) {
+        void fetchAllData();
+      }
+    }, 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, []);
 
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -152,10 +174,10 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
       // Refresh audit
-      const auditRes = await api.get<{ data: any }>('/tenant/seo/audit');
+      const auditRes = await api.get<{ data: SeoAuditResult }>('/tenant/seo/audit');
       setAuditResult(auditRes.data.data);
-    } catch (err: any) {
-      alert(err.message || 'Failed to save SEO settings');
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to save SEO settings');
     } finally {
       setSaving(false);
     }
@@ -175,8 +197,8 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
       setRedirects([res.data.data, ...redirects]);
       setNewSource('');
       setNewTarget('');
-    } catch (err: any) {
-      alert(err.message || 'Failed to create redirect');
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to create redirect');
     } finally {
       setCreatingRedirect(false);
     }
@@ -187,8 +209,8 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
     try {
       await api.delete(`/tenant/redirects/${id}`);
       setRedirects(redirects.filter((r) => r.id !== id));
-    } catch (err: any) {
-      alert(err.message || 'Failed to delete redirect');
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to delete redirect');
     }
   };
 
@@ -201,8 +223,8 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
         status_code: 301,
       });
       fetchAllData();
-    } catch (err: any) {
-      alert(err.message || 'Failed to resolve 404 log');
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to resolve 404 log');
     }
   };
 
@@ -220,8 +242,9 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
       });
 
       setPingStatus(`Successfully submitted ${res.data.submitted_urls.length} URLs to IndexNow search engine nodes.`);
-    } catch (err: any) {
-      setPingStatus(`IndexNow ping failed: ${err.message || 'Network error'}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Network error';
+      setPingStatus(`IndexNow ping failed: ${msg}`);
     } finally {
       setPinging(false);
     }
@@ -275,21 +298,21 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
 
       {/* Workspace Tabs Navigation */}
       <div className="flex flex-wrap items-center gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
-        {[
+        {([
           { id: 'metadata', label: 'Meta & Canonical', icon: Sliders },
           { id: 'nap', label: 'Local Business & Entity (NAP)', icon: Globe },
           { id: 'redirects', label: `URL Redirects (${redirects.length})`, icon: ArrowRight },
           { id: '404s', label: `404 Error Log (${notFoundLogs.length})`, icon: AlertTriangle },
           { id: 'indexnow', label: 'IndexNow & Sitemaps', icon: Radio },
           { id: 'audit', label: 'Discoverability Audit', icon: ShieldCheck },
-        ].map((tab) => {
+        ] as const).map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id)}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 isActive
                   ? 'bg-primary text-white shadow-xs font-bold'
@@ -838,7 +861,7 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
                 </div>
 
                 <div className="space-y-3">
-                  {auditResult.checks?.map((check: any, idx: number) => (
+                  {auditResult.checks?.map((check: AuditCheck, idx: number) => (
                     <div
                       key={idx}
                       className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 flex items-start gap-3 text-xs"
