@@ -61,7 +61,16 @@ export function setAccessToken(token: string | null): void {
   accessToken = token;
 }
 
-export function getAccessToken(): string | null {
+export function getAccessToken(path?: string): string | null {
+  if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+    const isPlatform =
+      (path && (path.startsWith('/platform') || path.startsWith('platform'))) ||
+      window.location.pathname.startsWith('/platform');
+    if (isPlatform) {
+      const platformToken = localStorage.getItem('platform_access_token');
+      if (platformToken) return platformToken;
+    }
+  }
   if (accessToken) return accessToken;
   if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
     return localStorage.getItem('access_token') || localStorage.getItem('platform_access_token');
@@ -383,7 +392,7 @@ async function execute<T>(
     ...options.headers,
   };
 
-  const token = getAccessToken();
+  const token = getAccessToken(path);
   if (token && options.skipAuth !== true) {
     headers['Authorization'] = `Bearer ${token}`;
   }

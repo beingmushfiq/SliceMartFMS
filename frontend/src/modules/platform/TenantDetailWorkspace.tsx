@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { api, setAccessToken } from '../../lib/api/client';
 import type { PlatformTenant, PlatformPlan } from '../../types/api/platform';
 import { PlatformPulseLoader } from '../../components/platform/PlatformPulseLoader';
+import { Button } from '../../components/ui/Button';
 import {
   Building2,
   CreditCard,
@@ -103,32 +104,34 @@ export const TenantDetailWorkspace: React.FC = () => {
   const [ownerNewPassword, setOwnerNewPassword] = useState('');
   const [overrideSaving, setOverrideSaving] = useState(false);
 
-  const { data: detailData, isLoading: tenantLoading } = useQuery<TenantDetailPayload | null>({
+  const {
+    data: detailData,
+    isLoading: tenantLoading,
+    error: queryError,
+    refetch,
+  } = useQuery<TenantDetailPayload | null>({
     queryKey: ['platform', 'tenant', id],
     queryFn: async () => {
       if (!id) return null;
-      try {
-        const response = await api.get<{ data: TenantDetailPayload } | TenantDetailPayload>(`/platform/tenants/${id}`);
-        const res = response.data;
-        if ('data' in res && res.data && 'tenant' in res.data) {
-          return res.data;
-        } else if ('tenant' in res) {
-          return res as TenantDetailPayload;
-        } else {
-          // Flatten fallback
-          return {
-            tenant: res as unknown as PlatformTenant,
-            users: [],
-            subscriptions: [],
-            usage_counters: [],
-            recent_audit: [],
-          };
-        }
-      } catch {
-        return null;
+      const response = await api.get<{ data: TenantDetailPayload } | TenantDetailPayload>(`/platform/tenants/${id}`);
+      const res = response.data;
+      if ('data' in res && res.data && 'tenant' in res.data) {
+        return res.data;
+      } else if ('tenant' in res) {
+        return res as TenantDetailPayload;
+      } else {
+        // Flatten fallback
+        return {
+          tenant: res as unknown as PlatformTenant,
+          users: [],
+          subscriptions: [],
+          usage_counters: [],
+          recent_audit: [],
+        };
       }
     },
     enabled: Boolean(id),
+    retry: 1,
   });
 
   const tenant = detailData?.tenant;
@@ -364,10 +367,39 @@ export const TenantDetailWorkspace: React.FC = () => {
     );
   }
 
+  if (queryError) {
+    const errorMsg = queryError instanceof Error ? queryError.message : 'Failed to load tenant record';
+    return (
+      <div className="p-12 text-center text-xs font-mono space-y-4 max-w-md mx-auto">
+        <div className="p-4 rounded-xl bg-rose-950/40 border border-rose-800/60 text-rose-300">
+          <p className="font-semibold mb-1 text-rose-200">Unable to load tenant #{id}</p>
+          <p className="text-rose-400">{errorMsg}</p>
+        </div>
+        <div className="flex items-center justify-center gap-3">
+          <Button variant="secondary" size="sm" onClick={() => void refetch()}>
+            Retry Query
+          </Button>
+          <Link
+            to="/platform/tenants"
+            className="text-xs text-amber-400 hover:text-amber-300 underline font-mono"
+          >
+            ← Return to Tenant Directory
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (!tenant) {
     return (
-      <div className="p-12 text-center text-slate-400 text-xs font-mono">
-        Tenant #{id} not found in master platform registry.
+      <div className="p-12 text-center text-slate-400 text-xs font-mono space-y-3">
+        <p>Tenant #{id} not found in master platform registry.</p>
+        <Link
+          to="/platform/tenants"
+          className="text-xs text-amber-400 hover:text-amber-300 underline font-mono inline-block"
+        >
+          ← Return to Tenant Directory
+        </Link>
       </div>
     );
   }
