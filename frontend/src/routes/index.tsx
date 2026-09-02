@@ -1,6 +1,7 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 import { AppShell } from '../components/layout/AppShell';
+import { RouteErrorBoundary } from '../components/routing/RouteErrorBoundary';
 import LoginPage from '../pages/auth/LoginPage';
 import CatalogueWorkspace from '../modules/catalogue/CatalogueWorkspace';
 import ProductionWorkspace from '../modules/production/ProductionWorkspace';
@@ -21,6 +22,7 @@ import { SettingsCenterWorkspace } from '../modules/settings/SettingsCenterWorks
 import { TenantRoleDashboard } from '../pages/dashboard/TenantRoleDashboard';
 import { ProfileSettingsWorkspace } from '../pages/settings/ProfileSettingsWorkspace';
 import { OnboardingWizard } from '../modules/platform/OnboardingWizard';
+import { NotFoundPage } from '../pages/errors/NotFoundPage';
 
 // Master SaaS Platform Admin imports
 import { PlatformProtectedRoute } from '../components/platform/PlatformProtectedRoute';
@@ -32,6 +34,7 @@ import TenantRegistrationWizard from '../modules/platform/TenantRegistrationWiza
 import TenantDetailWorkspace from '../modules/platform/TenantDetailWorkspace';
 import PlanManagerWorkspace from '../modules/platform/PlanManagerWorkspace';
 import PlatformAuditWorkspace from '../modules/platform/PlatformAuditWorkspace';
+import PlatformErrorMonitoringWorkspace from '../modules/platform/PlatformErrorMonitoringWorkspace';
 
 // Public Headless E-Commerce Storefront imports
 import { StorefrontShell } from '../components/storefront/StorefrontShell';
@@ -55,6 +58,7 @@ export const router = createBrowserRouter([
   {
     path: '/store/:subdomain',
     element: <StorefrontShell />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       {
         index: true,
@@ -92,6 +96,10 @@ export const router = createBrowserRouter([
         path: 'pages/:slug',
         element: <StorefrontDynamicPage />,
       },
+      {
+        path: '*',
+        element: <NotFoundPage />,
+      },
     ],
   },
 
@@ -103,6 +111,7 @@ export const router = createBrowserRouter([
   {
     path: '/platform',
     element: <PlatformProtectedRoute />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       {
         element: <PlatformShell />,
@@ -131,6 +140,14 @@ export const router = createBrowserRouter([
             path: 'audit-logs',
             element: <PlatformAuditWorkspace />,
           },
+          {
+            path: 'errors',
+            element: <PlatformErrorMonitoringWorkspace />,
+          },
+          {
+            path: '*',
+            element: <NotFoundPage />,
+          },
         ],
       },
     ],
@@ -144,6 +161,7 @@ export const router = createBrowserRouter([
   {
     path: '/',
     element: <ProtectedRoute />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       {
         element: <AppShell />,
@@ -286,10 +304,14 @@ export const router = createBrowserRouter([
           },
           {
             path: '*',
-            element: <Navigate to="/production" replace />,
+            element: <NotFoundPage />,
           },
         ],
       },
     ],
+  },
+  {
+    path: '*',
+    element: <NotFoundPage />,
   },
 ]);

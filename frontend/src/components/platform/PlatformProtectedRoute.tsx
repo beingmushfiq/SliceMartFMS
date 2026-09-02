@@ -1,24 +1,86 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { usePlatformAuthStore } from '../../lib/auth/platformAuthStore';
+import { Button } from '../ui/Button';
+import { RotateCcw, LogIn, AlertCircle } from 'lucide-react';
 
 export const PlatformProtectedRoute: React.FC = () => {
   const { status, user, bootstrap } = usePlatformAuthStore();
   const location = useLocation();
+  const [showEscalation, setShowEscalation] = useState(false);
 
   useEffect(() => {
     if (status === 'idle') {
-      bootstrap();
+      void bootstrap();
     }
   }, [status, bootstrap]);
 
+  // Safety escalation timer for platform admin session
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    if (status === 'idle' || status === 'authenticating') {
+      timer = setTimeout(() => {
+        setShowEscalation(true);
+      }, 5000);
+    } else {
+      setShowEscalation(false);
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [status]);
+
   if (status === 'idle' || status === 'authenticating') {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-200">
-        <div className="w-12 h-12 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin mb-4" />
-        <p className="text-sm font-mono tracking-widest text-slate-400 uppercase">
-          Verifying DevCenterPoint Platform Credentials...
-        </p>
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-200 p-6 text-center">
+        {!showEscalation ? (
+          <div className="flex flex-col items-center">
+            <div className="w-10 h-10 border-3 border-amber-500/20 border-t-amber-500 rounded-full animate-spin mb-4" />
+            <p className="text-xs font-mono tracking-widest text-slate-400 uppercase">
+              Verifying Platform Credentials...
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4 rounded-2xl bg-slate-900 border border-slate-800 p-6 shadow-2xl max-w-sm">
+            <div className="size-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 mx-auto">
+              <AlertCircle className="size-5" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-white font-sans">
+                Platform Verification Timeout
+              </h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Could not verify platform super-admin credentials. Please retry or sign in again.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setShowEscalation(false);
+                  void bootstrap();
+                }}
+                leftIcon={<RotateCcw className="size-3.5" />}
+              >
+                Retry
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  usePlatformAuthStore.getState().logout().then(() => {
+                    window.location.href = '/platform/login';
+                  });
+                }}
+                leftIcon={<LogIn className="size-3.5" />}
+              >
+                Go to Login
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

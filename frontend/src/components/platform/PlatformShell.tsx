@@ -2,21 +2,25 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { PlatformSidebar } from './PlatformSidebar';
 import { PlatformHeader } from './PlatformHeader';
+import { OfflineBanner } from '../layout/OfflineBanner';
 
 export const PlatformShell: React.FC = () => {
   return (
-    <div className="min-h-screen bg-(--app-bg) text-default flex font-sans antialiased selection:bg-amber-500 selection:text-white relative">
-      {/* Platform Sidebar */}
-      <PlatformSidebar />
+    <div className="min-h-screen bg-(--app-bg) text-default flex flex-col font-sans antialiased selection:bg-amber-500 selection:text-white relative">
+      <OfflineBanner />
+      <div className="flex-1 flex min-w-0 h-screen overflow-hidden">
+        {/* Platform Sidebar */}
+        <PlatformSidebar />
 
-      {/* Main Control Plane Viewport */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        <PlatformHeader />
-        <main className="flex-1 p-6 lg:p-8 overflow-y-auto bg-(--app-bg) transition-colors duration-200">
-          <div className="max-w-7xl mx-auto">
-            <Outlet />
-          </div>
-        </main>
+        {/* Main Control Plane Viewport */}
+        <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+          <PlatformHeader />
+          <main className="flex-1 p-6 lg:p-8 overflow-y-auto bg-(--app-bg) transition-colors duration-200">
+            <div className="max-w-7xl mx-auto">
+              <Outlet />
+            </div>
+          </main>
+        </div>
       </div>
     </div>
   );

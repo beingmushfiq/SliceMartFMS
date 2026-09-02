@@ -54,9 +54,17 @@ interface ProductFormDraft {
   reorder_level?: string | null;
   reorder_quantity?: string | null;
   weight?: string | null;
-  shelf_life_days?: number | null;
+  opening_stock?: string | null;
+  warehouse_id?: string | null;
   tracking_mode?: string;
   custom_attributes?: Record<string, unknown> | null;
+}
+
+interface WarehouseOption {
+  id: number | string;
+  uuid?: string;
+  name: string;
+  code: string;
 }
 
 export function ProductsSection() {
@@ -116,7 +124,8 @@ export function ProductsSection() {
     reorder_level: '10',
     reorder_quantity: '50',
     weight: '1',
-    shelf_life_days: 7,
+    opening_stock: '0',
+    warehouse_id: '',
     tracking_mode: 'batch',
   });
 
@@ -152,6 +161,12 @@ export function ProductsSection() {
   const brandsQuery = useQuery({
     queryKey: ['catalogue', 'brands', 'options'],
     queryFn: ({ signal }) => api.get<Brand[]>('/brands', { signal }),
+  });
+
+  // Fetch Warehouses options
+  const warehousesQuery = useQuery({
+    queryKey: ['inventory', 'warehouses', 'options'],
+    queryFn: ({ signal }) => api.get<WarehouseOption[]>('/warehouses', { signal }),
   });
 
   // ── Quick Add Mutations ──────────────────────────────────────────────────
@@ -290,7 +305,8 @@ export function ProductsSection() {
       reorder_level: '10',
       reorder_quantity: '50',
       weight: '1',
-      shelf_life_days: 7,
+      opening_stock: '0',
+      warehouse_id: '',
       tracking_mode: 'batch',
     });
     setActiveFormTab('general');
@@ -318,7 +334,8 @@ export function ProductsSection() {
       reorder_level: p.reorder_level || '10',
       reorder_quantity: p.reorder_quantity || '50',
       weight: p.weight || '1',
-      shelf_life_days: p.shelf_life_days || 7,
+      opening_stock: '0',
+      warehouse_id: '',
       tracking_mode: p.tracking_mode || 'batch',
     });
     setEditingProduct(p);
@@ -345,6 +362,11 @@ export function ProductsSection() {
   const units = unitsQuery.data?.data ?? [];
   const categories = categoriesQuery.data?.data ?? [];
   const brands = brandsQuery.data?.data ?? [];
+  const warehouses: WarehouseOption[] = Array.isArray(warehousesQuery.data?.data)
+    ? (warehousesQuery.data.data as WarehouseOption[])
+    : Array.isArray(warehousesQuery.data)
+    ? (warehousesQuery.data as WarehouseOption[])
+    : [];
 
   return (
     <div className="space-y-6">
@@ -914,9 +936,11 @@ export function ProductsSection() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Reorder Level (Min)</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Reorder Level (Min Buffer)
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. 10"
@@ -928,7 +952,9 @@ export function ProductsSection() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Reorder Quantity</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Reorder Quantity (Lot Size)
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. 50"
@@ -938,19 +964,54 @@ export function ProductsSection() {
                   />
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">Economic order lot size</span>
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Shelf Life (Days)</label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 7"
-                    value={draft.shelf_life_days ?? ''}
-                    onChange={(e) =>
-                      setDraft({ ...draft, shelf_life_days: e.target.value ? Number(e.target.value) : null })
-                    }
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
-                  />
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">For FEFO batch expiry</span>
+              {/* Initial / Opening Stock */}
+              <div className="p-3.5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/60 space-y-3">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-900 dark:text-indigo-200">
+                  <Package className="size-3.5 text-indigo-600 dark:text-indigo-400" />
+                  <span>Initial Opening Stock</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Opening / Initial Stock (Qty)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      min="0"
+                      step="any"
+                      value={draft.opening_stock ?? ''}
+                      onChange={(e) => setDraft({ ...draft, opening_stock: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
+                    />
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">
+                      Initial on-hand stock balance
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Opening Warehouse
+                    </label>
+                    <select
+                      value={draft.warehouse_id ?? ''}
+                      onChange={(e) => setDraft({ ...draft, warehouse_id: e.target.value || null })}
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs cursor-pointer font-medium"
+                    >
+                      <option value="">Default Main Warehouse</option>
+                      {warehouses.map((w: WarehouseOption) => (
+                        <option key={w.uuid || w.id} value={w.uuid || w.id}>
+                          {w.name} ({w.code})
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">
+                      Storage facility for opening inventory
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -1480,37 +1541,31 @@ export function ProductsSection() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Reorder Level (Min)</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Reorder Level (Min Buffer)
+                    </label>
                     <input
                       type="text"
                       value={draft.reorder_level ?? ''}
                       onChange={(e) => setDraft({ ...draft, reorder_level: e.target.value })}
                       className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
                     />
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">Safety stock trigger threshold</span>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Reorder Quantity</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Reorder Quantity (Lot Size)
+                    </label>
                     <input
                       type="text"
                       value={draft.reorder_quantity ?? ''}
                       onChange={(e) => setDraft({ ...draft, reorder_quantity: e.target.value })}
                       className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
                     />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Shelf Life (Days)</label>
-                    <input
-                      type="number"
-                      value={draft.shelf_life_days ?? ''}
-                      onChange={(e) =>
-                        setDraft({ ...draft, shelf_life_days: e.target.value ? Number(e.target.value) : null })
-                      }
-                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
-                    />
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">Economic order lot size</span>
                   </div>
                 </div>
 
@@ -2067,9 +2122,9 @@ export function ProductsSection() {
               </div>
 
               <div>
-                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Shelf Life / Weight</span>
+                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Unit Weight / Mass</span>
                 <span className="font-medium text-slate-900 dark:text-white mt-0.5 block">
-                  {viewingProduct.shelf_life_days ? `${viewingProduct.shelf_life_days} Days` : 'N/A'} · {viewingProduct.weight ? `${viewingProduct.weight} kg` : '—'}
+                  {viewingProduct.weight ? `${viewingProduct.weight} kg` : '—'}
                 </span>
               </div>
             </div>

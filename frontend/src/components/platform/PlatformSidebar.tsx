@@ -8,6 +8,7 @@ import {
   History,
   Layers,
   Sparkles,
+  ShieldAlert,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -41,6 +42,12 @@ const NAV_ITEMS = [
     icon: History,
     end: true,
   },
+  {
+    to: '/platform/errors',
+    label: 'Error Monitoring',
+    icon: ShieldAlert,
+    end: true,
+  },
 ];
 
 export const PlatformSidebar: React.FC = () => {
@@ -59,24 +66,37 @@ export const PlatformSidebar: React.FC = () => {
             <div className="w-full h-full rounded-lg bg-white dark:bg-[#090d16]/90 flex items-center justify-center text-amber-600 dark:text-amber-400">
               <Layers className="w-4 h-4 stroke-[2.5] drop-shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
             </div>
+            <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500 ring-2 ring-white dark:ring-[#070a10]" />
+            </span>
           </div>
-          <div className="flex flex-col min-w-0">
-            <span className="font-bold text-default text-sm tracking-tight truncate">DevCenterPoint</span>
+
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold tracking-tight text-default text-sm truncate font-sans">
+                Platform SaaS
+              </span>
+              <span className="inline-flex items-center rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold text-amber-600 dark:text-amber-300 border border-amber-500/30 tracking-wider uppercase font-mono">
+                Super
+              </span>
+            </div>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="inline-block size-1.5 rounded-full bg-amber-500 animate-pulse" />
-              <span className="text-[9px] font-mono text-amber-600 dark:text-amber-400/90 uppercase tracking-widest font-semibold">
-                Master SaaS Admin
+              <span className="text-[10px] font-medium text-muted truncate flex items-center gap-1">
+                <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
+                Root Control Plane
               </span>
             </div>
           </div>
         </div>
 
-        {/* Navigation items */}
+        {/* Navigation List */}
         <nav className="p-3 space-y-1">
-          <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-(--nav-section-fg) flex items-center gap-1.5">
+          <div className="px-3 py-1.5 text-[10px] font-bold tracking-[0.14em] text-(--nav-section-fg) uppercase flex items-center gap-1.5">
             <span className="size-1 rounded-full bg-amber-500/60" />
-            <span>Platform Core</span>
+            <span>Master Governance</span>
           </div>
+
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             return (
@@ -85,41 +105,26 @@ export const PlatformSidebar: React.FC = () => {
                 to={item.to}
                 end={item.end}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150 ${
+                  `flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-150 ${
                     isActive
-                      ? 'bg-amber-500/15 text-amber-700 dark:text-white border-l-2 border-amber-500 font-semibold shadow-xs'
-                      : 'text-muted hover:text-default hover:bg-(--nav-hover-bg) border-l-2 border-transparent'
+                      ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shadow-xs'
+                      : 'text-muted hover:text-default hover:bg-(--nav-hover-bg)'
                   }`
                 }
               >
-                {({ isActive }) => (
-                  <>
-                    <Icon
-                      className={`w-4 h-4 shrink-0 transition-transform duration-150 ${
-                        isActive
-                          ? 'text-amber-600 dark:text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.4)] scale-110'
-                          : 'text-muted'
-                      }`}
-                    />
-                    <span>{item.label}</span>
-                  </>
-                )}
+                <Icon className="size-4 shrink-0" />
+                <span>{item.label}</span>
               </NavLink>
             );
           })}
         </nav>
       </div>
 
-      {/* Tenant Context Footer info */}
-      <div className="p-3 border-t border-(--nav-border) bg-(--nav-bg-deep)">
-        <div className="p-3 rounded-xl bg-(--nav-bg) border border-(--nav-border) text-xs shadow-xs">
-          <div className="flex items-center gap-2 text-default font-medium mb-1">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>Multi-Tenant Engine</span>
-          </div>
-          <p className="text-[10px] text-muted leading-relaxed font-mono">
-            Hard isolation enforced via BelongsToTenant scope & verified JWT claims.
-          </p>
+      {/* Footer Info */}
+      <div className="p-3 border-t border-(--nav-border) text-[10px] text-muted space-y-1 bg-(--nav-bg-deep)">
+        <div className="flex items-center gap-1 text-slate-400">
+          <Sparkles className="size-3 text-amber-500" />
+          <span>Universal Platform Core v2.0</span>
         </div>
       </div>
     </aside>

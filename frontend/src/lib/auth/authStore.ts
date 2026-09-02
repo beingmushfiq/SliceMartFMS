@@ -157,14 +157,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         useTenantCapabilityStore.getState().bootstrap();
       }).catch(() => {});
     } catch (err: unknown) {
-      // If token is explicitly rejected (401), clear session
+      // If token is explicitly rejected (401/403) or no cached user exists, cleanly transition to unauthenticated
       const isUnauth =
         typeof err === 'object' &&
         err !== null &&
-        (('status' in err && (err as { status?: number }).status === 401) ||
+        (('status' in err && ((err as { status?: number }).status === 401 || (err as { status?: number }).status === 403)) ||
           ('code' in err && (err as { code?: string }).code === 'UNAUTHENTICATED'));
 
-      if (isUnauth) {
+      if (isUnauth || !get().user) {
         setAccessToken(null);
         localStorage.removeItem('access_token');
         localStorage.removeItem('auth_user');
@@ -180,7 +180,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           activeBranch: null,
           permissions: new Set(),
           status: 'unauthenticated',
+          error: err instanceof Error ? err.message : 'Session verification failed.',
         });
+      } else {
+        // Keep existing cached user session active so network blips don't log out user
+        set({ status: 'authenticated' });
       }
     }
   },
@@ -215,13 +219,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   switchBranch: async (branchId: number) => {
-    const res = await api.post<MeResponseData>('/auth/switch-branch', { branch_id: branchId });
-    const data = res.data;
-    localStorage.setItem('auth_active_branch', JSON.stringify(data.active_branch ?? null));
-    localStorage.setItem('auth_permissions', JSON.stringify(data.permissions ?? []));
-    set({
-      activeBranch: data.active_branch,
-      permissions: new Set(data.permissions ?? []),
-    });
+    try {
+      const response = await api.post<{ branch: BranchInfo }>('/auth/switch-branch', {
+        branch_id: branchId,
+      });
+      const updatedBranch = response.data.branch;
+      localStorage.setItem('auth_active_branch', JSON.stringify(updatedBranch));
+      set({ activeBranch: updatedBranch });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to switch branch';
+      set({ error: message });
+      throw err;
+    }
   },
 }));

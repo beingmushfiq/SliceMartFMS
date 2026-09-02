@@ -3,12 +3,14 @@ import { Outlet } from 'react-router-dom';
 import { AppHeader } from './AppHeader';
 import { Sidebar } from './Sidebar';
 import { ImpersonationBanner } from './ImpersonationBanner';
+import { OfflineBanner } from './OfflineBanner';
 
 export function AppShell() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
     <div className="flex min-h-dvh bg-base text-default font-sans antialiased flex-col">
+      <OfflineBanner />
       <ImpersonationBanner />
       <div className="flex flex-1 min-h-0">
         {/* Navigation Sidebar */}
