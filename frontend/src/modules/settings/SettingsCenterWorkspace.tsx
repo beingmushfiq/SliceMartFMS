@@ -1,13 +1,22 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// SETTINGS CENTER WORKSPACE — Enterprise Governance & Configuration
+// SETTINGS CENTER WORKSPACE — Enterprise Governance & Configuration Cockpit
 // ───────────────────────────────────────────────────────────────────────────
 // Fully token-compliant architecture (UI_SYSTEM.md §2, §10.2).
-// - Zero hardcoded primitive colors
-// - WAI-ARIA accessible overlays with focus trapping (Modal, ConfirmDialog)
-// - Native design system form controls (FormElements)
-// - Transient confirmations via notify (Sonner)
-// - Motion-enhanced panel crossfades with AnimatePresence
-// - Shimmer skeleton states
+// - Master Command Hub with Live Diagnostics & Quick Shortcuts
+// - Unified Governance Taxonomy (Roles, Security Audit, SEO, Profile)
+// - Global Instant Omni-Search with Keyword Breadcrumbs ('/' or Ctrl+K)
+// - Dedicated Purpose-Built Input Widgets via SettingFieldDispatcher:
+//   * Multi-Channel Interactive Chips (JSON arrays, notification channels, payment methods)
+//   * Dual Range Sliders with Numeric Steppers (% tolerances, yields, rates)
+//   * Formatted Currency Inputs with Instant Quick-Presets (+1k, +5k, +10k)
+//   * Duration & Lead-Time Stepper Controls (Days, Minutes, Months)
+//   * Visual Segmented Radio Cards (12h/24h, Portrait/Landscape, FIFO/AVCO, PDF/Excel)
+//   * Brand Asset Uploader with Live Preview Thumbnails
+//   * Document Prefix Inputs with Real-Time Mock Serials
+//   * Encrypted Credential Vault Cards with Visibility Toggle & Copy
+//   * Enterprise Operation Toggle Cards with Status Pills
+// - Keyboard Shortcuts: '/' or Ctrl+K for Search, Ctrl+S for Save
+// - Floating Unsaved Changes Pill with Precise Delta Counter
 // ═══════════════════════════════════════════════════════════════════════════
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -32,20 +41,19 @@ import {
   FileSpreadsheet,
   Save,
   RotateCcw,
-  Eye,
-  EyeOff,
   Sparkles,
   Info,
   RefreshCw,
   Copy,
   Plus,
   Trash2,
-  Lock,
   Activity,
   Check,
   AlertTriangle,
   CircleCheckBig,
   Boxes,
+  Search,
+  User,
 } from 'lucide-react';
 import { m, AnimatePresence } from 'framer-motion';
 import { api } from '../../lib/api/client';
@@ -54,13 +62,27 @@ import { enterFast } from '../../lib/motion/tokens';
 import { Button } from '../../components/ui/Button';
 import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import { Badge, StatusBadge } from '../../components/ui/Badge';
-import { Input, Select, SearchInput, FormGroup } from '../../components/ui/FormElements';
+import { Input, FormGroup } from '../../components/ui/FormElements';
+import { SelectDropdown } from '../../components/ui/Dropdown';
 import { notify } from '../../components/ui/Toast';
 import { DocumentsSection } from './documents/DocumentsSection';
 import { ModuleManagerSection } from './sections/ModuleManagerSection';
 import { ProductionStagesSection } from './sections/ProductionStagesSection';
 import { CustomFieldsManagerSection } from './sections/CustomFieldsManagerSection';
 import { TerminologySection } from './sections/TerminologySection';
+import { RolesManagementWorkspace } from '../../pages/settings/RolesManagementWorkspace';
+import { ActivityLogWorkspace } from '../../pages/settings/ActivityLogWorkspace';
+import { ProfileSettingsWorkspace } from '../../pages/settings/ProfileSettingsWorkspace';
+import { SeoDiscoverabilityWorkspace } from '../../pages/settings/SeoDiscoverabilityWorkspace';
+import { SettingsOverviewHub } from './components/SettingsOverviewHub';
+import { SettingsOmniSearch } from './components/SettingsOmniSearch';
+import { SettingFieldDispatcher } from './components/SettingFieldDispatcher';
+import {
+  BrandingPreview,
+  CurrencyFormatPreview,
+  DocumentPrefixPreview,
+} from './components/SettingsLivePreviews';
+import { SETTINGS_SUBGROUPS, type SubgroupDefinition } from './config/settingsSubgroups';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import type {
   SettingsSchemaDictionary,
@@ -70,7 +92,12 @@ import type {
 import type { TenantDomainRecord } from '../../types/api/domains';
 
 const GROUP_ICONS: Record<string, React.ElementType> = {
+  overview: Sparkles,
   general: Building2,
+  roles: ShieldCheck,
+  audit_logs: Activity,
+  profile: User,
+  seo: Globe,
   modules: Boxes,
   terminology: FileSpreadsheet,
   production_stages: Factory,
@@ -94,14 +121,48 @@ const GROUP_ICONS: Record<string, React.ElementType> = {
   reports: FileSpreadsheet,
 };
 
+const GROUP_LABELS: Record<string, string> = {
+  overview: 'Command Overview',
+  general: 'General Profile & Prefixes',
+  roles: 'Roles & Staff Permissions',
+  audit_logs: 'Security Audit Trail',
+  profile: 'Workstation & Profile',
+  seo: 'SEO & Discoverability',
+  custom_domains: 'Custom Domains & SSL',
+  modules: 'Active ERP Modules',
+  terminology: 'Vocabulary & Terminology',
+  production_stages: 'Production Stages',
+  custom_fields: 'Custom Attributes & Fields',
+  documents: 'Document Templates',
+  production: 'Production & Manufacturing',
+  inventory: 'Stock & Warehousing',
+  purchase: 'Procurement & Purchases',
+  sales: 'Sales & Commercial',
+  pos: 'Point of Sale (POS)',
+  ecommerce: 'E-Commerce Storefront',
+  delivery: 'Delivery & Couriers',
+  integrations: 'API & Payment Gateways',
+  qc: 'Quality Control (QC)',
+  hr_payroll: 'HR & Payroll Governance',
+  assets: 'Assets & Maintenance',
+  finance: 'Tax & Fiscal Periods',
+  notifications: 'Multi-Channel Alerts',
+  security: 'Session & Auth Hardening',
+  reports: 'Reports & Export Defaults',
+};
+
 const CATEGORIES = [
   {
-    name: 'Universal Architecture & Config',
-    groups: ['modules', 'terminology', 'production_stages', 'custom_fields'],
+    name: 'Command Center',
+    groups: ['overview'],
   },
   {
-    name: 'Enterprise Core',
-    groups: ['general', 'documents', 'security', 'notifications', 'reports'],
+    name: 'Company & Governance',
+    groups: ['general', 'roles', 'audit_logs', 'profile'],
+  },
+  {
+    name: 'Architecture & Customization',
+    groups: ['modules', 'terminology', 'production_stages', 'custom_fields', 'documents'],
   },
   {
     name: 'Manufacturing & Stock',
@@ -112,109 +173,16 @@ const CATEGORIES = [
     groups: ['purchase', 'sales', 'pos'],
   },
   {
-    name: 'E-Commerce & Domains',
-    groups: ['ecommerce', 'custom_domains'],
+    name: 'E-Commerce & Storefront',
+    groups: ['ecommerce', 'custom_domains', 'seo'],
   },
   {
-    name: 'Logistics & Connected APIs',
-    groups: ['delivery', 'integrations', 'finance', 'hr_payroll'],
+    name: 'Logistics & External Services',
+    groups: ['delivery', 'integrations', 'finance', 'hr_payroll', 'notifications', 'security', 'reports'],
   },
 ];
 
 type SettingFieldValue = string | number | boolean | string[] | Record<string, unknown>;
-
-// Predefined option definitions for dropdown fields
-const FIELD_OPTIONS: Record<string, Array<{ label: string; value: string }>> = {
-  valuation_method: [
-    { label: 'FIFO (First-In, First-Out)', value: 'fifo' },
-    { label: 'AVCO (Weighted Moving Average Cost)', value: 'avco' },
-    { label: 'Standard Costing', value: 'standard' },
-  ],
-  scheduling_mode: [
-    { label: 'Strict Sequential Execution', value: 'strict_sequential' },
-    { label: 'Parallel Batch Scheduling', value: 'parallel_batch' },
-    { label: 'Dynamic Capacity-Driven', value: 'capacity_driven' },
-  ],
-  material_allocation_policy: [
-    { label: 'FIFO (Earliest Received Stock First)', value: 'fifo' },
-    { label: 'FEFO (First Expired, First Out)', value: 'fefo' },
-    { label: 'LIFO (Latest In, First Out)', value: 'lifo' },
-  ],
-  default_payment_terms: [
-    { label: 'Immediate / Due on Receipt', value: 'due_on_receipt' },
-    { label: 'Net 15 Days', value: 'net_15' },
-    { label: 'Net 30 Days', value: 'net_30' },
-    { label: 'Net 60 Days', value: 'net_60' },
-  ],
-  credit_limit_action: [
-    { label: 'Strictly Block New Sales Orders', value: 'block_order' },
-    { label: 'Warn Sales Agent but Allow Submission', value: 'warn' },
-    { label: 'Require Financial Director PIN Override', value: 'supervisor_pin' },
-  ],
-  receipt_printer_template: [
-    { label: 'Standard Thermal POS (80mm Width)', value: 'thermal_80mm' },
-    { label: 'Compact Thermal POS (58mm Width)', value: 'thermal_58mm' },
-    { label: 'Formal Full-Page Invoice (A4 Standard)', value: 'standard_a4' },
-  ],
-  default_courier_provider: [
-    { label: 'Steadfast Courier Logistics', value: 'steadfast' },
-    { label: 'Pathao Courier & Parcel API', value: 'pathao' },
-    { label: 'REDX Express Logistics', value: 'redx' },
-    { label: 'Paperfly Smart Logistics', value: 'paperfly' },
-  ],
-  sms_provider: [
-    { label: 'Greenweb SMS Gateway (Bangladesh)', value: 'greenweb' },
-    { label: 'Twilio Global Communications', value: 'twilio' },
-    { label: 'BulkSMS BD Enterprise', value: 'bulksmsbd' },
-    { label: 'Infobip Global Messaging', value: 'infobip' },
-  ],
-  sampling_aql_standard: [
-    { label: 'ISO 2859-1 / AQL Level II (Normal)', value: 'aql_level_ii' },
-    { label: 'ISO 2859-1 / AQL Level I (Reduced Sampling)', value: 'aql_level_i' },
-    { label: 'ISO 2859-1 / AQL Level III (Tightened Sampling)', value: 'aql_level_iii' },
-  ],
-  default_depreciation_method: [
-    { label: 'Straight-Line Depreciation Method', value: 'straight_line' },
-    { label: 'Declining-Balance Method', value: 'declining_balance' },
-  ],
-  default_export_format: [
-    { label: 'Adobe PDF Document (*.pdf)', value: 'pdf' },
-    { label: 'Microsoft Excel Spreadsheet (*.xlsx)', value: 'excel' },
-    { label: 'Comma-Separated Values (*.csv)', value: 'csv' },
-  ],
-  default_paper_size: [
-    { label: 'ISO A4 (210mm × 297mm)', value: 'a4' },
-    { label: 'US Letter (8.5in × 11in)', value: 'letter' },
-    { label: 'US Legal (8.5in × 14in)', value: 'legal' },
-  ],
-  default_report_orientation: [
-    { label: 'Portrait (Vertical Layout)', value: 'portrait' },
-    { label: 'Landscape (Horizontal Table View)', value: 'landscape' },
-  ],
-  asset_disposal_auth_role: [
-    { label: 'Master SaaS Super Administrator', value: 'super_admin' },
-    { label: 'Plant General Manager / Admin', value: 'admin' },
-    { label: 'Chief Financial Officer / Director', value: 'finance_director' },
-  ],
-  date_format: [
-    { label: 'YYYY-MM-DD (2026-08-29)', value: 'YYYY-MM-DD' },
-    { label: 'DD/MM/YYYY (29/08/2026)', value: 'DD/MM/YYYY' },
-    { label: 'MM/DD/YYYY (08/29/2026)', value: 'MM/DD/YYYY' },
-    { label: 'DD-MMM-YYYY (29-Aug-2026)', value: 'DD-MMM-YYYY' },
-  ],
-  time_format: [
-    { label: '24-Hour Military Format (14:30)', value: '24h' },
-    { label: '12-Hour AM/PM Format (02:30 PM)', value: '12h' },
-  ],
-  system_timezone: [
-    { label: 'Asia/Dhaka (UTC+06:00)', value: 'Asia/Dhaka' },
-    { label: 'Asia/Kolkata (UTC+05:30)', value: 'Asia/Kolkata' },
-    { label: 'Asia/Dubai (UTC+04:00)', value: 'Asia/Dubai' },
-    { label: 'UTC (Coordinated Universal Time)', value: 'UTC' },
-    { label: 'America/New_York (UTC-05:00)', value: 'America/New_York' },
-    { label: 'Europe/London (UTC+00:00)', value: 'Europe/London' },
-  ],
-};
 
 function extractErrorMessage(err: unknown, fallback: string): string {
   if (err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string') {
@@ -226,9 +194,13 @@ function extractErrorMessage(err: unknown, fallback: string): string {
 export const SettingsCenterWorkspace: React.FC = () => {
   const [schema, setSchema] = useState<SettingsSchemaDictionary>({});
   const [activeGroup, setActiveGroup] = useWorkspaceTab<string>(
-    'general',
+    'overview',
     [
+      'overview',
       'general',
+      'roles',
+      'audit_logs',
+      'profile',
       'modules',
       'terminology',
       'production_stages',
@@ -241,6 +213,7 @@ export const SettingsCenterWorkspace: React.FC = () => {
       'pos',
       'ecommerce',
       'custom_domains',
+      'seo',
       'delivery',
       'integrations',
       'qc',
@@ -253,13 +226,13 @@ export const SettingsCenterWorkspace: React.FC = () => {
     ] as const,
     'tab'
   );
+
   const [formValues, setFormValues] = useState<Record<string, SettingFieldValue>>({});
   const [initialValues, setInitialValues] = useState<Record<string, SettingFieldValue>>({});
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [revealedSecrets, setRevealedSecrets] = useState<Record<string, boolean>>({});
+  const [omniSearchOpen, setOmniSearchOpen] = useState(false);
 
   // Inline error message for region
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -324,7 +297,20 @@ export const SettingsCenterWorkspace: React.FC = () => {
   }, []);
 
   const loadGroupSettings = useCallback(async (group: string) => {
-    if (['modules', 'terminology', 'production_stages', 'custom_fields', 'documents'].includes(group)) {
+    if (
+      [
+        'overview',
+        'modules',
+        'terminology',
+        'production_stages',
+        'custom_fields',
+        'documents',
+        'roles',
+        'audit_logs',
+        'profile',
+        'seo',
+      ].includes(group)
+    ) {
       setLoading(false);
       return;
     }
@@ -371,26 +357,42 @@ export const SettingsCenterWorkspace: React.FC = () => {
   }, [activeGroup, loadGroupSettings]);
 
   // Compute Unsaved Changes
-  const hasChanges = useMemo(() => {
-    if (activeGroup === 'custom_domains') return false;
-    return Object.keys(formValues).some((key) => {
+  const changedKeys = useMemo(() => {
+    if (
+      [
+        'overview',
+        'custom_domains',
+        'modules',
+        'terminology',
+        'production_stages',
+        'custom_fields',
+        'documents',
+        'roles',
+        'audit_logs',
+        'profile',
+        'seo',
+      ].includes(activeGroup)
+    ) {
+      return [];
+    }
+    return Object.keys(formValues).filter((key) => {
       return JSON.stringify(formValues[key]) !== JSON.stringify(initialValues[key]);
     });
   }, [formValues, initialValues, activeGroup]);
 
+  const hasChanges = changedKeys.length > 0;
+
   // Save Settings Handler
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     try {
       setSaving(true);
       setErrorMessage(null);
 
       const payload: Record<string, SettingFieldValue> = {};
-      Object.keys(formValues).forEach((key) => {
-        if (JSON.stringify(formValues[key]) !== JSON.stringify(initialValues[key])) {
-          const val = formValues[key];
-          if (val !== undefined) {
-            payload[key] = val;
-          }
+      changedKeys.forEach((key) => {
+        const val = formValues[key];
+        if (val !== undefined) {
+          payload[key] = val;
         }
       });
 
@@ -415,7 +417,7 @@ export const SettingsCenterWorkspace: React.FC = () => {
     } finally {
       setSaving(false);
     }
-  };
+  }, [activeGroup, changedKeys, formValues]);
 
   // Reset Group to Defaults
   const handleResetToDefault = async () => {
@@ -444,6 +446,33 @@ export const SettingsCenterWorkspace: React.FC = () => {
       setSaving(false);
     }
   };
+
+  // Keyboard Shortcuts: '/' or Ctrl+K for Omni-Search, Ctrl+S for Save
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isInput =
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable;
+
+      if ((e.key === '/' && !isInput) || ((e.ctrlKey || e.metaKey) && e.key === 'k')) {
+        e.preventDefault();
+        setOmniSearchOpen(true);
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        if (hasChanges && !saving) {
+          handleSave();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [hasChanges, saving, handleSave]);
 
   // Live Test Connection Handler
   const handleRunTestConnection = async () => {
@@ -484,7 +513,7 @@ export const SettingsCenterWorkspace: React.FC = () => {
       setErrorMessage(null);
 
       const res = await api.post<TenantDomainRecord>('/storefront/domains', {
-        domain: newDomainInput.trim(),
+        domain: newDomainInput.trim().toLowerCase(),
         type: newDomainType,
       });
 
@@ -556,26 +585,30 @@ export const SettingsCenterWorkspace: React.FC = () => {
     }
   };
 
-  // Filtered settings by search query
-  const filteredKeys = useMemo(() => {
-    if (activeGroup === 'custom_domains') return [];
-    const groupSettings = schema[activeGroup]?.settings || {};
-    if (!searchQuery.trim()) {
-      return Object.keys(groupSettings);
+  const handleSelectSearchResult = (groupKey: string, settingKey?: string, route?: string) => {
+    if (route) {
+      setActiveGroup(groupKey);
+      return;
     }
+    setActiveGroup(groupKey);
 
-    const q = searchQuery.toLowerCase();
-    return Object.keys(groupSettings).filter((key) => {
-      const meta = groupSettings[key];
-      return (
-        key.toLowerCase().includes(q) ||
-        (meta && meta.label.toLowerCase().includes(q))
-      );
-    });
-  }, [schema, activeGroup, searchQuery]);
+    if (settingKey) {
+      setTimeout(() => {
+        const el = document.getElementById(`setting-field-${settingKey}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+          setTimeout(() => {
+            el.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+          }, 2500);
+        }
+      }, 250);
+    }
+  };
 
   const activeGroupMeta = schema[activeGroup];
   const ActiveIcon = GROUP_ICONS[activeGroup] || Settings;
+  const currentSubgroups = SETTINGS_SUBGROUPS[activeGroup] || [];
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
@@ -588,7 +621,7 @@ export const SettingsCenterWorkspace: React.FC = () => {
           </div>
           <button
             onClick={() => setErrorMessage(null)}
-            className="text-danger hover:opacity-80 font-bold text-lg leading-none p-1 focus-visible:ring-focus rounded-md"
+            className="text-danger hover:opacity-80 font-bold text-lg leading-none p-1 focus-visible:ring-focus rounded-md cursor-pointer"
             aria-label="Dismiss error"
           >
             ×
@@ -596,76 +629,111 @@ export const SettingsCenterWorkspace: React.FC = () => {
         </div>
       )}
 
-      {/* Header Surface */}
-      <div className="bg-surface border border-default rounded-(--card-radius) p-6 shadow-(--card-shadow)">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
+      {/* Top Header Command Surface */}
+      <div className="bg-surface border border-default rounded-(--card-radius) p-5 sm:p-6 shadow-(--card-shadow)">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 flex-wrap">
               <Badge tone="primary-subtle" icon={Sparkles}>
-                Enterprise Governance
+                Enterprise Governance Center
               </Badge>
+              {activeGroup !== 'overview' && (
+                <div className="flex items-center gap-1.5 text-2xs text-muted">
+                  <span>/</span>
+                  <button
+                    onClick={() => setActiveGroup('overview')}
+                    className="hover:text-primary transition-colors cursor-pointer"
+                  >
+                    Overview
+                  </button>
+                  <span>/</span>
+                  <span className="text-default font-semibold">
+                    {GROUP_LABELS[activeGroup] || activeGroupMeta?.title || activeGroup}
+                  </span>
+                </div>
+              )}
             </div>
             <h1 className="text-xl font-bold tracking-tight text-default flex items-center gap-2.5">
               <Settings className="size-6 text-primary" aria-hidden="true" />
-              Platform Configuration Center
+              Settings & Configuration
             </h1>
             <p className="text-muted text-xs sm:text-sm max-w-2xl leading-relaxed">
-              Configure industrial thresholds, policy rules, API gateways, custom storefront domains, and multi-channel notifications. All mutations are secured with audit logging.
+              Unified governance hub for organizational identities, staff RBAC permissions, manufacturing routing, API credentials, and storefront domains.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="w-full sm:w-72">
-              <SearchInput
-                placeholder="Search parameters..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onClear={() => setSearchQuery('')}
-              />
-            </div>
+          <div className="flex items-center gap-2.5">
+            {/* Omni-Search Launch Button */}
+            <button
+              onClick={() => setOmniSearchOpen(true)}
+              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-default bg-surface-sunken hover:border-primary/50 text-xs text-muted hover:text-default transition-all shadow-xs w-full sm:w-72 justify-between cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Search className="size-4 text-primary" />
+                <span>Search all 120+ settings...</span>
+              </div>
+              <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-2xs font-mono text-muted bg-surface border border-default rounded">
+                /
+              </kbd>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Main Content Layout */}
+      {/* Main Layout: High-Polish Sidebar Navigation + Right Content Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-        {/* Left Navigation: 16 Categorized Domains + Custom Domains */}
-        <div className="lg:col-span-1 space-y-6">
+        {/* Left Navigation Rail */}
+        <div className="lg:col-span-1 space-y-5 bg-surface border border-default rounded-(--card-radius) p-3.5 shadow-xs sticky top-20">
           {CATEGORIES.map((cat) => (
-            <div key={cat.name} className="space-y-1.5">
-              <div className="px-3 text-2xs font-bold uppercase tracking-wider text-muted">
-                {cat.name}
+            <div key={cat.name} className="space-y-1">
+              <div className="px-2.5 py-1 text-3xs font-bold uppercase tracking-wider text-muted flex items-center justify-between">
+                <span>{cat.name}</span>
+                <span className="font-mono text-muted/60">{cat.groups.length}</span>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {cat.groups.map((groupKey) => {
                   const meta = schema[groupKey];
                   const Icon = GROUP_ICONS[groupKey] || Settings;
                   const isActive = activeGroup === groupKey;
-                  const label = groupKey === 'custom_domains' ? 'Custom Domains' : meta?.title || groupKey;
+                  const label = GROUP_LABELS[groupKey] || meta?.title || groupKey;
 
                   return (
                     <button
                       key={groupKey}
                       onClick={() => {
                         if (hasChanges) {
-                          notify.info('You have unsaved changes in this domain. Please save or discard before switching.');
+                          notify.info(
+                            'You have unsaved changes in this domain. Please save or discard before switching.'
+                          );
                           return;
                         }
                         setActiveGroup(groupKey);
                       }}
                       className={cn(
-                        'w-full flex items-center justify-between px-3.5 py-2.5 rounded-(--button-radius) text-xs font-semibold transition-token-colors focus-visible:ring-focus outline-none text-left',
+                        'w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold transition-all outline-none text-left cursor-pointer group',
                         isActive
                           ? 'bg-primary text-primary-fg shadow-xs font-bold'
-                          : 'bg-surface text-default border border-default hover:bg-surface-sunken'
+                          : 'text-default hover:bg-surface-sunken hover:translate-x-0.5'
                       )}
                     >
                       <div className="flex items-center gap-2.5 truncate">
-                        <Icon className={cn('size-4 shrink-0', isActive ? 'text-primary-fg' : 'text-primary')} aria-hidden="true" />
-                        <span className="truncate">{label}</span>
+                        <div
+                          className={cn(
+                            'size-6 rounded-lg flex items-center justify-center shrink-0 transition-colors',
+                            isActive
+                              ? 'bg-primary-fg/20 text-primary-fg'
+                              : 'bg-surface-sunken border border-default text-muted group-hover:text-primary group-hover:border-primary/40'
+                          )}
+                        >
+                          <Icon className="size-3.5" aria-hidden="true" />
+                        </div>
+                        <span className="truncate text-xs">{label}</span>
                       </div>
                       {hasChanges && isActive && (
-                        <span className="size-2 rounded-full bg-accent animate-pulse shrink-0" aria-label="Unsaved changes" />
+                        <span
+                          className="size-2 rounded-full bg-accent animate-pulse shrink-0 ml-2"
+                          aria-label="Unsaved changes"
+                        />
                       )}
                     </button>
                   );
@@ -684,26 +752,120 @@ export const SettingsCenterWorkspace: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={enterFast}
-              className="bg-surface rounded-(--card-radius) border border-default shadow-(--card-shadow) p-6 space-y-6"
+              className="space-y-6"
             >
-              {activeGroup === 'modules' ? (
-                /* Dynamic Module Ecosystem Activation */
-                <ModuleManagerSection />
+              {/* Overview Hub Dashboard */}
+              {activeGroup === 'overview' ? (
+                <SettingsOverviewHub
+                  schema={schema}
+                  formValues={formValues}
+                  onSelectGroup={(g) => setActiveGroup(g)}
+                  onOpenOmniSearch={() => setOmniSearchOpen(true)}
+                />
+              ) : activeGroup === 'roles' ? (
+                /* Roles & Permissions Workspace Embedded */
+                <div className="bg-surface rounded-(--card-radius) border border-default p-6 space-y-6 shadow-xs">
+                  <div className="flex items-center justify-between pb-4 border-b border-default">
+                    <div className="flex items-center gap-2.5">
+                      <ShieldCheck className="size-5 text-primary" />
+                      <div>
+                        <h2 className="text-sm font-bold text-default">Staff Roles & Permissions</h2>
+                        <p className="text-2xs text-muted">
+                          Configure granular RBAC permissions matrix and staff access tiers.
+                        </p>
+                      </div>
+                    </div>
+                    <Button variant="secondary" size="sm" onClick={() => setActiveGroup('overview')}>
+                      Back to Hub
+                    </Button>
+                  </div>
+                  <RolesManagementWorkspace />
+                </div>
+              ) : activeGroup === 'audit_logs' ? (
+                /* Security Audit Log Workspace Embedded */
+                <div className="bg-surface rounded-(--card-radius) border border-default p-6 space-y-6 shadow-xs">
+                  <div className="flex items-center justify-between pb-4 border-b border-default">
+                    <div className="flex items-center gap-2.5">
+                      <Activity className="size-5 text-primary" />
+                      <div>
+                        <h2 className="text-sm font-bold text-default">Security Audit Trail & Compliance</h2>
+                        <p className="text-2xs text-muted">
+                          Immutable audit ledger tracking delta changes and compliance records.
+                        </p>
+                      </div>
+                    </div>
+                    <Button variant="secondary" size="sm" onClick={() => setActiveGroup('overview')}>
+                      Back to Hub
+                    </Button>
+                  </div>
+                  <ActivityLogWorkspace />
+                </div>
+              ) : activeGroup === 'profile' ? (
+                /* Profile & Workstation Settings Embedded */
+                <div className="bg-surface rounded-(--card-radius) border border-default p-6 space-y-6 shadow-xs">
+                  <div className="flex items-center justify-between pb-4 border-b border-default">
+                    <div className="flex items-center gap-2.5">
+                      <User className="size-5 text-primary" />
+                      <div>
+                        <h2 className="text-sm font-bold text-default">User Workstation & Regional Defaults</h2>
+                        <p className="text-2xs text-muted">
+                          Personal localization preferences and password security credentials.
+                        </p>
+                      </div>
+                    </div>
+                    <Button variant="secondary" size="sm" onClick={() => setActiveGroup('overview')}>
+                      Back to Hub
+                    </Button>
+                  </div>
+                  <ProfileSettingsWorkspace />
+                </div>
+              ) : activeGroup === 'seo' ? (
+                /* SEO & Search Engine Discoverability Embedded */
+                <div className="bg-surface rounded-(--card-radius) border border-default p-6 space-y-6 shadow-xs">
+                  <div className="flex items-center justify-between pb-4 border-b border-default">
+                    <div className="flex items-center gap-2.5">
+                      <Globe className="size-5 text-primary" />
+                      <div>
+                        <h2 className="text-sm font-bold text-default">Storefront SEO & Google Discoverability</h2>
+                        <p className="text-2xs text-muted">
+                          Rich Schema markup, Google IndexNow, and XML sitemaps.
+                        </p>
+                      </div>
+                    </div>
+                    <Button variant="secondary" size="sm" onClick={() => setActiveGroup('overview')}>
+                      Back to Hub
+                    </Button>
+                  </div>
+                  <SeoDiscoverabilityWorkspace />
+                </div>
+              ) : activeGroup === 'modules' ? (
+                /* Dynamic Module Activation */
+                <div className="bg-surface rounded-(--card-radius) border border-default p-6 shadow-xs">
+                  <ModuleManagerSection />
+                </div>
               ) : activeGroup === 'terminology' ? (
                 /* Dynamic Vocabulary & Terminology */
-                <TerminologySection />
+                <div className="bg-surface rounded-(--card-radius) border border-default p-6 shadow-xs">
+                  <TerminologySection />
+                </div>
               ) : activeGroup === 'production_stages' ? (
                 /* Dynamic Production Stages & Routing */
-                <ProductionStagesSection />
+                <div className="bg-surface rounded-(--card-radius) border border-default p-6 shadow-xs">
+                  <ProductionStagesSection />
+                </div>
               ) : activeGroup === 'custom_fields' ? (
                 /* Custom Attributes & Extended Metadata */
-                <CustomFieldsManagerSection />
+                <div className="bg-surface rounded-(--card-radius) border border-default p-6 shadow-xs">
+                  <CustomFieldsManagerSection />
+                </div>
               ) : activeGroup === 'documents' ? (
                 /* Centralized Document Templates & Printing Infrastructure */
-                <DocumentsSection />
+                <div className="bg-surface rounded-(--card-radius) border border-default p-6 shadow-xs">
+                  <DocumentsSection />
+                </div>
               ) : activeGroup === 'custom_domains' ? (
                 /* Custom Domain Management Hub */
-                <div className="space-y-6">
+                <div className="bg-surface rounded-(--card-radius) border border-default p-6 space-y-6 shadow-xs">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-default">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
@@ -739,8 +901,8 @@ export const SettingsCenterWorkspace: React.FC = () => {
                   {/* Domains Table / List */}
                   {domainsLoading ? (
                     <div className="space-y-3 py-4">
-                      <div className="skeleton-shimmer h-20 w-full" />
-                      <div className="skeleton-shimmer h-20 w-full" />
+                      <div className="skeleton-shimmer h-20 w-full rounded-xl" />
+                      <div className="skeleton-shimmer h-20 w-full rounded-xl" />
                     </div>
                   ) : domains.length === 0 ? (
                     <div className="py-12 text-center space-y-3">
@@ -787,7 +949,13 @@ export const SettingsCenterWorkspace: React.FC = () => {
                                   <div className="flex items-center gap-1.5">
                                     <span>Verification:</span>
                                     <StatusBadge
-                                      status={dom.verification_status === 'verified' ? 'approved' : dom.verification_status === 'failed' ? 'failed' : 'pending'}
+                                      status={
+                                        dom.verification_status === 'verified'
+                                          ? 'approved'
+                                          : dom.verification_status === 'failed'
+                                          ? 'failed'
+                                          : 'pending'
+                                      }
                                       label={dom.verification_status.toUpperCase()}
                                     />
                                   </div>
@@ -795,7 +963,9 @@ export const SettingsCenterWorkspace: React.FC = () => {
                                   <div className="flex items-center gap-1.5">
                                     <span>SSL Status:</span>
                                     {dom.ssl_status === 'active' ? (
-                                      <Badge tone="success-subtle" icon={CircleCheckBig}>SSL Active</Badge>
+                                      <Badge tone="success-subtle" icon={CircleCheckBig}>
+                                        SSL Active
+                                      </Badge>
                                     ) : (
                                       <Badge tone="surface-sunken">SSL Inactive</Badge>
                                     )}
@@ -832,7 +1002,9 @@ export const SettingsCenterWorkspace: React.FC = () => {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => setConfirmDeleteDomain({ id: dom.id, domain: dom.domain })}
+                                    onClick={() =>
+                                      setConfirmDeleteDomain({ id: dom.id, domain: dom.domain })
+                                    }
                                     disabled={domainActionLoading === dom.id}
                                     aria-label={`Remove domain ${dom.domain}`}
                                   >
@@ -857,7 +1029,9 @@ export const SettingsCenterWorkspace: React.FC = () => {
                                   {dom.dns_records_expected.txt_record && (
                                     <div className="p-2.5 bg-surface border border-default rounded-md flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                                       <div className="space-y-0.5 min-w-0">
-                                        <div className="text-2xs font-bold text-primary uppercase">TXT Record (Ownership Challenge)</div>
+                                        <div className="text-2xs font-bold text-primary uppercase">
+                                          TXT Record (Ownership Challenge)
+                                        </div>
                                         <div className="text-default break-all">
                                           <span className="text-muted">Host:</span> {dom.dns_records_expected.txt_record.host}
                                         </div>
@@ -868,10 +1042,19 @@ export const SettingsCenterWorkspace: React.FC = () => {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => copyToClipboard(dom.dns_records_expected?.txt_record?.value || '', `txt-${dom.id}`)}
+                                        onClick={() =>
+                                          copyToClipboard(
+                                            dom.dns_records_expected?.txt_record?.value || '',
+                                            `txt-${dom.id}`
+                                          )
+                                        }
                                         aria-label="Copy TXT Value"
                                       >
-                                        {copiedKey === `txt-${dom.id}` ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
+                                        {copiedKey === `txt-${dom.id}` ? (
+                                          <Check className="size-3.5 text-success" />
+                                        ) : (
+                                          <Copy className="size-3.5" />
+                                        )}
                                       </Button>
                                     </div>
                                   )}
@@ -879,7 +1062,9 @@ export const SettingsCenterWorkspace: React.FC = () => {
                                   {dom.dns_records_expected.cname_record && (
                                     <div className="p-2.5 bg-surface border border-default rounded-md flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                                       <div className="space-y-0.5 min-w-0">
-                                        <div className="text-2xs font-bold text-primary uppercase">CNAME Record (Storefront Routing)</div>
+                                        <div className="text-2xs font-bold text-primary uppercase">
+                                          CNAME Record (Storefront Routing)
+                                        </div>
                                         <div className="text-default break-all">
                                           <span className="text-muted">Host:</span> {dom.dns_records_expected.cname_record.host}
                                         </div>
@@ -890,10 +1075,19 @@ export const SettingsCenterWorkspace: React.FC = () => {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => copyToClipboard(dom.dns_records_expected?.cname_record?.value || '', `cname-${dom.id}`)}
+                                        onClick={() =>
+                                          copyToClipboard(
+                                            dom.dns_records_expected?.cname_record?.value || '',
+                                            `cname-${dom.id}`
+                                          )
+                                        }
                                         aria-label="Copy CNAME Target"
                                       >
-                                        {copiedKey === `cname-${dom.id}` ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
+                                        {copiedKey === `cname-${dom.id}` ? (
+                                          <Check className="size-3.5 text-success" />
+                                        ) : (
+                                          <Copy className="size-3.5" />
+                                        )}
                                       </Button>
                                     </div>
                                   )}
@@ -907,15 +1101,17 @@ export const SettingsCenterWorkspace: React.FC = () => {
                   )}
                 </div>
               ) : (
-                /* Standard 16-Domain Form View */
+                /* Standard Domain Form View with Logical Sub-Group Cards & Dedicated Input Widgets */
                 <div className="space-y-6">
-                  {/* Domain Header */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-default">
+                  {/* Domain Header Card */}
+                  <div className="bg-surface rounded-2xl border border-default p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <ActiveIcon className="size-5 text-primary" aria-hidden="true" />
+                        <div className="size-8 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
+                          <ActiveIcon className="size-4" aria-hidden="true" />
+                        </div>
                         <h2 className="text-md font-bold text-default">
-                          {activeGroupMeta?.title || activeGroup}
+                          {GROUP_LABELS[activeGroup] || activeGroupMeta?.title || activeGroup}
                         </h2>
                       </div>
                       <p className="text-xs text-muted max-w-xl">
@@ -924,7 +1120,7 @@ export const SettingsCenterWorkspace: React.FC = () => {
                     </div>
 
                     {/* Header Action Buttons */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {(activeGroup === 'delivery' || activeGroup === 'integrations') && (
                         <Button
                           variant="secondary"
@@ -947,137 +1143,156 @@ export const SettingsCenterWorkspace: React.FC = () => {
                         disabled={saving}
                       >
                         <RotateCcw className="size-3.5 mr-1.5" aria-hidden="true" />
-                        Reset to Default
+                        Reset Defaults
                       </Button>
+
+                      {hasChanges && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={handleSave}
+                          loading={saving}
+                        >
+                          <Save className="size-3.5 mr-1.5" aria-hidden="true" />
+                          Save Domain (Ctrl+S)
+                        </Button>
+                      )}
                     </div>
                   </div>
 
                   {/* Loading Skeleton */}
                   {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      {Array.from({ length: 6 }).map((_, i) => (
-                        <div key={i} className="skeleton-shimmer h-24 rounded-(--card-radius)" />
+                    <div className="space-y-4">
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="skeleton-shimmer h-36 rounded-2xl" />
                       ))}
                     </div>
-                  ) : filteredKeys.length === 0 ? (
-                    <div className="py-12 text-center text-xs text-muted">
-                      No configuration parameters match "{searchQuery}".
+                  ) : currentSubgroups.length > 0 ? (
+                    /* Structured Subgroups Layout with Dedicated Input Widgets */
+                    <div className="space-y-6">
+                      {currentSubgroups.map((subgroup: SubgroupDefinition) => {
+                        const SubIcon = subgroup.icon || Settings;
+
+                        return (
+                          <div
+                            key={subgroup.id}
+                            className="bg-surface rounded-2xl border border-default p-5 sm:p-6 shadow-xs space-y-4 hover:border-primary/20 transition-all"
+                          >
+                            {/* Subgroup Header */}
+                            <div className="flex items-center justify-between pb-3 border-b border-default">
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-2">
+                                  <div className="size-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                                    <SubIcon className="size-3.5" />
+                                  </div>
+                                  <h3 className="text-sm font-bold text-default">{subgroup.title}</h3>
+                                </div>
+                                {subgroup.description && (
+                                  <p className="text-2xs text-muted">{subgroup.description}</p>
+                                )}
+                              </div>
+
+                              {subgroup.testTrigger && (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => {
+                                    setTestProvider(subgroup.testTrigger === 'payment' ? 'bkash' : subgroup.testTrigger || 'steadfast');
+                                    setTestResult(null);
+                                    setTestModalOpen(true);
+                                  }}
+                                >
+                                  <Activity className="size-3 mr-1 text-primary" />
+                                  Test API
+                                </Button>
+                              )}
+                            </div>
+
+                            {/* Live Simulator Previews */}
+                            {subgroup.previewType === 'branding' && (
+                              <BrandingPreview
+                                logoUrl={formValues['brand_logo_url'] as string}
+                                faviconUrl={formValues['brand_favicon_url'] as string}
+                                companyName={formValues['company_legal_name'] as string}
+                              />
+                            )}
+
+                            {subgroup.previewType === 'currency' && (
+                              <CurrencyFormatPreview
+                                currencyCode={formValues['currency_code'] as string}
+                                currencySymbol={formValues['currency_symbol'] as string}
+                                decimalPlaces={formValues['decimal_places'] as number}
+                                thousandSeparator={formValues['thousand_separator'] as string}
+                                dateFormat={formValues['date_format'] as string}
+                                timeFormat={formValues['time_format'] as string}
+                                timezone={formValues['system_timezone'] as string}
+                              />
+                            )}
+
+                            {subgroup.previewType === 'prefixes' && (
+                              <DocumentPrefixPreview
+                                invoicePrefix={formValues['invoice_prefix'] as string}
+                                poPrefix={formValues['purchase_order_prefix'] as string}
+                                batchPrefix={formValues['batch_prefix'] as string}
+                                challanPrefix={formValues['challan_prefix'] as string}
+                                quotationPrefix={formValues['quotation_prefix'] as string}
+                                receiptPrefix={formValues['receipt_prefix'] as string}
+                              />
+                            )}
+
+                            {/* Form Fields Grid with Specialized Dispatcher */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {subgroup.keys.map((key) => {
+                                const meta = activeGroupMeta?.settings[key];
+                                if (!meta) return null;
+
+                                return (
+                                  <div
+                                    key={key}
+                                    id={`setting-field-${key}`}
+                                    className="transition-all"
+                                  >
+                                    <SettingFieldDispatcher
+                                      settingKey={key}
+                                      meta={meta}
+                                      value={formValues[key]}
+                                      onChange={(val) =>
+                                        setFormValues((prev) => ({ ...prev, [key]: val as SettingFieldValue }))
+                                      }
+                                      currencySymbol={formValues['currency_symbol'] as string}
+                                      currencyCode={formValues['currency_code'] as string}
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
-                    /* Dynamic Form Fields Grid */
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      {filteredKeys.map((key) => {
+                    /* Fallback Flat List for any domain without subgroups */
+                    <div className="bg-surface rounded-2xl border border-default p-6 shadow-xs grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {Object.keys(activeGroupMeta?.settings || {}).map((key) => {
                         const meta = activeGroupMeta?.settings[key];
                         if (!meta) return null;
-
-                        const currentValue = formValues[key];
-                        const isSensitive = meta.sensitive;
-                        const isRevealed = revealedSecrets[key];
-                        const options = FIELD_OPTIONS[key];
 
                         return (
                           <div
                             key={key}
-                            className={cn(
-                              'p-4 rounded-(--card-radius) border transition-token-colors',
-                              meta.type === 'boolean'
-                                ? 'flex items-center justify-between gap-4 md:col-span-2 bg-surface-sunken border-default'
-                                : 'space-y-2 bg-surface border-default'
-                            )}
+                            id={`setting-field-${key}`}
+                            className="transition-all"
                           >
-                            <div className="space-y-0.5">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-default">{meta.label}</span>
-                                {isSensitive && (
-                                  <Badge tone="danger-subtle" icon={Lock}>
-                                    Encrypted
-                                  </Badge>
-                                )}
-                              </div>
-                              <span className="font-mono text-2xs text-muted block">{key}</span>
-                            </div>
-
-                            {/* Input Controls */}
-                            {meta.type === 'boolean' ? (
-                              <button
-                                type="button"
-                                role="switch"
-                                aria-checked={Boolean(currentValue)}
-                                onClick={() => setFormValues((prev) => ({ ...prev, [key]: !prev[key] }))}
-                                className={cn(
-                                  'w-11 h-6 flex items-center rounded-full p-1 transition-token-colors focus-visible:ring-focus outline-none cursor-pointer',
-                                  currentValue ? 'bg-primary' : 'bg-surface-sunken border border-default'
-                                )}
-                              >
-                                <div
-                                  className={cn(
-                                    'bg-surface w-4 h-4 rounded-full shadow-xs transform transition-transform duration-150',
-                                    currentValue ? 'translate-x-5 bg-primary-fg' : 'translate-x-0'
-                                  )}
-                                />
-                              </button>
-                            ) : options ? (
-                              /* Predefined Select */
-                              <Select
-                                value={typeof currentValue === 'string' ? currentValue : String(meta.default ?? '')}
-                                onChange={(e) => setFormValues((prev) => ({ ...prev, [key]: e.target.value }))}
-                              >
-                                {options.map((opt) => (
-                                  <option key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                  </option>
-                                ))}
-                              </Select>
-                            ) : meta.type === 'number' ? (
-                              /* Number Input */
-                              <Input
-                                type="number"
-                                step="any"
-                                value={typeof currentValue === 'number' || typeof currentValue === 'string' ? currentValue : ''}
-                                onChange={(e) =>
-                                  setFormValues((prev) => ({
-                                    ...prev,
-                                    [key]: e.target.value === '' ? '' : Number(e.target.value),
-                                  }))
-                                }
-                              />
-                            ) : meta.type === 'json' ? (
-                              /* JSON Array Input */
-                              <Input
-                                type="text"
-                                value={Array.isArray(currentValue) ? currentValue.join(', ') : JSON.stringify(currentValue ?? [])}
-                                onChange={(e) => {
-                                  const arr = e.target.value.split(',').map((s) => s.trim()).filter(Boolean);
-                                  setFormValues((prev) => ({ ...prev, [key]: arr }));
-                                }}
-                                placeholder="e.g. in_app, email, sms"
-                              />
-                            ) : isSensitive ? (
-                              /* Masked Sensitive Secret Input */
-                              <Input
-                                type={isRevealed ? 'text' : 'password'}
-                                value={typeof currentValue === 'string' ? currentValue : ''}
-                                onChange={(e) => setFormValues((prev) => ({ ...prev, [key]: e.target.value }))}
-                                placeholder="••••••••"
-                                rightElement={
-                                  <button
-                                    type="button"
-                                    onClick={() => setRevealedSecrets((prev) => ({ ...prev, [key]: !prev[key] }))}
-                                    className="p-1 text-muted hover:text-default transition-token-colors focus-visible:ring-focus rounded-md"
-                                    aria-label={isRevealed ? 'Hide secret' : 'Show secret'}
-                                  >
-                                    {isRevealed ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                                  </button>
-                                }
-                              />
-                            ) : (
-                              /* Default Text Input */
-                              <Input
-                                type="text"
-                                value={typeof currentValue === 'string' || typeof currentValue === 'number' ? currentValue : ''}
-                                onChange={(e) => setFormValues((prev) => ({ ...prev, [key]: e.target.value }))}
-                              />
-                            )}
+                            <SettingFieldDispatcher
+                              settingKey={key}
+                              meta={meta}
+                              value={formValues[key]}
+                              onChange={(val) =>
+                                setFormValues((prev) => ({ ...prev, [key]: val as SettingFieldValue }))
+                              }
+                              currencySymbol={formValues['currency_symbol'] as string}
+                              currencyCode={formValues['currency_code'] as string}
+                            />
                           </div>
                         );
                       })}
@@ -1092,17 +1307,23 @@ export const SettingsCenterWorkspace: React.FC = () => {
 
       {/* Floating Unsaved Changes Bottom Bar */}
       {hasChanges && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-surface-raised text-default px-6 py-3.5 rounded-(--card-radius) shadow-overlay border border-default flex items-center gap-6 animate-rise-in">
-          <div className="flex items-center gap-2">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-surface-raised text-default px-6 py-3.5 rounded-2xl shadow-overlay border border-default flex items-center gap-6 animate-rise-in backdrop-blur-md">
+          <div className="flex items-center gap-2.5">
             <span className="size-2.5 rounded-full bg-accent animate-pulse" aria-hidden="true" />
-            <span className="text-xs font-semibold">You have unsaved changes in this domain.</span>
+            <span className="text-xs font-semibold">
+              You have <span className="text-primary font-bold">{changedKeys.length}</span> unsaved{' '}
+              {changedKeys.length === 1 ? 'change' : 'changes'} in this domain.
+            </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
-              onClick={() => setFormValues(initialValues)}
+              onClick={() => {
+                setFormValues(initialValues);
+                notify.info('All unsaved modifications discarded');
+              }}
               disabled={saving}
             >
               Discard
@@ -1113,163 +1334,161 @@ export const SettingsCenterWorkspace: React.FC = () => {
               onClick={handleSave}
               loading={saving}
             >
-              <Save className="size-3.5 mr-1.5" aria-hidden="true" />
-              Save Changes
+              <Save className="size-3.5 mr-1.5" />
+              Save Changes (Ctrl+S)
             </Button>
           </div>
         </div>
       )}
 
-      {/* Add Custom Domain Modal */}
+      {/* Global Omni-Search Modal */}
+      <SettingsOmniSearch
+        isOpen={omniSearchOpen}
+        onClose={() => setOmniSearchOpen(false)}
+        schema={schema}
+        formValues={formValues}
+        onSelectResult={handleSelectSearchResult}
+      />
+
+      {/* Test Connection Modal */}
+      <Modal
+        open={testModalOpen}
+        onClose={() => setTestModalOpen(false)}
+        title="Live Connection Diagnostics"
+      >
+        <div className="space-y-4 text-xs">
+          <p className="text-muted">
+            Send an instant test ping to the API server using your active credentials to verify authentication and latency.
+          </p>
+
+          <div>
+            <label className="block text-2xs font-bold uppercase tracking-wider text-muted mb-1">
+              Gateway Provider
+            </label>
+            <SelectDropdown
+              options={[
+                { value: 'steadfast', label: 'Steadfast Courier API' },
+                { value: 'pathao', label: 'Pathao Courier & Parcel API' },
+                { value: 'redx', label: 'REDX Express Logistics' },
+                { value: 'bkash', label: 'bKash Tokenized Checkout' },
+                { value: 'sslcommerz', label: 'SSLCommerz Payment Gateway' },
+              ]}
+              value={testProvider}
+              onChange={(val) => setTestProvider(val)}
+              size="md"
+              buttonClassName="w-full"
+            />
+          </div>
+
+          {testResult && (
+            <div
+              className={cn(
+                'p-4 rounded-xl border space-y-1',
+                testResult.success
+                  ? 'bg-success-subtle border-success text-success'
+                  : 'bg-danger-subtle border-danger text-danger'
+              )}
+            >
+              <div className="flex items-center gap-2 font-bold">
+                {testResult.success ? (
+                  <Check className="size-4" />
+                ) : (
+                  <AlertTriangle className="size-4" />
+                )}
+                <span>{testResult.success ? 'Connection Successful' : 'Connection Failed'}</span>
+              </div>
+              <p className="text-2xs opacity-90">{testResult.message}</p>
+              {testResult.latency_ms !== undefined && (
+                <span className="font-mono text-2xs block">
+                  Response latency: {testResult.latency_ms}ms
+                </span>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" size="sm" onClick={() => setTestModalOpen(false)}>
+              Close
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleRunTestConnection}
+              loading={testLoading}
+            >
+              Run Diagnostic Ping
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Reset Group Confirmation Dialog */}
+      <ConfirmDialog
+        open={confirmResetOpen}
+        onClose={() => setConfirmResetOpen(false)}
+        onConfirm={handleResetToDefault}
+        title={`Reset ${GROUP_LABELS[activeGroup] || activeGroup} to Factory Defaults?`}
+        message="All customized parameters in this domain will be restored to system defaults. This operation is permanent and recorded in the audit log."
+        confirmLabel="Reset to Defaults"
+        variant="danger"
+        loading={saving}
+      />
+
+      {/* Add Domain Modal */}
       <Modal
         open={addDomainModalOpen}
         onClose={() => setAddDomainModalOpen(false)}
-        title="Add Custom Storefront Domain"
-        size="md"
+        title="Register Custom Storefront Domain"
       >
-        <form onSubmit={handleAddDomain} className="space-y-4">
-          <FormGroup
-            label="Domain Name (FQDN)"
-            required
-            helper="Do not include http:// or trailing slashes (e.g. shop.slicemart.tech or slicemart.com)."
-          >
+        <form onSubmit={handleAddDomain} className="space-y-4 text-xs">
+          <p className="text-muted">
+            Enter your custom domain or subdomain (e.g. <span className="font-mono text-default">shop.yourbrand.com</span>). You will be issued DNS TXT and CNAME verification records.
+          </p>
+
+          <FormGroup label="Domain Name" required>
             <Input
               type="text"
-              placeholder="shop.slicemart.tech"
+              placeholder="e.g. store.slicemart.com"
               value={newDomainInput}
               onChange={(e) => setNewDomainInput(e.target.value)}
               required
             />
           </FormGroup>
 
-          <FormGroup label="Domain Role" required>
-            <Select
+          <div>
+            <label className="block text-2xs font-bold uppercase tracking-wider text-muted mb-1">
+              Domain Role
+            </label>
+            <SelectDropdown
+              options={[
+                { value: 'custom_alias', label: 'Domain Alias (Secondary Brand Routing)' },
+                { value: 'custom_primary', label: 'Primary Domain (Canonical Storefront URL)' },
+              ]}
               value={newDomainType}
-              onChange={(e) => setNewDomainType(e.target.value as 'custom_primary' | 'custom_alias')}
-            >
-              <option value="custom_alias">Custom Alias Domain</option>
-              <option value="custom_primary">Primary Brand Storefront Domain</option>
-            </Select>
-          </FormGroup>
+              onChange={(val) => setNewDomainType(val as 'custom_primary' | 'custom_alias')}
+              size="md"
+              buttonClassName="w-full"
+            />
+          </div>
 
-          <div className="pt-2 flex items-center justify-end gap-3">
-            <Button
-              variant="secondary"
-              size="sm"
-              type="button"
-              onClick={() => setAddDomainModalOpen(false)}
-            >
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" size="sm" onClick={() => setAddDomainModalOpen(false)}>
               Cancel
             </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              type="submit"
-              loading={domainActionLoading === -1}
-            >
-              Register Domain
+            <Button variant="primary" size="sm" type="submit" loading={domainActionLoading === -1}>
+              Generate DNS Verification
             </Button>
           </div>
         </form>
       </Modal>
-
-      {/* Test Live Connection Modal */}
-      <Modal
-        open={testModalOpen}
-        onClose={() => setTestModalOpen(false)}
-        title="Live Gateway Diagnostic Tester"
-        size="md"
-      >
-        <div className="space-y-4">
-          <FormGroup label="Select Integration / Gateway">
-            <Select
-              value={testProvider}
-              onChange={(e) => {
-                setTestProvider(e.target.value);
-                setTestResult(null);
-              }}
-            >
-              <option value="steadfast">Steadfast Courier Logistics API</option>
-              <option value="pathao">Pathao Logistics OAuth2 API</option>
-              <option value="redx">REDX Parcel API</option>
-              <option value="bkash">bKash Payment Gateway (PGW)</option>
-              <option value="nagad">Nagad Direct Payment API</option>
-              <option value="sslcommerz">SSLCommerz Hosted Gateway</option>
-              <option value="sms">SMS Provider Gateway</option>
-              <option value="whatsapp">Meta WhatsApp Cloud API</option>
-            </Select>
-          </FormGroup>
-
-          {testResult && (
-            <div
-              className={cn(
-                'p-4 rounded-(--card-radius) border text-xs space-y-2',
-                testResult.success
-                  ? 'bg-success-subtle border-success text-success'
-                  : 'bg-danger-subtle border-danger text-danger'
-              )}
-            >
-              <div className="flex items-center justify-between font-bold">
-                <div className="flex items-center gap-1.5">
-                  {testResult.success ? (
-                    <CircleCheckBig className="size-4 text-success" aria-hidden="true" />
-                  ) : (
-                    <AlertTriangle className="size-4 text-danger" aria-hidden="true" />
-                  )}
-                  <span>{testResult.provider || testProvider}</span>
-                </div>
-                {testResult.latency_ms && (
-                  <span className="px-2 py-0.5 bg-surface rounded-md text-2xs font-mono border border-default text-default">
-                    {testResult.latency_ms} ms
-                  </span>
-                )}
-              </div>
-              <p className="text-2xs leading-relaxed text-default">{testResult.message}</p>
-            </div>
-          )}
-
-          <div className="pt-2 flex items-center justify-end gap-3">
-            <Button
-              variant="secondary"
-              size="sm"
-              type="button"
-              onClick={() => setTestModalOpen(false)}
-            >
-              Close
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              type="button"
-              onClick={handleRunTestConnection}
-              loading={testLoading}
-            >
-              <RefreshCw className={cn('size-3.5 mr-1.5', testLoading && 'animate-spin')} aria-hidden="true" />
-              Run Diagnostic
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Reset Confirmation Dialog */}
-      <ConfirmDialog
-        open={confirmResetOpen}
-        onClose={() => setConfirmResetOpen(false)}
-        onConfirm={handleResetToDefault}
-        title={`Reset '${schema[activeGroup]?.title || activeGroup}' Settings?`}
-        message="Are you sure you want to reset this domain's configuration to platform defaults? Any custom overrides will be lost."
-        confirmLabel="Reset to Defaults"
-        variant="danger"
-        loading={saving}
-      />
 
       {/* Delete Domain Confirmation Dialog */}
       <ConfirmDialog
         open={Boolean(confirmDeleteDomain)}
         onClose={() => setConfirmDeleteDomain(null)}
         onConfirm={handleDeleteDomain}
-        title={`Remove Custom Domain '${confirmDeleteDomain?.domain}'?`}
-        message="Are you sure you want to remove this domain? Web traffic routing to your storefront through this domain will cease immediately."
+        title={`Remove Domain "${confirmDeleteDomain?.domain}"?`}
+        message="This domain will immediately cease resolving to your e-commerce storefront. Active SSL certificates for this host will be decommissioned."
         confirmLabel="Remove Domain"
         variant="danger"
         loading={domainActionLoading === confirmDeleteDomain?.id}

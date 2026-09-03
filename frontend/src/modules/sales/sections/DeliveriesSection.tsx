@@ -23,6 +23,7 @@ import { api } from '../../../lib/api/client';
 import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { DeliveryChallanDocument } from '../../../components/print/documents/DeliveryChallanDocument';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 import { useCurrency } from '../../../hooks/useCurrency';
 
 interface DeliveryFormItem {
@@ -482,17 +483,19 @@ export function DeliveriesSection() {
             <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'pending', label: 'Pending Dispatch', colorDot: 'bg-amber-500' },
+              { value: 'in_transit', label: 'Out for Delivery', colorDot: 'bg-blue-500' },
+              { value: 'delivered', label: 'Delivered', colorDot: 'bg-emerald-500' },
+              { value: 'cancelled', label: 'Cancelled', colorDot: 'bg-rose-500' },
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
-          >
-            <option value="all">All Statuses</option>
-            <option value="pending">Pending Dispatch</option>
-            <option value="in_transit">Out for Delivery</option>
-            <option value="delivered">Delivered</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter deliveries by status"
+          />
         </div>
 
         <div className="relative flex-1 sm:max-w-xs">

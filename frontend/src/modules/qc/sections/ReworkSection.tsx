@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
 export interface ReworkOrder {
   id: number;
@@ -353,17 +354,19 @@ export function ReworkSection() {
             <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Status' },
+              { value: 'pending', label: 'Pending Queue', colorDot: 'bg-amber-500' },
+              { value: 'in_rework', label: 'In Progress', colorDot: 'bg-blue-500' },
+              { value: 'completed', label: 'Completed (Salvaged)', colorDot: 'bg-emerald-500' },
+              { value: 'scrapped', label: 'Scrapped', colorDot: 'bg-rose-500' },
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface px-3 py-2 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
-          >
-            <option value="all">All Status</option>
-            <option value="pending">Pending Queue</option>
-            <option value="in_rework">In Progress</option>
-            <option value="completed">Completed (Salvaged)</option>
-            <option value="scrapped">Scrapped</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter rework by status"
+          />
         </div>
 
         <button

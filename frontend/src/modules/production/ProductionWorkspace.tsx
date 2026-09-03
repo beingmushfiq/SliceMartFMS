@@ -72,13 +72,13 @@ export default function ProductionWorkspace() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 ${
+                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer ${
                   isActive
-                    ? 'bg-surface text-default font-semibold shadow-xs border border-default/70'
+                    ? 'bg-primary text-primary-fg font-semibold shadow-xs border border-primary'
                     : 'text-muted hover:text-default hover:bg-surface/50 border border-transparent'
                 }`}
               >
-                <Icon className={`size-4 ${isActive ? 'text-primary' : 'text-muted'}`} />
+                <Icon className={`size-4 ${isActive ? 'text-primary-fg' : 'text-muted'}`} />
                 <span>{tab.label}</span>
               </button>
             );

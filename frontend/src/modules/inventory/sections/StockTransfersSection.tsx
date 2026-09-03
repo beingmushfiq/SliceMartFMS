@@ -23,6 +23,7 @@ import { api } from '../../../lib/api/client';
 import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { StockTransferDocument } from '../../../components/print/documents/StockTransferDocument';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
 interface TransferFormItem {
   product_name: string;
@@ -430,17 +431,19 @@ export function StockTransfersSection() {
             <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'draft', label: 'Draft Plans', colorDot: 'bg-slate-400' },
+              { value: 'in_transit', label: 'In Transit', colorDot: 'bg-blue-500' },
+              { value: 'received', label: 'Completed', colorDot: 'bg-emerald-500' },
+              { value: 'cancelled', label: 'Cancelled', colorDot: 'bg-rose-500' },
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
-          >
-            <option value="all">All Statuses</option>
-            <option value="draft">Draft Plans</option>
-            <option value="in_transit">In Transit</option>
-            <option value="received">Completed</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter transfers by status"
+          />
         </div>
 
         <div className="relative flex-1 sm:max-w-xs">

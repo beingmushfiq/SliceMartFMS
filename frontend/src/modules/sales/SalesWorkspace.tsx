@@ -55,7 +55,7 @@ const tabs: TabConfig[] = [
     id: 'customers',
     label: 'Customer CRM',
     icon: Users,
-    description: 'Customer accounts directory, statements, credit limit approvals & loyalty points',
+    description: 'Customer accounts directory, statements & balance receivables',
   },
   {
     id: 'leads',
@@ -87,16 +87,6 @@ export default function SalesWorkspace() {
             {currentTab?.description}
           </p>
         </div>
-
-        <div className="flex items-center gap-3">
-          <a
-            href="/fraud-verification"
-            className="inline-flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2 text-xs font-semibold text-amber-700 dark:text-amber-300 hover:bg-amber-500/15 transition-all shadow-2xs"
-          >
-            <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
-            <span>Fraud Check & Verification Queue</span>
-          </a>
-        </div>
       </div>
 
       {/* Segmented Tabs Navigation Tray */}
@@ -111,11 +101,11 @@ export default function SalesWorkspace() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer ${
                   isActive
-                    ? 'bg-surface text-default font-semibold shadow-xs border border-default/70'
+                    ? 'bg-primary text-primary-fg font-semibold shadow-xs border border-primary'
                     : 'text-muted hover:text-default hover:bg-surface/50 border border-transparent'
                 }`}
               >
-                <Icon className={`size-4 ${isActive ? 'text-primary' : 'text-muted'}`} />
+                <Icon className={`size-4 ${isActive ? 'text-primary-fg' : 'text-muted'}`} />
                 <span>{tab.label}</span>
               </button>
             );
@@ -125,7 +115,7 @@ export default function SalesWorkspace() {
 
       {/* Tab Content */}
       <div className="pt-1">
-        {activeTab === 'orders' && <SalesOrdersSection />}
+        {activeTab === 'orders' && <SalesOrdersSection onNavigateToTab={(tab) => setActiveTab(tab as SalesTab)} />}
         {activeTab === 'invoices' && <InvoicesSection />}
         {activeTab === 'deliveries' && <DeliveriesSection />}
         {activeTab === 'payments' && <PaymentsSection />}

@@ -14,6 +14,7 @@ import {
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 import { Badge, StatusBadge } from '../../../components/ui/Badge';
 import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
 import { isApiError } from '../../../lib/api/errors';
@@ -214,18 +215,20 @@ export function ProductionBatchesSection() {
             />
           </div>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'draft', label: 'Draft', colorDot: 'bg-slate-400' },
+              { value: 'scheduled', label: 'Scheduled', colorDot: 'bg-indigo-500' },
+              { value: 'in_progress', label: 'In Progress', colorDot: 'bg-blue-500' },
+              { value: 'completed', label: 'Completed', colorDot: 'bg-emerald-500' },
+              { value: 'closed', label: 'Closed', colorDot: 'bg-purple-500' },
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface-sunken py-2 px-3 text-xs text-default focus:border-primary focus:outline-none transition-all shadow-2xs"
-          >
-            <option value="all">All Statuses</option>
-            <option value="draft">Draft</option>
-            <option value="scheduled">Scheduled</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-            <option value="closed">Closed</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter batches by status"
+          />
         </div>
 
         <Button

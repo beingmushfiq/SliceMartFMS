@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
 import { Button } from '../../components/ui/Button';
+import { SelectDropdown } from '../../components/ui/Dropdown';
 import { notify } from '../../components/ui/Toast';
 import { VersionDiffModal, type AuditLogEntry } from '../../components/audit/VersionDiffModal';
 
@@ -233,45 +234,51 @@ export const ActivityLogWorkspace: React.FC = () => {
 
           {/* Action Filter */}
           <div>
-            <select
+            <SelectDropdown
+              options={[
+                { value: 'all', label: 'All Action Types' },
+                { value: 'create', label: 'CREATE', colorDot: 'bg-emerald-500' },
+                { value: 'update', label: 'UPDATE (Edit)', colorDot: 'bg-blue-500' },
+                { value: 'delete', label: 'DELETE', colorDot: 'bg-rose-500' },
+                { value: 'approve', label: 'APPROVE', colorDot: 'bg-amber-500' },
+                { value: 'void', label: 'VOID', colorDot: 'bg-purple-500' },
+              ]}
               value={selectedAction}
-              onChange={(e) => {
-                setSelectedAction(e.target.value);
+              onChange={(val) => {
+                setSelectedAction(val);
                 setPage(1);
               }}
-              className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-1.5 text-xs text-default focus:border-primary focus:outline-none"
-            >
-              <option value="all">All Action Types</option>
-              <option value="create">CREATE</option>
-              <option value="update">UPDATE (Edit)</option>
-              <option value="delete">DELETE</option>
-              <option value="approve">APPROVE</option>
-              <option value="void">VOID</option>
-            </select>
+              size="sm"
+              buttonClassName="w-full"
+              aria-label="Filter logs by action"
+            />
           </div>
 
           {/* Entity Type Filter */}
           <div>
-            <select
+            <SelectDropdown
+              options={[
+                { value: 'all', label: 'All Entity Models' },
+                { value: 'Product', label: 'Product' },
+                { value: 'BillOfMaterials', label: 'Bill of Materials' },
+                { value: 'ProductionBatch', label: 'Production Batch' },
+                { value: 'ProductionPlan', label: 'Production Plan' },
+                { value: 'QcInspection', label: 'QC Inspection' },
+                { value: 'WastageRecord', label: 'Wastage Record' },
+                { value: 'SalesOrder', label: 'Sales Order' },
+                { value: 'PurchaseOrder', label: 'Purchase Order' },
+                { value: 'Role', label: 'Role / RBAC' },
+                { value: 'Warehouse', label: 'Warehouse & Stock' },
+              ]}
               value={selectedType}
-              onChange={(e) => {
-                setSelectedType(e.target.value);
+              onChange={(val) => {
+                setSelectedType(val);
                 setPage(1);
               }}
-              className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-1.5 text-xs text-default focus:border-primary focus:outline-none"
-            >
-              <option value="all">All Entity Models</option>
-              <option value="Product">Product</option>
-              <option value="BillOfMaterials">Bill of Materials</option>
-              <option value="ProductionBatch">Production Batch</option>
-              <option value="ProductionPlan">Production Plan</option>
-              <option value="QcInspection">QC Inspection</option>
-              <option value="WastageRecord">Wastage Record</option>
-              <option value="SalesOrder">Sales Order</option>
-              <option value="PurchaseOrder">Purchase Order</option>
-              <option value="Role">Role / RBAC</option>
-              <option value="Warehouse">Warehouse & Stock</option>
-            </select>
+              size="sm"
+              buttonClassName="w-full"
+              aria-label="Filter logs by entity"
+            />
           </div>
 
           {/* Filter Buttons */}

@@ -25,6 +25,7 @@ import {
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
 import { isApiError } from '../../../lib/api/errors';
 import { notify } from '../../../components/ui/Toast';
@@ -407,24 +408,20 @@ export function ProductsSection() {
             />
           </div>
 
-          <div className="relative">
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              aria-label="Filter products by type"
-              className="appearance-none rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-2 pl-3 pr-8 text-xs text-slate-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all shadow-xs font-medium cursor-pointer"
-            >
-              <option value="all">All Types</option>
-              <option value="finished">Finished Goods</option>
-              <option value="semi_finished">Semi-Finished</option>
-              <option value="raw_material">Raw Materials</option>
-              <option value="packaging">Packaging</option>
-              <option value="consumable">Consumables</option>
-            </select>
-            <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">
-              ▼
-            </div>
-          </div>
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Types', icon: Layers },
+              { value: 'finished', label: 'Finished Goods', colorDot: 'bg-emerald-500' },
+              { value: 'semi_finished', label: 'Semi-Finished', colorDot: 'bg-amber-500' },
+              { value: 'raw_material', label: 'Raw Materials', colorDot: 'bg-blue-500' },
+              { value: 'packaging', label: 'Packaging', colorDot: 'bg-purple-500' },
+              { value: 'consumable', label: 'Consumables', colorDot: 'bg-cyan-500' },
+            ]}
+            value={typeFilter}
+            onChange={(val) => setTypeFilter(val)}
+            size="sm"
+            aria-label="Filter products by type"
+          />
         </div>
 
         <div className="flex items-center gap-2">

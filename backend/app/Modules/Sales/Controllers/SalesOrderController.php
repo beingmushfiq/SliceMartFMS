@@ -99,6 +99,104 @@ final class SalesOrderController extends Controller
             (int) $request->user()?->id
         );
 
-        return new SalesOrderResource($approved);
+        return new SalesOrderResource($approved->fresh(['customer', 'warehouse', 'items.product', 'items.unit']));
+    }
+
+    public function updateStatus(int $id, Request $request): SalesOrderResource
+    {
+        $tenantId = TenantContext::current()->tenantId();
+        $validated = $request->validate([
+            'status' => 'required|string|in:draft,pending,confirmed,allocated,picking,packed,dispatched,delivered,cancelled',
+            'notes'  => 'nullable|string',
+        ]);
+
+        $order = SalesOrder::where('tenant_id', $tenantId)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $order->status = $validated['status'];
+        if ($validated['status'] === 'confirmed' && empty($order->confirmed_at)) {
+            $order->confirmed_at = now();
+            $order->confirmed_by = (int) $request->user()?->id;
+        } elseif ($validated['status'] === 'cancelled') {
+            $order->cancelled_at = now();
+            $order->cancelled_by = (int) $request->user()?->id;
+        }
+        if (!empty($validated['notes'])) {
+            $order->internal_notes = $validated['notes'];
+        }
+        $order->save();
+
+        return new SalesOrderResource($order->fresh(['customer', 'warehouse', 'items.product', 'items.unit']));
+    }
+
+    public function recordPayment(int $id, Request $request): SalesOrderResource
+    {
+        $tenantId = TenantContext::current()->tenantId();
+        $validated = $request->validate([
+            'payment_status' => 'required|string|in:paid,partially_paid,pending,failed',
+            'paid_amount'    => 'nullable|numeric',
+        ]);
+
+        $order = SalesOrder::where('tenant_id', $tenantId)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $order->payment_status = $validated['payment_status'];
+        if (isset($validated['paid_amount'])) {
+            $order->paid_amount = (string) $validated['paid_amount'];
+            $order->due_amount = (string) max(0, (float) $order->total_amount - (float) $validated['paid_amount']);
+        } elseif ($validated['payment_status'] === 'paid') {
+            $order->paid_amount = $order->total_amount;
+            $order->due_amount = '0.0000';
+        }
+        $order->save();
+
+        return new SalesOrderResource($order->fresh(['customer', 'warehouse', 'items.product', 'items.unit']));
+    }
+
+    public function generateInvoice(int $id, Request $request): JsonResponse
+    {
+        $tenantId = TenantContext::current()->tenantId();
+        $order = SalesOrder::with(['items'])->where('tenant_id', $tenantId)->where('id', $id)->firstOrFail();
+
+        // Check if invoice already exists
+        $existing = \App\Modules\Sales\Models\Invoice::where('tenant_id', $tenantId)->where('sales_order_id', $order->id)->first();
+        if ($existing) {
+            return response()->json([
+                'message' => 'Invoice already exists for this order',
+                'data'    => new \App\Modules\Sales\Resources\InvoiceResource($existing),
+            ]);
+        }
+
+        $items = [];
+        foreach ($order->items as $item) {
+            $items[] = [
+                'product_id'          => $item->product_id,
+                'sales_order_item_id' => $item->id,
+                'quantity'            => (string) $item->quantity,
+                'unit_id'             => $item->unit_id,
+                'unit_price'          => (string) $item->unit_price,
+                'discount_amount'     => (string) ($item->line_discount ?? '0.0000'),
+                'tax_amount'          => (string) ($item->tax_amount ?? '0.0000'),
+            ];
+        }
+
+        $invoice = app(\App\Modules\Sales\Actions\CreateInvoiceAction::class)->execute([
+            'tenant_id'      => $tenantId,
+            'sales_order_id' => $order->id,
+            'company_id'     => $order->company_id,
+            'branch_id'      => $order->branch_id,
+            'party_id'       => $order->party_id,
+            'invoice_date'   => now()->toDateString(),
+            'due_date'       => now()->addDays(7)->toDateString(),
+            'created_by'     => (int) $request->user()?->id,
+            'items'          => $items,
+        ]);
+
+        return response()->json([
+            'message' => 'Invoice created successfully',
+            'data'    => new \App\Modules\Sales\Resources\InvoiceResource($invoice),
+        ], 201);
     }
 }

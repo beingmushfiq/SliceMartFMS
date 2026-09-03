@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { api, setAccessToken } from '../../lib/api/client';
 import type { PlatformTenant } from '../../types/api/platform';
 import { PlatformPulseLoader } from '../../components/platform/PlatformPulseLoader';
+import { SelectDropdown } from '../../components/ui/Dropdown';
 import {
   Building2,
   Search,
@@ -326,30 +327,32 @@ export const TenantDirectoryWorkspace: React.FC = () => {
         </form>
 
         <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-2">
-            <Filter className="size-3.5 text-slate-500" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 focus:outline-hidden focus:border-amber-500 text-xs cursor-pointer"
-            >
-              <option value="all">All Statuses</option>
-              <option value="active">Active Only</option>
-              <option value="trial">Trial Only</option>
-              <option value="suspended">Suspended Only</option>
-            </select>
-          </div>
+          <SelectDropdown
+            icon={Filter}
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'active', label: 'Active Only', colorDot: 'bg-emerald-500' },
+              { value: 'trial', label: 'Trial Only', colorDot: 'bg-blue-500' },
+              { value: 'suspended', label: 'Suspended Only', colorDot: 'bg-rose-500' },
+            ]}
+            value={statusFilter}
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter tenants by status"
+          />
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Plans' },
+              { value: 'starter', label: 'Starter', colorDot: 'bg-slate-400' },
+              { value: 'professional', label: 'Professional', colorDot: 'bg-indigo-500' },
+              { value: 'enterprise', label: 'Enterprise', colorDot: 'bg-amber-500' },
+            ]}
             value={planFilter}
-            onChange={(e) => setPlanFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 focus:outline-hidden focus:border-amber-500 text-xs cursor-pointer"
-          >
-            <option value="all">All Plans</option>
-            <option value="starter">Starter</option>
-            <option value="professional">Professional</option>
-            <option value="enterprise">Enterprise</option>
-          </select>
+            onChange={(val) => setPlanFilter(val)}
+            size="sm"
+            aria-label="Filter tenants by plan"
+          />
         </div>
       </div>
 

@@ -1,17 +1,24 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Clock, Plus, RefreshCw, Search, XCircle, ShoppingCart } from 'lucide-react';
+import { CheckCircle2, Clock, Plus, RefreshCw, Search, XCircle, ShoppingCart, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import type { SalesOrder } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
+import { OrderProcessingModal } from '../components/OrderProcessingModal';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
-export function SalesOrdersSection() {
+interface SalesOrdersSectionProps {
+  onNavigateToTab?: (tab: string) => void;
+}
+
+export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps = {}) {
   const { formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [channelFilter, setChannelFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
 
   // New Order Form state
   const [channel, setChannel] = useState<'counter' | 'dealer' | 'phone' | 'field' | 'online'>(
@@ -94,6 +101,12 @@ export function SalesOrdersSection() {
             <Clock className="h-3 w-3 text-zinc-400" /> Draft
           </span>
         );
+      case 'pending':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+            <Clock className="h-3 w-3 text-amber-500" /> Pending Review
+          </span>
+        );
       case 'confirmed':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20">
@@ -163,18 +176,20 @@ export function SalesOrdersSection() {
             />
           </div>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Channels' },
+              { value: 'dealer', label: 'B2B Dealer', colorDot: 'bg-indigo-500' },
+              { value: 'counter', label: 'Counter POS', colorDot: 'bg-emerald-500' },
+              { value: 'phone', label: 'Telesales', colorDot: 'bg-amber-500' },
+              { value: 'field', label: 'Field DSR', colorDot: 'bg-blue-500' },
+              { value: 'online', label: 'E-Commerce', colorDot: 'bg-purple-500' },
+            ]}
             value={channelFilter}
-            onChange={(e) => setChannelFilter(e.target.value)}
-            className="h-9 rounded-xl border border-default bg-surface-sunken px-3 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
-          >
-            <option value="all">All Channels</option>
-            <option value="dealer">B2B Dealer</option>
-            <option value="counter">Counter POS</option>
-            <option value="phone">Telesales</option>
-            <option value="field">Field DSR</option>
-            <option value="online">E-Commerce</option>
-          </select>
+            onChange={(val) => setChannelFilter(val)}
+            size="sm"
+            aria-label="Filter orders by channel"
+          />
 
           <button
             onClick={() => refetch()}
@@ -232,8 +247,13 @@ export function SalesOrdersSection() {
                 </tr>
               ) : (
                 filteredOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-surface-sunken/60 transition-colors">
-                    <td className="px-4 py-3.5 font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                  <tr
+                    key={order.id}
+                    onClick={() => setSelectedOrder(order)}
+                    className="hover:bg-surface-sunken/70 transition-colors cursor-pointer group"
+                    title="Click row to view and process order"
+                  >
+                    <td className="px-4 py-3.5 font-mono font-medium text-emerald-600 dark:text-emerald-400 group-hover:underline">
                       {order.order_number}
                     </td>
                     <td className="px-4 py-3.5 text-muted">{order.order_date}</td>
@@ -258,16 +278,30 @@ export function SalesOrdersSection() {
                         {order.payment_status}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 text-right">
-                      {order.status === 'draft' && (
+                    <td className="px-4 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1.5">
+                        {(order.status === 'draft' || order.status === 'pending') && (
+                          <button
+                            type="button"
+                            onClick={() => approveMutation.mutate(order.id)}
+                            disabled={approveMutation.isPending}
+                            className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50 cursor-pointer transition-colors flex items-center gap-1"
+                            title="Confirm order immediately"
+                          >
+                            <CheckCircle2 className="size-3" />
+                            {approveMutation.isPending ? 'Confirming...' : 'Confirm'}
+                          </button>
+                        )}
                         <button
-                          onClick={() => approveMutation.mutate(order.id)}
-                          disabled={approveMutation.isPending}
-                          className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50 cursor-pointer transition-colors"
+                          type="button"
+                          onClick={() => setSelectedOrder(order)}
+                          className="rounded-lg bg-primary/10 border border-primary/20 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20 cursor-pointer transition-colors flex items-center gap-1"
+                          title="Open order processing workflow"
                         >
-                          {approveMutation.isPending ? 'Confirming...' : 'Confirm'}
+                          <SlidersHorizontal className="size-3" />
+                          <span>Process</span>
                         </button>
-                      )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -363,6 +397,13 @@ export function SalesOrdersSection() {
           </div>
         </div>
       )}
+
+      {/* Order Processing Modal */}
+      <OrderProcessingModal
+        order={orders.find((o) => o.id === selectedOrder?.id) ?? selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        onNavigateToTab={onNavigateToTab}
+      />
     </div>
   );
 }

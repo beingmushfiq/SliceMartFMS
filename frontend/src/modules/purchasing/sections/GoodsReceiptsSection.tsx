@@ -22,6 +22,7 @@ import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { GoodsReceiptDocument } from '../../../components/print/documents/GoodsReceiptDocument';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
 import { useCurrency } from '../../../hooks/useCurrency';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
 interface GrnFormItem {
   product_name: string;
@@ -418,16 +419,18 @@ export function GoodsReceiptsSection() {
             <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'draft', label: 'Pending QA', colorDot: 'bg-amber-500' },
+              { value: 'completed', label: 'Stock Ingested', colorDot: 'bg-emerald-500' },
+              { value: 'cancelled', label: 'Cancelled', colorDot: 'bg-rose-500' },
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
-          >
-            <option value="all">All Statuses</option>
-            <option value="draft">Pending QA</option>
-            <option value="completed">Stock Ingested</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter GRNs by status"
+          />
         </div>
 
         <div className="relative flex-1 sm:max-w-xs">

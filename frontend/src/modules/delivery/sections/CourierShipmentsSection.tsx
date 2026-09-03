@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { CourierShipment, CourierProvider } from '../../../types/api/delivery';
 import type { DeliveryOrder } from '../../../types/api/sales';
 import { useCurrency } from '../../../hooks/useCurrency';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
 interface CourierShipmentsSectionProps {
   shipments: CourierShipment[];
@@ -152,45 +153,33 @@ export const CourierShipmentsSection: React.FC<CourierShipmentsSectionProps> = (
             fontSize: '0.875rem',
           }}
         />
-        <select
+        <SelectDropdown
+          options={[
+            { value: 'all', label: 'All Statuses' },
+            { value: 'pending', label: 'Pending', colorDot: 'bg-amber-500' },
+            { value: 'confirmed', label: 'Confirmed', colorDot: 'bg-blue-500' },
+            { value: 'in_transit', label: 'In Transit', colorDot: 'bg-indigo-500' },
+            { value: 'out_for_delivery', label: 'Out For Delivery', colorDot: 'bg-cyan-500' },
+            { value: 'delivered', label: 'Delivered', colorDot: 'bg-emerald-500' },
+            { value: 'failed', label: 'Failed', colorDot: 'bg-rose-500' },
+            { value: 'returned', label: 'Returned', colorDot: 'bg-purple-500' },
+            { value: 'cancelled', label: 'Cancelled', colorDot: 'bg-slate-400' },
+          ]}
           value={selectedStatus}
-          onChange={(e) => setSelectedStatus(e.target.value)}
-          style={{
-            padding: '8px 12px',
-            borderRadius: 6,
-            border: '1px solid #D1D5DB',
-            fontSize: '0.875rem',
-            backgroundColor: '#FFFFFF',
-          }}
-        >
-          <option value="all">All Statuses</option>
-          <option value="pending">Pending</option>
-          <option value="confirmed">Confirmed</option>
-          <option value="in_transit">In Transit</option>
-          <option value="out_for_delivery">Out For Delivery</option>
-          <option value="delivered">Delivered</option>
-          <option value="failed">Failed</option>
-          <option value="returned">Returned</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-        <select
+          onChange={(val) => setSelectedStatus(val)}
+          size="sm"
+          aria-label="Filter shipments by status"
+        />
+        <SelectDropdown
+          options={[
+            { value: 'all', label: 'All Providers' },
+            ...providers.map((p) => ({ value: String(p.id), label: p.name })),
+          ]}
           value={selectedProvider}
-          onChange={(e) => setSelectedProvider(e.target.value)}
-          style={{
-            padding: '8px 12px',
-            borderRadius: 6,
-            border: '1px solid #D1D5DB',
-            fontSize: '0.875rem',
-            backgroundColor: '#FFFFFF',
-          }}
-        >
-          <option value="all">All Providers</option>
-          {providers.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
+          onChange={(val) => setSelectedProvider(val)}
+          size="sm"
+          aria-label="Filter shipments by provider"
+        />
       </div>
 
       {/* Shipments Table */}

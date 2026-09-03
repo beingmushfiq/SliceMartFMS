@@ -6,6 +6,7 @@ import type { Invoice } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
 import { InvoiceTemplateBuilder } from '../components/InvoiceTemplateBuilder';
 import { useCurrency } from '../../../hooks/useCurrency';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
 export function InvoicesSection() {
   const { formatCurrency } = useCurrency();
@@ -121,17 +122,19 @@ export function InvoicesSection() {
             />
           </div>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'draft', label: 'Draft', colorDot: 'bg-slate-400' },
+              { value: 'posted', label: 'Posted', colorDot: 'bg-blue-500' },
+              { value: 'paid', label: 'Paid', colorDot: 'bg-emerald-500' },
+              { value: 'void', label: 'Void', colorDot: 'bg-rose-500' },
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 rounded-xl border border-default bg-surface-sunken px-3 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
-          >
-            <option value="all">All Statuses</option>
-            <option value="draft">Draft</option>
-            <option value="posted">Posted</option>
-            <option value="paid">Paid</option>
-            <option value="void">Void</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter invoices by status"
+          />
 
           <button
             onClick={() => refetch()}

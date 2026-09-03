@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { CodReconciliation, RunSheet, CourierProvider } from '../../../types/api/delivery';
 import { useCurrency } from '../../../hooks/useCurrency';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
 interface CodReconciliationSectionProps {
   reconciliations: CodReconciliation[];
@@ -279,32 +280,25 @@ export const CodReconciliationSection: React.FC<CodReconciliationSectionProps> =
                   </label>
                 </div>
 
-                <select
+                <SelectDropdown
+                  options={[
+                    { value: 0, label: '-- Select Source Record --' },
+                    ...(sourceType === 'run_sheet'
+                      ? completedRunSheets.map((s) => ({
+                          value: s.id,
+                          label: `${s.run_sheet_number} (${s.rider_name || 'Rider'}) — ${formatCurrency(s.total_cod_collected)}`,
+                        }))
+                      : providers.map((p) => ({
+                          value: p.id,
+                          label: p.name,
+                        }))),
+                  ]}
                   value={sourceId}
-                  onChange={(e) => handleSourceSelect(sourceType, Number(e.target.value))}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 6,
-                    border: '1px solid #D1D5DB',
-                    fontSize: '0.875rem',
-                  }}
-                >
-                  <option value="0">-- Select Source Record --</option>
-                  {sourceType === 'run_sheet'
-                    ? completedRunSheets.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.run_sheet_number} ({s.rider_name || 'Rider'}) —{' '}
-                          {formatCurrency(s.total_cod_collected)}
-                        </option>
-                      ))
-                    : providers.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                </select>
+                  onChange={(val) => handleSourceSelect(sourceType, Number(val))}
+                  size="md"
+                  buttonClassName="w-full"
+                  aria-label="Select source record"
+                />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

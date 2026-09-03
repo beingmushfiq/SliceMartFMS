@@ -4,17 +4,13 @@
 
 /* ─── Page Definitions ─────────────────────────────────────────────────── */
 @page {
-  margin: 10mm;
-}
-
-@page a4-portrait {
   size: A4 portrait;
-  margin: 12mm 15mm;
+  margin: 6mm 8mm;
 }
 
 @page a4-landscape {
   size: A4 landscape;
-  margin: 10mm 12mm;
+  margin: 6mm 8mm;
 }
 
 @page a3-landscape {
@@ -60,29 +56,41 @@
 }
 
 @media print {
-  /* Hide the entire web application root when printing through PrintPortal */
-  body.printing-active > #root {
+  /* Hide the entire web application root and any injected body portals/toasts/extensions when printing */
+  body > *:not(#print-root) {
     display: none !important;
   }
 
-  body.printing-active {
-    background: #ffffff !important;
-    color: #000000 !important;
+  html,
+  body {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: hidden !important;
   }
 
   #print-root {
     display: block !important;
     position: static !important;
     width: 100% !important;
+    max-height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
+    overflow: hidden !important;
+    break-after: avoid !important;
+    page-break-after: avoid !important;
   }
 
   /* Page specific class bindings */
   .print-page-a4 {
-    page: a4-portrait;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
   .print-page-a4-landscape {

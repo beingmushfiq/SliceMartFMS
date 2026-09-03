@@ -442,6 +442,12 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                     ->middleware('permission:sales.order.view')->name('show');
                 Route::post('{id}/approve', [App\Modules\Sales\Controllers\SalesOrderController::class, 'approve'])
                     ->middleware('permission:sales.order.approve')->name('approve');
+                Route::patch('{id}/status', [App\Modules\Sales\Controllers\SalesOrderController::class, 'updateStatus'])
+                    ->middleware('permission:sales.order.approve')->name('status');
+                Route::post('{id}/payment', [App\Modules\Sales\Controllers\SalesOrderController::class, 'recordPayment'])
+                    ->middleware('permission:sales.order.approve')->name('payment');
+                Route::post('{id}/invoice', [App\Modules\Sales\Controllers\SalesOrderController::class, 'generateInvoice'])
+                    ->middleware('permission:sales.order.approve')->name('invoice');
             });
 
             Route::prefix('invoices')->name('invoices.')->group(static function (): void {
@@ -720,14 +726,6 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             Route::post('{group}/reset', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'resetGroup'])->name('reset');
         });
 
-        // ── E-Commerce Fraud Check & Order Verification ─────────────
-        Route::prefix('fraud-check')->name('fraud-check.')->group(static function (): void {
-            Route::get('queue', [\App\Modules\Ecommerce\Controllers\OrderFraudVerificationController::class, 'index'])->name('queue');
-            Route::get('orders/{orderId}', [\App\Modules\Ecommerce\Controllers\OrderFraudVerificationController::class, 'show'])->name('show');
-            Route::post('orders/{orderId}/verify', [\App\Modules\Ecommerce\Controllers\OrderFraudVerificationController::class, 'verify'])->name('verify');
-            Route::post('orders/{orderId}/hold', [\App\Modules\Ecommerce\Controllers\OrderFraudVerificationController::class, 'hold'])->name('hold');
-            Route::post('orders/{orderId}/reject', [\App\Modules\Ecommerce\Controllers\OrderFraudVerificationController::class, 'reject'])->name('reject');
-        });
 
         // ── RBAC & Role Management ──────────────────────────────────
         Route::prefix('roles')->name('roles.')->group(static function (): void {

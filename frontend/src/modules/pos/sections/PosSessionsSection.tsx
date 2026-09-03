@@ -18,6 +18,7 @@ import {
 import type { PosSession } from '../../../types/api/pos';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
 interface PosSessionsSectionProps {
   onLaunchPOS?: (session: PosSession) => void;
@@ -311,15 +312,17 @@ export function PosSessionsSection({ onLaunchPOS }: PosSessionsSectionProps) {
             <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Shifts' },
+              { value: 'open', label: 'Open Shifts', colorDot: 'bg-emerald-500' },
+              { value: 'closed', label: 'Closed Shifts', colorDot: 'bg-slate-400' },
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
-          >
-            <option value="all">All Shifts</option>
-            <option value="open">Open Shifts</option>
-            <option value="closed">Closed Shifts</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter POS sessions by status"
+          />
         </div>
 
         <div className="relative flex-1 sm:max-w-xs">

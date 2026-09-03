@@ -350,80 +350,32 @@ export const DeliveryWorkspace: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div
-        style={{
-          display: 'flex',
-          gap: 8,
-          borderBottom: '1px solid #E5E7EB',
-          paddingBottom: 2,
-        }}
-      >
-        <button
-          onClick={() => setActiveTab('shipments')}
-          style={{
-            padding: '10px 18px',
-            border: 'none',
-            background: 'none',
-            borderBottom: activeTab === 'shipments' ? '2px solid #2563EB' : '2px solid transparent',
-            color: activeTab === 'shipments' ? '#2563EB' : '#4B5563',
-            fontWeight: activeTab === 'shipments' ? 600 : 500,
-            fontSize: '0.9375rem',
-            cursor: 'pointer',
-          }}
-        >
-          📦 3PL Shipments & Tracking
-        </button>
-
-        <button
-          onClick={() => setActiveTab('run_sheets')}
-          style={{
-            padding: '10px 18px',
-            border: 'none',
-            background: 'none',
-            borderBottom:
-              activeTab === 'run_sheets' ? '2px solid #2563EB' : '2px solid transparent',
-            color: activeTab === 'run_sheets' ? '#2563EB' : '#4B5563',
-            fontWeight: activeTab === 'run_sheets' ? 600 : 500,
-            fontSize: '0.9375rem',
-            cursor: 'pointer',
-          }}
-        >
-          🛵 Rider Run Sheets
-        </button>
-
-        <button
-          onClick={() => setActiveTab('providers')}
-          style={{
-            padding: '10px 18px',
-            border: 'none',
-            background: 'none',
-            borderBottom: activeTab === 'providers' ? '2px solid #2563EB' : '2px solid transparent',
-            color: activeTab === 'providers' ? '#2563EB' : '#4B5563',
-            fontWeight: activeTab === 'providers' ? 600 : 500,
-            fontSize: '0.9375rem',
-            cursor: 'pointer',
-          }}
-        >
-          🏢 Courier Partners
-        </button>
-
-        <button
-          onClick={() => setActiveTab('cod_reconciliation')}
-          style={{
-            padding: '10px 18px',
-            border: 'none',
-            background: 'none',
-            borderBottom:
-              activeTab === 'cod_reconciliation' ? '2px solid #2563EB' : '2px solid transparent',
-            color: activeTab === 'cod_reconciliation' ? '#2563EB' : '#4B5563',
-            fontWeight: activeTab === 'cod_reconciliation' ? 600 : 500,
-            fontSize: '0.9375rem',
-            cursor: 'pointer',
-          }}
-        >
-          💵 COD Reconciliation
-        </button>
+      {/* Segmented Navigation Tabs Tray */}
+      <div className="flex overflow-x-auto p-1.5 bg-surface-sunken rounded-2xl border border-default shadow-2xs">
+        <div className="flex gap-1.5 min-w-full sm:min-w-0">
+          {[
+            { id: 'shipments', label: '📦 3PL Shipments & Tracking' },
+            { id: 'run_sheets', label: '🛵 Rider Run Sheets' },
+            { id: 'providers', label: '🏢 Courier Partners' },
+            { id: 'cod_reconciliation', label: '💵 COD Reconciliation' },
+          ].map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer ${
+                  isActive
+                    ? 'bg-primary text-primary-fg font-semibold shadow-xs border border-primary'
+                    : 'text-muted hover:text-default hover:bg-surface/50 border border-transparent'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Tab Panels */}

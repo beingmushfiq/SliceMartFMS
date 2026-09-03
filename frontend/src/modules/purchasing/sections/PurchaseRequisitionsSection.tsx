@@ -20,6 +20,7 @@ import {
 import type { PurchaseRequisition } from '../../../types/api/purchasing';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
 interface RequisitionFormItem {
   product_name: string;
@@ -447,17 +448,19 @@ export function PurchaseRequisitionsSection() {
             <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'draft', label: 'Draft Review', colorDot: 'bg-slate-400' },
+              { value: 'approved', label: 'Approved', colorDot: 'bg-emerald-500' },
+              { value: 'converted', label: 'Converted to PO', colorDot: 'bg-blue-500' },
+              { value: 'rejected', label: 'Rejected', colorDot: 'bg-rose-500' },
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
-          >
-            <option value="all">All Statuses</option>
-            <option value="draft">Draft Review</option>
-            <option value="approved">Approved</option>
-            <option value="converted">Converted to PO</option>
-            <option value="rejected">Rejected</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter requisitions by status"
+          />
         </div>
 
         <div className="relative flex-1 sm:max-w-xs">

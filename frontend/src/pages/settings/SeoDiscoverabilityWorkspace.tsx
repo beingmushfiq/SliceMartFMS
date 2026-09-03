@@ -17,6 +17,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
+import { SelectDropdown } from '../../components/ui/Dropdown';
 import { SerpPreviewCard } from '../../components/seo/SerpPreviewCard';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 
@@ -455,17 +456,20 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
                 <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
                   Schema Business Type
                 </label>
-                <select
+                <SelectDropdown
+                  options={[
+                    { value: 'LocalBusiness', label: 'LocalBusiness (General)' },
+                    { value: 'WholesaleStore', label: 'WholesaleStore' },
+                    { value: 'Store', label: 'Store' },
+                    { value: 'Organization', label: 'Organization' },
+                    { value: 'Manufacturer', label: 'Manufacturer' },
+                  ]}
                   value={settings.business_type}
-                  onChange={(e) => setSettings({ ...settings, business_type: e.target.value })}
-                  className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2.5 text-zinc-900 dark:text-white"
-                >
-                  <option value="LocalBusiness">LocalBusiness (General)</option>
-                  <option value="WholesaleStore">WholesaleStore</option>
-                  <option value="Store">Store</option>
-                  <option value="Organization">Organization</option>
-                  <option value="Manufacturer">Manufacturer</option>
-                </select>
+                  onChange={(val) => setSettings({ ...settings, business_type: val })}
+                  size="md"
+                  buttonClassName="w-full"
+                  aria-label="Schema business type"
+                />
               </div>
 
               <div>
@@ -617,14 +621,17 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
 
               <div className="sm:col-span-2">
                 <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">Status Code</label>
-                <select
+                <SelectDropdown
+                  options={[
+                    { value: 301, label: '301 Permanent' },
+                    { value: 302, label: '302 Temporary' },
+                  ]}
                   value={newStatusCode}
-                  onChange={(e) => setNewStatusCode(Number(e.target.value))}
-                  className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2 text-zinc-900 dark:text-white font-mono"
-                >
-                  <option value={301}>301 Permanent</option>
-                  <option value={302}>302 Temporary</option>
-                </select>
+                  onChange={(val) => setNewStatusCode(Number(val))}
+                  size="md"
+                  buttonClassName="w-full font-mono"
+                  aria-label="Redirect status code"
+                />
               </div>
 
               <div className="sm:col-span-2 flex flex-col justify-end">

@@ -11,6 +11,7 @@ import {
   Printer,
 } from 'lucide-react';
 import { PrintPreviewModal } from '../../components/print/PrintPreviewModal';
+import { SelectDropdown } from '../../components/ui/Dropdown';
 import { ReportPrintDocument } from '../../components/print/reports/ReportPrintDocument';
 import { useBusinessConfig } from '../../lib/document/useBusinessConfig';
 import type {
@@ -332,19 +333,15 @@ export const ReportsWorkspace: React.FC = () => {
               />
             </div>
 
-            <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
-              <Bookmark className="w-4 h-4 text-slate-400" />
-              <select
+            <div className="flex items-center gap-2 border-l border-default pl-3">
+              <SelectDropdown
+                icon={Bookmark}
+                options={savedViews.map((v) => ({ value: v.name, label: v.name }))}
                 value={selectedView}
-                onChange={(e) => setSelectedView(e.target.value)}
-                className="text-xs border border-slate-300 rounded px-2 py-1.5 focus:outline-none focus:border-indigo-500"
-              >
-                {savedViews.map((v) => (
-                  <option key={v.id} value={v.name}>
-                    {v.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setSelectedView(val)}
+                size="sm"
+                aria-label="Select saved report view"
+              />
             </div>
 
             <button

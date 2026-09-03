@@ -15,6 +15,7 @@ import { api } from '../../lib/api/client';
 import { useStorefrontCartStore } from '../../lib/storefront/storefrontCartStore';
 import { SeoHead } from '../../components/seo/SeoHead';
 import { BreadcrumbNav } from '../../components/seo/BreadcrumbNav';
+import { SelectDropdown } from '../../components/ui/Dropdown';
 import type { StorefrontConfig, StorefrontProduct } from '../../types/api/storefront';
 
 interface OutletContextType {
@@ -269,20 +270,22 @@ export const StorefrontCatalogPage: React.FC = () => {
           <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
             <div className="flex items-center gap-2 text-xs">
               <span className="text-zinc-400 hidden md:inline">Sort:</span>
-              <select
+              <SelectDropdown
+                options={[
+                  { value: 'featured', label: 'Featured / Standard' },
+                  { value: 'price-asc', label: 'Price: Low to High' },
+                  { value: 'price-desc', label: 'Price: High to Low' },
+                  { value: 'name', label: 'Product Name (A-Z)' },
+                ]}
                 value={sortBy}
-                onChange={(e) => {
-                  setSortBy(e.target.value as 'featured' | 'price-asc' | 'price-desc' | 'name');
-                  searchParams.set('sort', e.target.value);
+                onChange={(val) => {
+                  setSortBy(val as 'featured' | 'price-asc' | 'price-desc' | 'name');
+                  searchParams.set('sort', val);
                   setSearchParams(searchParams);
                 }}
-                className="rounded-xl bg-zinc-950 border border-zinc-800 px-3 py-2 text-xs text-zinc-200 focus:border-emerald-500 focus:outline-none"
-              >
-                <option value="featured">Featured / Standard</option>
-                <option value="price-asc">Price: Low to High</option>
-                <option value="price-desc">Price: High to Low</option>
-                <option value="name">Product Name (A-Z)</option>
-              </select>
+                size="sm"
+                aria-label="Sort catalog products"
+              />
             </div>
 
             {/* View Mode Switcher */}

@@ -7,6 +7,7 @@ export type SalesOrderChannel = 'counter' | 'dealer' | 'phone' | 'field' | 'onli
 
 export type SalesOrderStatus =
   | 'draft'
+  | 'pending'
   | 'confirmed'
   | 'allocated'
   | 'picking'
@@ -15,7 +16,7 @@ export type SalesOrderStatus =
   | 'delivered'
   | 'cancelled';
 
-export type SalesOrderPaymentStatus = 'unpaid' | 'partially_paid' | 'paid';
+export type SalesOrderPaymentStatus = 'unpaid' | 'partially_paid' | 'paid' | 'pending' | 'failed';
 
 export type InvoiceStatus = 'draft' | 'posted' | 'paid' | 'partially_paid' | 'void';
 
@@ -70,6 +71,7 @@ export interface SalesOrder {
   status: SalesOrderStatus;
   payment_status: SalesOrderPaymentStatus;
   notes?: string | null;
+  shipping_address?: string | null;
   confirmed_at?: string | null;
   cancelled_at?: string | null;
   created_at?: string;

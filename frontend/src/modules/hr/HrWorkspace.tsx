@@ -409,28 +409,36 @@ export const HrWorkspace: React.FC = () => {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 space-x-6">
-        {[
-          { id: 'payroll', label: '💰 Payroll Runs & Payslips', count: payslips.length },
-          { id: 'employees', label: '👔 Employee Directory', count: employees.length },
-          { id: 'attendance', label: '⏱️ Shifts & Attendance', count: attendances.length },
-          { id: 'leaves', label: '🏖️ Leave Management', count: leaveRequests.length },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as HrTab)}
-            className={`pb-3 text-sm font-medium transition flex items-center gap-2 relative ${
-              activeTab === tab.id
-                ? 'text-indigo-600 dark:text-indigo-400 font-semibold border-b-2 border-indigo-600 dark:border-indigo-400'
-                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-            }`}
-          >
-            <span>{tab.label}</span>
-            <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
-              {tab.count}
-            </span>
-          </button>
-        ))}
+      <div className="flex overflow-x-auto p-1.5 bg-surface-sunken rounded-2xl border border-default shadow-2xs">
+        <div className="flex gap-1.5 min-w-full sm:min-w-0">
+          {[
+            { id: 'payroll', label: '💰 Payroll Runs & Payslips', count: payslips.length },
+            { id: 'employees', label: '👔 Employee Directory', count: employees.length },
+            { id: 'attendance', label: '⏱️ Shifts & Attendance', count: attendances.length },
+            { id: 'leaves', label: '🏖️ Leave Management', count: leaveRequests.length },
+          ].map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id as HrTab)}
+                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer ${
+                  isActive
+                    ? 'bg-primary text-primary-fg font-semibold shadow-xs border border-primary'
+                    : 'text-muted hover:text-default hover:bg-surface/50 border border-transparent'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
+                  isActive ? 'bg-white/20 text-white font-bold' : 'bg-surface-sunken text-muted'
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Tab 1: Payroll Runs & Payslips */}

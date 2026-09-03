@@ -21,6 +21,7 @@ import {
 import type { PurchaseBill } from '../../../types/api/purchasing';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
 interface BillFormItem {
   product_name: string;
@@ -481,17 +482,19 @@ export function PurchaseBillsSection() {
             <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'unpaid', label: 'Unpaid A/P', colorDot: 'bg-rose-500' },
+              { value: 'paid', label: 'Fully Settled', colorDot: 'bg-emerald-500' },
+              { value: 'approved', label: 'Approved', colorDot: 'bg-blue-500' },
+              { value: 'pending', label: 'Pending Review', colorDot: 'bg-amber-500' },
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
-          >
-            <option value="all">All Statuses</option>
-            <option value="unpaid">Unpaid A/P</option>
-            <option value="paid">Fully Settled</option>
-            <option value="approved">Approved</option>
-            <option value="pending">Pending Review</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter bills by status"
+          />
         </div>
 
         <div className="relative flex-1 sm:max-w-xs">

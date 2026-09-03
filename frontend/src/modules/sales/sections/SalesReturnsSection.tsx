@@ -23,6 +23,7 @@ import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { CreditNoteDocument } from '../../../components/print/documents/CreditNoteDocument';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
 import { useCurrency } from '../../../hooks/useCurrency';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
 interface SalesReturnFormItem {
   product_name: string;
@@ -409,16 +410,18 @@ export function SalesReturnsSection() {
             <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'draft', label: 'Pending Inspection', colorDot: 'bg-amber-500' },
+              { value: 'completed', label: 'Credit Issued', colorDot: 'bg-emerald-500' },
+              { value: 'cancelled', label: 'Cancelled', colorDot: 'bg-rose-500' },
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
-          >
-            <option value="all">All Statuses</option>
-            <option value="draft">Pending Inspection</option>
-            <option value="completed">Credit Issued</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter returns by status"
+          />
         </div>
 
         <div className="relative flex-1 sm:max-w-xs">

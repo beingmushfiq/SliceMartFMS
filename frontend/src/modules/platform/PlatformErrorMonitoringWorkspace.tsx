@@ -17,6 +17,7 @@ import {
 import { toast } from 'sonner';
 import { getLogs, clearLogs, subscribeToLogs, type LogEntry } from '../../lib/observability/logger';
 import { Button } from '../../components/ui/Button';
+import { SelectDropdown } from '../../components/ui/Dropdown';
 
 export function PlatformErrorMonitoringWorkspace() {
   const [logs, setLogs] = useState<readonly LogEntry[]>(() => getLogs());
@@ -187,29 +188,33 @@ export function PlatformErrorMonitoringWorkspace() {
 
         <div className="flex flex-wrap items-center gap-2">
           {/* Level Filter */}
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Severity Levels' },
+              { value: 'error', label: 'Errors Only', colorDot: 'bg-rose-500' },
+              { value: 'warn', label: 'Warnings Only', colorDot: 'bg-amber-500' },
+              { value: 'info', label: 'Info Only', colorDot: 'bg-blue-500' },
+            ]}
             value={levelFilter}
-            onChange={(e) => setLevelFilter(e.target.value)}
-            className="text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-slate-700 dark:text-slate-300"
-          >
-            <option value="all">All Severity Levels</option>
-            <option value="error">Errors Only</option>
-            <option value="warn">Warnings Only</option>
-            <option value="info">Info Only</option>
-          </select>
+            onChange={(val) => setLevelFilter(val)}
+            size="sm"
+            aria-label="Filter by severity level"
+          />
 
           {/* Source Filter */}
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Sources' },
+              { value: 'boundary', label: 'Boundary Crashes' },
+              { value: 'api', label: 'API Refusals' },
+              { value: 'boot', label: 'Boot Failures' },
+              { value: 'app', label: 'App Runtime' },
+            ]}
             value={sourceFilter}
-            onChange={(e) => setSourceFilter(e.target.value)}
-            className="text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-slate-700 dark:text-slate-300"
-          >
-            <option value="all">All Sources</option>
-            <option value="boundary">Boundary Crashes</option>
-            <option value="api">API Refusals</option>
-            <option value="boot">Boot Failures</option>
-            <option value="app">App Runtime</option>
-          </select>
+            onChange={(val) => setSourceFilter(val)}
+            size="sm"
+            aria-label="Filter by log source"
+          />
         </div>
       </div>
 

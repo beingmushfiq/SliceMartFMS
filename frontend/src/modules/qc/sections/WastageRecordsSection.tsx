@@ -4,6 +4,7 @@ import { AlertOctagon, DollarSign, Plus, Search, Trash2 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 import { Badge } from '../../../components/ui/Badge';
 import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
 import { isApiError } from '../../../lib/api/errors';
@@ -130,19 +131,21 @@ export function WastageRecordsSection() {
             />
           </div>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Stages' },
+              { value: 'input', label: 'Material Input', colorDot: 'bg-blue-500' },
+              { value: 'in_process', label: 'In-Process', colorDot: 'bg-amber-500' },
+              { value: 'output', label: 'Output Sorting', colorDot: 'bg-emerald-500' },
+              { value: 'qc', label: 'QC Rejection', colorDot: 'bg-rose-500' },
+              { value: 'storage', label: 'Storage Loss', colorDot: 'bg-purple-500' },
+              { value: 'transit', label: 'In Transit', colorDot: 'bg-cyan-500' },
+            ]}
             value={stageFilter}
-            onChange={(e) => setStageFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface-sunken py-2 px-3 text-xs text-default focus:border-primary focus:outline-none"
-          >
-            <option value="all">All Stages</option>
-            <option value="input">Material Input</option>
-            <option value="in_process">In-Process</option>
-            <option value="output">Output Sorting</option>
-            <option value="qc">QC Rejection</option>
-            <option value="storage">Storage Loss</option>
-            <option value="transit">In Transit</option>
-          </select>
+            onChange={(val) => setStageFilter(val)}
+            size="sm"
+            aria-label="Filter wastage by stage"
+          />
         </div>
 
         <Button

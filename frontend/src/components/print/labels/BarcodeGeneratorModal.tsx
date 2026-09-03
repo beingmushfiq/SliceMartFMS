@@ -123,8 +123,8 @@ export function BarcodeGeneratorModal({
                 onClick={() => setActiveTab('setup')}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   activeTab === 'setup'
-                    ? 'bg-surface text-primary shadow-xs border border-default'
-                    : 'text-muted hover:text-default'
+                    ? 'bg-primary text-primary-fg shadow-xs border border-primary'
+                    : 'text-muted hover:text-default border border-transparent'
                 }`}
               >
                 <Settings className="size-3.5" />
@@ -137,8 +137,8 @@ export function BarcodeGeneratorModal({
                 disabled={totalLabels === 0}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   activeTab === 'sheet_preview'
-                    ? 'bg-surface text-primary shadow-xs border border-default'
-                    : 'text-muted hover:text-default'
+                    ? 'bg-primary text-primary-fg shadow-xs border border-primary'
+                    : 'text-muted hover:text-default border border-transparent'
                 }`}
               >
                 <Eye className="size-3.5" />

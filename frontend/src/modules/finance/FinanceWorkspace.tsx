@@ -464,15 +464,15 @@ export const FinanceWorkspace: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 ${
+                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer ${
                   isActive
-                    ? 'bg-surface text-default font-semibold shadow-xs border border-default/70'
+                    ? 'bg-primary text-primary-fg font-semibold shadow-xs border border-primary'
                     : 'text-muted hover:text-default hover:bg-surface/50 border border-transparent'
                 }`}
               >
                 <span>{tab.label}</span>
                 <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
-                  isActive ? 'bg-primary-subtle text-primary font-bold' : 'bg-surface-sunken text-muted'
+                  isActive ? 'bg-white/20 text-white font-bold' : 'bg-surface-sunken text-muted'
                 }`}>
                   {tab.count}
                 </span>

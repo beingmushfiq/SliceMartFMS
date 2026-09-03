@@ -4,6 +4,7 @@ import { api } from '../../lib/api/client';
 import { useTenantCapabilityStore } from '../../lib/capabilities/tenantCapabilityStore';
 import { useAuthStore } from '../../lib/auth/authStore';
 import { Button } from '../../components/ui/Button';
+import { SelectDropdown } from '../../components/ui/Dropdown';
 import { notify } from '../../components/ui/Toast';
 import { IndustryProfilePicker } from './IndustryProfilePicker';
 import {
@@ -276,34 +277,40 @@ export const OnboardingWizard: React.FC = () => {
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-default">Base Currency</label>
-                  <select
+                  <SelectDropdown
+                    options={[
+                      { value: 'BDT', label: 'BDT (৳ Bangladeshi Taka)' },
+                      { value: 'USD', label: 'USD ($ United States Dollar)' },
+                      { value: 'EUR', label: 'EUR (€ Euro)' },
+                      { value: 'GBP', label: 'GBP (£ British Pound)' },
+                      { value: 'INR', label: 'INR (₹ Indian Rupee)' },
+                      { value: 'AED', label: 'AED (د.إ UAE Dirham)' },
+                    ]}
                     value={currencyCode}
-                    onChange={(e) => setCurrencyCode(e.target.value)}
-                    className="w-full rounded-lg border border-default bg-surface px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
-                  >
-                    <option value="BDT">BDT (৳ Bangladeshi Taka)</option>
-                    <option value="USD">USD ($ United States Dollar)</option>
-                    <option value="EUR">EUR (€ Euro)</option>
-                    <option value="GBP">GBP (£ British Pound)</option>
-                    <option value="INR">INR (₹ Indian Rupee)</option>
-                    <option value="AED">AED (د.إ UAE Dirham)</option>
-                  </select>
+                    onChange={(val) => setCurrencyCode(val)}
+                    size="md"
+                    buttonClassName="w-full"
+                    aria-label="Base currency"
+                  />
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-default">Default Timezone</label>
-                  <select
+                  <SelectDropdown
+                    options={[
+                      { value: 'Asia/Dhaka', label: 'Asia/Dhaka (UTC+06:00)' },
+                      { value: 'UTC', label: 'UTC (Universal Coordinated Time)' },
+                      { value: 'America/New_York', label: 'America/New_York (UTC-05:00)' },
+                      { value: 'Europe/London', label: 'Europe/London (UTC+00:00)' },
+                      { value: 'Asia/Dubai', label: 'Asia/Dubai (UTC+04:00)' },
+                      { value: 'Asia/Kolkata', label: 'Asia/Kolkata (UTC+05:30)' },
+                    ]}
                     value={timezone}
-                    onChange={(e) => setTimezone(e.target.value)}
-                    className="w-full rounded-lg border border-default bg-surface px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
-                  >
-                    <option value="Asia/Dhaka">Asia/Dhaka (UTC+06:00)</option>
-                    <option value="UTC">UTC (Universal Coordinated Time)</option>
-                    <option value="America/New_York">America/New_York (UTC-05:00)</option>
-                    <option value="Europe/London">Europe/London (UTC+00:00)</option>
-                    <option value="Asia/Dubai">Asia/Dubai (UTC+04:00)</option>
-                    <option value="Asia/Kolkata">Asia/Kolkata (UTC+05:30)</option>
-                  </select>
+                    onChange={(val) => setTimezone(val)}
+                    size="md"
+                    buttonClassName="w-full"
+                    aria-label="Default timezone"
+                  />
                 </div>
               </div>
             </div>

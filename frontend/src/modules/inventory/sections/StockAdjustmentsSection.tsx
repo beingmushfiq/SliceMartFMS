@@ -20,6 +20,7 @@ import {
 import type { StockAdjustment } from '../../../types/api/inventory';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
 interface AdjFormItem {
   product_name: string;
@@ -385,16 +386,18 @@ export function StockAdjustmentsSection() {
             <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'draft', label: 'Pending Review', colorDot: 'bg-amber-500' },
+              { value: 'approved', label: 'Posted to GL', colorDot: 'bg-emerald-500' },
+              { value: 'cancelled', label: 'Cancelled', colorDot: 'bg-rose-500' },
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
-          >
-            <option value="all">All Statuses</option>
-            <option value="draft">Pending Review</option>
-            <option value="approved">Posted to GL</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter adjustments by status"
+          />
         </div>
 
         <div className="relative flex-1 sm:max-w-xs">

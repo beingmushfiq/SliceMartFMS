@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import type { StockCount } from '../../../types/api/inventory';
 import { api } from '../../../lib/api/client';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
 interface CountFormItem {
   product_name: string;
@@ -414,16 +415,18 @@ export function StockCountsSection() {
             <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'counting', label: 'Active Counting', colorDot: 'bg-blue-500' },
+              { value: 'completed', label: 'Reconciled', colorDot: 'bg-emerald-500' },
+              { value: 'cancelled', label: 'Cancelled', colorDot: 'bg-rose-500' },
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
-          >
-            <option value="all">All Statuses</option>
-            <option value="counting">Active Counting</option>
-            <option value="completed">Reconciled</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter counts by status"
+          />
         </div>
 
         <div className="relative flex-1 sm:max-w-xs">

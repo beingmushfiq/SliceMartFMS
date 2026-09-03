@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import React from 'react';
+import { ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 // ── Shared input classes ───────────────────────────────────────────────────
@@ -124,14 +125,28 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 
 export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
   ({ error, placeholder, children, className, ...props }, ref) => (
-    <select ref={ref} className={cn(inputBase, error && inputError, className)} {...props}>
-      {placeholder && (
-        <option value="" disabled>
-          {placeholder}
-        </option>
-      )}
-      {children}
-    </select>
+    <div className="relative flex items-center w-full">
+      <select
+        ref={ref}
+        className={cn(
+          inputBase,
+          'appearance-none pr-9 cursor-pointer',
+          error && inputError,
+          className
+        )}
+        {...props}
+      >
+        {placeholder && (
+          <option value="" disabled>
+            {placeholder}
+          </option>
+        )}
+        {children}
+      </select>
+      <span className="pointer-events-none absolute right-3 flex items-center text-muted">
+        <ChevronDown className="size-4 opacity-70" />
+      </span>
+    </div>
   )
 );
 Select.displayName = 'Select';

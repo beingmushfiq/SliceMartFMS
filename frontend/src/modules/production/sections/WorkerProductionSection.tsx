@@ -11,6 +11,7 @@ import {
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 import { StatusBadge } from '../../../components/ui/Badge';
 import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
 import { isApiError } from '../../../lib/api/errors';
@@ -203,17 +204,19 @@ export function WorkerProductionSection() {
             />
           </div>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Shifts' },
+              { value: 'morning', label: 'Morning Shift', colorDot: 'bg-amber-400' },
+              { value: 'evening', label: 'Evening Shift', colorDot: 'bg-indigo-500' },
+              { value: 'night', label: 'Night Shift', colorDot: 'bg-purple-600' },
+              { value: 'general', label: 'General Shift', colorDot: 'bg-blue-500' },
+            ]}
             value={shiftFilter}
-            onChange={(e) => setShiftFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface-sunken py-2 px-3 text-xs text-default focus:border-primary focus:outline-none"
-          >
-            <option value="all">All Shifts</option>
-            <option value="morning">Morning Shift</option>
-            <option value="evening">Evening Shift</option>
-            <option value="night">Night Shift</option>
-            <option value="general">General Shift</option>
-          </select>
+            onChange={(val) => setShiftFilter(val)}
+            size="sm"
+            aria-label="Filter production by shift"
+          />
         </div>
 
         <Button

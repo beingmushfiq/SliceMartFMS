@@ -18,6 +18,7 @@ import {
 import type { PurchaseReturn } from '../../../types/api/purchasing';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
 interface ReturnFormItem {
   product_name: string;
@@ -394,16 +395,18 @@ export function PurchaseReturnsSection() {
             <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'draft', label: 'Pending Claims', colorDot: 'bg-amber-500' },
+              { value: 'completed', label: 'Debit Settled', colorDot: 'bg-emerald-500' },
+              { value: 'cancelled', label: 'Cancelled', colorDot: 'bg-rose-500' },
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
-          >
-            <option value="all">All Statuses</option>
-            <option value="draft">Pending Claims</option>
-            <option value="completed">Debit Settled</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter returns by status"
+          />
         </div>
 
         <div className="relative flex-1 sm:max-w-xs">

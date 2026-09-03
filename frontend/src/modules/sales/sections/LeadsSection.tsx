@@ -16,6 +16,7 @@ import {
 import type { Lead, LeadStatus, LeadSource } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
 const SAMPLE_LEADS: Lead[] = [
   {
@@ -100,14 +101,14 @@ const SAMPLE_LEADS: Lead[] = [
   },
 ];
 
-const STAGES: { id: LeadStatus; label: string; tone: string; badgeBg: string }[] = [
-  { id: 'new', label: 'New Inquiries', tone: 'text-sky-600 dark:text-sky-400', badgeBg: 'bg-sky-500/10 border-sky-500/20' },
-  { id: 'contacted', label: 'Contacted', tone: 'text-blue-600 dark:text-blue-400', badgeBg: 'bg-blue-500/10 border-blue-500/20' },
-  { id: 'qualified', label: 'Qualified', tone: 'text-indigo-600 dark:text-indigo-400', badgeBg: 'bg-indigo-500/10 border-indigo-500/20' },
-  { id: 'proposal', label: 'Proposal Sent', tone: 'text-purple-600 dark:text-purple-400', badgeBg: 'bg-purple-500/10 border-purple-500/20' },
-  { id: 'negotiation', label: 'Negotiation', tone: 'text-amber-600 dark:text-amber-400', badgeBg: 'bg-amber-500/10 border-amber-500/20' },
-  { id: 'won', label: 'Closed Won', tone: 'text-emerald-600 dark:text-emerald-400', badgeBg: 'bg-emerald-500/10 border-emerald-500/20' },
-  { id: 'lost', label: 'Closed Lost', tone: 'text-rose-600 dark:text-rose-400', badgeBg: 'bg-rose-500/10 border-rose-500/20' },
+const STAGES: { id: LeadStatus; label: string; tone: string; dotBg: string; badgeBg: string }[] = [
+  { id: 'new', label: 'New Inquiries', tone: 'text-sky-600 dark:text-sky-400', dotBg: 'bg-sky-500', badgeBg: 'bg-sky-500/10 border-sky-500/20' },
+  { id: 'contacted', label: 'Contacted', tone: 'text-blue-600 dark:text-blue-400', dotBg: 'bg-blue-500', badgeBg: 'bg-blue-500/10 border-blue-500/20' },
+  { id: 'qualified', label: 'Qualified', tone: 'text-indigo-600 dark:text-indigo-400', dotBg: 'bg-indigo-500', badgeBg: 'bg-indigo-500/10 border-indigo-500/20' },
+  { id: 'proposal', label: 'Proposal Sent', tone: 'text-purple-600 dark:text-purple-400', dotBg: 'bg-purple-500', badgeBg: 'bg-purple-500/10 border-purple-500/20' },
+  { id: 'negotiation', label: 'Negotiation', tone: 'text-amber-600 dark:text-amber-400', dotBg: 'bg-amber-500', badgeBg: 'bg-amber-500/10 border-amber-500/20' },
+  { id: 'won', label: 'Closed Won', tone: 'text-emerald-600 dark:text-emerald-400', dotBg: 'bg-emerald-500', badgeBg: 'bg-emerald-500/10 border-emerald-500/20' },
+  { id: 'lost', label: 'Closed Lost', tone: 'text-rose-600 dark:text-rose-400', dotBg: 'bg-rose-500', badgeBg: 'bg-rose-500/10 border-rose-500/20' },
 ];
 
 export function LeadsSection() {
@@ -307,18 +308,16 @@ export function LeadsSection() {
             />
           </div>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Stages' },
+              ...STAGES.map((s) => ({ value: s.id, label: s.label, colorDot: s.dotBg })),
+            ]}
             value={stageFilter}
-            onChange={(e) => setStageFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface px-3 py-2 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
-          >
-            <option value="all">All Stages</option>
-            {STAGES.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.label}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => setStageFilter(val)}
+            size="sm"
+            aria-label="Filter leads by stage"
+          />
 
           <button
             type="button"
@@ -370,94 +369,102 @@ export function LeadsSection() {
 
       {/* Kanban Board View */}
       {viewMode === 'kanban' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3.5 overflow-x-auto pb-4">
-          {STAGES.map((stage) => {
-            const stageLeads = filteredLeads.filter((l) => l.status === stage.id);
-            const stageValue = stageLeads.reduce((sum, l) => sum + parseFloat(l.deal_value || '0'), 0);
+        <div className="w-full overflow-x-auto pb-6 pt-1">
+          <div className="flex gap-4 items-start min-w-max">
+            {STAGES.map((stage) => {
+              const stageLeads = filteredLeads.filter((l) => l.status === stage.id);
+              const stageValue = stageLeads.reduce((sum, l) => sum + parseFloat(l.deal_value || '0'), 0);
 
-            return (
-              <div
-                key={stage.id}
-                className="flex flex-col rounded-2xl border border-default bg-surface-sunken/60 p-3 min-w-[240px]"
-              >
-                {/* Column Header */}
-                <div className="flex items-center justify-between pb-2.5 border-b border-default mb-3">
-                  <div>
-                    <h3 className={`text-xs font-bold ${stage.tone}`}>{stage.label}</h3>
-                    <div className="text-[10px] font-mono text-muted">
-                      {formatCurrency(stageValue)}
+              return (
+                <div
+                  key={stage.id}
+                  className="flex flex-col rounded-2xl border border-default bg-surface-sunken/50 p-3.5 w-72.5 shrink-0 shadow-2xs transition-all"
+                >
+                  {/* Column Header */}
+                  <div className="flex items-center justify-between pb-3 border-b border-default mb-3">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`size-2 rounded-full ${stage.dotBg}`} />
+                        <h3 className={`text-xs font-bold ${stage.tone}`}>{stage.label}</h3>
+                      </div>
+                      <div className="text-[11px] font-mono font-semibold text-muted mt-0.5">
+                        {formatCurrency(stageValue)}
+                      </div>
                     </div>
+                    <span className="flex h-5 min-w-5 px-1.5 items-center justify-center rounded-full bg-surface text-[10px] font-bold text-default border border-default shadow-2xs">
+                      {stageLeads.length}
+                    </span>
                   </div>
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-surface text-[10px] font-bold text-default border border-default">
-                    {stageLeads.length}
-                  </span>
-                </div>
 
-                {/* Cards Container */}
-                <div className="space-y-2.5 flex-1 overflow-y-auto max-h-[600px] pr-1">
-                  {stageLeads.length === 0 ? (
-                    <div className="py-8 text-center text-[11px] text-muted border border-dashed border-default rounded-xl">
-                      No leads
-                    </div>
-                  ) : (
-                    stageLeads.map((lead) => (
-                      <div
-                        key={lead.id}
-                        className="rounded-xl border border-default bg-surface p-3.5 shadow-2xs hover:shadow-sm transition-all hover:border-primary/40 space-y-2.5"
-                      >
-                        <div className="flex items-start justify-between gap-1.5">
-                          <div>
-                            <div className="text-xs font-bold text-default leading-tight">{lead.name}</div>
-                            {lead.company_name && (
-                              <div className="text-[11px] text-muted flex items-center gap-1 mt-0.5">
-                                <Building2 className="h-3 w-3" />
-                                <span className="truncate">{lead.company_name}</span>
+                  {/* Cards Container */}
+                  <div className="space-y-3 flex-1 overflow-y-auto max-h-155 pr-0.5">
+                    {stageLeads.length === 0 ? (
+                      <div className="py-10 text-center text-xs text-muted border-2 border-dashed border-default/70 rounded-xl bg-surface/30">
+                        <p className="font-semibold">No leads</p>
+                        <p className="text-[10px] text-muted/70 mt-0.5">Stage is empty</p>
+                      </div>
+                    ) : (
+                      stageLeads.map((lead) => (
+                        <div
+                          key={lead.id}
+                          className="group rounded-xl border border-default bg-surface p-3.5 shadow-2xs hover:shadow-sm transition-all hover:border-primary/40 space-y-2.5"
+                        >
+                          <div className="flex items-start justify-between gap-1.5">
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-bold text-default leading-tight truncate group-hover:text-primary transition-colors">
+                                {lead.name}
                               </div>
+                              {lead.company_name && (
+                                <div className="text-[11px] text-muted flex items-center gap-1 mt-0.5 truncate">
+                                  <Building2 className="h-3 w-3 shrink-0 text-muted" />
+                                  <span className="truncate">{lead.company_name}</span>
+                                </div>
+                              )}
+                            </div>
+                            <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-surface-sunken text-muted border border-default font-medium capitalize">
+                              {lead.source.replace('_', ' ')}
+                            </span>
+                          </div>
+
+                          <div className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                            {formatCurrency(lead.deal_value || '0')}
+                          </div>
+
+                          {lead.notes && (
+                            <p className="text-[11px] text-muted line-clamp-2 leading-relaxed bg-surface-sunken/50 p-2 rounded-lg border border-default/40">
+                              {lead.notes}
+                            </p>
+                          )}
+
+                          <div className="pt-2 border-t border-default/70 flex items-center justify-between text-[10px] text-muted">
+                            <span className="truncate max-w-30 font-medium">{lead.assigned_to || 'Unassigned'}</span>
+                            {lead.expected_close_date && (
+                              <span className="font-mono">{lead.expected_close_date}</span>
                             )}
                           </div>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-sunken text-muted border border-default capitalize">
-                            {lead.source.replace('_', ' ')}
-                          </span>
-                        </div>
 
-                        <div className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                          {formatCurrency(lead.deal_value || '0')}
+                          {/* Quick Stage Mover */}
+                          <div className="pt-1">
+                            <select
+                              value={lead.status}
+                              onChange={(e) => handleUpdateStage(lead.id, e.target.value as LeadStatus)}
+                              className="w-full text-[11px] rounded-lg border border-default bg-surface-sunken px-2.5 py-1.5 text-default focus:border-primary focus:outline-none cursor-pointer transition-colors"
+                            >
+                              {STAGES.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                  Move to {s.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
-
-                        {lead.notes && (
-                          <p className="text-[11px] text-muted line-clamp-2 leading-relaxed">
-                            {lead.notes}
-                          </p>
-                        )}
-
-                        <div className="pt-2 border-t border-default/70 flex items-center justify-between text-[10px] text-muted">
-                          <span className="truncate max-w-[110px]">{lead.assigned_to || 'Unassigned'}</span>
-                          {lead.expected_close_date && (
-                            <span className="font-mono">{lead.expected_close_date}</span>
-                          )}
-                        </div>
-
-                        {/* Quick Stage Mover */}
-                        <div className="flex items-center gap-1 pt-1">
-                          <select
-                            value={lead.status}
-                            onChange={(e) => handleUpdateStage(lead.id, e.target.value as LeadStatus)}
-                            className="w-full text-[10px] rounded-lg border border-default bg-surface-sunken px-2 py-1 text-default focus:outline-none cursor-pointer"
-                          >
-                            {STAGES.map((s) => (
-                              <option key={s.id} value={s.id}>
-                                Move to {s.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                    ))
-                  )}
+                      ))
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       ) : (
         /* Table View */

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import type { PosTerminal } from '../../../types/api/pos';
 import { api } from '../../../lib/api/client';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
 const SAMPLE_TERMINALS: PosTerminal[] = [
   {
@@ -288,15 +289,17 @@ export function PosTerminalsSection() {
             <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Terminals' },
+              { value: 'active', label: 'Active Only', colorDot: 'bg-emerald-500' },
+              { value: 'inactive', label: 'Inactive Only', colorDot: 'bg-slate-400' },
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
-          >
-            <option value="all">All Terminals</option>
-            <option value="active">Active Only</option>
-            <option value="inactive">Inactive Only</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter POS terminals by status"
+          />
         </div>
 
         <div className="relative flex-1 sm:max-w-xs">

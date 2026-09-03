@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   Search,
   Layers,
@@ -20,6 +20,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const isModuleEnabled = useTenantCapabilityStore((state) => state.isModuleEnabled);
   const getTerm = useTenantCapabilityStore((state) => state.getTerm);
   const [searchQuery, setSearchQuery] = useState('');
+  const location = useLocation();
+
+  const isItemActive = (to: string, isActive: boolean) => {
+    if (isActive) return true;
+    if (to === '/hr' && (location.pathname.startsWith('/workforce') || location.pathname.startsWith('/employees') || location.pathname.startsWith('/attendance'))) {
+      return true;
+    }
+    return false;
+  };
 
   const navSections = useMemo(
     () => buildDynamicNavSections(isModuleEnabled, hasPermission, getTerm),
@@ -143,29 +152,32 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                       key={item.to}
                       to={item.to}
                       onClick={onClose}
-                      className={({ isActive }) =>
-                        cn(
+                      className={({ isActive }) => {
+                        const active = isItemActive(item.to, isActive);
+                        return cn(
                           'group relative flex items-center justify-between px-3 rounded-lg text-xs font-medium transition-all duration-150 focus-visible:ring-2 focus-visible:ring-primary outline-none h-9.5',
-                          isActive
+                          active
                             ? 'font-semibold text-primary dark:text-white bg-(--nav-active-bg) border-l-2 border-(--nav-active-marker) shadow-xs'
                             : 'text-muted hover:text-default hover:bg-(--nav-hover-bg) border-l-2 border-transparent'
-                        )
-                      }
+                        );
+                      }}
                     >
-                      {({ isActive }) => (
-                        <>
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <Icon
-                              className={cn(
-                                'size-4 shrink-0 transition-transform duration-150 group-hover:scale-110',
-                                isActive
-                                  ? 'text-primary dark:text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.4)]'
-                                  : 'text-muted group-hover:text-default'
-                              )}
-                              aria-hidden="true"
-                            />
-                            <span className="truncate tracking-normal">{item.label}</span>
-                          </div>
+                      {({ isActive }) => {
+                        const active = isItemActive(item.to, isActive);
+                        return (
+                          <>
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <Icon
+                                className={cn(
+                                  'size-4 shrink-0 transition-transform duration-150 group-hover:scale-110',
+                                  active
+                                    ? 'text-primary dark:text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.4)]'
+                                    : 'text-muted group-hover:text-default'
+                                )}
+                                aria-hidden="true"
+                              />
+                              <span className="truncate tracking-normal">{item.label}</span>
+                            </div>
 
                           {item.badge && (
                             <span
@@ -179,8 +191,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                               {item.badge}
                             </span>
                           )}
-                        </>
-                      )}
+                          </>
+                        );
+                      }}
                     </NavLink>
                   );
                 })}
