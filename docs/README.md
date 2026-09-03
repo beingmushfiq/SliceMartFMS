@@ -23,7 +23,7 @@ Three rules govern everything in it:
    nobody trusts is worse than none.
 
 If a request conflicts with an accepted decision in
-[DECISIONS.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/DECISIONS.md):
+[DECISIONS.md](./DECISIONS.md):
 **stop, state the conflict, and ask for an explicit override.** Do not silently
 deviate and do not quietly "improve" a decision.
 
@@ -40,7 +40,7 @@ deviate and do not quietly "improve" a decision.
 | **Stack** | Laravel 13 / PHP 8.5 · MySQL 8 · React 19 · TypeScript strict · Vite · Tailwind v4 |
 | **Shape** | Modular monolith, shared-schema tenancy on `tenant_id`, contract-first API |
 
-Full context: [PROJECT_CONTEXT.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/PROJECT_CONTEXT.md).
+Full context: [PROJECT_CONTEXT.md](./PROJECT_CONTEXT.md).
 
 ---
 
@@ -76,22 +76,22 @@ Two consequences people miss:
 
 | # | Document | Read it when you need to know | Size |
 |---|---|---|---|
-| 1 | [DECISIONS.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/DECISIONS.md) | *Why* something is the way it is, and whether you are allowed to change it | 31 ADRs |
-| 2 | [PROJECT_CONTEXT.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/PROJECT_CONTEXT.md) | What the product is, who uses it, what the words mean, what is out of scope | 12 § |
-| 3 | [ARCHITECTURE.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/ARCHITECTURE.md) | Where code goes, how a request flows, how tenancy and auth are enforced | 11 § |
-| 4 | [DATABASE_DESIGN.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/DATABASE_DESIGN.md) | Tables, columns, keys, the inventory ledger, migration waves | 169 tables |
-| 5 | [API_CONTRACT.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/API_CONTRACT.md) | Envelope, error codes, pagination, idempotency, auth flow, endpoint families | 46 codes |
-| 6 | [UI_SYSTEM.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/UI_SYSTEM.md) | Tokens, dark mode, motion, the state matrix, accessibility, tables, forms | 21 § |
-| 7 | [MODULE_MAP.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/MODULE_MAP.md) | The 41 modules, their dependencies, their phase, the Definition of Done | 41 modules |
+| 1 | [DECISIONS.md](./DECISIONS.md) | *Why* something is the way it is, and whether you are allowed to change it | 31 ADRs |
+| 2 | [PROJECT_CONTEXT.md](./PROJECT_CONTEXT.md) | What the product is, who uses it, what the words mean, what is out of scope | 12 § |
+| 3 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Where code goes, how a request flows, how tenancy and auth are enforced | 11 § |
+| 4 | [DATABASE_DESIGN.md](./DATABASE_DESIGN.md) | Tables, columns, keys, the inventory ledger, migration waves | 169 tables |
+| 5 | [API_CONTRACT.md](./API_CONTRACT.md) | Envelope, error codes, pagination, idempotency, auth flow, endpoint families | 46 codes |
+| 6 | [UI_SYSTEM.md](./UI_SYSTEM.md) | Tokens, dark mode, motion, the state matrix, accessibility, tables, forms | 21 § |
+| 7 | [MODULE_MAP.md](./MODULE_MAP.md) | The 41 modules, their dependencies, their phase, the Definition of Done | 41 modules |
 
 ### Supporting — operational documents
 
 | Document | Purpose |
 |---|---|
-| [ROADMAP.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/ROADMAP.md) | Phases 0–10, each with deliverables and a **numbered, testable exit gate** |
-| [TASK_PROTOCOL.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/TASK_PROTOCOL.md) | The procedure for a single unit of work, start to merge |
-| [DEVELOPMENT_STATUS.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/DEVELOPMENT_STATUS.md) | The live ledger: what is done, what is in flight, what is next |
-| [RMS_REPORT_MATRIX.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/RMS_REPORT_MATRIX.md) | Every report: source of truth, filters, permission, live vs pre-aggregated |
+| [ROADMAP.md](./ROADMAP.md) | Phases 0–10, each with deliverables and a **numbered, testable exit gate** |
+| [TASK_PROTOCOL.md](./TASK_PROTOCOL.md) | The procedure for a single unit of work, start to merge |
+| [DEVELOPMENT_STATUS.md](./DEVELOPMENT_STATUS.md) | The live ledger: what is done, what is in flight, what is next |
+| [RMS_REPORT_MATRIX.md](./RMS_REPORT_MATRIX.md) | Every report: source of truth, filters, permission, live vs pre-aggregated |
 
 ### `_legacy/` — 14 archived files
 
@@ -188,7 +188,7 @@ changes.
 | **Phase 2 — Master data · Products · Warehouses** | 🔄 **Ready for implementation.** |
 | **Code in repository** | `/frontend` — design-system foundation, all 9 UI primitives, the §8 reliability primitives and the single transport seam, with 128 passing tests. `/backend` — Laravel 13.26.1 skeleton on PHP `^8.5` with Pint + PHPStan level 9 passing, 169 migrated tables across Waves 1–25, the tenancy runtime (`app/Core`), and the full Phase 1 Auth/RBAC pipeline live (492 tests / 2575 assertions). |
 
-Live detail: [DEVELOPMENT_STATUS.md](file:///d:/Factory%20Production,%20Inventory%20&%20Business%20Management%20System/slicemart-fms/docs/DEVELOPMENT_STATUS.md). Resuming in a new session: start at its §7 and §8.
+Live detail: [DEVELOPMENT_STATUS.md](./DEVELOPMENT_STATUS.md). Resuming in a new session: start at its §7 and §8.
 
 ---
 

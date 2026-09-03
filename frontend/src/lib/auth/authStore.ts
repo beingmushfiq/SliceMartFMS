@@ -39,7 +39,13 @@ const initialTenant = getStoredItem<TenantInfo | null>('auth_tenant', null);
 const initialPermissions = new Set<string>(getStoredItem<string[]>('auth_permissions', []));
 const initialBranches = getStoredItem<BranchInfo[]>('auth_branches', []);
 const initialActiveBranch = getStoredItem<BranchInfo | null>('auth_active_branch', null);
-const initialHasToken = typeof window !== 'undefined' && Boolean(localStorage.getItem('access_token'));
+const initialHasToken =
+  typeof window !== 'undefined' &&
+  typeof localStorage !== 'undefined' &&
+  typeof localStorage.getItem === 'function'
+    ? Boolean(localStorage.getItem('access_token'))
+    : false;
+
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: initialUser,
