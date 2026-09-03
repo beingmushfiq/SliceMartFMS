@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import type { CustomerCrm } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 const SAMPLE_CUSTOMERS: CustomerCrm[] = [
   {
@@ -125,6 +126,7 @@ interface PartyRaw {
 
 export function CustomersSection() {
   const queryClient = useQueryClient();
+  const { currencyCode, formatCurrency } = useCurrency();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -282,7 +284,7 @@ export function CustomersSection() {
             </div>
           </div>
           <div className="mt-2 text-xl font-bold font-mono text-amber-600 dark:text-amber-400">
-            BDT {totalReceivables.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            {formatCurrency(totalReceivables)}
           </div>
           <div className="mt-1 text-[11px] text-muted">
             Pending customer collections
@@ -299,7 +301,7 @@ export function CustomersSection() {
             </div>
           </div>
           <div className="mt-2 text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
-            BDT {totalLifetimeSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            {formatCurrency(totalLifetimeSales)}
           </div>
           <div className="mt-1 text-[11px] text-muted">
             Total lifetime billed revenue
@@ -435,22 +437,22 @@ export function CustomersSection() {
                         <span>{c.city || 'Dhaka'}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5 font-mono text-muted">
-                      BDT {parseFloat(c.credit_limit || '0').toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    <td className="px-4 py-3.5 text-right font-mono text-xs">
+                      {formatCurrency(c.credit_limit)}
                     </td>
-                    <td className="px-4 py-3.5 font-mono font-bold">
+                    <td className="px-4 py-3.5 text-right font-mono text-xs font-semibold">
                       <span
                         className={
                           parseFloat(c.current_balance || '0') > 0
                             ? 'text-amber-600 dark:text-amber-400'
-                            : 'text-emerald-600 dark:text-emerald-400'
+                            : 'text-default'
                         }
                       >
-                        BDT {parseFloat(c.current_balance || '0').toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        {formatCurrency(c.current_balance)}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 font-mono font-bold text-default">
-                      BDT {parseFloat(c.lifetime_value || '0').toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    <td className="px-4 py-3.5 text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      {formatCurrency(c.lifetime_value)}
                     </td>
                     <td className="px-4 py-3.5 font-mono text-purple-600 dark:text-purple-400 font-bold">
                       {c.loyalty_points} pts
@@ -509,16 +511,16 @@ export function CustomersSection() {
 
             <div className="grid grid-cols-3 gap-3 p-3.5 rounded-xl bg-surface-sunken border border-default text-xs">
               <div>
-                <div className="text-muted text-[10px] uppercase font-semibold">Credit Limit</div>
-                <div className="font-mono font-bold text-default mt-0.5">
-                  BDT {parseFloat(selectedCustomer.credit_limit).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                </div>
+                <p className="text-[11px] text-muted uppercase tracking-wider font-semibold">Credit Limit</p>
+                <p className="text-base font-bold font-mono text-default mt-0.5">
+                  {formatCurrency(selectedCustomer.credit_limit)}
+                </p>
               </div>
-              <div>
-                <div className="text-muted text-[10px] uppercase font-semibold">Outstanding Due</div>
-                <div className="font-mono font-bold text-amber-600 dark:text-amber-400 mt-0.5">
-                  BDT {parseFloat(selectedCustomer.current_balance).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                </div>
+              <div className="p-3.5 rounded-xl border border-default bg-surface-sunken">
+                <p className="text-[11px] text-muted uppercase tracking-wider font-semibold">Current Balance</p>
+                <p className="text-base font-bold font-mono text-amber-600 dark:text-amber-400 mt-0.5">
+                  {formatCurrency(selectedCustomer.current_balance)}
+                </p>
               </div>
               <div>
                 <div className="text-muted text-[10px] uppercase font-semibold">Total Orders</div>
@@ -545,28 +547,28 @@ export function CustomersSection() {
                     <td className="px-3.5 py-2.5 text-muted">2026-08-10</td>
                     <td className="px-3.5 py-2.5 text-emerald-600 dark:text-emerald-400 font-semibold">INV-2026-0042</td>
                     <td className="px-3.5 py-2.5 text-default">Sales Tax Invoice</td>
-                    <td className="px-3.5 py-2.5 text-right font-bold text-default">150,000.00</td>
+                    <td className="px-3.5 py-2.5 text-right font-bold text-default">{formatCurrency(150000)}</td>
                     <td className="px-3.5 py-2.5 text-right text-muted">-</td>
-                    <td className="px-3.5 py-2.5 text-right font-bold text-amber-600 dark:text-amber-400">150,000.00</td>
+                    <td className="px-3.5 py-2.5 text-right font-bold text-amber-600 dark:text-amber-400">{formatCurrency(150000)}</td>
                   </tr>
                   <tr>
                     <td className="px-3.5 py-2.5 text-muted">2026-08-15</td>
                     <td className="px-3.5 py-2.5 text-sky-600 dark:text-sky-400 font-semibold">REC-2026-0089</td>
                     <td className="px-3.5 py-2.5 text-default">Bank Wire Receipt (BRAC Bank)</td>
                     <td className="px-3.5 py-2.5 text-right text-muted">-</td>
-                    <td className="px-3.5 py-2.5 text-right font-bold text-emerald-600 dark:text-emerald-400">150,000.00</td>
-                    <td className="px-3.5 py-2.5 text-right font-bold text-emerald-600 dark:text-emerald-400">0.00</td>
+                    <td className="px-3.5 py-2.5 text-right font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(150000)}</td>
+                    <td className="px-3.5 py-2.5 text-right font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(0)}</td>
                   </tr>
                   <tr>
                     <td className="px-3.5 py-2.5 text-muted">2026-08-25</td>
                     <td className="px-3.5 py-2.5 text-emerald-600 dark:text-emerald-400 font-semibold">INV-2026-0098</td>
                     <td className="px-3.5 py-2.5 text-default">Sales Tax Invoice</td>
                     <td className="px-3.5 py-2.5 text-right font-bold text-default">
-                      {parseFloat(selectedCustomer.current_balance || '0').toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      {formatCurrency(selectedCustomer.current_balance)}
                     </td>
                     <td className="px-3.5 py-2.5 text-right text-muted">-</td>
                     <td className="px-3.5 py-2.5 text-right font-bold text-amber-600 dark:text-amber-400">
-                      {parseFloat(selectedCustomer.current_balance || '0').toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      {formatCurrency(selectedCustomer.current_balance)}
                     </td>
                   </tr>
                 </tbody>
@@ -681,8 +683,8 @@ export function CustomersSection() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
-                    Approved Credit Limit (BDT)
+                  <label className="block text-xs font-medium text-default mb-1">
+                    Approved Credit Limit ({currencyCode})
                   </label>
                   <input
                     type="number"

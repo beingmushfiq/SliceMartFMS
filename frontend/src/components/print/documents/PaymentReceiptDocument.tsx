@@ -73,14 +73,18 @@ export function PaymentReceiptDocument({ payment, businessConfig }: PaymentRecei
         <div className="flex items-center justify-between border-b border-slate-200 pb-2">
           <span className="text-slate-600">The sum of amount:</span>
           <span className="font-mono font-black text-[11pt] text-emerald-800">
-            {formatCurrency(payment.amount, payment.currency_code === 'BDT' ? '৳' : payment.currency_code)}
+            {formatCurrency(payment.amount, payment.currency_code || businessConfig.currencySymbol || '$')}
           </span>
         </div>
 
         <div className="border-b border-slate-200 pb-2">
           <span className="text-[7.5pt] font-bold text-slate-500 uppercase block mb-0.5">Amount in Words:</span>
           <p className="font-bold italic text-slate-900 text-[8.5pt]">
-            {numberToWords(payment.amount, 'Taka', 'Paisa')}
+            {numberToWords(
+              payment.amount,
+              payment.currency_code === 'BDT' ? 'Taka' : (payment.currency_code || 'Units'),
+              payment.currency_code === 'BDT' ? 'Paisa' : 'Cents'
+            )}
           </p>
         </div>
 

@@ -8,6 +8,7 @@ import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
 import { isApiError } from '../../../lib/api/errors';
 import { notify } from '../../../components/ui/Toast';
 import type { Party } from '../../../types/api/party';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 interface PartyFormDraft {
   code: string;
@@ -28,6 +29,7 @@ interface PartyFormDraft {
 }
 
 export function PartiesSection() {
+  const { formatCurrency } = useCurrency();
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<
     'all' | 'customer' | 'supplier' | 'dealer' | 'agent'
@@ -326,7 +328,7 @@ export function PartiesSection() {
                       )}
                     </td>
                     <td className="py-3.5 px-3 font-mono text-default">
-                      {p.credit_limit} BDT
+                      {formatCurrency(p.credit_limit)}
                       <div className="text-[10px] text-muted font-sans">{p.credit_days} days term</div>
                     </td>
                     <td className="py-3.5 px-3 font-mono">
@@ -337,7 +339,7 @@ export function PartiesSection() {
                             : 'text-default'
                         }
                       >
-                        {p.current_balance} BDT
+                        {formatCurrency(p.current_balance)}
                       </span>
                     </td>
                     <td className="py-3.5 px-3">
@@ -648,11 +650,11 @@ export function PartiesSection() {
               </div>
               <div>
                 <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">Credit Limit</span>
-                <span className="font-mono text-default">{viewingParty.credit_limit} BDT</span>
+                <span className="font-mono text-default">{formatCurrency(viewingParty.credit_limit)}</span>
               </div>
               <div>
                 <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">Current Ledger Balance</span>
-                <span className="font-mono font-bold text-default">{viewingParty.current_balance} BDT</span>
+                <span className="font-mono font-bold text-default">{formatCurrency(viewingParty.current_balance)}</span>
               </div>
             </div>
 

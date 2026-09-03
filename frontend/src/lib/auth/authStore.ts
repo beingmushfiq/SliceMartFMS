@@ -195,17 +195,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (user.is_platform_admin) return true;
     if (permissions.has('*')) return true;
 
-    const userWithRoles = user as unknown as { role?: string; roles?: Array<{ name?: string; slug?: string } | string> };
-    if (
-      userWithRoles.role === 'admin' ||
-      userWithRoles.role === 'owner' ||
-      userWithRoles.role === 'Tenant Admin' ||
-      userWithRoles.role === 'Super Admin' ||
-      userWithRoles.role === 'Manager'
-    ) {
-      return true;
-    }
-
     if (Array.isArray(permission)) {
       return permission.some((p) => {
         if (permissions.has(p)) return true;

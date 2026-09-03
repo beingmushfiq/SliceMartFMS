@@ -25,6 +25,7 @@ export function PurchaseOrderDocument({ po, businessConfig }: PurchaseOrderDocum
   }, [po.po_number]);
 
   const items = po.items ?? [];
+  const currencySymbol = businessConfig.currencySymbol || '$';
 
   return (
     <div className="print-doc w-full text-slate-900 bg-white text-[9pt] leading-normal font-sans">
@@ -110,9 +111,9 @@ export function PurchaseOrderDocument({ po, businessConfig }: PurchaseOrderDocum
               <th className="py-2 px-2.5 border-r border-slate-300">Material / Item SKU</th>
               <th className="py-2 px-2 border-r border-slate-300 text-right w-20">Ordered Qty</th>
               <th className="py-2 px-2 border-r border-slate-300 text-center w-14">Unit</th>
-              <th className="py-2 px-2 border-r border-slate-300 text-right w-24">Unit Rate (৳)</th>
-              <th className="py-2 px-2 border-r border-slate-300 text-right w-20">Tax (৳)</th>
-              <th className="py-2 px-2.5 text-right w-28">Total Cost (৳)</th>
+              <th className="py-2 px-2 border-r border-slate-300 text-right w-24">Unit Rate ({currencySymbol})</th>
+              <th className="py-2 px-2 border-r border-slate-300 text-right w-20">Tax ({currencySymbol})</th>
+              <th className="py-2 px-2.5 text-right w-28">Total Cost ({currencySymbol})</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">

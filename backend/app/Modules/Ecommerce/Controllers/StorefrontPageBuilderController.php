@@ -18,14 +18,15 @@ final class StorefrontPageBuilderController extends Controller
 {
     private function getTenantStorefront(int $tenantId): Storefront
     {
+        $tenant = TenantContext::current()->tenant();
         return Storefront::firstOrCreate(
             ['tenant_id' => $tenantId],
             [
                 'uuid' => (string) Str::uuid(),
-                'name' => 'Storefront',
-                'subdomain' => 'store-' . $tenantId,
+                'name' => $tenant['name'] ?? 'Storefront',
+                'subdomain' => $tenant['slug'] ?? 'store-' . $tenantId,
                 'status' => 'live',
-                'currency' => 'BDT',
+                'currency' => $tenant['currency_code'] ?? 'USD',
             ]
         );
     }

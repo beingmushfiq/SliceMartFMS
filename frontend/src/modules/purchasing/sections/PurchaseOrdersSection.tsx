@@ -23,6 +23,7 @@ import { api } from '../../../lib/api/client';
 import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { PurchaseOrderDocument } from '../../../components/print/documents/PurchaseOrderDocument';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 interface PoFormItem {
   product_name: string;
@@ -171,6 +172,7 @@ const SAMPLE_ORDERS: PurchaseOrder[] = [
 ];
 
 export function PurchaseOrdersSection() {
+  const { formatCurrency, currencyCode } = useCurrency();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -461,7 +463,7 @@ export function PurchaseOrdersSection() {
             <DollarSign className="size-4 text-emerald-500" />
           </div>
           <div className="text-2xl font-extrabold text-default font-mono">
-            ৳{grandTotalCommitted.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            {formatCurrency(grandTotalCommitted)}
           </div>
           <div className="mt-1 text-[11px] text-muted">Total financial exposure</div>
         </div>
@@ -478,7 +480,7 @@ export function PurchaseOrdersSection() {
                 warehouse_name: 'Central Raw Materials Silo',
                 order_date: new Date().toISOString().slice(0, 10),
                 expected_delivery_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
-                currency_code: 'BDT',
+                currency_code: currencyCode,
                 terms_and_conditions: 'Net 30 Days upon inspection pass.',
                 notes: '',
                 items: [
@@ -572,7 +574,7 @@ export function PurchaseOrdersSection() {
                     <td className="px-4 py-3.5 text-muted">{o.warehouse_name ?? '—'}</td>
                     <td className="px-4 py-3.5 font-mono text-muted">{o.order_date}</td>
                     <td className="px-4 py-3.5 text-right font-mono font-semibold text-default">
-                      ৳{parseFloat(o.grand_total).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      {formatCurrency(o.grand_total)}
                     </td>
                     <td className="px-4 py-3.5">{getStatusBadge(o.status)}</td>
                     <td className="px-4 py-3.5 text-right">
@@ -851,7 +853,7 @@ export function PurchaseOrdersSection() {
                 </div>
                 <div>
                   <span className="text-[10px] text-muted block uppercase">Grand Total</span>
-                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">৳{parseFloat(activeOrder.grand_total).toFixed(2)}</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(activeOrder.grand_total)}</span>
                 </div>
               </div>
 
@@ -879,10 +881,10 @@ export function PurchaseOrdersSection() {
                       <tr key={it.id}>
                         <td className="px-3 py-2.5 font-medium text-default">{it.product_name}</td>
                         <td className="px-3 py-2.5 font-mono">{it.quantity} {it.unit_code}</td>
-                        <td className="px-3 py-2.5 font-mono">৳{parseFloat(it.unit_price).toFixed(2)}</td>
+                        <td className="px-3 py-2.5 font-mono">{formatCurrency(it.unit_price)}</td>
                         <td className="px-3 py-2.5 font-mono">{it.tax_rate}%</td>
                         <td className="px-3 py-2.5 font-mono text-right font-semibold text-default">
-                          ৳{parseFloat(it.total_amount).toFixed(2)}
+                          {formatCurrency(it.total_amount)}
                         </td>
                       </tr>
                     ))}

@@ -37,6 +37,7 @@ import {
 } from 'recharts';
 import { useAuthStore } from '../../lib/auth/authStore';
 import { useTenantCapabilityStore } from '../../lib/capabilities/tenantCapabilityStore';
+import { useCurrency } from '../../hooks/useCurrency';
 import { KPICard } from '../../components/ui/KPICard';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -128,7 +129,7 @@ const INITIAL_NOTICES: NoticeItem[] = [
     id: 'notice-3',
     type: 'info',
     title: 'Pending Purchase Approvals (1 PO)',
-    description: 'PO-2026-009 for Raw Dyes & Chemicals (৳ 145,000) awaits Management confirmation.',
+    description: 'PO-2026-009 for Raw Dyes & Chemicals awaits Management confirmation.',
     actionText: 'Approve PO',
     actionHref: '/purchasing',
   },
@@ -136,10 +137,10 @@ const INITIAL_NOTICES: NoticeItem[] = [
 
 export const TenantRoleDashboard: React.FC = () => {
   const { user, tenant } = useAuthStore();
+  const { currencySymbol, formatCurrency } = useCurrency();
   const isModuleEnabled = useTenantCapabilityStore((state) => state.isModuleEnabled);
   const getTerm = useTenantCapabilityStore((state) => state.getTerm);
-  const manifest = useTenantCapabilityStore((state) => state.manifest);
-  const currency = manifest?.currency_code === 'USD' ? '$' : manifest?.currency_code === 'EUR' ? '€' : '৳';
+  const currency = currencySymbol;
 
   const [activeActivityFilter, setActiveActivityFilter] = useState<'all' | 'production' | 'qc' | 'sales'>('all');
   const [notices, setNotices] = useState<NoticeItem[]>(INITIAL_NOTICES);
@@ -445,7 +446,7 @@ export const TenantRoleDashboard: React.FC = () => {
           <div>
             <div className="flex items-center justify-between border-b border-default pb-3">
               <h3 className="text-sm font-bold text-default">Omnichannel Revenue Mix</h3>
-              <Badge tone="success-subtle">৳ 211.1k Today</Badge>
+              <Badge tone="success-subtle">{currencySymbol} 211.1k Today</Badge>
             </div>
             <p className="text-2xs text-muted mt-2">Combined sales across B2B Wholesale, Retail POS, and E-Commerce</p>
           </div>
@@ -468,7 +469,7 @@ export const TenantRoleDashboard: React.FC = () => {
                 </Pie>
                 <Tooltip
                   formatter={(val: number | string | readonly (string | number)[] | undefined) => [
-                    `৳ ${Number(val ?? 0).toLocaleString()}`,
+                    formatCurrency(Number(val ?? 0)),
                     'Revenue',
                   ]}
                   contentStyle={{
@@ -490,7 +491,7 @@ export const TenantRoleDashboard: React.FC = () => {
                   <span className="size-2.5 rounded-full" style={{ backgroundColor: channel.color }} />
                   <span className="text-muted">{channel.name}</span>
                 </div>
-                <span className="font-bold text-default font-mono">৳ {channel.value.toLocaleString()}</span>
+                <span className="font-bold text-default font-mono">{formatCurrency(channel.value)}</span>
               </div>
             ))}
           </div>
@@ -778,7 +779,7 @@ export const TenantRoleDashboard: React.FC = () => {
             <div className="flex items-center gap-3 min-w-0">
               <span className="size-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)] shrink-0" />
               <span className="text-default truncate">
-                Purchase Order <strong className="font-mono text-default">PO-2026-004</strong> approved by Accounts (Amount: ৳ 420,000)
+                Purchase Order <strong className="font-mono text-default">PO-2026-004</strong> approved by Accounts (Amount: {currencySymbol} 420,000)
               </span>
             </div>
             <span className="text-muted text-[11px] font-mono shrink-0">2h ago</span>

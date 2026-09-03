@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { CodReconciliation, RunSheet, CourierProvider } from '../../../types/api/delivery';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 interface CodReconciliationSectionProps {
   reconciliations: CodReconciliation[];
@@ -20,6 +21,7 @@ export const CodReconciliationSection: React.FC<CodReconciliationSectionProps> =
   providers,
   onCreateReconciliation,
 }) => {
+  const { formatCurrency, currencySymbol } = useCurrency();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [sourceType, setSourceType] = useState<'run_sheet' | 'courier_provider'>('run_sheet');
   const [sourceId, setSourceId] = useState<number>(0);
@@ -176,9 +178,9 @@ export const CodReconciliationSection: React.FC<CodReconciliationSectionProps> =
                       {r.source_type.replace(/_/g, ' ')} #{r.source_id}
                     </span>
                   </td>
-                  <td style={{ padding: '12px 16px' }}>৳ {Number(r.expected_amount).toFixed(2)}</td>
+                  <td style={{ padding: '12px 16px' }}>{formatCurrency(r.expected_amount)}</td>
                   <td style={{ padding: '12px 16px', fontWeight: 600, color: '#059669' }}>
-                    ৳ {Number(r.received_amount).toFixed(2)}
+                    {formatCurrency(r.received_amount)}
                   </td>
                   <td style={{ padding: '12px 16px' }}>
                     <span
@@ -293,8 +295,8 @@ export const CodReconciliationSection: React.FC<CodReconciliationSectionProps> =
                   {sourceType === 'run_sheet'
                     ? completedRunSheets.map((s) => (
                         <option key={s.id} value={s.id}>
-                          {s.run_sheet_number} ({s.rider_name || 'Rider'}) — ৳
-                          {Number(s.total_cod_collected).toFixed(2)}
+                          {s.run_sheet_number} ({s.rider_name || 'Rider'}) —{' '}
+                          {formatCurrency(s.total_cod_collected)}
                         </option>
                       ))
                     : providers.map((p) => (
@@ -315,7 +317,7 @@ export const CodReconciliationSection: React.FC<CodReconciliationSectionProps> =
                       marginBottom: 4,
                     }}
                   >
-                    Expected Amount (৳)
+                    Expected Amount ({currencySymbol})
                   </label>
                   <input
                     type="number"
@@ -341,7 +343,7 @@ export const CodReconciliationSection: React.FC<CodReconciliationSectionProps> =
                       marginBottom: 4,
                     }}
                   >
-                    Actual Cash Received (৳)
+                    Actual Cash Received ({currencySymbol})
                   </label>
                   <input
                     type="number"

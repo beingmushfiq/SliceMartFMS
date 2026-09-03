@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import type { PosSession } from '../../../types/api/pos';
 import { api } from '../../../lib/api/client';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 interface PosSessionsSectionProps {
   onLaunchPOS?: (session: PosSession) => void;
@@ -47,7 +48,7 @@ const SAMPLE_SESSIONS: PosSession[] = [
     sales_count: 42,
     refund_total: '300.00',
     status: 'open',
-    notes: 'Morning shift started with ৳2000 drawer float.',
+    notes: 'Morning shift started with opening drawer float.',
     created_at: '2026-08-30T08:00:00Z',
   },
   {
@@ -80,6 +81,7 @@ const SAMPLE_SESSIONS: PosSession[] = [
 ];
 
 export function PosSessionsSection({ onLaunchPOS }: PosSessionsSectionProps) {
+  const { formatCurrency, currencySymbol } = useCurrency();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -273,7 +275,7 @@ export function PosSessionsSection({ onLaunchPOS }: PosSessionsSectionProps) {
             <DollarSign className="size-4 text-emerald-500" />
           </div>
           <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-            ৳{totalCollectedToday.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            {formatCurrency(totalCollectedToday)}
           </div>
           <div className="mt-1 text-[11px] text-muted">Combined POS tender intake</div>
         </div>
@@ -370,10 +372,10 @@ export function PosSessionsSection({ onLaunchPOS }: PosSessionsSectionProps) {
                     </td>
                     <td className="px-4 py-3.5 font-mono font-semibold text-primary">{s.sales_count} Receipts</td>
                     <td className="px-4 py-3.5 text-right font-mono text-muted">
-                      ৳{parseFloat(s.opening_cash).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      {formatCurrency(s.opening_cash)}
                     </td>
                     <td className="px-4 py-3.5 text-right font-mono font-semibold text-default">
-                      ৳{parseFloat(s.expected_cash).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      {formatCurrency(s.expected_cash)}
                     </td>
                     <td className="px-4 py-3.5">{getStatusBadge(s.status)}</td>
                     <td className="px-4 py-3.5 text-right">
@@ -480,7 +482,7 @@ export function PosSessionsSection({ onLaunchPOS }: PosSessionsSectionProps) {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-muted mb-1">Opening Cash Float (৳)</label>
+                  <label className="block font-semibold text-muted mb-1">Opening Cash Float ({currencySymbol})</label>
                   <input
                     type="number"
                     value={openFormData.opening_cash}
@@ -540,16 +542,16 @@ export function PosSessionsSection({ onLaunchPOS }: PosSessionsSectionProps) {
               <div className="grid grid-cols-2 gap-3 bg-surface-sunken p-3 rounded-xl border border-default font-mono">
                 <div>
                   <span className="text-[10px] text-muted block uppercase">Opening Float</span>
-                  <span className="font-semibold text-default">৳{parseFloat(activeSession.opening_cash).toFixed(2)}</span>
+                  <span className="font-semibold text-default">{formatCurrency(activeSession.opening_cash)}</span>
                 </div>
                 <div>
                   <span className="text-[10px] text-muted block uppercase">Expected Drawer Cash</span>
-                  <span className="font-semibold text-primary">৳{parseFloat(activeSession.expected_cash).toFixed(2)}</span>
+                  <span className="font-semibold text-primary">{formatCurrency(activeSession.expected_cash)}</span>
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-muted mb-1">Physical Counted Cash in Drawer (৳)</label>
+                <label className="block font-semibold text-muted mb-1">Physical Counted Cash in Drawer ({currencySymbol})</label>
                 <input
                   type="number"
                   value={closeFormData.counted_cash}
@@ -571,7 +573,7 @@ export function PosSessionsSection({ onLaunchPOS }: PosSessionsSectionProps) {
                         : 'text-rose-600 dark:text-rose-400'
                     }`}
                   >
-                    ৳{(parseFloat(closeFormData.counted_cash) - parseFloat(activeSession.expected_cash)).toFixed(2)}
+                    {formatCurrency(parseFloat(closeFormData.counted_cash) - parseFloat(activeSession.expected_cash))}
                   </span>
                 </div>
               )}
@@ -651,29 +653,29 @@ export function PosSessionsSection({ onLaunchPOS }: PosSessionsSectionProps) {
                 <div className="space-y-1.5 font-mono">
                   <div className="flex justify-between py-1 border-b border-default/50">
                     <span className="text-muted">Opening Drawer Float:</span>
-                    <span className="font-semibold text-default">৳{parseFloat(activeSession.opening_cash).toFixed(2)}</span>
+                    <span className="font-semibold text-default">{formatCurrency(activeSession.opening_cash)}</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-default/50">
                     <span className="text-muted">Cash Sales:</span>
-                    <span className="font-semibold text-default">৳{(parseFloat(activeSession.expected_cash) - parseFloat(activeSession.opening_cash)).toFixed(2)}</span>
+                    <span className="font-semibold text-default">{formatCurrency(parseFloat(activeSession.expected_cash) - parseFloat(activeSession.opening_cash))}</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-default/50">
                     <span className="text-muted">POS Card Terminal:</span>
-                    <span className="font-semibold text-default">৳{parseFloat(activeSession.card_total).toFixed(2)}</span>
+                    <span className="font-semibold text-default">{formatCurrency(activeSession.card_total)}</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-default/50">
                     <span className="text-muted">Mobile Banking (bKash/Nagad):</span>
-                    <span className="font-semibold text-default">৳{parseFloat(activeSession.mobile_total).toFixed(2)}</span>
+                    <span className="font-semibold text-default">{formatCurrency(activeSession.mobile_total)}</span>
                   </div>
                   <div className="flex justify-between py-1.5 font-bold text-sm text-primary pt-2 border-t border-default">
                     <span>Total Shift Revenue:</span>
                     <span>
-                      ৳{(
+                      {formatCurrency(
                         parseFloat(activeSession.expected_cash) -
                         parseFloat(activeSession.opening_cash) +
                         parseFloat(activeSession.card_total) +
                         parseFloat(activeSession.mobile_total)
-                      ).toFixed(2)}
+                      )}
                     </span>
                   </div>
                 </div>
@@ -682,7 +684,7 @@ export function PosSessionsSection({ onLaunchPOS }: PosSessionsSectionProps) {
               {activeSession.cash_variance !== null && activeSession.cash_variance !== undefined && (
                 <div className="p-3 rounded-xl bg-surface-sunken border border-default flex items-center justify-between font-mono">
                   <span className="font-semibold text-muted">Reconciled Cash Variance:</span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">৳{parseFloat(activeSession.cash_variance).toFixed(2)}</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(activeSession.cash_variance)}</span>
                 </div>
               )}
 

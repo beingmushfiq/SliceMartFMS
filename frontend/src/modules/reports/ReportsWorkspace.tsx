@@ -20,6 +20,8 @@ import type {
   ReportSavedView,
   ExportFormat,
 } from '../../types/api/reports';
+import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
+import { useCurrency } from '../../hooks/useCurrency';
 
 const MOCK_DEFINITIONS: ReportDefinition[] = [
   {
@@ -90,8 +92,23 @@ const MOCK_DEFINITIONS: ReportDefinition[] = [
 ];
 
 export const ReportsWorkspace: React.FC = () => {
-  const [selectedCategory, setSelectedCategory] = useState<ReportCategory | 'all'>('all');
-  const [selectedReportCode, setSelectedReportCode] = useState<string>('production_yield');
+  const { formatCurrency } = useCurrency();
+  const [selectedCategory, setSelectedCategory] = useWorkspaceTab<ReportCategory | 'all'>(
+    'all',
+    ['all', 'operational', 'financial', 'analytical', 'compliance'] as const,
+    'category'
+  );
+  const [selectedReportCode, setSelectedReportCode] = useWorkspaceTab<string>(
+    'production_yield',
+    [
+      'production_yield',
+      'stock_valuation',
+      'sales_performance',
+      'general_ledger',
+      'payroll_summary',
+    ] as const,
+    'report'
+  );
   const [startDate, setStartDate] = useState<string>('2026-08-01');
   const [endDate, setEndDate] = useState<string>('2026-08-28');
   const [loading, setLoading] = useState<boolean>(false);
@@ -420,6 +437,14 @@ export const ReportsWorkspace: React.FC = () => {
                       return (
                         <td key={colKey} className="px-4 py-3 font-semibold text-indigo-600">
                           {val}
+                        </td>
+                      );
+                    }
+
+                    if (colDef?.type === 'currency') {
+                      return (
+                        <td key={colKey} className="px-4 py-3 font-mono font-semibold text-slate-800 dark:text-slate-200">
+                          {formatCurrency(Number(val) || 0)}
                         </td>
                       );
                     }

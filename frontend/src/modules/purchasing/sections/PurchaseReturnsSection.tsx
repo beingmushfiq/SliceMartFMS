@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import type { PurchaseReturn } from '../../../types/api/purchasing';
 import { api } from '../../../lib/api/client';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 interface ReturnFormItem {
   product_name: string;
@@ -97,6 +98,7 @@ const SAMPLE_RETURNS: PurchaseReturn[] = [
 ];
 
 export function PurchaseReturnsSection() {
+  const { formatCurrency, currencyCode } = useCurrency();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -179,7 +181,7 @@ export function PurchaseReturnsSection() {
       warehouse_id: 1,
       warehouse_name: formData.warehouse_name,
       return_date: formData.return_date,
-      currency_code: 'BDT',
+      currency_code: currencyCode,
       total_amount: calculatedTotal.toFixed(2),
       status: 'draft',
       reason: formData.reason,
@@ -347,7 +349,7 @@ export function PurchaseReturnsSection() {
             <TrendingUp className="size-4 text-rose-500" />
           </div>
           <div className="text-2xl font-extrabold text-rose-600 dark:text-rose-400 font-mono">
-            ৳{totalReturnRecovery.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            {formatCurrency(totalReturnRecovery)}
           </div>
           <div className="mt-1 text-[11px] text-muted">Recovered supplier debit value</div>
         </div>
@@ -453,7 +455,7 @@ export function PurchaseReturnsSection() {
                     </td>
                     <td className="px-4 py-3.5 text-muted max-w-xs truncate">{r.reason ?? '—'}</td>
                     <td className="px-4 py-3.5 text-right font-mono font-semibold text-rose-600 dark:text-rose-400">
-                      ৳{parseFloat(r.total_amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      {formatCurrency(r.total_amount)}
                     </td>
                     <td className="px-4 py-3.5">{getStatusBadge(r.status)}</td>
                     <td className="px-4 py-3.5 text-right">
@@ -715,7 +717,7 @@ export function PurchaseReturnsSection() {
                 </div>
                 <div>
                   <span className="text-[10px] text-muted block uppercase">Total Claim</span>
-                  <span className="font-semibold text-rose-600 dark:text-rose-400">৳{parseFloat(activeReturn.total_amount).toFixed(2)}</span>
+                  <span className="font-semibold text-rose-600 dark:text-rose-400">{formatCurrency(activeReturn.total_amount)}</span>
                 </div>
               </div>
 
@@ -745,9 +747,9 @@ export function PurchaseReturnsSection() {
                           {it.notes && <span className="text-[10px] text-muted block font-normal">{it.notes}</span>}
                         </td>
                         <td className="px-3 py-2.5 font-mono">{it.quantity} {it.unit_code}</td>
-                        <td className="px-3 py-2.5 font-mono">৳{parseFloat(it.unit_price).toFixed(2)}</td>
+                        <td className="px-3 py-2.5 font-mono">{formatCurrency(it.unit_price)}</td>
                         <td className="px-3 py-2.5 font-mono text-right font-semibold text-rose-600 dark:text-rose-400">
-                          ৳{parseFloat(it.total_amount).toFixed(2)}
+                          {formatCurrency(it.total_amount)}
                         </td>
                       </tr>
                     ))}

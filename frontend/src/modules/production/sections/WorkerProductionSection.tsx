@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2,
-  DollarSign,
   Plus,
   Search,
   ShieldCheck,
@@ -22,6 +21,7 @@ import type {
   ProductionBatch,
 } from '../../../types/api/production';
 import type { Product } from '../../../types/api/catalog';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 interface CreateEntryDraft {
   batch_id: string;
@@ -39,6 +39,7 @@ interface CreateEntryDraft {
 }
 
 export function WorkerProductionSection() {
+  const { formatCurrency } = useCurrency();
   const [search, setSearch] = useState('');
   const [shiftFilter, setShiftFilter] = useState<string>('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -181,9 +182,8 @@ export function WorkerProductionSection() {
             <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">
               Earned Wages
             </div>
-            <div className="mt-1 text-2xl font-bold font-mono text-default flex items-center gap-1">
-              <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-              <span>{summary.total_earned}</span>
+            <div className="mt-1 text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
+              {formatCurrency(summary.total_earned)}
             </div>
           </div>
         </div>
@@ -312,7 +312,7 @@ export function WorkerProductionSection() {
                       <span className="text-rose-600 dark:text-rose-400">{entry.rejected_quantity}</span>
                     </td>
                     <td className="py-3 px-3 font-mono text-default">
-                      {entry.total_earned ? `$${entry.total_earned}` : 'N/A'}
+                      {entry.total_earned ? formatCurrency(entry.total_earned) : 'N/A'}
                     </td>
                     <td className="py-3 px-3">
                       <StatusBadge status={entry.status} />

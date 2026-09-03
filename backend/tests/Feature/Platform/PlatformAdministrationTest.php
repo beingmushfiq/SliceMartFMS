@@ -131,6 +131,15 @@ class PlatformAdministrationTest extends TestCase
 
         $this->assertDatabaseHas('tenants', ['slug' => 'apex-footwear']);
         $this->assertDatabaseHas('users', ['email' => 'manzur@apexfootwear.com']);
+
+        $tenantId = $response->json('data.tenant.id');
+        $this->assertDatabaseHas('warehouses', ['tenant_id' => $tenantId, 'code' => 'WH-MAIN']);
+        $this->assertDatabaseHas('warehouses', ['tenant_id' => $tenantId, 'code' => 'WH-FG']);
+        $this->assertDatabaseHas('warehouses', ['tenant_id' => $tenantId, 'code' => 'WH-QC']);
+        $this->assertDatabaseHas('storefronts', ['tenant_id' => $tenantId, 'subdomain' => 'apex-footwear']);
+        $this->assertDatabaseHas('storefront_pages', ['tenant_id' => $tenantId, 'slug' => 'home']);
+        $this->assertDatabaseHas('storefront_pages', ['tenant_id' => $tenantId, 'slug' => 'privacy-policy']);
+        $this->assertDatabaseHas('tenant_domains', ['tenant_id' => $tenantId, 'domain' => 'apex-footwear.devcenterpoint.com']);
     }
 
     public function test_cannot_provision_tenant_with_reserved_subdomain(): void

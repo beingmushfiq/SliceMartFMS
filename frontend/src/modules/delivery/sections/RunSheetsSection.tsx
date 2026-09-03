@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { RunSheet } from '../../../types/api/delivery';
 import type { DeliveryOrder } from '../../../types/api/sales';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 interface RunSheetsSectionProps {
   runSheets: RunSheet[];
@@ -27,6 +28,7 @@ export const RunSheetsSection: React.FC<RunSheetsSectionProps> = ({
   onCreateRunSheet,
   onCompleteRunSheet,
 }) => {
+  const { formatCurrency } = useCurrency();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedBranchId, setSelectedBranchId] = useState<number>(branches[0]?.id || 1);
   const [selectedRiderId, setSelectedRiderId] = useState<number>(0);
@@ -200,10 +202,10 @@ export const RunSheetsSection: React.FC<RunSheetsSectionProps> = ({
                     {rs.completed_stops} / {rs.total_stops}
                   </td>
                   <td style={{ padding: '12px 16px', fontWeight: 600 }}>
-                    ৳ {Number(rs.total_cod_expected).toFixed(2)}
+                    {formatCurrency(rs.total_cod_expected)}
                   </td>
                   <td style={{ padding: '12px 16px', color: '#059669', fontWeight: 600 }}>
-                    ৳ {Number(rs.total_cod_collected).toFixed(2)}
+                    {formatCurrency(rs.total_cod_collected)}
                   </td>
                   <td style={{ padding: '12px 16px' }}>{getStatusBadge(rs.status)}</td>
                   <td style={{ padding: '12px 16px', textAlign: 'right' }}>
@@ -430,7 +432,7 @@ export const RunSheetsSection: React.FC<RunSheetsSectionProps> = ({
                           </span>
                         </div>
                         <span style={{ fontWeight: 600, color: '#1E40AF' }}>
-                          ৳ {Number(d.cod_amount).toFixed(2)}
+                          {formatCurrency(d.cod_amount)}
                         </span>
                       </label>
                     ))

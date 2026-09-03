@@ -25,6 +25,7 @@ import type {
 } from '../../../lib/barcode/types';
 import { DEFAULT_LABEL_FIELDS } from '../../../lib/barcode/types';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 export interface BarcodeGeneratorModalProps {
   isOpen: boolean;
@@ -37,6 +38,7 @@ export function BarcodeGeneratorModal({
   onClose,
   initialProducts = [],
 }: BarcodeGeneratorModalProps) {
+  const { currencySymbol } = useCurrency();
   const { config } = useBusinessConfig();
   const { printDocument, isPrinting } = useDocumentPrint();
 
@@ -51,7 +53,7 @@ export function BarcodeGeneratorModal({
               sku: 'FG-BREAD-01',
               barcode: '8901234567890',
               sale_price: '280.00',
-              currency: '৳',
+              currency: currencySymbol,
               unit_code: 'PCS',
               batch_code: 'BAT-2026-0830',
               mfg_date: '2026-08-30',
@@ -233,7 +235,7 @@ export function BarcodeGeneratorModal({
                             <span>SKU: {item.product.sku}</span>
                             {item.product.barcode && <span>Code: {item.product.barcode}</span>}
                             <span className="text-emerald-600 font-bold">
-                              {item.product.currency || '৳'}{item.product.sale_price}
+                              {item.product.currency || currencySymbol}{item.product.sale_price}
                             </span>
                           </div>
                         </div>

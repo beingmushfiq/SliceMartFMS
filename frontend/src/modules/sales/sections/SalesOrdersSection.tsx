@@ -4,9 +4,10 @@ import { CheckCircle2, Clock, Plus, RefreshCw, Search, XCircle, ShoppingCart } f
 import { toast } from 'sonner';
 import type { SalesOrder } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
-import { formatCurrency } from '../../../lib/document/formatters';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 export function SalesOrdersSection() {
+  const { formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [channelFilter, setChannelFilter] = useState<string>('all');
@@ -241,7 +242,7 @@ export function SalesOrdersSection() {
                       {order.customer_name ?? 'Walk-in / Direct'}
                     </td>
                     <td className="px-4 py-3.5 font-mono font-medium text-default">
-                      {formatCurrency(order.total_amount, '৳')}
+                      {formatCurrency(order.total_amount)}
                     </td>
                     <td className="px-4 py-3.5">{getStatusBadge(order.status)}</td>
                     <td className="px-4 py-3.5">

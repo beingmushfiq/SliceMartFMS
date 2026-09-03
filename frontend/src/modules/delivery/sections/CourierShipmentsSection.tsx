@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { CourierShipment, CourierProvider } from '../../../types/api/delivery';
 import type { DeliveryOrder } from '../../../types/api/sales';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 interface CourierShipmentsSectionProps {
   shipments: CourierShipment[];
@@ -21,6 +22,7 @@ export const CourierShipmentsSection: React.FC<CourierShipmentsSectionProps> = (
   onCancelShipment,
   onOpenLabel,
 }) => {
+  const { formatCurrency } = useCurrency();
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedProvider, setSelectedProvider] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -250,7 +252,7 @@ export const CourierShipmentsSection: React.FC<CourierShipmentsSectionProps> = (
                     {s.delivery_number || `#${s.delivery_order_id}`}
                   </td>
                   <td style={{ padding: '12px 16px' }}>
-                    <span style={{ fontWeight: 600 }}>৳ {Number(s.cod_amount).toFixed(2)}</span>
+                    <span style={{ fontWeight: 600 }}>{formatCurrency(s.cod_amount)}</span>
                   </td>
                   <td style={{ padding: '12px 16px' }}>{getStatusBadge(s.status)}</td>
                   <td style={{ padding: '12px 16px', color: '#6B7280', fontSize: '0.8125rem' }}>
@@ -378,7 +380,7 @@ export const CourierShipmentsSection: React.FC<CourierShipmentsSectionProps> = (
                   <option value="">-- Choose Pending Delivery Order --</option>
                   {pendingDeliveries.map((d) => (
                     <option key={d.id} value={d.id}>
-                      {d.delivery_number} — {d.recipient_name} (৳{Number(d.cod_amount).toFixed(2)})
+                      {d.delivery_number} — {d.recipient_name} ({formatCurrency(d.cod_amount)})
                     </option>
                   ))}
                 </select>
@@ -412,7 +414,7 @@ export const CourierShipmentsSection: React.FC<CourierShipmentsSectionProps> = (
                     .filter((p) => p.is_active)
                     .map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name} (Default charge: ৳{Number(p.default_charge).toFixed(2)})
+                        {p.name} (Default charge: {formatCurrency(p.default_charge)})
                       </option>
                     ))}
                 </select>

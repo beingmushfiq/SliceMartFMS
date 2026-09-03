@@ -5,9 +5,10 @@ import { toast } from 'sonner';
 import type { Invoice } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
 import { InvoiceTemplateBuilder } from '../components/InvoiceTemplateBuilder';
-import { formatCurrency } from '../../../lib/document/formatters';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 export function InvoicesSection() {
+  const { formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -202,12 +203,12 @@ export function InvoicesSection() {
                         {inv.customer_name ?? 'Counter Customer'}
                       </td>
                       <td className="px-4 py-3.5 font-mono text-default">
-                        {formatCurrency(subtotalNum, '৳')}
+                        {formatCurrency(subtotalNum)}
                       </td>
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-1.5">
                           <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-xs">
-                            {formatCurrency(grossProfit, '৳')}
+                            {formatCurrency(grossProfit)}
                           </span>
                           <span className="text-[10px] text-muted font-mono">
                             ({marginPct.toFixed(1)}%)
@@ -218,7 +219,7 @@ export function InvoicesSection() {
                         </div>
                       </td>
                       <td className="px-4 py-3.5 font-mono font-medium text-default">
-                        {formatCurrency(inv.total_amount, '৳')}
+                        {formatCurrency(inv.total_amount)}
                       </td>
                       <td className="px-4 py-3.5">{getStatusBadge(inv.status)}</td>
                       <td className="px-4 py-3.5 text-right space-x-1.5">

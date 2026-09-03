@@ -3,8 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowDownLeft, ArrowUpRight, Boxes, Layers, RefreshCw, Search } from 'lucide-react';
 import type { StockMovement, StockBalance } from '../../../types/api/inventory';
 import { api } from '../../../lib/api/client';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 export function StockLedgerSection() {
+  const { formatCurrency } = useCurrency();
   const [viewMode, setViewMode] = useState<'movements' | 'balances'>('balances');
   const [search, setSearch] = useState('');
 
@@ -170,10 +172,10 @@ export function StockLedgerSection() {
                         {parseFloat(b.quantity).toFixed(2)}
                       </td>
                       <td className="px-4 py-3.5 text-right font-mono text-default">
-                        ৳{parseFloat(b.average_cost).toFixed(2)}
+                        {formatCurrency(b.average_cost)}
                       </td>
                       <td className="px-4 py-3.5 text-right font-mono font-bold text-default">
-                        ৳{parseFloat(b.total_value).toFixed(2)}
+                        {formatCurrency(b.total_value)}
                       </td>
                     </tr>
                   ))

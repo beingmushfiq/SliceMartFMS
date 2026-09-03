@@ -14,6 +14,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
+import { useCurrency } from '../../hooks/useCurrency';
 
 interface RiskFactor {
   code: string;
@@ -54,6 +55,7 @@ interface FraudAssessment {
 }
 
 export const OrderFraudVerificationWorkspace: React.FC = () => {
+  const { formatCurrency } = useCurrency();
   const [riskFilter, setRiskFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -340,7 +342,7 @@ export const OrderFraudVerificationWorkspace: React.FC = () => {
                       </div>
                     </td>
                     <td className="py-3.5 px-4 font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-                      ৳ {Number(item.sales_order?.total_amount || 0).toFixed(2)}
+                      {formatCurrency(Number(item.sales_order?.total_amount || 0))}
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2">

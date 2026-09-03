@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
+import { useCurrency } from '../../hooks/useCurrency';
 import type {
   Employee,
   Department,
@@ -15,7 +17,11 @@ type HrTab = 'employees' | 'attendance' | 'leaves' | 'payroll';
 type EmploymentType = 'permanent' | 'contract' | 'daily_wage' | 'piece_rate';
 
 export const HrWorkspace: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<HrTab>('payroll');
+  const { formatCurrency } = useCurrency();
+  const [activeTab, setActiveTab] = useWorkspaceTab<HrTab>(
+    'payroll',
+    ['employees', 'attendance', 'leaves', 'payroll'] as const
+  );
   const [selectedEmployeeForBadge, setSelectedEmployeeForBadge] = useState<Employee | null>(null);
 
   // Master Reference Data
@@ -373,11 +379,8 @@ export const HrWorkspace: React.FC = () => {
           <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
             Monthly Payroll Run
           </div>
-          <div className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-2">
-            ৳{' '}
-            {parseFloat(payrollPeriods[0]?.total_net || '0').toLocaleString('en-US', {
-              minimumFractionDigits: 2,
-            })}
+          <div className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-2 font-mono">
+            {formatCurrency(payrollPeriods[0]?.total_net || '0')}
           </div>
           <div className="text-xs text-gray-400 mt-1">
             Period: {payrollPeriods[0]?.period_code} (LOCKED)
@@ -461,10 +464,7 @@ export const HrWorkspace: React.FC = () => {
                       Total Gross
                     </span>
                     <div className="text-lg font-bold font-mono text-gray-900 dark:text-gray-100">
-                      ৳{' '}
-                      {parseFloat(period.total_gross).toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                      })}
+                      {formatCurrency(period.total_gross)}
                     </div>
                   </div>
                   <div>
@@ -472,10 +472,7 @@ export const HrWorkspace: React.FC = () => {
                       Total Net Payout
                     </span>
                     <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                      ৳{' '}
-                      {parseFloat(period.total_net).toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                      })}
+                      {formatCurrency(period.total_net)}
                     </div>
                   </div>
                 </div>
@@ -535,22 +532,13 @@ export const HrWorkspace: React.FC = () => {
                         : '—'}
                     </td>
                     <td className="px-6 py-4 text-right font-mono text-gray-900 dark:text-gray-100">
-                      ৳{' '}
-                      {parseFloat(ps.gross_amount).toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                      })}
+                      {formatCurrency(ps.gross_amount)}
                     </td>
                     <td className="px-6 py-4 text-right font-mono text-rose-600 dark:text-rose-400">
-                      ৳{' '}
-                      {parseFloat(ps.total_deductions).toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                      })}
+                      {formatCurrency(ps.total_deductions)}
                     </td>
                     <td className="px-6 py-4 text-right font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
-                      ৳{' '}
-                      {parseFloat(ps.net_amount).toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                      })}
+                      {formatCurrency(ps.net_amount)}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <button
@@ -775,13 +763,12 @@ export const HrWorkspace: React.FC = () => {
                     </div>
                     {item.quantity && item.rate && (
                       <div className="text-xs text-gray-500">
-                        {parseFloat(item.quantity).toFixed(0)} units @ ৳
-                        {parseFloat(item.rate).toFixed(2)}
+                        {parseFloat(item.quantity).toFixed(0)} units @ {formatCurrency(item.rate)}
                       </div>
                     )}
                   </div>
                   <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                    ৳ {parseFloat(item.amount).toFixed(2)}
+                    {formatCurrency(item.amount)}
                   </div>
                 </div>
               ))}
@@ -791,10 +778,7 @@ export const HrWorkspace: React.FC = () => {
               <div>
                 <span className="text-xs text-gray-500">Net Payable Amount</span>
                 <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-                  ৳{' '}
-                  {parseFloat(selectedPayslip.net_amount).toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                  })}
+                  {formatCurrency(selectedPayslip.net_amount)}
                 </div>
               </div>
               <button

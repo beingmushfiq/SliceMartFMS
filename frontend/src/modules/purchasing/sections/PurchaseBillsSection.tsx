@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import type { PurchaseBill } from '../../../types/api/purchasing';
 import { api } from '../../../lib/api/client';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 interface BillFormItem {
   product_name: string;
@@ -120,6 +121,7 @@ const SAMPLE_BILLS: PurchaseBill[] = [
 ];
 
 export function PurchaseBillsSection() {
+  const { formatCurrency, currencyCode } = useCurrency();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -407,7 +409,7 @@ export function PurchaseBillsSection() {
             <Clock className="size-4 text-amber-500" />
           </div>
           <div className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 font-mono">
-            ৳{totalPayable.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            {formatCurrency(totalPayable)}
           </div>
           <div className="mt-1 text-[11px] text-muted">Total unpaid vendor balances</div>
         </div>
@@ -429,9 +431,9 @@ export function PurchaseBillsSection() {
             <TrendingUp className="size-4 text-indigo-500" />
           </div>
           <div className="text-2xl font-extrabold text-default font-mono">
-            ৳{bills
-              .reduce((sum, b) => sum + parseFloat(b.grand_total || '0'), 0)
-              .toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            {formatCurrency(
+              bills.reduce((sum, b) => sum + parseFloat(b.grand_total || '0'), 0)
+            )}
           </div>
           <div className="mt-1 text-[11px] text-muted">Cumulative procurement expenditure</div>
         </div>
@@ -449,7 +451,7 @@ export function PurchaseBillsSection() {
                 supplier_invoice_number: 'INV-2026-001',
                 bill_date: new Date().toISOString().slice(0, 10),
                 due_date: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
-                currency_code: 'BDT',
+                currency_code: currencyCode,
                 notes: '',
                 items: [
                   {
@@ -545,7 +547,7 @@ export function PurchaseBillsSection() {
                     </td>
                     <td className="px-4 py-3.5 font-mono text-muted">{b.due_date}</td>
                     <td className="px-4 py-3.5 text-right font-mono font-semibold text-default">
-                      ৳{parseFloat(b.grand_total).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      {formatCurrency(b.grand_total)}
                     </td>
                     <td className="px-4 py-3.5">{getStatusBadge(b.status, b.payment_status)}</td>
                     <td className="px-4 py-3.5 text-right">
@@ -830,7 +832,7 @@ export function PurchaseBillsSection() {
               <div className="flex justify-between">
                 <span className="text-muted">Net Payable Amount:</span>
                 <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm">
-                  ৳{parseFloat(activeBill.grand_total).toFixed(2)}
+                  {formatCurrency(activeBill.grand_total)}
                 </span>
               </div>
             </div>
@@ -917,7 +919,7 @@ export function PurchaseBillsSection() {
                 </div>
                 <div>
                   <span className="text-[10px] text-muted block uppercase">Net Payable</span>
-                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">৳{parseFloat(activeBill.grand_total).toFixed(2)}</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(activeBill.grand_total)}</span>
                 </div>
               </div>
 
@@ -938,10 +940,10 @@ export function PurchaseBillsSection() {
                       <tr key={it.id}>
                         <td className="px-3 py-2.5 font-medium text-default">{it.product_name}</td>
                         <td className="px-3 py-2.5 font-mono">{it.quantity} {it.unit_code}</td>
-                        <td className="px-3 py-2.5 font-mono">৳{parseFloat(it.unit_price).toFixed(2)}</td>
-                        <td className="px-3 py-2.5 font-mono">৳{parseFloat(it.tax_amount).toFixed(2)}</td>
+                        <td className="px-3 py-2.5 font-mono">{formatCurrency(it.unit_price)}</td>
+                        <td className="px-3 py-2.5 font-mono">{formatCurrency(it.tax_amount)}</td>
                         <td className="px-3 py-2.5 font-mono text-right font-semibold text-default">
-                          ৳{parseFloat(it.total_amount).toFixed(2)}
+                          {formatCurrency(it.total_amount)}
                         </td>
                       </tr>
                     ))}

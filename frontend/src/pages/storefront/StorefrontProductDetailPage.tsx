@@ -6,6 +6,7 @@ import { useStorefrontCartStore } from '../../lib/storefront/storefrontCartStore
 import { SeoHead } from '../../components/seo/SeoHead';
 import { BreadcrumbNav } from '../../components/seo/BreadcrumbNav';
 import type { StorefrontConfig, StorefrontProduct, StorefrontProductVariant } from '../../types/api/storefront';
+import { useCurrency } from '../../hooks/useCurrency';
 
 interface OutletContextType {
   config: StorefrontConfig;
@@ -15,6 +16,7 @@ interface OutletContextType {
 export const StorefrontProductDetailPage: React.FC = () => {
   const { idOrSku } = useParams<{ idOrSku: string }>();
   const { config, subdomain } = useOutletContext<OutletContextType>();
+  const { formatCurrency } = useCurrency();
   const [product, setProduct] = useState<StorefrontProduct | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<StorefrontProductVariant | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -253,9 +255,9 @@ export const StorefrontProductDetailPage: React.FC = () => {
                 } catch {
                   // Fallback
                   const text = encodeURIComponent(
-                    `Hello ${config?.name ?? 'SliceMart'}, I would like to order ${quantity}x ${product.name} (৳${(
+                    `Hello ${config?.name ?? 'Storefront'}, I would like to order ${quantity}x ${product.name} (${formatCurrency(
                       parseFloat(price) * quantity
-                    ).toFixed(2)}).`
+                    )}).`
                   );
                   window.open(`https://wa.me/${config?.whatsapp_number?.replace(/[^0-9]/g, '') || '8801700000000'}?text=${text}`, '_blank');
                 }

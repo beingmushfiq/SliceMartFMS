@@ -452,8 +452,23 @@ export const TenantRegistrationWizard: React.FC = () => {
                 <span className="text-amber-400">{provisionedData?.tenant?.slug || 'workspace'}.devcenterpoint.com</span>
               </div>
               <div className="flex justify-between border-b border-slate-800 pb-2">
-                <span className="text-slate-400">Tenant Admin:</span>
-                <span className="text-slate-200">{provisionedData?.owner?.email || 'Admin'}</span>
+                <span className="text-slate-400">Storefront URL:</span>
+                <a
+                  href={`/store/${provisionedData?.tenant?.slug}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-emerald-400 hover:underline flex items-center gap-1 font-semibold"
+                >
+                  /store/{provisionedData?.tenant?.slug}
+                </a>
+              </div>
+              <div className="flex justify-between border-b border-slate-800 pb-2">
+                <span className="text-slate-400">Storefront Pages:</span>
+                <span className="text-emerald-400 font-medium">9 CMS Pages Provisioned (Live)</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-800 pb-2">
+                <span className="text-slate-400">Warehouses:</span>
+                <span className="text-slate-300">Central (WH-MAIN), FG (WH-FG), QC (WH-QC)</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Tenant ID:</span>
@@ -462,6 +477,14 @@ export const TenantRegistrationWizard: React.FC = () => {
             </div>
 
             <div className="pt-6 flex items-center justify-center gap-4 font-mono text-xs">
+              <a
+                href={`/store/${provisionedData?.tenant?.slug}`}
+                target="_blank"
+                rel="noreferrer"
+                className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-colors shadow-lg shadow-emerald-600/20"
+              >
+                Visit Storefront
+              </a>
               <button
                 onClick={() => navigate('/platform/tenants')}
                 className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors"

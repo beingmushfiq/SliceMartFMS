@@ -1,72 +1,68 @@
-# E-COMMERCE & STOREFRONT ARCHITECTURE
-# DevCenterPoint Multi-Tenant Platform
+# E-COMMERCE ARCHITECTURE — STOREFRONT, INVENTORY SYNC & FRAUD VERIFICATION
 
-## 1. Domain & Routing Strategy
-The e-commerce experience is headless, tenant-isolated, and dynamically rendered:
-- **Production URL**: `https://{subdomain}.devcenterpoint.com`
-- **Development/Fallback Route**: `http://localhost:5173/store/:subdomain`
-
-### Tenant Resolution Pipeline
-1. Incoming HTTP requests are intercepted by `ResolveStorefrontTenant` middleware.
-2. Tenant is resolved via:
-   - Host header subdomain (e.g. `slicemart.devcenterpoint.com` -> `slicemart`)
-   - `X-Storefront-Subdomain` header
-   - `X-Tenant-Subdomain` header
-3. Once found and validated (`status = 'active'`), `TenantContext::bind($tenant)` establishes tenant isolation for all downstream queries.
+> **Status:** Canonical E-Commerce Specification  
+> **Application:** Application 3 — Tenant Public Storefront  
+> **Philosophy:** Polished, Editorial, Visual-First Online Store. Integrated directly with warehouse inventory and commercial workflows.  
 
 ---
 
-## 2. Headless API Surface (`/api/v1/storefront/*`)
+## 1. Headless Storefront Topology
 
-| Endpoint | Method | Purpose | Authentication |
-|---|---|---|---|
-| `/storefront/config` | `GET` | Store metadata, branding colors, currencies, policies | Public |
-| `/storefront/categories` | `GET` | Active category taxonomy | Public |
-| `/storefront/products` | `GET` | Filtered & paginated product catalog | Public |
-| `/storefront/products/{idOrSku}` | `GET` | Product detail with variants & stock status | Public |
-| `/storefront/cart` | `GET` | Active cart session details & line totals | `X-Cart-Session` |
-| `/storefront/cart/items` | `POST` | Add product to cart | `X-Cart-Session` |
-| `/storefront/cart/items/{id}` | `PUT` | Update line item quantity | `X-Cart-Session` |
-| `/storefront/cart/items/{id}` | `DELETE` | Remove line item | `X-Cart-Session` |
-| `/storefront/cart/coupon` | `POST` | Apply discount coupon voucher | `X-Cart-Session` |
-| `/storefront/cart/coupon` | `DELETE` | Remove active coupon | `X-Cart-Session` |
-| `/storefront/checkout` | `POST` | Convert cart to online order | `X-Cart-Session` |
-| `/storefront/orders/track` | `GET` | Public order timeline lookup | Public |
-| `/storefront/cms/pages` | `GET` | Dynamic CMS pages & section blocks | Public |
-| `/storefront/customer/*` | `*` | Customer registration, login, profile & past orders | Bearer (Customer) |
+The Public Storefront (`/store/:subdomain/*`) acts as an autonomous e-commerce engine operating over the central tenant catalog:
 
----
-
-## 3. Order Lifecycle & Separation of Concerns
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Shopper as Customer
-    participant Storefront as Storefront App
-    participant Cart as Cart Service
-    participant Orders as Sales Order Engine
-    participant Fraud as Fraud Check
-    participant Delivery as Logistics & Courier
-    
-    Shopper->>Storefront: Add to Cart & Checkout
-    Storefront->>Cart: POST /storefront/checkout
-    Cart->>Orders: Create Sales Order (Channel: 'online', Status: 'pending')
-    Orders-->>Shopper: Order Reference Number (e.g. SO-ONL-2026...)
-    
-    Note over Orders,Fraud: Tenant Admin Back-Office Processing
-    Orders->>Fraud: Verification & Risk Scoring
-    Fraud->>Orders: Mark Verified / Approved
-    Orders->>Orders: Generate Official Sales Invoice & Chalan
-    Orders->>Delivery: Create Delivery Order
-    Delivery->>Delivery: Assign Courier (Steadfast / Pathao / REDX)
-    Delivery-->>Shopper: Live Tracking Webhooks
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       PUBLIC STOREFRONT USER EXPERIENCE                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ 1. Homepage & Collections │ Dynamic CMS Hero, Featured Grid, Sliders        │
+│ 2. Catalog & Filters      │ Categories, Price Range, Search, In-Stock Only  │
+│ 3. Product Detail (PDP)   │ Image Gallery, Variant Picker, Add to Cart      │
+│ 4. WhatsApp Direct Order  │ 1-Click pre-formatted WhatsApp chat ordering    │
+│ 5. Shopping Cart & Drawer │ Real-time subtotal, discount codes, shipping fee│
+│ 6. Transparent Checkout   │ Guest or customer checkout, COD / Mobile Money  │
+│ 7. Token Order Tracking   │ Live status pipeline by tracking UUID / Phone   │
+│ 8. Customer Self-Service  │ Order history, saved addresses, profile         │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 4. Storefront CMS & Page Builder Engine
-- **Tenant Customization**: Storefronts customize branding colors, hero banner copy, guest checkout toggles, and payment gateways without code changes.
-- **Published Catalog Switchboard**: Tenant managers toggle product publication via `POST /api/v1/storefront/products/toggle-publish`.
-- **Sandboxed Custom Code Blocks**: Custom HTML/CSS/JS promotional blocks execute exclusively inside sandboxed iframes (`sandbox="allow-scripts"`) on the storefront to prevent tenant code execution inside the management back-office.
-- **Voucher Promotion Engine**: Configurable fixed or percentage discounts with minimum order amount requirements.
+## 2. Real-Time Inventory Synchronization
+
+To prevent overselling and inventory race conditions:
+1. **Dynamic Live Availability:**
+   - Catalog displays actual available stock (`on_hand - reserved`).
+   - If `allow_negative_stock` is false, out-of-stock items disable the "Add to Cart" button or show "Backorder Available".
+2. **Checkout Reservation Lock (15-Minute TTL):**
+   - When a customer proceeds to checkout, the system places a temporary 15-minute reservation hold on the selected items.
+   - If checkout is completed, the reservation converts to an allocated sales order item.
+   - If checkout is abandoned, the reservation automatically expires and returns to available stock.
+
+---
+
+## 3. Order Fraud Verification Engine
+
+Every online order is automatically evaluated by the `OrderFraudScorerService`:
+
+```
+Input Factors:
+├── Phone Number Historical Deliveries & Return Rates
+├── IP Geolocation vs Delivery City Mismatch
+├── Unusually High Quantity / Order Value for First-time Buyer
+└── Rapid Duplicate Orders from Same Device Fingerprint
+            │
+            ▼
+Weighted Risk Score (0–100):
+├── 0 – 29: Low Risk ➔ Auto-Confirmed & routed to packing
+├── 30 – 69: Medium Risk ➔ Staff Phone Verification Queue
+└── 70 – 100: High Risk ➔ Auto-Held, Requires Advance Payment
+```
+
+---
+
+## 4. WhatsApp Direct Order Flow
+
+For markets with high social commerce adoption:
+- Product Detail and Cart provide a *"Order via WhatsApp"* button.
+- Dynamically compiles a structured message with tenant hotline, product names, quantities, unit prices, total amount, and delivery address prompt.
+- Saves an initial draft order in the backend with channel `'whatsapp'` for customer service agents to confirm with a single click.

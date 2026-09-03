@@ -22,6 +22,7 @@ import { api } from '../../../lib/api/client';
 import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { CreditNoteDocument } from '../../../components/print/documents/CreditNoteDocument';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 interface SalesReturnFormItem {
   product_name: string;
@@ -105,6 +106,7 @@ const SAMPLE_RETURNS: SalesReturn[] = [
 ];
 
 export function SalesReturnsSection() {
+  const { formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -362,7 +364,7 @@ export function SalesReturnsSection() {
             <TrendingUp className="size-4 text-rose-500" />
           </div>
           <div className="text-2xl font-extrabold text-rose-600 dark:text-rose-400 font-mono">
-            ৳{totalCreditIssued.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            {formatCurrency(totalCreditIssued)}
           </div>
           <div className="mt-1 text-[11px] text-muted">Total customer refund/credit value</div>
         </div>
@@ -480,7 +482,7 @@ export function SalesReturnsSection() {
                       )}
                     </td>
                     <td className="px-4 py-3.5 text-right font-mono font-semibold text-rose-600 dark:text-rose-400">
-                      ৳{parseFloat(r.total_amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      {formatCurrency(r.total_amount)}
                     </td>
                     <td className="px-4 py-3.5">{getStatusBadge(r.status)}</td>
                     <td className="px-4 py-3.5 text-right">
@@ -774,7 +776,7 @@ export function SalesReturnsSection() {
                 </div>
                 <div>
                   <span className="text-[10px] text-muted block uppercase">Credit Amount</span>
-                  <span className="font-semibold text-rose-600 dark:text-rose-400">৳{parseFloat(activeReturn.total_amount).toFixed(2)}</span>
+                  <span className="font-semibold text-rose-600 dark:text-rose-400">{formatCurrency(activeReturn.total_amount)}</span>
                 </div>
               </div>
 
@@ -803,7 +805,7 @@ export function SalesReturnsSection() {
                         <td className="px-3 py-2.5 font-mono">{it.quantity} PCS</td>
                         <td className="px-3 py-2.5 font-mono capitalize">{it.condition.replace('_', ' ')}</td>
                         <td className="px-3 py-2.5 font-mono text-right font-semibold text-rose-600 dark:text-rose-400">
-                          ৳{parseFloat(it.line_total).toFixed(2)}
+                          {formatCurrency(it.line_total)}
                         </td>
                       </tr>
                     ))}

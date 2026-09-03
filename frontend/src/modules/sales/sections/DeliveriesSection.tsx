@@ -23,6 +23,7 @@ import { api } from '../../../lib/api/client';
 import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { DeliveryChallanDocument } from '../../../components/print/documents/DeliveryChallanDocument';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 interface DeliveryFormItem {
   product_name: string;
@@ -147,6 +148,7 @@ const SAMPLE_DELIVERIES: DeliveryOrder[] = [
 ];
 
 export function DeliveriesSection() {
+  const { formatCurrency, currencySymbol } = useCurrency();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -433,7 +435,7 @@ export function DeliveriesSection() {
             <DollarSign className="size-4 text-amber-500" />
           </div>
           <div className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 font-mono">
-            ৳{totalCodPending.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            {formatCurrency(totalCodPending)}
           </div>
           <div className="mt-1 text-[11px] text-muted">Cash on delivery collection</div>
         </div>
@@ -548,7 +550,7 @@ export function DeliveriesSection() {
                       {d.delivery_type.replace('_', ' ')}
                     </td>
                     <td className="px-4 py-3.5 text-right font-mono font-semibold text-default">
-                      ৳{parseFloat(d.cod_amount || '0').toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      {formatCurrency(d.cod_amount || '0')}
                     </td>
                     <td className="px-4 py-3.5">{getStatusBadge(d.status)}</td>
                     <td className="px-4 py-3.5 text-right">
@@ -707,7 +709,7 @@ export function DeliveriesSection() {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-muted mb-1">COD Collection (৳)</label>
+                  <label className="block font-semibold text-muted mb-1">COD Collection ({currencySymbol})</label>
                   <input
                     type="number"
                     value={formData.cod_amount}
@@ -837,7 +839,7 @@ export function DeliveriesSection() {
                 </div>
                 <div>
                   <span className="text-[10px] text-muted block uppercase">COD Amount</span>
-                  <span className="font-semibold text-amber-600 dark:text-amber-400">৳{parseFloat(activeDelivery.cod_amount || '0').toFixed(2)}</span>
+                  <span className="font-semibold text-amber-600 dark:text-amber-400">{formatCurrency(activeDelivery.cod_amount || '0')}</span>
                 </div>
                 <div>
                   <span className="text-[10px] text-muted block uppercase">Delivered At</span>

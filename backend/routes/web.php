@@ -16,3 +16,35 @@ Route::middleware([\App\Core\Http\Middleware\ResolveStorefrontTenant::class])->g
     Route::get('/robots.txt', \App\Modules\Ecommerce\Controllers\StorefrontRobotsController::class);
 });
 
+Route::match(['get', 'head'], '/api/health', function () {
+    return response()->json([
+        'status' => 'ok',
+        'timestamp' => now()->toIso8601String(),
+        'version' => '1.0.0',
+    ]);
+});
+
+Route::get('/healthz', function () {
+    return response()->json([
+        'status' => 'healthy',
+        'timestamp' => now()->toIso8601String(),
+    ]);
+});
+
+Route::get('/readyz', function () {
+    try {
+        \Illuminate\Support\Facades\DB::connection()->getPdo();
+        return response()->json([
+            'status' => 'ready',
+            'database' => 'connected',
+            'timestamp' => now()->toIso8601String(),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status' => 'unready',
+            'database' => 'disconnected',
+            'error' => $e->getMessage(),
+        ], 503);
+    }
+});
+

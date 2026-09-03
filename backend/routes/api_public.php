@@ -45,4 +45,12 @@ Route::prefix('v1')
         Route::get('industry-profiles', [\App\Modules\Platform\Controllers\IndustryProfileController::class, 'index'])->name('industry-profiles.index');
         Route::get('industry-profiles/{key}', [\App\Modules\Platform\Controllers\IndustryProfileController::class, 'show'])->name('industry-profiles.show');
         Route::get('business-types', [\App\Modules\Platform\Controllers\IndustryProfileController::class, 'businessTypes'])->name('business-types.index');
+
+        Route::match(['get', 'head'], 'health', function () {
+            return response()->json([
+                'status' => 'ok',
+                'timestamp' => now()->toIso8601String(),
+                'version' => '1.0.0',
+            ]);
+        })->name('health');
     });

@@ -154,7 +154,7 @@ class StructuredDataBuilder
             $images[] = $settings->default_og_image;
         }
 
-        $currency = $storefront?->currency ?: 'BDT';
+        $currency = $storefront?->currency ?: 'USD';
         $price = (float) $product->default_sale_price;
 
         $isStockAvailable = ($product->is_stock_tracked)

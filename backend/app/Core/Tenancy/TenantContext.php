@@ -134,6 +134,16 @@ final class TenantContext
     }
 
     /**
+     * Raw tenant array representation.
+     *
+     * @return array<string, mixed>
+     */
+    public function tenant(): array
+    {
+        return $this->tenant;
+    }
+
+    /**
      * Tenant status: trial | active | past_due | suspended | cancelled.
      */
     public function tenantStatus(): string

@@ -61,6 +61,7 @@ import { ModuleManagerSection } from './sections/ModuleManagerSection';
 import { ProductionStagesSection } from './sections/ProductionStagesSection';
 import { CustomFieldsManagerSection } from './sections/CustomFieldsManagerSection';
 import { TerminologySection } from './sections/TerminologySection';
+import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import type {
   SettingsSchemaDictionary,
   SettingItem,
@@ -224,7 +225,34 @@ function extractErrorMessage(err: unknown, fallback: string): string {
 
 export const SettingsCenterWorkspace: React.FC = () => {
   const [schema, setSchema] = useState<SettingsSchemaDictionary>({});
-  const [activeGroup, setActiveGroup] = useState<string>('general');
+  const [activeGroup, setActiveGroup] = useWorkspaceTab<string>(
+    'general',
+    [
+      'general',
+      'modules',
+      'terminology',
+      'production_stages',
+      'custom_fields',
+      'documents',
+      'production',
+      'inventory',
+      'purchase',
+      'sales',
+      'pos',
+      'ecommerce',
+      'custom_domains',
+      'delivery',
+      'integrations',
+      'qc',
+      'hr_payroll',
+      'assets',
+      'finance',
+      'notifications',
+      'security',
+      'reports',
+    ] as const,
+    'tab'
+  );
   const [formValues, setFormValues] = useState<Record<string, SettingFieldValue>>({});
   const [initialValues, setInitialValues] = useState<Record<string, SettingFieldValue>>({});
 

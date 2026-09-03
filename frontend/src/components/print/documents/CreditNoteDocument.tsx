@@ -25,6 +25,7 @@ export function CreditNoteDocument({ salesReturn, businessConfig }: CreditNoteDo
   }, [salesReturn.return_number]);
 
   const items = salesReturn.items ?? [];
+  const currencySymbol = businessConfig.currencySymbol || '$';
 
   return (
     <div className="print-doc w-full text-slate-900 bg-white text-[9pt] leading-normal font-sans">
@@ -88,8 +89,8 @@ export function CreditNoteDocument({ salesReturn, businessConfig }: CreditNoteDo
               <th className="py-2 px-2.5 border-r border-slate-300">Returned Product</th>
               <th className="py-2 px-2 border-r border-slate-300 text-center w-20">Condition</th>
               <th className="py-2 px-2 border-r border-slate-300 text-right w-16">Qty</th>
-              <th className="py-2 px-2 border-r border-slate-300 text-right w-20">Unit Rate (৳)</th>
-              <th className="py-2 px-2.5 text-right w-24">Credit Value (৳)</th>
+              <th className="py-2 px-2 border-r border-slate-300 text-right w-20">Unit Rate ({currencySymbol})</th>
+              <th className="py-2 px-2.5 text-right w-24">Credit Value ({currencySymbol})</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">

@@ -1,8 +1,9 @@
-import { useState } from 'react';
 import { ClipboardList, Factory, Users } from 'lucide-react';
 import { ProductionPlansSection } from './sections/ProductionPlansSection';
 import { ProductionBatchesSection } from './sections/ProductionBatchesSection';
 import { WorkerProductionSection } from './sections/WorkerProductionSection';
+
+import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 
 export type ProductionTab = 'plans' | 'batches' | 'worker-entries';
 
@@ -35,8 +36,10 @@ const tabs: TabConfig[] = [
   },
 ];
 
+const VALID_TABS: readonly ProductionTab[] = ['batches', 'plans', 'worker-entries'];
+
 export default function ProductionWorkspace() {
-  const [activeTab, setActiveTab] = useState<ProductionTab>('batches');
+  const [activeTab, setActiveTab] = useWorkspaceTab<ProductionTab>('batches', VALID_TABS);
 
   const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[0];
 

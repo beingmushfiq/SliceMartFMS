@@ -172,3 +172,139 @@ export function SearchInput({ onClear, className, ...props }: SearchInputProps) 
     </div>
   );
 }
+
+// ── CurrencyInput ──────────────────────────────────────────────────────────
+
+interface CurrencyInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+  value: string | number;
+  onChange: (value: string) => void;
+  currencySymbol?: string;
+  error?: boolean;
+}
+
+export function CurrencyInput({
+  value,
+  onChange,
+  currencySymbol = '$',
+  error,
+  className,
+  ...props
+}: CurrencyInputProps) {
+  return (
+    <div className="relative flex items-center">
+      <span className="absolute left-3 font-semibold text-xs text-muted pointer-events-none select-none">
+        {currencySymbol}
+      </span>
+      <input
+        type="number"
+        step="0.01"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={cn(inputBase, 'pl-8 text-right font-mono', error && inputError, className)}
+        {...props}
+      />
+    </div>
+  );
+}
+
+// ── QuantityInput ──────────────────────────────────────────────────────────
+
+import { Plus, Minus } from 'lucide-react';
+
+interface QuantityInputProps {
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  unit?: string;
+  disabled?: boolean;
+  className?: string;
+}
+
+export function QuantityInput({
+  value,
+  onChange,
+  min = 0,
+  max,
+  step = 1,
+  unit,
+  disabled = false,
+  className,
+}: QuantityInputProps) {
+  const handleDecrement = () => {
+    if (disabled) return;
+    const next = Math.max(min, value - step);
+    onChange(next);
+  };
+
+  const handleIncrement = () => {
+    if (disabled) return;
+    const next = max !== undefined ? Math.min(max, value + step) : value + step;
+    onChange(next);
+  };
+
+  return (
+    <div className={cn('inline-flex items-center rounded-(--input-radius) border border-(--input-border) bg-(--input-bg) p-0.5', className)}>
+      <button
+        type="button"
+        disabled={disabled || value <= min}
+        onClick={handleDecrement}
+        className="p-1.5 rounded text-muted hover:text-default hover:bg-surface-sunken disabled:opacity-40 transition-colors"
+      >
+        <Minus className="size-3.5" />
+      </button>
+      <input
+        type="number"
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+        disabled={disabled}
+        className="w-16 text-center text-xs font-mono bg-transparent border-none focus:outline-none text-default"
+      />
+      {unit && <span className="text-[10px] text-muted pr-1.5">{unit}</span>}
+      <button
+        type="button"
+        disabled={disabled || (max !== undefined && value >= max)}
+        onClick={handleIncrement}
+        className="p-1.5 rounded text-muted hover:text-default hover:bg-surface-sunken disabled:opacity-40 transition-colors"
+      >
+        <Plus className="size-3.5" />
+      </button>
+    </div>
+  );
+}
+
+// ── PercentageInput ────────────────────────────────────────────────────────
+
+interface PercentageInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+  value: string | number;
+  onChange: (value: string) => void;
+  error?: boolean;
+}
+
+export function PercentageInput({
+  value,
+  onChange,
+  error,
+  className,
+  ...props
+}: PercentageInputProps) {
+  return (
+    <div className="relative flex items-center">
+      <input
+        type="number"
+        step="0.1"
+        min="0"
+        max="100"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={cn(inputBase, 'pr-8 text-right font-mono', error && inputError, className)}
+        {...props}
+      />
+      <span className="absolute right-3 font-semibold text-xs text-muted pointer-events-none select-none">
+        %
+      </span>
+    </div>
+  );
+}
+

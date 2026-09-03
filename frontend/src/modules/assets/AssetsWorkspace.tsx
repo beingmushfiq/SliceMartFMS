@@ -5,11 +5,18 @@ import type {
   AssetDepreciationEntry,
   MaintenanceOrder,
 } from '../../types/api/assets';
+import { useCurrency } from '../../hooks/useCurrency';
+import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 
 type AssetTab = 'assets' | 'depreciation' | 'categories' | 'maintenance';
 
 export const AssetsWorkspace: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<AssetTab>('assets');
+  const [activeTab, setActiveTab] = useWorkspaceTab<AssetTab>(
+    'assets',
+    ['assets', 'depreciation', 'categories', 'maintenance'] as const,
+    'tab'
+  );
+  const { formatCurrency } = useCurrency();
 
   // Asset Categories State
   const [categories] = useState<AssetCategory[]>([
@@ -250,7 +257,7 @@ export const AssetsWorkspace: React.FC = () => {
             Total Gross Asset Value
           </div>
           <div className="text-2xl font-extrabold text-gray-900 dark:text-gray-100 mt-2">
-            ৳ {totalAssetCost.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            {formatCurrency(totalAssetCost)}
           </div>
           <div className="text-xs text-gray-400 mt-1">
             Acquisition Cost Across {assets.length} Assets
@@ -262,7 +269,7 @@ export const AssetsWorkspace: React.FC = () => {
             Accumulated Depreciation
           </div>
           <div className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-2">
-            ৳ {totalAccumulatedDepr.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            {formatCurrency(totalAccumulatedDepr)}
           </div>
           <div className="text-xs text-gray-400 mt-1">Expensed to GL General Ledger</div>
         </div>
@@ -272,7 +279,7 @@ export const AssetsWorkspace: React.FC = () => {
             Net Carrying Book Value
           </div>
           <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-2">
-            ৳ {totalNetBookValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            {formatCurrency(totalNetBookValue)}
           </div>
           <div className="text-xs text-gray-400 mt-1">Balance Sheet Asset Value</div>
         </div>
@@ -352,22 +359,13 @@ export const AssetsWorkspace: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right font-mono text-gray-900 dark:text-gray-100">
-                    ৳{' '}
-                    {parseFloat(ast.purchase_cost).toLocaleString('en-US', {
-                      minimumFractionDigits: 2,
-                    })}
+                    {formatCurrency(ast.purchase_cost)}
                   </td>
                   <td className="px-6 py-4 text-right font-mono text-amber-600 dark:text-amber-400">
-                    ৳{' '}
-                    {parseFloat(ast.accumulated_depreciation).toLocaleString('en-US', {
-                      minimumFractionDigits: 2,
-                    })}
+                    {formatCurrency(ast.accumulated_depreciation)}
                   </td>
                   <td className="px-6 py-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                    ৳{' '}
-                    {parseFloat(ast.book_value).toLocaleString('en-US', {
-                      minimumFractionDigits: 2,
-                    })}
+                    {formatCurrency(ast.book_value)}
                   </td>
                   <td className="px-6 py-4 text-center">
                     <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 uppercase">
@@ -409,22 +407,13 @@ export const AssetsWorkspace: React.FC = () => {
                     <div className="text-xs font-mono text-gray-500">{dep.asset?.asset_code}</div>
                   </td>
                   <td className="px-6 py-4 text-right font-mono text-gray-700 dark:text-gray-300">
-                    ৳{' '}
-                    {parseFloat(dep.opening_book_value).toLocaleString('en-US', {
-                      minimumFractionDigits: 2,
-                    })}
+                    {formatCurrency(dep.opening_book_value)}
                   </td>
                   <td className="px-6 py-4 text-right font-mono font-bold text-amber-600 dark:text-amber-400">
-                    ৳{' '}
-                    {parseFloat(dep.depreciation_amount).toLocaleString('en-US', {
-                      minimumFractionDigits: 2,
-                    })}
+                    {formatCurrency(dep.depreciation_amount)}
                   </td>
                   <td className="px-6 py-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                    ৳{' '}
-                    {parseFloat(dep.closing_book_value).toLocaleString('en-US', {
-                      minimumFractionDigits: 2,
-                    })}
+                    {formatCurrency(dep.closing_book_value)}
                   </td>
                   <td className="px-6 py-4 font-mono text-xs text-indigo-600 dark:text-indigo-400">
                     JE-202608-000{dep.journal_entry_id}
@@ -483,7 +472,7 @@ export const AssetsWorkspace: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 text-xs">{mo.scheduled_date}</td>
                   <td className="px-6 py-4 text-right font-mono font-semibold text-gray-900 dark:text-gray-100">
-                    ৳ {parseFloat(mo.cost).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    {formatCurrency(mo.cost)}
                   </td>
                   <td className="px-6 py-4 text-center">
                     <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 uppercase">

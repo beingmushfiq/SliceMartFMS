@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { Lead, LeadStatus, LeadSource } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 const SAMPLE_LEADS: Lead[] = [
   {
@@ -26,7 +27,7 @@ const SAMPLE_LEADS: Lead[] = [
     phone: '+8801711223344',
     status: 'proposal',
     deal_value: '450000.00',
-    currency_code: 'BDT',
+    currency_code: 'USD',
     source: 'storefront',
     assigned_to: 'Kazi Farhan (Sales Exec)',
     notes: 'Inquiring for bulk customized poly packaging and industrial rolls (10,000 units/mo).',
@@ -42,7 +43,7 @@ const SAMPLE_LEADS: Lead[] = [
     phone: '+8801822334455',
     status: 'qualified',
     deal_value: '185000.00',
-    currency_code: 'BDT',
+    currency_code: 'USD',
     source: 'referral',
     assigned_to: 'Nusrat Jahan',
     notes: 'Looking to switch suppliers for corrugated master cartons.',
@@ -58,7 +59,7 @@ const SAMPLE_LEADS: Lead[] = [
     phone: '+8801933445566',
     status: 'negotiation',
     deal_value: '820000.00',
-    currency_code: 'BDT',
+    currency_code: 'USD',
     source: 'website',
     assigned_to: 'Kazi Farhan (Sales Exec)',
     notes: 'Price negotiation on 5-ply export grade boxes. Requested 3% volume discount.',
@@ -74,7 +75,7 @@ const SAMPLE_LEADS: Lead[] = [
     phone: '+8801644556677',
     status: 'new',
     deal_value: '95000.00',
-    currency_code: 'BDT',
+    currency_code: 'USD',
     source: 'cold_outreach',
     assigned_to: 'Unassigned',
     notes: 'Initial contact made. Requested product catalog & standard price list.',
@@ -90,7 +91,7 @@ const SAMPLE_LEADS: Lead[] = [
     phone: '+8801755667788',
     status: 'won',
     deal_value: '1200000.00',
-    currency_code: 'BDT',
+    currency_code: 'USD',
     source: 'event',
     assigned_to: 'Tanvir Ahmed',
     notes: 'Deal closed! Contract signed for annual delivery contract.',
@@ -110,6 +111,7 @@ const STAGES: { id: LeadStatus; label: string; tone: string; badgeBg: string }[]
 ];
 
 export function LeadsSection() {
+  const { formatCurrency, currencyCode, currencySymbol } = useCurrency();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
   const [search, setSearch] = useState('');
@@ -169,7 +171,7 @@ export function LeadsSection() {
       status: formData.status,
       source: formData.source,
       deal_value: formData.deal_value || '0.00',
-      currency_code: 'BDT',
+      currency_code: currencyCode,
       assigned_to: formData.assigned_to || 'Unassigned',
       expected_close_date: formData.expected_close_date || null,
       notes: formData.notes || null,
@@ -232,7 +234,7 @@ export function LeadsSection() {
             </div>
           </div>
           <div className="mt-2 text-xl font-bold font-mono text-default">
-            BDT {totalPipelineValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            {formatCurrency(totalPipelineValue)}
           </div>
           <div className="mt-1 text-[11px] text-muted">
             {leads.filter((l) => l.status !== 'won' && l.status !== 'lost').length} active deals in progress
@@ -249,7 +251,7 @@ export function LeadsSection() {
             </div>
           </div>
           <div className="mt-2 text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
-            BDT {wonDealsValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            {formatCurrency(wonDealsValue)}
           </div>
           <div className="mt-1 text-[11px] text-muted">
             {leads.filter((l) => l.status === 'won').length} successfully won contracts
@@ -383,7 +385,7 @@ export function LeadsSection() {
                   <div>
                     <h3 className={`text-xs font-bold ${stage.tone}`}>{stage.label}</h3>
                     <div className="text-[10px] font-mono text-muted">
-                      BDT {stageValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                      {formatCurrency(stageValue)}
                     </div>
                   </div>
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-surface text-[10px] font-bold text-default border border-default">
@@ -419,7 +421,7 @@ export function LeadsSection() {
                         </div>
 
                         <div className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                          BDT {parseFloat(lead.deal_value || '0').toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          {formatCurrency(lead.deal_value || '0')}
                         </div>
 
                         {lead.notes && (
@@ -503,7 +505,7 @@ export function LeadsSection() {
                           </span>
                         </td>
                         <td className="px-4 py-3.5 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                          BDT {parseFloat(l.deal_value || '0').toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          {formatCurrency(l.deal_value || '0')}
                         </td>
                         <td className="px-4 py-3.5">
                           <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border ${currentStage?.badgeBg} ${currentStage?.tone}`}>
@@ -616,7 +618,7 @@ export function LeadsSection() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
-                    Estimated Deal Value (BDT)
+                    Estimated Deal Value ({currencySymbol} {currencyCode})
                   </label>
                   <input
                     type="number"

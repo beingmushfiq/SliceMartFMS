@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Building2,
   ChevronDown,
@@ -71,6 +71,7 @@ const SAMPLE_NOTIFICATIONS: NotificationItem[] = [
 ];
 
 export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
+  const navigate = useNavigate();
   const { user, branches, activeBranch, switchBranch, logout } = useAuthStore();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isBranchMenuOpen, setIsBranchMenuOpen] = useState(false);
@@ -128,6 +129,14 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
     const now = new Date().toISOString();
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read_at: now } : n)));
     api.post(`/notifications/${id}/read`).catch(() => {});
+  };
+
+  const handleNotificationClick = (notif: NotificationItem) => {
+    markSingleRead(notif.id);
+    if (notif.action_url) {
+      navigate(notif.action_url);
+      setIsNotifMenuOpen(false);
+    }
   };
 
   const getSeverityIcon = (severity: string) => {
@@ -269,7 +278,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
                     <button
                       key={notif.id}
                       type="button"
-                      onClick={() => markSingleRead(notif.id)}
+                      onClick={() => handleNotificationClick(notif)}
                       className={cn(
                         'w-full p-3.5 text-left transition-token-colors cursor-pointer hover:bg-surface-sunken focus-visible:ring-focus outline-none',
                         !notif.read_at ? 'bg-primary-subtle/30' : 'opacity-70'

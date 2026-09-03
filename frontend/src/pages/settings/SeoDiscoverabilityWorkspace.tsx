@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
 import { SerpPreviewCard } from '../../components/seo/SerpPreviewCard';
+import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 
 interface SeoSettingsState {
   default_title_template: string;
@@ -77,7 +78,11 @@ interface SeoAuditResult {
 type SeoTab = 'metadata' | 'nap' | 'redirects' | '404s' | 'indexnow' | 'audit';
 
 export const SeoDiscoverabilityWorkspace: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<SeoTab>('metadata');
+  const [activeTab, setActiveTab] = useWorkspaceTab<SeoTab>(
+    'metadata',
+    ['metadata', 'nap', 'redirects', '404s', 'indexnow', 'audit'] as const,
+    'tab'
+  );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -91,10 +96,10 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
     allow_ai_crawlers: true,
     business_type: 'LocalBusiness',
     street_address: '',
-    city: 'Dhaka',
-    state: 'Dhaka',
-    postal_code: '1212',
-    country: 'BD',
+    city: '',
+    state: '',
+    postal_code: '',
+    country: '',
     latitude: '',
     longitude: '',
     telephone: '',

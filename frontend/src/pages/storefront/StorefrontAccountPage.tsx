@@ -17,6 +17,7 @@ import {
 import { api } from '../../lib/api/client';
 import { useStorefrontCustomerStore } from '../../lib/storefront/storefrontCustomerStore';
 import type { StorefrontConfig } from '../../types/api/storefront';
+import { useCurrency } from '../../hooks/useCurrency';
 
 interface OutletContextType {
   config: StorefrontConfig;
@@ -46,6 +47,7 @@ interface CustomerOrder {
 
 export const StorefrontAccountPage: React.FC = () => {
   const { subdomain } = useOutletContext<OutletContextType>();
+  const { formatCurrency } = useCurrency();
   const { token, customer, setAuth, logout } = useStorefrontCustomerStore();
 
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
@@ -274,7 +276,7 @@ export const StorefrontAccountPage: React.FC = () => {
                       <div className="text-right">
                         <span className="text-[11px] text-zinc-500 block">Total Amount</span>
                         <span className="text-sm font-bold text-emerald-400 font-mono">
-                          ৳ {Number(order.total_amount).toFixed(2)}
+                          {formatCurrency(order.total_amount)}
                         </span>
                       </div>
                       <Link
@@ -296,7 +298,7 @@ export const StorefrontAccountPage: React.FC = () => {
                             {item.quantity}x {item.product?.name || 'Item'}
                           </span>
                           <span className="font-mono text-zinc-300">
-                            ৳ {Number(item.line_total).toFixed(2)}
+                            {formatCurrency(item.line_total)}
                           </span>
                         </div>
                       ))}

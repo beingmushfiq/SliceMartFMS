@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import type { PurchaseRequisition } from '../../../types/api/purchasing';
 import { api } from '../../../lib/api/client';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 interface RequisitionFormItem {
   product_name: string;
@@ -109,6 +110,7 @@ const SAMPLE_REQUISITIONS: PurchaseRequisition[] = [
 ];
 
 export function PurchaseRequisitionsSection() {
+  const { formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -399,7 +401,7 @@ export function PurchaseRequisitionsSection() {
             <TrendingUp className="size-4 text-indigo-500" />
           </div>
           <div className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 font-mono">
-            ৳{totalEstimatedCost.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            {formatCurrency(totalEstimatedCost)}
           </div>
           <div className="mt-1 text-[11px] text-muted">Budgeted procurement value</div>
         </div>
@@ -520,7 +522,7 @@ export function PurchaseRequisitionsSection() {
                       <td className="px-4 py-3.5">
                         <div className="font-semibold text-default">{itemsCount} Item(s)</div>
                         <div className="text-[10px] font-mono text-muted">
-                          ৳{reqEstTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          {formatCurrency(reqEstTotal)}
                         </div>
                       </td>
                       <td className="px-4 py-3.5">{getStatusBadge(r.status)}</td>
@@ -843,9 +845,9 @@ export function PurchaseRequisitionsSection() {
                         <td className="px-3 py-2.5 font-mono">
                           {it.quantity} {it.unit_code}
                         </td>
-                        <td className="px-3 py-2.5 font-mono">৳{parseFloat(it.estimated_unit_cost).toFixed(2)}</td>
+                        <td className="px-3 py-2.5 font-mono">{formatCurrency(it.estimated_unit_cost)}</td>
                         <td className="px-3 py-2.5 font-mono text-right font-semibold text-default">
-                          ৳{parseFloat(it.estimated_total_cost).toFixed(2)}
+                          {formatCurrency(it.estimated_total_cost)}
                         </td>
                       </tr>
                     ))}

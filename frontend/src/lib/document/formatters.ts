@@ -108,7 +108,7 @@ export function numberToWords(amount: number | string, currencyUnit = 'Taka', su
  */
 export function formatCurrency(
   value: number | string | null | undefined,
-  currencySymbol = '৳',
+  currencySymbol = '$',
   decimals = 2
 ): string {
   if (value === null || value === undefined || value === '') return `${currencySymbol}0.00`;

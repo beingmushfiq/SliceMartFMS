@@ -1,11 +1,13 @@
-import { useState } from 'react';
 import { ArrowRightLeft, Boxes, ClipboardCheck, Scale } from 'lucide-react';
 import { StockLedgerSection } from './sections/StockLedgerSection';
 import { StockTransfersSection } from './sections/StockTransfersSection';
 import { StockAdjustmentsSection } from './sections/StockAdjustmentsSection';
 import { StockCountsSection } from './sections/StockCountsSection';
+import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 
 export type InventoryTab = 'ledger' | 'transfers' | 'adjustments' | 'counts';
+
+const VALID_TABS: readonly InventoryTab[] = ['ledger', 'transfers', 'adjustments', 'counts'];
 
 interface TabConfig {
   id: InventoryTab;
@@ -46,7 +48,7 @@ const tabs: TabConfig[] = [
 ];
 
 export default function InventoryWorkspace() {
-  const [activeTab, setActiveTab] = useState<InventoryTab>('ledger');
+  const [activeTab, setActiveTab] = useWorkspaceTab<InventoryTab>('ledger', VALID_TABS);
 
   const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[0];
 

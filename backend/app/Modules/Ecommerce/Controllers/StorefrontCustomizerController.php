@@ -32,7 +32,7 @@ final class StorefrontCustomizerController extends Controller
                 'name' => $tenant['name'] ?? 'Online Storefront',
                 'code' => 'STORE-' . strtoupper(Str::random(4)),
                 'subdomain' => $tenant['slug'] ?? 'store-' . $tenantId,
-                'currency' => $tenant['currency_code'] ?? 'BDT',
+                'currency' => $tenant['currency_code'] ?? 'USD',
                 'locale' => $tenant['locale'] ?? 'en',
                 'theme' => [
                     'primary_color' => '#10b981',

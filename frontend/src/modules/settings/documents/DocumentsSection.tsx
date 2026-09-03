@@ -18,6 +18,7 @@ import { PrintProfilesTab } from './tabs/PrintProfilesTab';
 import { NumberingTab } from './tabs/NumberingTab';
 import { BusinessIdentityTab } from './tabs/BusinessIdentityTab';
 import { ReprintHistoryTab } from './tabs/ReprintHistoryTab';
+import { useWorkspaceTab } from '../../../hooks/useWorkspaceTab';
 import type { DocumentTemplate } from '../../../types/api/documents';
 
 export type DocumentsTabId =
@@ -30,7 +31,18 @@ export type DocumentsTabId =
   | 'history';
 
 export function DocumentsSection() {
-  const [activeTab, setActiveTab] = useState<DocumentsTabId>('templates');
+  const [activeTab, setActiveTab] = useWorkspaceTab<DocumentsTabId>(
+    'templates',
+    [
+      'templates',
+      'editor',
+      'paper_sizes',
+      'print_profiles',
+      'numbering',
+      'business_identity',
+      'history',
+    ] as const
+  );
   const [editingTemplate, setEditingTemplate] = useState<DocumentTemplate | null>(null);
 
   const handleEditTemplate = (template: DocumentTemplate) => {

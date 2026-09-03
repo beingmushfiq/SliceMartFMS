@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
+import { useCurrency } from '../../hooks/useCurrency';
 import type {
   ChartOfAccount,
   JournalEntry,
@@ -47,7 +49,11 @@ function createManualJournalEntry(
 }
 
 export const FinanceWorkspace: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<FinanceTab>('journal');
+  const { formatCurrency } = useCurrency();
+  const [activeTab, setActiveTab] = useWorkspaceTab<FinanceTab>(
+    'journal',
+    ['coa', 'journal', 'banking', 'expenses', 'costing', 'statements'] as const
+  );
 
   // Chart of Accounts State
   const [accounts] = useState<ChartOfAccount[]>([
@@ -406,9 +412,9 @@ export const FinanceWorkspace: React.FC = () => {
             Total Liquid Assets
           </div>
           <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-2 font-mono">
-            ৳ 970,000.00
+            {formatCurrency(970000)}
           </div>
-          <div className="text-[11px] text-muted mt-1">Cash (৳125k) + BRAC Bank (৳845k)</div>
+          <div className="text-[11px] text-muted mt-1">Cash ({formatCurrency(125000)}) + Bank ({formatCurrency(845000)})</div>
         </div>
 
         <div className="bg-surface rounded-2xl p-6 shadow-xs border border-default">
@@ -416,7 +422,7 @@ export const FinanceWorkspace: React.FC = () => {
             Total Receivables
           </div>
           <div className="text-2xl font-extrabold text-primary mt-2 font-mono">
-            ৳ 340,000.00
+            {formatCurrency(340000)}
           </div>
           <div className="text-[11px] text-muted mt-1">From Corporate & B2B Invoices</div>
         </div>
@@ -426,7 +432,7 @@ export const FinanceWorkspace: React.FC = () => {
             Operating Payables
           </div>
           <div className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-2 font-mono">
-            ৳ 210,000.00
+            {formatCurrency(210000)}
           </div>
           <div className="text-[11px] text-muted mt-1">Supplier Bills & Logistics</div>
         </div>
@@ -436,7 +442,7 @@ export const FinanceWorkspace: React.FC = () => {
             Recognized Sales Revenue
           </div>
           <div className="text-2xl font-extrabold text-primary mt-2 font-mono">
-            ৳ 950,000.00
+            {formatCurrency(950000)}
           </div>
           <div className="text-[11px] text-muted mt-1">Current Fiscal Period</div>
         </div>
@@ -506,16 +512,10 @@ export const FinanceWorkspace: React.FC = () => {
                     </td>
                     <td className="px-5 py-3.5 max-w-xs truncate text-default">{je.narration}</td>
                     <td className="px-5 py-3.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                      ৳{' '}
-                      {parseFloat(je.total_debit).toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                      })}
+                      {formatCurrency(je.total_debit)}
                     </td>
                     <td className="px-5 py-3.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                      ৳{' '}
-                      {parseFloat(je.total_credit).toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                      })}
+                      {formatCurrency(je.total_credit)}
                     </td>
                     <td className="px-5 py-3.5 text-center">
                       <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
@@ -576,10 +576,7 @@ export const FinanceWorkspace: React.FC = () => {
                     {acc.normal_balance}
                   </td>
                   <td className="px-6 py-4 text-right font-mono font-semibold text-gray-900 dark:text-gray-100">
-                    ৳{' '}
-                    {parseFloat(acc.current_balance || '0').toLocaleString('en-US', {
-                      minimumFractionDigits: 2,
-                    })}
+                    {formatCurrency(acc.current_balance || '0')}
                   </td>
                   <td className="px-6 py-4 text-center">
                     <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
@@ -637,10 +634,7 @@ export const FinanceWorkspace: React.FC = () => {
               <div className="flex justify-between items-center pt-2">
                 <span className="text-sm text-gray-500">Current Balance:</span>
                 <span className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-                  ৳{' '}
-                  {parseFloat(ba.current_balance).toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                  })}
+                  {formatCurrency(ba.current_balance)}
                 </span>
               </div>
             </div>
@@ -676,7 +670,7 @@ export const FinanceWorkspace: React.FC = () => {
                     {exp.payment_method.replace('_', ' ')}
                   </td>
                   <td className="px-6 py-4 text-right font-mono font-bold text-gray-900 dark:text-gray-100">
-                    ৳ {parseFloat(exp.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    {formatCurrency(exp.amount)}
                   </td>
                   <td className="px-6 py-4 text-center">
                     <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
@@ -716,16 +710,16 @@ export const FinanceWorkspace: React.FC = () => {
                       <div className="text-xs font-mono text-gray-500">{pc.product?.sku}</div>
                     </td>
                     <td className="px-6 py-4 text-right font-mono text-gray-700 dark:text-gray-300">
-                      ৳ {parseFloat(pc.material_cost).toFixed(2)}
+                      {formatCurrency(pc.material_cost)}
                     </td>
                     <td className="px-6 py-4 text-right font-mono text-amber-600 dark:text-amber-400 font-semibold">
-                      ৳ {parseFloat(pc.labour_cost).toFixed(2)}
+                      {formatCurrency(pc.labour_cost)}
                     </td>
                     <td className="px-6 py-4 text-right font-mono text-gray-700 dark:text-gray-300">
-                      ৳ {parseFloat(pc.overhead_cost).toFixed(2)}
+                      {formatCurrency(pc.overhead_cost)}
                     </td>
                     <td className="px-6 py-4 text-right font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
-                      ৳ {parseFloat(pc.total_cost).toFixed(2)}
+                      {formatCurrency(pc.total_cost)}
                     </td>
                     <td className="px-6 py-4 text-xs text-gray-500">{pc.effective_from}</td>
                     <td className="px-6 py-4 text-center">
@@ -770,19 +764,19 @@ export const FinanceWorkspace: React.FC = () => {
               <div className="space-y-2.5 text-sm">
                 <div className="flex justify-between items-center text-gray-900 dark:text-gray-100 font-semibold">
                   <span>Gross Sales Revenue</span>
-                  <span className="font-mono text-emerald-600 dark:text-emerald-400">৳ 950,000.00</span>
+                  <span className="font-mono text-emerald-600 dark:text-emerald-400">{formatCurrency(950000)}</span>
                 </div>
                 <div className="flex justify-between items-center text-gray-600 dark:text-gray-300">
                   <span className="pl-4">Less: Cost of Goods Sold (COGS)</span>
-                  <span className="font-mono text-rose-500">(৳ 480,000.00)</span>
+                  <span className="font-mono text-rose-500">({formatCurrency(480000)})</span>
                 </div>
                 <div className="flex justify-between items-center text-gray-600 dark:text-gray-300">
                   <span className="pl-4">Less: Direct Factory Labour</span>
-                  <span className="font-mono text-rose-500">(৳ 145,000.00)</span>
+                  <span className="font-mono text-rose-500">({formatCurrency(145000)})</span>
                 </div>
                 <div className="border-t pt-2 flex justify-between items-center font-bold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-900/40 p-2 rounded">
                   <span>Gross Profit</span>
-                  <span className="font-mono text-emerald-600 dark:text-emerald-400">৳ 325,000.00 (34.2%)</span>
+                  <span className="font-mono text-emerald-600 dark:text-emerald-400">{formatCurrency(325000)} (34.2%)</span>
                 </div>
               </div>
 
@@ -792,19 +786,19 @@ export const FinanceWorkspace: React.FC = () => {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between items-center text-gray-600 dark:text-gray-300">
                   <span>Logistics & 3PL Courier Fees</span>
-                  <span className="font-mono">৳ 38,500.00</span>
+                  <span className="font-mono">{formatCurrency(38500)}</span>
                 </div>
                 <div className="flex justify-between items-center text-gray-600 dark:text-gray-300">
                   <span>Utilities & Factory Power</span>
-                  <span className="font-mono">৳ 24,000.00</span>
+                  <span className="font-mono">{formatCurrency(24000)}</span>
                 </div>
                 <div className="flex justify-between items-center text-gray-600 dark:text-gray-300">
                   <span>Administrative & Software</span>
-                  <span className="font-mono">৳ 18,200.00</span>
+                  <span className="font-mono">{formatCurrency(18200)}</span>
                 </div>
                 <div className="border-t pt-2 flex justify-between items-center font-bold text-base text-gray-900 dark:text-gray-100 bg-emerald-50 dark:bg-emerald-950/30 p-2.5 rounded-lg border border-emerald-500/20">
                   <span className="text-emerald-700 dark:text-emerald-400">Net Operating Income</span>
-                  <span className="font-mono text-emerald-700 dark:text-emerald-400">৳ 244,300.00</span>
+                  <span className="font-mono text-emerald-700 dark:text-emerald-400">{formatCurrency(244300)}</span>
                 </div>
               </div>
             </div>
@@ -818,37 +812,37 @@ export const FinanceWorkspace: React.FC = () => {
                 <div className="p-3 bg-blue-50/50 dark:bg-blue-950/20 rounded-xl border border-blue-100 dark:border-blue-900/40">
                   <div className="flex justify-between items-center font-bold text-blue-900 dark:text-blue-300 mb-1.5">
                     <span>Total Current & Fixed Assets</span>
-                    <span className="font-mono">৳ 1,310,000.00</span>
+                    <span className="font-mono">{formatCurrency(1310000)}</span>
                   </div>
                   <div className="text-xs text-blue-700 dark:text-blue-400 space-y-0.5">
-                    <div className="flex justify-between"><span>• Liquid Cash & Banks:</span> <span className="font-mono font-semibold">৳ 970,000.00</span></div>
-                    <div className="flex justify-between"><span>• Accounts Receivable:</span> <span className="font-mono font-semibold">৳ 340,000.00</span></div>
+                    <div className="flex justify-between"><span>• Liquid Cash & Banks:</span> <span className="font-mono font-semibold">{formatCurrency(970000)}</span></div>
+                    <div className="flex justify-between"><span>• Accounts Receivable:</span> <span className="font-mono font-semibold">{formatCurrency(340000)}</span></div>
                   </div>
                 </div>
 
                 <div className="p-3 bg-amber-50/50 dark:bg-amber-950/20 rounded-xl border border-amber-100 dark:border-amber-900/40">
                   <div className="flex justify-between items-center font-bold text-amber-900 dark:text-amber-300 mb-1.5">
                     <span>Total Liabilities</span>
-                    <span className="font-mono">৳ 210,000.00</span>
+                    <span className="font-mono">{formatCurrency(210000)}</span>
                   </div>
                   <div className="text-xs text-amber-700 dark:text-amber-400 space-y-0.5">
-                    <div className="flex justify-between"><span>• Accounts Payable:</span> <span className="font-mono font-semibold">৳ 210,000.00</span></div>
+                    <div className="flex justify-between"><span>• Accounts Payable:</span> <span className="font-mono font-semibold">{formatCurrency(210000)}</span></div>
                   </div>
                 </div>
 
                 <div className="p-3 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-xl border border-indigo-100 dark:border-indigo-900/40">
                   <div className="flex justify-between items-center font-bold text-indigo-900 dark:text-indigo-300 mb-1.5">
                     <span>Owner's Equity & Retained Earnings</span>
-                    <span className="font-mono">৳ 1,100,000.00</span>
+                    <span className="font-mono">{formatCurrency(1100000)}</span>
                   </div>
                   <div className="text-xs text-indigo-700 dark:text-indigo-400 space-y-0.5">
-                    <div className="flex justify-between"><span>• Contributed Capital:</span> <span className="font-mono font-semibold">৳ 500,000.00</span></div>
-                    <div className="flex justify-between"><span>• Retained Fiscal Earnings:</span> <span className="font-mono font-semibold">৳ 600,000.00</span></div>
+                    <div className="flex justify-between"><span>• Contributed Capital:</span> <span className="font-mono font-semibold">{formatCurrency(500000)}</span></div>
+                    <div className="flex justify-between"><span>• Retained Fiscal Earnings:</span> <span className="font-mono font-semibold">{formatCurrency(600000)}</span></div>
                   </div>
                 </div>
 
                 <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs font-semibold text-emerald-400">
-                  <span>Balance Check: ৳ 1,310,000 = ৳ 210,000 + ৳ 1,100,000</span>
+                  <span>Balance Check: {formatCurrency(1310000)} = {formatCurrency(210000)} + {formatCurrency(1100000)}</span>
                   <span>✓ 100% IN BALANCE</span>
                 </div>
               </div>
@@ -957,13 +951,13 @@ export const FinanceWorkspace: React.FC = () => {
                 }`}
               >
                 <div>
-                  <span className="font-semibold">Debits:</span> ৳ {totalNewDebit.toFixed(2)} |{' '}
-                  <span className="font-semibold">Credits:</span> ৳ {totalNewCredit.toFixed(2)}
+                  <span className="font-semibold">Debits:</span> {formatCurrency(totalNewDebit)} |{' '}
+                  <span className="font-semibold">Credits:</span> {formatCurrency(totalNewCredit)}
                 </div>
                 <div className="font-bold">
                   {isJournalBalanced
                     ? '✓ BALANCED'
-                    : `⚠️ OUT OF BALANCE (৳ ${Math.abs(totalNewDebit - totalNewCredit).toFixed(2)})`}
+                    : `⚠️ OUT OF BALANCE (${formatCurrency(Math.abs(totalNewDebit - totalNewCredit))})`}
                 </div>
               </div>
 

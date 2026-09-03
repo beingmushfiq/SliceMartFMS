@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { CourierProvider } from '../../../types/api/delivery';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 interface CourierProvidersSectionProps {
   providers: CourierProvider[];
@@ -12,6 +13,7 @@ export const CourierProvidersSection: React.FC<CourierProvidersSectionProps> = (
   onSaveProvider,
   onToggleActive,
 }) => {
+  const { formatCurrency } = useCurrency();
   const [selectedProvider, setSelectedProvider] = useState<CourierProvider | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [formData, setFormData] = useState<Partial<CourierProvider>>({});
@@ -121,7 +123,7 @@ export const CourierProvidersSection: React.FC<CourierProvidersSectionProps> = (
 
               <div style={{ fontSize: '0.875rem', color: '#4B5563', marginBottom: 16 }}>
                 <div>
-                  <strong>Default Charge:</strong> ৳ {Number(p.default_charge).toFixed(2)}
+                  <strong>Default Charge:</strong> {formatCurrency(p.default_charge)}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#9CA3AF', marginTop: 2 }}>
                   Adapter: {p.adapter_class.split('\\').pop()}

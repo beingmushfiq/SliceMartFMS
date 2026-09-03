@@ -17,7 +17,7 @@ export const StorefrontCartDrawer: React.FC<StorefrontCartDrawerProps> = ({ conf
   if (!isDrawerOpen) return null;
 
   const items = cart?.items ?? [];
-  const currency = config?.currency ?? 'BDT';
+  const currency = config?.currency ?? 'USD';
 
   const handleCheckoutClick = () => {
     closeDrawer();
@@ -65,7 +65,7 @@ export const StorefrontCartDrawer: React.FC<StorefrontCartDrawerProps> = ({ conf
                 <span className="text-emerald-400 font-bold">
                   {parseFloat(cart?.total_amount ?? '0') >= 1000
                     ? '🎉 Free Shipping Unlocked!'
-                    : `৳${Math.max(0, 1000 - parseFloat(cart?.total_amount ?? '0')).toFixed(0)} away`}
+                    : `${currency} ${Math.max(0, 1000 - parseFloat(cart?.total_amount ?? '0')).toFixed(0)} away`}
                 </span>
               </div>
               <div className="h-1.5 w-full rounded-full bg-zinc-800 overflow-hidden">

@@ -7,10 +7,11 @@ import { api } from '../../../lib/api/client';
 import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { PaymentReceiptDocument } from '../../../components/print/documents/PaymentReceiptDocument';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
-import { formatCurrency } from '../../../lib/document/formatters';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 export function PaymentsSection() {
   const queryClient = useQueryClient();
+  const { currencyCode, formatCurrency } = useCurrency();
   const [search, setSearch] = useState('');
   const [directionFilter, setDirectionFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -182,7 +183,7 @@ export function PaymentsSection() {
                       {p.reference_number || '-'}
                     </td>
                     <td className="px-4 py-3.5 font-mono font-bold text-default">
-                      {formatCurrency(p.amount, '৳')}
+                      {formatCurrency(p.amount)}
                     </td>
                     <td className="px-4 py-3.5">
                       <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
@@ -210,20 +211,33 @@ export function PaymentsSection() {
 
       {/* Record Payment Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-md rounded-2xl border border-default bg-surface p-6 shadow-xl">
-            <h3 className="text-base font-semibold text-default">Record Payment / Receipt</h3>
-            <form onSubmit={handleRecordPayment} className="mt-4 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-fade-in">
+          <div className="w-full max-w-lg rounded-2xl border border-default bg-surface p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-default pb-3">
+              <h3 className="text-base font-bold text-default">Record Payment / Receipt</h3>
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="rounded-lg p-1 text-muted hover:bg-surface-sunken hover:text-default"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form
+              onSubmit={handleRecordPayment}
+              className="space-y-4"
+            >
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-default mb-1">Direction</label>
                   <select
                     value={direction}
-                    onChange={(e) => setDirection(e.target.value as typeof direction)}
-                    className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
+                    onChange={(e) => setDirection(e.target.value as 'in' | 'out')}
+                    className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
                   >
                     <option value="in">Customer Inflow (Receipt)</option>
-                    <option value="out">Vendor Outflow (Payment)</option>
+                    <option value="out">Vendor/Refund Outflow</option>
                   </select>
                 </div>
 
@@ -231,12 +245,12 @@ export function PaymentsSection() {
                   <label className="block text-xs font-medium text-default mb-1">Method</label>
                   <select
                     value={method}
-                    onChange={(e) => setMethod(e.target.value as typeof method)}
-                    className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
+                    onChange={(e) => setMethod(e.target.value as any)}
+                    className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
                   >
                     <option value="cash">Cash</option>
                     <option value="bank_transfer">Bank Transfer</option>
-                    <option value="card">Credit/Debit Card</option>
+                    <option value="card">POS Card</option>
                     <option value="mobile_banking">Mobile Banking (bKash/Nagad)</option>
                     <option value="cheque">Cheque</option>
                   </select>
@@ -244,7 +258,7 @@ export function PaymentsSection() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-default mb-1">Amount (BDT)</label>
+                <label className="block text-xs font-medium text-default mb-1">Amount ({currencyCode})</label>
                 <input
                   type="number"
                   step="0.0001"

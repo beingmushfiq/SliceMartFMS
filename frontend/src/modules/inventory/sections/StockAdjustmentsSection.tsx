@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import type { StockAdjustment } from '../../../types/api/inventory';
 import { api } from '../../../lib/api/client';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 interface AdjFormItem {
   product_name: string;
@@ -95,6 +96,7 @@ const SAMPLE_ADJUSTMENTS: StockAdjustment[] = [
 ];
 
 export function StockAdjustmentsSection() {
+  const { currencySymbol, formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -636,7 +638,7 @@ export function StockAdjustmentsSection() {
                     <div className="col-span-3">
                       <input
                         type="number"
-                        placeholder="Unit Cost (৳)"
+                        placeholder={`Unit Cost (${currencySymbol})`}
                         value={item.unit_cost}
                         onChange={(e) => updateFormItem(idx, { unit_cost: e.target.value })}
                         className="w-full rounded-lg border border-default bg-surface-sunken px-2 py-1.5 text-xs text-default font-mono"
@@ -764,9 +766,9 @@ export function StockAdjustmentsSection() {
                           )}
                         </td>
                         <td className="px-3 py-2.5 font-mono">{it.quantity}</td>
-                        <td className="px-3 py-2.5 font-mono">৳{parseFloat(it.unit_cost).toFixed(2)}</td>
+                        <td className="px-3 py-2.5 font-mono">{formatCurrency(it.unit_cost)}</td>
                         <td className="px-3 py-2.5 font-mono text-right font-semibold">
-                          ৳{parseFloat(it.total_cost).toFixed(2)}
+                          {formatCurrency(it.total_cost)}
                         </td>
                       </tr>
                     ))}

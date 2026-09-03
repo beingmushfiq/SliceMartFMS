@@ -23,7 +23,7 @@ export function BarcodeLabel({
   preset = 'standard_50x35',
   format = 'code128',
   fields = {},
-  businessName = 'SliceMart Bakery & Foods',
+  businessName = 'Enterprise Commercial Corp',
   className = '',
 }: BarcodeLabelProps) {
   const showFields: BarcodeFieldOptions = {
@@ -131,7 +131,7 @@ export function BarcodeLabel({
               style={{ fontSize: isSmall ? '7pt' : '9pt' }}
               className="font-mono font-black text-black"
             >
-              {formatCurrency(product.sale_price, product.currency || '৳')}
+              {formatCurrency(product.sale_price, product.currency || '')}
               {showFields.showUnit && product.unit_code && (
                 <span style={{ fontSize: isSmall ? '4.5pt' : '5.5pt' }} className="font-normal text-black/70 ml-0.5">
                   /{product.unit_code}

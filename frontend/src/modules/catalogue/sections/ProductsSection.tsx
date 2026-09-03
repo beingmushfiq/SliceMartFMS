@@ -38,6 +38,7 @@ import { SerpPreviewCard } from '../../../components/seo/SerpPreviewCard';
 import { DiscoverabilityChecklist } from '../../../components/seo/DiscoverabilityChecklist';
 import type { Product, Category, Brand } from '../../../types/api/catalog';
 import type { Unit } from '../../../types/api/unit';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 interface ProductFormDraft {
   sku: string;
@@ -78,6 +79,7 @@ interface WarehouseOption {
 }
 
 export function ProductsSection() {
+  const { currencyCode, currencySymbol, formatCurrency } = useCurrency();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -560,9 +562,9 @@ export function ProductsSection() {
                           {p.type.replace('_', ' ')}
                         </span>
                       </td>
-                      <td className="py-3 px-3 font-mono text-slate-700 dark:text-slate-300 font-medium">৳ {p.standard_cost}</td>
+                      <td className="py-3 px-3 font-mono text-slate-700 dark:text-slate-300 font-medium">{formatCurrency(p.standard_cost)}</td>
                       <td className="py-3 px-3 font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                        ৳ {p.default_sale_price}
+                        {formatCurrency(p.default_sale_price)}
                       </td>
                       <td className="py-3 px-3">
                         <div className="flex items-center gap-1.5">
@@ -935,11 +937,11 @@ export function ProductsSection() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Standard Cost (৳ BDT)
+                    Standard Cost ({currencySymbol} {currencyCode})
                   </label>
                   <div className="relative">
                     <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 font-mono">
-                      ৳
+                      {currencySymbol}
                     </span>
                     <input
                       type="text"
@@ -953,11 +955,11 @@ export function ProductsSection() {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Default Sale Price (৳ BDT)
+                    Default Sale Price ({currencySymbol} {currencyCode})
                   </label>
                   <div className="relative">
                     <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-                      ৳
+                      {currencySymbol}
                     </span>
                     <input
                       type="text"
@@ -1651,10 +1653,10 @@ export function ProductsSection() {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Standard Cost (৳ BDT)</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Standard Cost ({currencySymbol} {currencyCode})</label>
                     <div className="relative">
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 font-mono">
-                        ৳
+                        {currencySymbol}
                       </span>
                       <input
                         type="text"
@@ -1666,10 +1668,10 @@ export function ProductsSection() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Default Sale Price (৳ BDT)</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Default Sale Price ({currencySymbol} {currencyCode})</label>
                     <div className="relative">
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-                        ৳
+                        {currencySymbol}
                       </span>
                       <input
                         type="text"
@@ -2355,14 +2357,14 @@ export function ProductsSection() {
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700">
                 <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Standard Cost</span>
                 <span className="font-mono font-semibold text-slate-900 dark:text-white text-sm mt-0.5 block">
-                  ৳ {viewingProduct.standard_cost}
+                  {formatCurrency(viewingProduct.standard_cost)}
                 </span>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700">
                 <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Sale Price</span>
                 <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm mt-0.5 block">
-                  ৳ {viewingProduct.default_sale_price}
+                  {formatCurrency(viewingProduct.default_sale_price)}
                 </span>
               </div>
 
@@ -2497,7 +2499,7 @@ export function ProductsSection() {
               sku: selectedLabelProduct.sku,
               barcode: selectedLabelProduct.barcode || selectedLabelProduct.sku,
               sale_price: selectedLabelProduct.default_sale_price || '0.00',
-              currency: '৳',
+              currency: currencySymbol,
               unit_code: 'PCS',
               batch_code: 'BAT-2026',
               quantity: 4,

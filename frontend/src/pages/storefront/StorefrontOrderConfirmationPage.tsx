@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation, useOutletContext } from 'react-router-dom';
 import { CheckCircle, ArrowRight } from 'lucide-react';
 import type { StorefrontConfig, StorefrontOrderConfirmation } from '../../types/api/storefront';
+import { useCurrency } from '../../hooks/useCurrency';
 
 interface OutletContextType {
   config: StorefrontConfig;
@@ -10,10 +11,11 @@ interface OutletContextType {
 
 export const StorefrontOrderConfirmationPage: React.FC = () => {
   const { config, subdomain } = useOutletContext<OutletContextType>();
+  const { formatCurrency, currencyCode } = useCurrency();
   const location = useLocation();
   const order = (location.state as { order?: StorefrontOrderConfirmation })?.order;
 
-  const currency = order?.currency ?? config.currency ?? 'BDT';
+  const currency = order?.currency ?? config.currency ?? currencyCode;
 
   return (
     <div className="max-w-xl mx-auto py-8">
@@ -56,9 +58,9 @@ export const StorefrontOrderConfirmationPage: React.FC = () => {
           {order && (
             <a
               href={`https://wa.me/${(config.whatsapp_number || '+8801700000000').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-                `Hello ${config.name}, I have just placed order #${order.order_number} for ৳${parseFloat(
+                `Hello ${config.name}, I have just placed order #${order.order_number} for ${formatCurrency(
                   order.total_amount
-                ).toFixed(2)}. Please confirm receipt and delivery schedule.`
+                )}. Please confirm receipt and delivery schedule.`
               )}`}
               target="_blank"
               rel="noreferrer"

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { DeliveryOrder } from '../../../types/api/sales';
 import type { BusinessConfig } from '../../../lib/document/useBusinessConfig';
-import { formatDocumentDate } from '../../../lib/document/formatters';
+import { formatDocumentDate, formatCurrency } from '../../../lib/document/formatters';
 import { generateBarcodeSvg } from '../../../lib/barcode/engine';
 
 export interface DeliveryChallanDocumentProps {
@@ -90,7 +90,9 @@ export function DeliveryChallanDocument({ delivery, businessConfig }: DeliveryCh
             </div>
             <div>
               <span className="text-slate-500">COD Amount:</span>{' '}
-              <span className="font-mono font-bold text-emerald-700">৳{delivery.cod_amount || '0.00'}</span>
+              <span className="font-mono font-bold text-emerald-700">
+                {formatCurrency(delivery.cod_amount || '0.00', businessConfig.currencySymbol || '$')}
+              </span>
             </div>
             <div>
               <span className="text-slate-500">Packages:</span>{' '}

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Boxes, FileCode, Package, Ruler, Tag, Users, Warehouse } from 'lucide-react';
 import { ProductsSection } from './sections/ProductsSection';
 import { UnitsSection } from './sections/UnitsSection';
@@ -8,8 +7,20 @@ import { BillOfMaterialsSection } from './sections/BillOfMaterialsSection';
 import { WarehousesSection } from './sections/WarehousesSection';
 import { PartiesSection } from './sections/PartiesSection';
 
+import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
+
 export type CatalogueTab =
   'products' | 'units' | 'categories' | 'brands' | 'bom' | 'warehouses' | 'parties';
+
+const VALID_TABS: readonly CatalogueTab[] = [
+  'products',
+  'units',
+  'categories',
+  'brands',
+  'bom',
+  'warehouses',
+  'parties',
+];
 
 interface TabConfig {
   id: CatalogueTab;
@@ -64,7 +75,7 @@ const tabs: TabConfig[] = [
 ];
 
 export default function CatalogueWorkspace() {
-  const [activeTab, setActiveTab] = useState<CatalogueTab>('products');
+  const [activeTab, setActiveTab] = useWorkspaceTab<CatalogueTab>('products', VALID_TABS);
 
   const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[0];
 

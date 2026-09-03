@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { FileText, Receipt, ShoppingCart, Truck, Undo2, Users, Kanban } from 'lucide-react';
 import { SalesOrdersSection } from './sections/SalesOrdersSection';
 import { InvoicesSection } from './sections/InvoicesSection';
@@ -8,7 +7,11 @@ import { SalesReturnsSection } from './sections/SalesReturnsSection';
 import { LeadsSection } from './sections/LeadsSection';
 import { CustomersSection } from './sections/CustomersSection';
 
+import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
+
 export type SalesTab = 'orders' | 'invoices' | 'deliveries' | 'payments' | 'returns' | 'leads' | 'customers';
+
+const VALID_TABS: readonly SalesTab[] = ['orders', 'invoices', 'deliveries', 'payments', 'returns', 'leads', 'customers'];
 
 interface TabConfig {
   id: SalesTab;
@@ -63,7 +66,7 @@ const tabs: TabConfig[] = [
 ];
 
 export default function SalesWorkspace() {
-  const [activeTab, setActiveTab] = useState<SalesTab>('orders');
+  const [activeTab, setActiveTab] = useWorkspaceTab<SalesTab>('orders', VALID_TABS);
 
   const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[0];
 

@@ -21,6 +21,7 @@ import { api } from '../../../lib/api/client';
 import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { GoodsReceiptDocument } from '../../../components/print/documents/GoodsReceiptDocument';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 interface GrnFormItem {
   product_name: string;
@@ -109,6 +110,7 @@ const SAMPLE_RECEIPTS: GoodsReceipt[] = [
 ];
 
 export function GoodsReceiptsSection() {
+  const { formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -367,7 +369,7 @@ export function GoodsReceiptsSection() {
             <TrendingUp className="size-4 text-indigo-500" />
           </div>
           <div className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 font-mono">
-            ৳{totalReceivedValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            {formatCurrency(totalReceivedValue)}
           </div>
           <div className="mt-1 text-[11px] text-muted">Received inventory asset value</div>
         </div>
@@ -487,7 +489,7 @@ export function GoodsReceiptsSection() {
                       </td>
                       <td className="px-4 py-3.5 text-muted">{r.warehouse_name ?? 'Central Silo'}</td>
                       <td className="px-4 py-3.5 text-right font-mono font-semibold text-default">
-                        ৳{grnTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        {formatCurrency(grnTotal)}
                       </td>
                       <td className="px-4 py-3.5">{getStatusBadge(r.status)}</td>
                       <td className="px-4 py-3.5 text-right">
@@ -826,7 +828,7 @@ export function GoodsReceiptsSection() {
                           {it.accepted_quantity} {it.unit_code}
                         </td>
                         <td className="px-3 py-2.5 font-mono text-right font-semibold text-default">
-                          ৳{parseFloat(it.total_cost).toFixed(2)}
+                          {formatCurrency(it.total_cost)}
                         </td>
                       </tr>
                     ))}

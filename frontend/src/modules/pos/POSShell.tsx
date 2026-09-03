@@ -17,6 +17,7 @@ import {
 import type { PosSession, PosCheckoutPayload, PosCheckoutResult } from '../../types/api/pos';
 import type { Product } from '../../types/api/catalog';
 import { api } from '../../lib/api/client';
+import { useCurrency } from '../../hooks/useCurrency';
 
 interface CartItem {
   product: Product;
@@ -41,6 +42,7 @@ interface CartSlot {
 }
 
 export function POSShell({ session, onExit }: POSShellProps) {
+  const { formatCurrency } = useCurrency();
   const [search, setSearch] = useState('');
   
   // Multi-cart slots (up to 5 concurrent held transactions)
@@ -247,7 +249,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
             <div>
               Expected Cash:{' '}
               <span className="text-emerald-600 dark:text-emerald-400 font-mono font-medium">
-                {parseFloat(session.expected_cash || '0').toFixed(2)} BDT
+                {formatCurrency(session.expected_cash)}
               </span>
             </div>
           </div>
@@ -315,7 +317,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
                     </div>
                     <div className="font-mono text-[10px] text-muted">{p.sku}</div>
                     <div className="mt-2 font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
-                      100.00 <span className="text-[9px] font-normal text-muted">BDT</span>
+                      {formatCurrency(100)}
                     </div>
                   </button>
                 ))}
@@ -386,7 +388,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
                       {item.product.name}
                     </p>
                     <p className="font-mono text-[10px] text-muted">
-                      {item.unit_price.toFixed(2)} BDT / unit
+                      {formatCurrency(item.unit_price)} / unit
                     </p>
                   </div>
 
@@ -499,17 +501,17 @@ export function POSShell({ session, onExit }: POSShellProps) {
             <div className="space-y-1 text-xs text-muted border-t border-default pt-2 font-mono">
               <div className="flex justify-between">
                 <span>Subtotal:</span>
-                <span>{subtotal.toFixed(2)} BDT</span>
+                <span>{formatCurrency(subtotal)}</span>
               </div>
               {changeGiven > 0 && (
                 <div className="flex justify-between text-amber-600 dark:text-amber-400">
                   <span>Change Return:</span>
-                  <span>{changeGiven.toFixed(2)} BDT</span>
+                  <span>{formatCurrency(changeGiven)}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm font-bold text-default pt-1">
                 <span className="font-sans">Total Payable:</span>
-                <span className="text-emerald-600 dark:text-emerald-400">{grandTotal.toFixed(2)} BDT</span>
+                <span className="text-emerald-600 dark:text-emerald-400">{formatCurrency(grandTotal)}</span>
               </div>
             </div>
 
@@ -519,7 +521,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
               disabled={cart.length === 0 || checkingOut}
               className="w-full rounded-xl bg-primary py-3 text-center text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary-hover disabled:opacity-50 disabled:pointer-events-none active:scale-[0.99] cursor-pointer"
             >
-              {checkingOut ? 'Processing...' : `Complete Sale (${grandTotal.toFixed(2)} BDT)`}
+              {checkingOut ? 'Processing...' : `Complete Sale (${formatCurrency(grandTotal)})`}
             </button>
 
             {/* Cashier Velocity Hotkey Bar */}
@@ -553,7 +555,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
               <div className="flex justify-between text-muted">
                 <span>Amount Paid:</span>
                 <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                  {lastReceipt.order.total_amount} BDT
+                  {formatCurrency(lastReceipt.order.total_amount)}
                 </span>
               </div>
               <div className="flex justify-between text-muted">

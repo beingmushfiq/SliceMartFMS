@@ -55,8 +55,9 @@ class StorefrontCheckoutController extends Controller
         }
 
         return DB::transaction(function () use ($validated, $storefront, $cart): JsonResponse {
-            // 1. Resolve or create customer party
+            // 1. Resolve or create customer party strictly scoped to the storefront tenant
             $customer = Party::query()
+                ->where('tenant_id', $storefront->tenant_id)
                 ->where('phone', $validated['phone'])
                 ->first();
 
@@ -72,6 +73,15 @@ class StorefrontCheckoutController extends Controller
                     'is_customer' => true,
                     'type' => 'individual',
                 ]);
+            } else {
+                // Update name/email if empty or provided
+                if (! empty($validated['customer_name']) && empty($customer->name)) {
+                    $customer->name = $validated['customer_name'];
+                }
+                if (! empty($validated['email']) && empty($customer->email)) {
+                    $customer->email = $validated['email'];
+                }
+                $customer->save();
             }
 
             // 2. Generate Order Number

@@ -10,6 +10,7 @@ import { notify } from '../../../components/ui/Toast';
 import type { BillOfMaterial } from '../../../types/api/bom';
 import type { Product } from '../../../types/api/catalog';
 import type { Unit } from '../../../types/api/unit';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 interface BOMFormDraft {
   product_id: string;
@@ -23,6 +24,7 @@ interface BOMFormDraft {
 }
 
 export function BillOfMaterialsSection() {
+  const { formatCurrency } = useCurrency();
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingBOM, setEditingBOM] = useState<BillOfMaterial | null>(null);
@@ -347,10 +349,10 @@ export function BillOfMaterialsSection() {
                           {c.qty} {c.unit}
                         </td>
                         <td className="py-2 px-3 font-mono text-muted">
-                          {effectiveCost.toFixed(2)} BDT
+                          {formatCurrency(effectiveCost)}
                         </td>
                         <td className="py-2 px-3 font-mono text-right font-semibold text-default">
-                          {subtotal.toFixed(2)} BDT
+                          {formatCurrency(subtotal)}
                         </td>
                       </tr>
                     );
@@ -363,13 +365,12 @@ export function BillOfMaterialsSection() {
               <div className="text-xs">
                 <span className="text-muted">Total Simulated Batch Cost: </span>
                 <span className="font-bold text-primary text-sm font-mono ml-1">
-                  {(
+                  {formatCurrency(
                     sampleComponents.reduce(
                       (sum, c) => sum + c.baseCost * (1 + materialCostInflation / 100) * c.qty,
                       0
                     )
-                  ).toFixed(2)}{' '}
-                  BDT
+                  )}
                 </span>
               </div>
               <Button variant="secondary" onClick={() => setSelectedBOMForRollup(null)}>

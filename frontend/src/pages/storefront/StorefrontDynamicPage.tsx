@@ -262,7 +262,7 @@ export const StorefrontDynamicPage: React.FC = () => {
       },
       {
         q: 'What are your delivery timelines and courier charges?',
-        a: 'Orders placed before 2:00 PM are dispatched on the same business day. Delivery inside Dhaka typically arrives in 24–48 hours (standard fee ৳ 60). Delivery outside Dhaka takes 2–4 business days (standard fee ৳ 120) via Steadfast, Pathao, or REDX.',
+        a: 'Orders placed before 2:00 PM are dispatched on the same business day. Delivery typically arrives in 24–48 hours for metro areas and 2–4 business days nationwide via trusted 3PL couriers (Steadfast, Pathao, or REDX) with rates calculated at checkout.',
       },
       {
         q: 'Can I track my shipment in real time?',

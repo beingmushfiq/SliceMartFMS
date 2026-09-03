@@ -10,11 +10,15 @@ import { CourierShipmentsSection } from './sections/CourierShipmentsSection';
 import { RunSheetsSection } from './sections/RunSheetsSection';
 import { CourierProvidersSection } from './sections/CourierProvidersSection';
 import { CodReconciliationSection } from './sections/CodReconciliationSection';
+import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
+
+type DeliveryTab = 'shipments' | 'run_sheets' | 'providers' | 'cod_reconciliation';
 
 export const DeliveryWorkspace: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<
-    'shipments' | 'run_sheets' | 'providers' | 'cod_reconciliation'
-  >('shipments');
+  const [activeTab, setActiveTab] = useWorkspaceTab<DeliveryTab>(
+    'shipments',
+    ['shipments', 'run_sheets', 'providers', 'cod_reconciliation'] as const
+  );
 
   // Initial State Data
   const [providers, setProviders] = useState<CourierProvider[]>([

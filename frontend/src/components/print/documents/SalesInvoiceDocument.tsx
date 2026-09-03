@@ -47,6 +47,7 @@ export function SalesInvoiceDocument({
 
   const items = invoice.items ?? [];
   const dueAmountNum = parseFloat(invoice.due_amount || '0');
+  const currencySymbol = businessConfig.currencySymbol || '$';
 
   return (
     <div className="print-doc w-full text-slate-900 bg-white text-[9pt] leading-normal font-sans">
@@ -176,10 +177,10 @@ export function SalesInvoiceDocument({
               <th className="py-2 px-2 border-r border-slate-300 w-8 text-center">#</th>
               <th className="py-2 px-2.5 border-r border-slate-300">Item Description & SKU</th>
               <th className="py-2 px-2 border-r border-slate-300 text-right w-16">Qty</th>
-              <th className="py-2 px-2 border-r border-slate-300 text-right w-20">Rate (৳)</th>
-              <th className="py-2 px-2 border-r border-slate-300 text-right w-16">Disc (৳)</th>
-              <th className="py-2 px-2 border-r border-slate-300 text-right w-16">VAT (৳)</th>
-              <th className="py-2 px-2.5 text-right w-24">Total Amount (৳)</th>
+              <th className="py-2 px-2 border-r border-slate-300 text-right w-20">Rate ({currencySymbol})</th>
+              <th className="py-2 px-2 border-r border-slate-300 text-right w-16">Disc ({currencySymbol})</th>
+              <th className="py-2 px-2 border-r border-slate-300 text-right w-16">VAT ({currencySymbol})</th>
+              <th className="py-2 px-2.5 text-right w-24">Total Amount ({currencySymbol})</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">

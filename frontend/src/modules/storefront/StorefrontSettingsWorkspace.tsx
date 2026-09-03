@@ -17,6 +17,8 @@ import {
 import { api } from '../../lib/api/client';
 import type { StorefrontConfig } from '../../types/api/storefront';
 import { DomainSettingsTab } from './DomainSettingsTab';
+import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
+import { useCurrency } from '../../hooks/useCurrency';
 
 interface PublishedProductItem {
   id: number;
@@ -31,8 +33,14 @@ interface PublishedProductItem {
   display_order: number;
 }
 
+type StorefrontSettingTab = 'branding' | 'products' | 'checkout' | 'domains';
+
 export const StorefrontSettingsWorkspace: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'branding' | 'products' | 'checkout' | 'domains'>('branding');
+  const { currencyCode } = useCurrency();
+  const [activeTab, setActiveTab] = useWorkspaceTab<StorefrontSettingTab>(
+    'branding',
+    ['branding', 'products', 'checkout', 'domains'] as const
+  );
   const [products, setProducts] = useState<PublishedProductItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -42,7 +50,7 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
   const [form, setForm] = useState({
     name: '',
     subdomain: '',
-    currency: 'BDT',
+    currency: currencyCode,
     primary_color: '#10b981',
     accent_color: '#14b8a6',
     hero_title: '',
@@ -83,7 +91,7 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
           setForm({
             name: conf.name ?? '',
             subdomain: conf.subdomain ?? '',
-            currency: conf.currency ?? 'BDT',
+            currency: conf.currency ?? currencyCode,
             primary_color: conf.theme?.primary_color ?? '#10b981',
             accent_color: conf.theme?.accent_color ?? '#14b8a6',
             hero_title: conf.theme?.hero_title ?? 'Factory Fresh Goods',

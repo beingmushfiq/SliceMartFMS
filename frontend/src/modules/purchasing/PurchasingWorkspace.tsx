@@ -1,12 +1,14 @@
-import { useState } from 'react';
 import { FileSpreadsheet, PackageCheck, Receipt, ShoppingCart, Undo2 } from 'lucide-react';
 import { PurchaseOrdersSection } from './sections/PurchaseOrdersSection';
 import { GoodsReceiptsSection } from './sections/GoodsReceiptsSection';
 import { PurchaseRequisitionsSection } from './sections/PurchaseRequisitionsSection';
 import { PurchaseBillsSection } from './sections/PurchaseBillsSection';
 import { PurchaseReturnsSection } from './sections/PurchaseReturnsSection';
+import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 
 export type PurchasingTab = 'orders' | 'receipts' | 'requisitions' | 'bills' | 'returns';
+
+const VALID_TABS: readonly PurchasingTab[] = ['orders', 'receipts', 'requisitions', 'bills', 'returns'];
 
 interface TabConfig {
   id: PurchasingTab;
@@ -52,7 +54,7 @@ const tabs: TabConfig[] = [
 ];
 
 export default function PurchasingWorkspace() {
-  const [activeTab, setActiveTab] = useState<PurchasingTab>('orders');
+  const [activeTab, setActiveTab] = useWorkspaceTab<PurchasingTab>('orders', VALID_TABS);
 
   const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[0];
 
