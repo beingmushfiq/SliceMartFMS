@@ -21,7 +21,7 @@ export function WidgetBoundary({
       level="inline"
       fallback={(_error, reset) => (
         <div
-          className={`flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 text-center min-h-[140px] space-y-2 ${className}`}
+          className={`flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 text-center min-h-35 space-y-2 ${className}`}
         >
           <div className="size-8 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 flex items-center justify-center text-amber-600 dark:text-amber-400">
             <AlertCircle className="size-4" />

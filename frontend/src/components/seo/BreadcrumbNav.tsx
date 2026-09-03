@@ -51,7 +51,7 @@ export const BreadcrumbNav: React.FC<BreadcrumbNavProps> = ({
                 {isLast ? (
                   <span
                     aria-current="page"
-                    className="font-semibold text-zinc-900 dark:text-white line-clamp-1 max-w-[200px] sm:max-w-xs"
+                    className="font-semibold text-zinc-900 dark:text-white line-clamp-1 max-w-50 sm:max-w-xs"
                   >
                     {item.name}
                   </span>
