@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\Product;
 use App\Models\Storefront;
+use App\Models\StorefrontProduct;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -52,7 +53,10 @@ class StorefrontWhatsAppOrderController extends Controller
 
             if ($product) {
                 $qty = (int) ($validated['quantity'] ?? 1);
-                $unitPrice = (string) $product->selling_price;
+                $sfProd = StorefrontProduct::where('storefront_id', $storefront->id)
+                    ->where('product_id', $product->id)
+                    ->first();
+                $unitPrice = (string) ($sfProd?->price_override ?: ($product->default_sale_price ?? '0.0000'));
                 $lineTotal = bcmul($unitPrice, (string) $qty, 4);
                 $totalEstimated = $lineTotal;
 

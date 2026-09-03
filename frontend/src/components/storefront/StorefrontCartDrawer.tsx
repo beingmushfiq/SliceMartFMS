@@ -239,8 +239,12 @@ export const StorefrontCartDrawer: React.FC<StorefrontCartDrawerProps> = ({ conf
                           },
                         }
                       );
-                      if (res.data?.data?.whatsapp_url) {
-                        window.open(res.data.data.whatsapp_url, '_blank');
+                      const whatsappPayload = res.data as unknown;
+                      const whatsappUrl =
+                        (whatsappPayload as { whatsapp_url?: string })?.whatsapp_url ??
+                        (whatsappPayload as { data?: { whatsapp_url?: string } })?.data?.whatsapp_url;
+                      if (whatsappUrl) {
+                        window.open(whatsappUrl, '_blank');
                       }
                     } catch {
                       window.open('https://wa.me/8801700000000', '_blank');

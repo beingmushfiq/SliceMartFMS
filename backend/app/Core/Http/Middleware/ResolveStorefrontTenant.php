@@ -49,6 +49,43 @@ class ResolveStorefrontTenant
                             ->orWhere('domain', $subdomain);
                     })
                     ->first();
+
+                if (! $storefront) {
+                    $tenantBySlug = Tenant::query()
+                        ->where('slug', $subdomain)
+                        ->where('status', '!=', 'suspended')
+                        ->first();
+
+                    if ($tenantBySlug) {
+                        $storefront = Storefront::withoutTenantScope()
+                            ->where('tenant_id', $tenantBySlug->id)
+                            ->where('status', '!=', 'suspended')
+                            ->first();
+
+                        if (! $storefront) {
+                            $storefront = Storefront::create([
+                                'tenant_id' => $tenantBySlug->id,
+                                'uuid' => (string) \Illuminate\Support\Str::uuid(),
+                                'name' => $tenantBySlug->name,
+                                'code' => 'STORE-' . strtoupper(\Illuminate\Support\Str::random(4)),
+                                'subdomain' => $tenantBySlug->slug,
+                                'currency' => $tenantBySlug->currency_code ?? 'BDT',
+                                'locale' => $tenantBySlug->locale ?? 'en',
+                                'theme' => [
+                                    'primary_color' => '#10b981',
+                                    'accent_color' => '#065f46',
+                                    'hero_title' => 'Direct from the Factory',
+                                    'hero_subtitle' => 'Premium products manufactured to perfection',
+                                ],
+                                'meta_title' => $tenantBySlug->name . ' - Official Store',
+                                'guest_checkout_enabled' => true,
+                                'cod_enabled' => true,
+                                'online_payment_enabled' => true,
+                                'status' => 'live',
+                            ]);
+                        }
+                    }
+                }
             }
         }
 

@@ -75,13 +75,26 @@ export const StorefrontHomePage: React.FC = () => {
         ]);
 
         if (prodRes.status === 'fulfilled') {
-          setProducts(prodRes.value.data.data ?? []);
+          const rawProds = prodRes.value.data as unknown;
+          const prodList = Array.isArray(rawProds)
+            ? (rawProds as StorefrontProduct[])
+            : (((rawProds as Record<string, unknown>)?.data as StorefrontProduct[]) ?? []);
+          setProducts(prodList);
         }
         if (catRes.status === 'fulfilled') {
-          setCategories(catRes.value.data.data ?? []);
+          const rawCats = catRes.value.data as unknown;
+          const catList = Array.isArray(rawCats)
+            ? (rawCats as { id: number; name: string }[])
+            : (((rawCats as Record<string, unknown>)?.data as { id: number; name: string }[]) ?? []);
+          setCategories(catList);
         }
-        if (cmsRes.status === 'fulfilled' && cmsRes.value.data?.data?.blocks) {
-          setCmsBlocks(cmsRes.value.data.data.blocks);
+        if (cmsRes.status === 'fulfilled') {
+          const rawCms = cmsRes.value.data as unknown;
+          const blocks =
+            (rawCms as { blocks?: CmsBlock[] })?.blocks ??
+            (rawCms as { data?: { blocks?: CmsBlock[] } })?.data?.blocks ??
+            [];
+          setCmsBlocks(blocks);
         }
       } catch (err) {
         console.error('Failed to load storefront catalog', err);

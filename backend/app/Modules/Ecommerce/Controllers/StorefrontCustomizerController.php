@@ -119,7 +119,7 @@ final class StorefrontCustomizerController extends Controller
                 'category_name' => $prod->category?->name,
                 'brand_name' => $prod->brand?->name,
                 'default_sale_price' => $prod->default_sale_price,
-                'is_published' => $pub ? (bool) $pub->is_available : false,
+                'is_published' => $pub ? (bool) $pub->is_available : ((bool) ($prod->is_online ?? ($prod->type === 'finished'))),
                 'is_featured' => $pub ? (bool) $pub->is_featured : false,
                 'price_override' => $pub?->price_override,
                 'display_order' => $pub?->sort_order ?? 0,
@@ -170,6 +170,8 @@ final class StorefrontCustomizerController extends Controller
                 'sort_order' => $validated['display_order'] ?? 0,
             ]
         );
+
+        $product->update(['is_online' => $validated['is_published']]);
 
         return response()->json([
             'success' => true,

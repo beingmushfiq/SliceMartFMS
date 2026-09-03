@@ -75,7 +75,11 @@ export const StorefrontAccountPage: React.FC = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-      setOrders(response.data.data ?? []);
+      const rawOrders = response.data as unknown;
+      const orderList = Array.isArray(rawOrders)
+        ? (rawOrders as CustomerOrder[])
+        : (((rawOrders as Record<string, unknown>)?.data as CustomerOrder[]) ?? []);
+      setOrders(orderList);
     } catch {
       // If unauthenticated or token expired, log out
       logout();
@@ -121,8 +125,21 @@ export const StorefrontAccountPage: React.FC = () => {
         }
       );
 
-      setAuth(response.data.data.token, response.data.data.customer);
-      setSuccessMessage('Welcome back!');
+      const authPayload = response.data as unknown;
+      const authData =
+        (authPayload as { token?: string })?.token !== undefined
+          ? (authPayload as {
+              token: string;
+              customer: { uuid: string; name: string; email: string | null; phone: string };
+            })
+          : (((authPayload as Record<string, unknown>)?.data as {
+              token: string;
+              customer: { uuid: string; name: string; email: string | null; phone: string };
+            }) ?? null);
+      if (authData) {
+        setAuth(authData.token, authData.customer);
+        setSuccessMessage('Welcome back!');
+      }
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : 'Invalid credentials. Please verify phone and password.');
     } finally {
@@ -155,8 +172,21 @@ export const StorefrontAccountPage: React.FC = () => {
         }
       );
 
-      setAuth(response.data.data.token, response.data.data.customer);
-      setSuccessMessage('Account created successfully!');
+      const authPayload = response.data as unknown;
+      const authData =
+        (authPayload as { token?: string })?.token !== undefined
+          ? (authPayload as {
+              token: string;
+              customer: { uuid: string; name: string; email: string | null; phone: string };
+            })
+          : (((authPayload as Record<string, unknown>)?.data as {
+              token: string;
+              customer: { uuid: string; name: string; email: string | null; phone: string };
+            }) ?? null);
+      if (authData) {
+        setAuth(authData.token, authData.customer);
+        setSuccessMessage('Account created successfully!');
+      }
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : 'Failed to register account.');
     } finally {

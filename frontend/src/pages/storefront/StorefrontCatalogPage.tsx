@@ -69,10 +69,17 @@ export const StorefrontCatalogPage: React.FC = () => {
         ]);
 
         if (prodRes.status === 'fulfilled') {
-          setProducts(prodRes.value.data.data ?? []);
+          const rawProds = prodRes.value.data as unknown;
+          const prodList = Array.isArray(rawProds)
+            ? (rawProds as StorefrontProduct[])
+            : (((rawProds as Record<string, unknown>)?.data as StorefrontProduct[]) ?? []);
+          setProducts(prodList);
         }
         if (catRes.status === 'fulfilled') {
-          const cats = catRes.value.data.data ?? [];
+          const rawCats = catRes.value.data as unknown;
+          const cats = Array.isArray(rawCats)
+            ? (rawCats as CategoryItem[])
+            : (((rawCats as Record<string, unknown>)?.data as CategoryItem[]) ?? []);
           setCategories(cats);
           if (categorySlug && !selectedCategory) {
             const matched = cats.find(
