@@ -259,7 +259,7 @@ export function TemplatePreview({
   };
 
   return (
-    <div className="w-full h-full overflow-auto bg-slate-950/60 p-4 flex justify-center items-start">
+    <div className="w-full h-full overflow-auto bg-surface-sunken p-4 flex justify-center items-start">
       <div
         style={{
           transform: `scale(${scale})`,

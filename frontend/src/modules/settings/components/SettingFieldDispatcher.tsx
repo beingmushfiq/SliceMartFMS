@@ -6,6 +6,7 @@ import {
   FileSpreadsheet,
   Cpu,
   Zap,
+  SlidersHorizontal,
 } from 'lucide-react';
 import type { SettingFieldSchema } from '../../../types/api/settings';
 import { MultiChannelChipSelect } from './fields/MultiChannelChipSelect';
@@ -17,8 +18,14 @@ import { BrandAssetField } from './fields/BrandAssetField';
 import { PrefixSerialField } from './fields/PrefixSerialField';
 import { EncryptedVaultField } from './fields/EncryptedVaultField';
 import { SettingToggleCard } from './fields/SettingToggleCard';
+import { LegalIdentifierField } from './fields/LegalIdentifierField';
+import { AddressLocationField } from './fields/AddressLocationField';
+import { ContactPhoneField } from './fields/ContactPhoneField';
+import { ContactEmailField } from './fields/ContactEmailField';
+import { NumericStepperField } from './fields/NumericStepperField';
+import { FormattedNoteField } from './fields/FormattedNoteField';
+import { DynamicTextField } from './fields/DynamicTextField';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
-import { Input } from '../../../components/ui/FormElements';
 
 interface SettingFieldDispatcherProps {
   settingKey: string;
@@ -187,6 +194,10 @@ const DROPDOWN_OPTIONS: Record<string, Array<{ label: string; value: string }>> 
     { label: 'America/New_York (UTC-05:00)', value: 'America/New_York' },
     { label: 'Europe/London (UTC+00:00)', value: 'Europe/London' },
   ],
+  system_language: [
+    { label: 'English (US / International)', value: 'en' },
+    { label: 'Bengali / বাংলা (Local BD Interface)', value: 'bn' },
+  ],
 };
 
 export const SettingFieldDispatcher: React.FC<SettingFieldDispatcherProps> = ({
@@ -277,7 +288,85 @@ export const SettingFieldDispatcher: React.FC<SettingFieldDispatcherProps> = ({
     );
   }
 
-  // 6. Duration & Time-Interval Fields
+  // 6. Corporate & Legal Registration Identifiers
+  if (
+    settingKey === 'company_legal_name' ||
+    settingKey === 'trade_license_no' ||
+    settingKey === 'tax_identification_number' ||
+    settingKey === 'rjsc_registration_no' ||
+    settingKey === 'factory_license_no' ||
+    settingKey === 'bin_branch_code'
+  ) {
+    return (
+      <LegalIdentifierField
+        label={meta.label}
+        settingKey={settingKey}
+        value={value}
+        onChange={(val) => onChange(val)}
+      />
+    );
+  }
+
+  // 7. Headquarters & Plant Physical Address Fields
+  if (settingKey.includes('address') || settingKey.includes('location')) {
+    return (
+      <AddressLocationField
+        label={meta.label}
+        settingKey={settingKey}
+        value={value}
+        onChange={(val) => onChange(val)}
+      />
+    );
+  }
+
+  // 8. Telephone & Direct Operations Hotline Fields
+  if (
+    settingKey.includes('phone') ||
+    settingKey.includes('hotline') ||
+    settingKey.includes('mobile') ||
+    settingKey === 'whatsapp_business_number'
+  ) {
+    return (
+      <ContactPhoneField
+        label={meta.label}
+        settingKey={settingKey}
+        value={value}
+        onChange={(val) => onChange(val)}
+      />
+    );
+  }
+
+  // 9. Official & Transactional Email Fields
+  if (settingKey.includes('email')) {
+    return (
+      <ContactEmailField
+        label={meta.label}
+        settingKey={settingKey}
+        value={value}
+        onChange={(val) => onChange(val)}
+      />
+    );
+  }
+
+  // 10. Customer Greetings, Receipt Notes & Hero Copy
+  if (
+    settingKey.includes('note') ||
+    settingKey.includes('tagline') ||
+    settingKey.includes('hero_') ||
+    settingKey.includes('message') ||
+    settingKey === 'default_walk_in_customer'
+  ) {
+    return (
+      <FormattedNoteField
+        label={meta.label}
+        settingKey={settingKey}
+        value={value}
+        onChange={(val) => onChange(val)}
+      />
+    );
+  }
+
+  // 11. Duration & Lead-Time Stepper Fields
   if (
     settingKey.endsWith('_days') ||
     settingKey.endsWith('_minutes') ||
@@ -302,11 +391,11 @@ export const SettingFieldDispatcher: React.FC<SettingFieldDispatcherProps> = ({
     );
   }
 
-  // 7. Brand Asset & Image Fields
+  // 12. Brand Asset & Image Fields
   if (
     settingKey === 'brand_logo_url' ||
     settingKey === 'brand_favicon_url' ||
-    settingKey.endsWith('_url')
+    (settingKey.endsWith('_url') && !settingKey.includes('api'))
   ) {
     return (
       <BrandAssetField
@@ -318,7 +407,7 @@ export const SettingFieldDispatcher: React.FC<SettingFieldDispatcherProps> = ({
     );
   }
 
-  // 8. Document Prefix Fields
+  // 13. Document Prefix Fields
   if (settingKey.endsWith('_prefix')) {
     return (
       <PrefixSerialField
@@ -330,7 +419,7 @@ export const SettingFieldDispatcher: React.FC<SettingFieldDispatcherProps> = ({
     );
   }
 
-  // 9. Visual Segmented Radio Cards (for low-cardinality policy fields)
+  // 14. Visual Segmented Radio Cards
   if (SEGMENTED_OPTIONS[settingKey]) {
     return (
       <SegmentedRadioCards
@@ -343,14 +432,26 @@ export const SettingFieldDispatcher: React.FC<SettingFieldDispatcherProps> = ({
     );
   }
 
-  // 10. Curated Dropdowns
+  // 15. Curated Dropdowns with High-Polish Header & Badge
   const dropdownOpts = DROPDOWN_OPTIONS[settingKey];
   if (dropdownOpts) {
     return (
-      <div className="p-4 rounded-xl border border-default bg-surface space-y-2">
-        <div>
-          <span className="text-xs font-bold text-default block">{meta.label}</span>
-          <span className="font-mono text-2xs text-muted block">{settingKey}</span>
+      <div className="p-4 rounded-xl border border-default bg-surface space-y-3 hover:border-primary/30 transition-all">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-2.5 min-w-0">
+            <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0 mt-0.5">
+              <SlidersHorizontal className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-default">{meta.label}</span>
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-3xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
+                  Curated Policy
+                </span>
+              </div>
+              <p className="text-2xs text-muted mt-0.5">Select approved enterprise standard.</p>
+            </div>
+          </div>
         </div>
         <SelectDropdown
           options={dropdownOpts}
@@ -364,37 +465,26 @@ export const SettingFieldDispatcher: React.FC<SettingFieldDispatcherProps> = ({
     );
   }
 
-  // 11. Plain Number Steppers (e.g. working days per week, shift grace)
+  // 16. Purpose-Built Numeric Steppers for Counts, Multipliers, Chars, Hours
   if (meta.type === 'number') {
     return (
-      <div className="p-4 rounded-xl border border-default bg-surface space-y-2">
-        <div>
-          <span className="text-xs font-bold text-default block">{meta.label}</span>
-          <span className="font-mono text-2xs text-muted block">{settingKey}</span>
-        </div>
-        <input
-          type="number"
-          step="any"
-          value={typeof value === 'number' || typeof value === 'string' ? value : ''}
-          onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))}
-          className="w-full bg-surface-sunken border border-default rounded-xl px-3 py-2 text-xs font-mono font-bold text-default focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-        />
-      </div>
+      <NumericStepperField
+        label={meta.label}
+        settingKey={settingKey}
+        value={value}
+        onChange={(val) => onChange(val)}
+        min={0}
+      />
     );
   }
 
-  // 12. Fallback Clean Text Input
+  // 17. High-Polish Dynamic Text Field (Replaces plain raw text input)
   return (
-    <div className="p-4 rounded-xl border border-default bg-surface space-y-2">
-      <div>
-        <span className="text-xs font-bold text-default block">{meta.label}</span>
-        <span className="font-mono text-2xs text-muted block">{settingKey}</span>
-      </div>
-      <Input
-        type="text"
-        value={typeof value === 'string' || typeof value === 'number' ? value : ''}
-        onChange={(e) => onChange(e.target.value)}
-      />
-    </div>
+    <DynamicTextField
+      label={meta.label}
+      settingKey={settingKey}
+      value={value}
+      onChange={(val) => onChange(val)}
+    />
   );
 };

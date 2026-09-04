@@ -37,25 +37,27 @@ final class RolesAndPermissionsSeeder extends Seeder
         }
 
         // 2. Super Administrator Role
-        $superAdminRole = Role::create([
-            'uuid' => (string) Str::uuid(),
-            'tenant_id' => $tenantId,
-            'name' => 'Super Administrator',
-            'slug' => 'super_admin',
-            'description' => 'Unrestricted access to all tenant functions and configurations',
-            'is_system' => true,
-        ]);
+        $superAdminRole = Role::firstOrCreate(
+            ['tenant_id' => $tenantId, 'slug' => 'super_admin'],
+            [
+                'uuid' => (string) Str::uuid(),
+                'name' => 'Super Administrator',
+                'description' => 'Unrestricted access to all tenant functions and configurations',
+                'is_system' => true,
+            ]
+        );
         $superAdminRole->permissions()->sync(array_values($permissionModelMap));
 
         // 3. Production Manager Role
-        $productionManagerRole = Role::create([
-            'uuid' => (string) Str::uuid(),
-            'tenant_id' => $tenantId,
-            'name' => 'Production Manager',
-            'slug' => 'production_manager',
-            'description' => 'Manages batch recipes, production schedules, shift logs, and factory output',
-            'is_system' => false,
-        ]);
+        $productionManagerRole = Role::firstOrCreate(
+            ['tenant_id' => $tenantId, 'slug' => 'production_manager'],
+            [
+                'uuid' => (string) Str::uuid(),
+                'name' => 'Production Manager',
+                'description' => 'Manages batch recipes, production schedules, shift logs, and factory output',
+                'is_system' => false,
+            ]
+        );
         $prodPerms = array_filter(
             $permissionModelMap,
             static fn (string $key): bool => str_starts_with($key, 'production.')
@@ -69,14 +71,15 @@ final class RolesAndPermissionsSeeder extends Seeder
         $productionManagerRole->permissions()->sync(array_values($prodPerms));
 
         // 4. Quality Control Inspector Role
-        $qcRole = Role::create([
-            'uuid' => (string) Str::uuid(),
-            'tenant_id' => $tenantId,
-            'name' => 'QC Inspector',
-            'slug' => 'qc_inspector',
-            'description' => 'Executes quality parameters inspection, logs defects and wastage',
-            'is_system' => false,
-        ]);
+        $qcRole = Role::firstOrCreate(
+            ['tenant_id' => $tenantId, 'slug' => 'qc_inspector'],
+            [
+                'uuid' => (string) Str::uuid(),
+                'name' => 'QC Inspector',
+                'description' => 'Executes quality parameters inspection, logs defects and wastage',
+                'is_system' => false,
+            ]
+        );
         $qcPerms = array_filter(
             $permissionModelMap,
             static fn (string $key): bool => str_starts_with($key, 'qc.')
@@ -86,14 +89,15 @@ final class RolesAndPermissionsSeeder extends Seeder
         $qcRole->permissions()->sync(array_values($qcPerms));
 
         // 5. Storekeeper / Warehouse Officer Role
-        $storekeeperRole = Role::create([
-            'uuid' => (string) Str::uuid(),
-            'tenant_id' => $tenantId,
-            'name' => 'Warehouse Storekeeper',
-            'slug' => 'storekeeper',
-            'description' => 'Manages stock movements, transfers, receipts, and material issues',
-            'is_system' => false,
-        ]);
+        $storekeeperRole = Role::firstOrCreate(
+            ['tenant_id' => $tenantId, 'slug' => 'storekeeper'],
+            [
+                'uuid' => (string) Str::uuid(),
+                'name' => 'Warehouse Storekeeper',
+                'description' => 'Manages stock movements, transfers, receipts, and material issues',
+                'is_system' => false,
+            ]
+        );
         $storePerms = array_filter(
             $permissionModelMap,
             static fn (string $key): bool => str_starts_with($key, 'inventory.')
@@ -104,14 +108,15 @@ final class RolesAndPermissionsSeeder extends Seeder
         $storekeeperRole->permissions()->sync(array_values($storePerms));
 
         // 6. Sales Officer Role
-        $salesRole = Role::create([
-            'uuid' => (string) Str::uuid(),
-            'tenant_id' => $tenantId,
-            'name' => 'Sales Officer',
-            'slug' => 'sales_officer',
-            'description' => 'Manages CRM leads, orders, invoices, and retail counter operations',
-            'is_system' => false,
-        ]);
+        $salesRole = Role::firstOrCreate(
+            ['tenant_id' => $tenantId, 'slug' => 'sales_officer'],
+            [
+                'uuid' => (string) Str::uuid(),
+                'name' => 'Sales Officer',
+                'description' => 'Manages CRM leads, orders, invoices, and retail counter operations',
+                'is_system' => false,
+            ]
+        );
         $salesPerms = array_filter(
             $permissionModelMap,
             static fn (string $key): bool => str_starts_with($key, 'sales.')
@@ -125,89 +130,101 @@ final class RolesAndPermissionsSeeder extends Seeder
         // 7. Seed Demo Users
         $defaultPassword = Hash::make('Password123!');
 
-        $adminUser = User::create([
-            'uuid' => (string) Str::uuid(),
-            'tenant_id' => $tenantId,
-            'name' => 'System Administrator',
-            'email' => 'admin@slicemart.test',
-            'password' => $defaultPassword,
-            'phone' => '+8801700000001',
-            'status' => 'active',
-            'locale' => 'en',
-            'token_version' => 1,
-            'perm_version' => 1,
-        ]);
-        $adminUser->roles()->attach($superAdminRole);
+        $adminUser = User::firstOrCreate(
+            ['email' => 'admin@slicemart.test'],
+            [
+                'uuid' => (string) Str::uuid(),
+                'tenant_id' => $tenantId,
+                'name' => 'System Administrator',
+                'password' => $defaultPassword,
+                'phone' => '+8801700000001',
+                'status' => 'active',
+                'locale' => 'en',
+                'token_version' => 1,
+                'perm_version' => 1,
+            ]
+        );
+        $adminUser->roles()->syncWithoutDetaching([$superAdminRole->id]);
 
-        $prodUser = User::create([
-            'uuid' => (string) Str::uuid(),
-            'tenant_id' => $tenantId,
-            'name' => 'Hasan Production Lead',
-            'email' => 'production@slicemart.test',
-            'password' => $defaultPassword,
-            'phone' => '+8801700000002',
-            'status' => 'active',
-            'locale' => 'en',
-            'token_version' => 1,
-            'perm_version' => 1,
-        ]);
-        $prodUser->roles()->attach($productionManagerRole);
+        $prodUser = User::firstOrCreate(
+            ['email' => 'production@slicemart.test'],
+            [
+                'uuid' => (string) Str::uuid(),
+                'tenant_id' => $tenantId,
+                'name' => 'Hasan Production Lead',
+                'password' => $defaultPassword,
+                'phone' => '+8801700000002',
+                'status' => 'active',
+                'locale' => 'en',
+                'token_version' => 1,
+                'perm_version' => 1,
+            ]
+        );
+        $prodUser->roles()->syncWithoutDetaching([$productionManagerRole->id]);
 
-        $qcUser = User::create([
-            'uuid' => (string) Str::uuid(),
-            'tenant_id' => $tenantId,
-            'name' => 'Farhana QC Lead',
-            'email' => 'qc@slicemart.test',
-            'password' => $defaultPassword,
-            'phone' => '+8801700000003',
-            'status' => 'active',
-            'locale' => 'en',
-            'token_version' => 1,
-            'perm_version' => 1,
-        ]);
-        $qcUser->roles()->attach($qcRole);
+        $qcUser = User::firstOrCreate(
+            ['email' => 'qc@slicemart.test'],
+            [
+                'uuid' => (string) Str::uuid(),
+                'tenant_id' => $tenantId,
+                'name' => 'Farhana QC Lead',
+                'password' => $defaultPassword,
+                'phone' => '+8801700000003',
+                'status' => 'active',
+                'locale' => 'en',
+                'token_version' => 1,
+                'perm_version' => 1,
+            ]
+        );
+        $qcUser->roles()->syncWithoutDetaching([$qcRole->id]);
 
-        $storeUser = User::create([
-            'uuid' => (string) Str::uuid(),
-            'tenant_id' => $tenantId,
-            'name' => 'Rafiq Store In-Charge',
-            'email' => 'store@slicemart.test',
-            'password' => $defaultPassword,
-            'phone' => '+8801700000004',
-            'status' => 'active',
-            'locale' => 'en',
-            'token_version' => 1,
-            'perm_version' => 1,
-        ]);
-        $storeUser->roles()->attach($storekeeperRole);
+        $storeUser = User::firstOrCreate(
+            ['email' => 'store@slicemart.test'],
+            [
+                'uuid' => (string) Str::uuid(),
+                'tenant_id' => $tenantId,
+                'name' => 'Rafiq Store In-Charge',
+                'password' => $defaultPassword,
+                'phone' => '+8801700000004',
+                'status' => 'active',
+                'locale' => 'en',
+                'token_version' => 1,
+                'perm_version' => 1,
+            ]
+        );
+        $storeUser->roles()->syncWithoutDetaching([$storekeeperRole->id]);
 
-        $salesUser = User::create([
-            'uuid' => (string) Str::uuid(),
-            'tenant_id' => $tenantId,
-            'name' => 'Tanvir Sales Lead',
-            'email' => 'sales@slicemart.test',
-            'password' => $defaultPassword,
-            'phone' => '+8801700000005',
-            'status' => 'active',
-            'locale' => 'en',
-            'token_version' => 1,
-            'perm_version' => 1,
-        ]);
-        $salesUser->roles()->attach($salesRole);
+        $salesUser = User::firstOrCreate(
+            ['email' => 'sales@slicemart.test'],
+            [
+                'uuid' => (string) Str::uuid(),
+                'tenant_id' => $tenantId,
+                'name' => 'Kamal Sales Officer',
+                'password' => $defaultPassword,
+                'phone' => '+8801700000005',
+                'status' => 'active',
+                'locale' => 'en',
+                'token_version' => 1,
+                'perm_version' => 1,
+            ]
+        );
+        $salesUser->roles()->syncWithoutDetaching([$salesRole->id]);
 
         // 8. Seed Platform Super Administrator (DevCenterPoint Staff - tenant_id = null)
-        $platformAdmin = new User([
-            'uuid' => (string) Str::uuid(),
-            'name' => 'Platform Super Admin',
-            'email' => 'admin@devcenterpoint.com',
-            'password' => Hash::make('PlatformAdmin123!'),
-            'phone' => '+18005550199',
-            'status' => 'active',
-            'locale' => 'en',
-            'token_version' => 1,
-            'perm_version' => 1,
-        ]);
-        $platformAdmin->tenant_id = null;
-        $platformAdmin->save();
+        if (!User::where('email', 'admin@devcenterpoint.com')->exists()) {
+            $platformAdmin = new User([
+                'uuid' => (string) Str::uuid(),
+                'name' => 'Platform Super Admin',
+                'email' => 'admin@devcenterpoint.com',
+                'password' => Hash::make('PlatformAdmin123!'),
+                'phone' => '+18005550199',
+                'status' => 'active',
+                'locale' => 'en',
+                'token_version' => 1,
+                'perm_version' => 1,
+            ]);
+            $platformAdmin->tenant_id = null;
+            $platformAdmin->save();
+        }
     }
 }

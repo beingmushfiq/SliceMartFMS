@@ -717,9 +717,17 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
 
 
 
+        // ── Dynamic Tenant Modules ──────────────────────────────────
+        Route::prefix('tenant/modules')->name('tenant.modules.')->group(static function (): void {
+            Route::get('/', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'index'])->name('index');
+            Route::put('{moduleKey}', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'update'])->name('update');
+            Route::post('batch', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'batchUpdate'])->name('batch');
+        });
+
         // ── Settings & Configuration System ─────────────────────────
         Route::prefix('settings')->name('settings.')->group(static function (): void {
             Route::get('schema', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'schema'])->name('schema');
+            Route::post('upload-asset', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'uploadAsset'])->name('upload-asset');
             Route::get('{group}', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'getGroup'])->name('get');
             Route::put('{group}', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'updateGroup'])->name('update');
             Route::post('{group}/test-connection', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'testConnection'])->name('test-connection');

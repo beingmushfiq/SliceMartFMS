@@ -128,4 +128,32 @@ class TenantSettingsController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Upload a brand asset (logo, favicon, or icon).
+     */
+    public function uploadAsset(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:png,jpg,jpeg,svg,ico,webp,gif|max:5120',
+            'type' => 'nullable|string|in:logo,favicon,general',
+        ]);
+
+        $file = $request->file('file');
+        $tenantId = \App\Core\Tenancy\TenantContext::current()->tenantId() ?? 'default';
+        $ext = $file->getClientOriginalExtension() ?: 'png';
+        $filename = ($request->input('type') ?? 'asset') . '_' . time() . '_' . substr(md5(uniqid()), 0, 8) . '.' . $ext;
+
+        $path = $file->storeAs("branding/{$tenantId}", $filename, 'public');
+        $url = \Illuminate\Support\Facades\Storage::disk('public')->url($path);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Asset uploaded successfully.',
+            'data' => [
+                'url' => $url,
+                'path' => $path,
+            ],
+        ]);
+    }
 }
