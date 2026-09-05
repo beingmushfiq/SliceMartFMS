@@ -121,6 +121,19 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 ->middleware('permission:catalog.bom.manage')->name('destroy');
         });
 
+        Route::prefix('boms')->name('boms.')->group(static function (): void {
+            Route::get('/', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'index'])
+                ->middleware('permission:catalog.bom.view')->name('index');
+            Route::post('/', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'store'])
+                ->middleware('permission:catalog.bom.manage')->name('store');
+            Route::get('{billOfMaterial:uuid}', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'show'])
+                ->middleware('permission:catalog.bom.view')->name('show');
+            Route::patch('{billOfMaterial:uuid}', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'update'])
+                ->middleware('permission:catalog.bom.manage')->name('update');
+            Route::delete('{billOfMaterial:uuid}', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'destroy'])
+                ->middleware('permission:catalog.bom.manage')->name('destroy');
+        });
+
         Route::prefix('warehouses')->name('warehouses.')->group(static function (): void {
             Route::get('options', [App\Modules\Catalogue\Controllers\WarehouseController::class, 'options'])
                 ->middleware('permission:inventory.warehouse.view')->name('options');
@@ -313,6 +326,16 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::delete('{wastageRecord:uuid}', [App\Modules\QC\Controllers\WastageRecordController::class, 'destroy'])
                     ->middleware('permission:qc.wastage.delete')->name('destroy');
             });
+
+            Route::prefix('rework-orders')->name('rework-orders.')->group(static function (): void {
+                Route::get('/', [App\Modules\QC\Controllers\ReworkOrderController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\QC\Controllers\ReworkOrderController::class, 'store'])->name('store');
+                Route::get('{id}', [App\Modules\QC\Controllers\ReworkOrderController::class, 'show'])->name('show');
+                Route::patch('{id}', [App\Modules\QC\Controllers\ReworkOrderController::class, 'update'])->name('update');
+                Route::post('{id}/start', [App\Modules\QC\Controllers\ReworkOrderController::class, 'start'])->name('start');
+                Route::post('{id}/complete', [App\Modules\QC\Controllers\ReworkOrderController::class, 'complete'])->name('complete');
+                Route::delete('{id}', [App\Modules\QC\Controllers\ReworkOrderController::class, 'destroy'])->name('destroy');
+            });
         });
 
         // ── Inventory & Stock Operations ──────────────────────────────
@@ -331,6 +354,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                     ->middleware('permission:inventory.transfer.create')->name('store');
                 Route::get('{id}', [App\Modules\Inventory\Controllers\StockTransferController::class, 'show'])
                     ->middleware('permission:inventory.transfer.view')->name('show');
+                Route::patch('{id}', [App\Modules\Inventory\Controllers\StockTransferController::class, 'update'])
+                    ->middleware('permission:inventory.transfer.create')->name('update');
                 Route::post('{id}/dispatch', [App\Modules\Inventory\Controllers\StockTransferController::class, 'dispatch'])
                     ->middleware('permission:inventory.transfer.approve')->name('dispatch');
                 Route::post('{id}/receive', [App\Modules\Inventory\Controllers\StockTransferController::class, 'receive'])
@@ -346,6 +371,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                     ->middleware('permission:inventory.adjustment.create')->name('store');
                 Route::get('{id}', [App\Modules\Inventory\Controllers\StockAdjustmentController::class, 'show'])
                     ->middleware('permission:inventory.adjustment.view')->name('show');
+                Route::patch('{id}', [App\Modules\Inventory\Controllers\StockAdjustmentController::class, 'update'])
+                    ->middleware('permission:inventory.adjustment.create')->name('update');
                 Route::post('{id}/approve', [App\Modules\Inventory\Controllers\StockAdjustmentController::class, 'approve'])
                     ->middleware('permission:inventory.adjustment.approve')->name('approve');
                 Route::delete('{id}', [App\Modules\Inventory\Controllers\StockAdjustmentController::class, 'destroy'])
@@ -359,6 +386,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                     ->middleware('permission:inventory.count.create')->name('store');
                 Route::get('{id}', [App\Modules\Inventory\Controllers\StockCountController::class, 'show'])
                     ->middleware('permission:inventory.count.view')->name('show');
+                Route::patch('{id}', [App\Modules\Inventory\Controllers\StockCountController::class, 'update'])
+                    ->middleware('permission:inventory.count.create')->name('update');
                 Route::post('{id}/reconcile', [App\Modules\Inventory\Controllers\StockCountController::class, 'reconcile'])
                     ->middleware('permission:inventory.count.approve')->name('reconcile');
                 Route::delete('{id}', [App\Modules\Inventory\Controllers\StockCountController::class, 'destroy'])
@@ -636,6 +665,16 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::get('payslips', [App\Modules\HR\Controllers\PayrollController::class, 'payslips'])->name('payslips');
                 Route::get('payslips/{id}', [App\Modules\HR\Controllers\PayrollController::class, 'showPayslip'])->name('payslips.show');
             });
+        });
+
+        // Workforce Route Alias for Frontend Compatibility
+        Route::prefix('workforce')->name('workforce.')->group(static function (): void {
+            Route::prefix('employees')->name('employees.')->group(static function (): void {
+                Route::get('/', [App\Modules\HR\Controllers\EmployeeController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\HR\Controllers\EmployeeController::class, 'store'])->name('store');
+                Route::get('{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'show'])->name('show');
+            });
+            Route::get('shifts', [App\Modules\HR\Controllers\EmployeeController::class, 'shifts'])->name('shifts');
         });
 
         // ── Reports & RMS Engine ──────────────────────────────────────

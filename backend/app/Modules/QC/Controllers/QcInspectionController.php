@@ -35,7 +35,7 @@ final class QcInspectionController extends Controller
             );
         }
 
-        $query = QcInspection::query()->with(['productionBatch', 'productionOutput', 'inspector', 'results.qcParameter', 'defects.defectReason', 'approvedByUser']);
+        $query = QcInspection::query()->with(['productionBatch.product', 'productionOutput.product', 'inspector', 'results.qcParameter', 'defects.defectReason', 'approvedByUser']);
 
         $batchUuid = $request->input('production_batch_id');
         if (is_string($batchUuid)) {
@@ -135,7 +135,7 @@ final class QcInspectionController extends Controller
             );
         }
 
-        $qcInspection->load(['productionBatch', 'productionOutput', 'inspector', 'results.qcParameter', 'defects.defectReason', 'approvedByUser']);
+        $qcInspection->load(['productionBatch.product', 'productionOutput.product', 'inspector', 'results.qcParameter', 'defects.defectReason', 'approvedByUser']);
 
         return response()->json([
             'success' => true,

@@ -22,8 +22,11 @@ final class QcParameterResource extends JsonResource
     {
         return [
             'id' => $this->uuid,
+            'code' => 'QC-'.strtoupper(substr($this->uuid, 0, 4)),
             'name' => $this->name,
             'type' => $this->type,
+            'data_type' => $this->type,
+            'category' => 'physical',
             'product' => new ProductResource($this->whenLoaded('product')),
             'unit' => new UnitResource($this->whenLoaded('unit')),
             'min_value' => $this->min_value,

@@ -54,6 +54,7 @@ final class WorkerProductionEntry extends Model
     protected $table = 'worker_production_entries';
 
     protected $fillable = [
+        'tenant_id',
         'uuid',
         'production_batch_id',
         'employee_id',

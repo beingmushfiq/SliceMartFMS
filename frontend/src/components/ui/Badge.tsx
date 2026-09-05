@@ -203,6 +203,11 @@ export function StatusBadge({
 }) {
   const { tone, icon, labelKey, spin } = resolveStatus(status);
   const known = status in STATUS_REGISTRY;
+  const displayLabel =
+    label ??
+    (known
+      ? (labelKey.startsWith('status.') ? labelKey.slice(7) : labelKey).replace(/_/g, ' ')
+      : status.replace(/_/g, ' '));
 
   return (
     <Badge
@@ -214,7 +219,7 @@ export function StatusBadge({
       // the RMS export both need it (§10.3 rule 8).
       data-status={status}
     >
-      {label ?? (known ? labelKey : status)}
+      {displayLabel}
     </Badge>
   );
 }

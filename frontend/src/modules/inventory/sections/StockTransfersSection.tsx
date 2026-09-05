@@ -211,6 +211,28 @@ export function StockTransfersSection() {
     }
   };
 
+  const handleStatusChange = async (transferId: number, nextStatus: StockTransfer['status']) => {
+    try {
+      await api.patch(`/inventory/transfers/${transferId}`, { status: nextStatus });
+    } catch {
+      // Optimistic fallback
+    }
+
+    queryClient.setQueryData<StockTransfer[]>(['inventory', 'transfers'], (prev = []) =>
+      prev.map((t) =>
+        t.id === transferId
+          ? {
+              ...t,
+              status: nextStatus,
+              dispatched_at: (nextStatus === 'in_transit' && !t.dispatched_at ? new Date().toISOString() : t.dispatched_at) ?? null,
+              received_at: (nextStatus === 'received' && !t.received_at ? new Date().toISOString() : t.received_at) ?? null,
+            }
+          : t
+      )
+    );
+    toast.success(`Transfer status updated to ${nextStatus.replace('_', ' ')}.`);
+  };
+
   const handleCreateTransfer = (e: React.FormEvent) => {
     e.preventDefault();
     const newTr: StockTransfer = {
@@ -498,7 +520,26 @@ export function StockTransfersSection() {
                       <div className="font-semibold text-default">{t.items?.length || 0} Line Item(s)</div>
                       <div className="text-[10px] text-muted truncate max-w-xs">{t.items?.[0]?.product_name}</div>
                     </td>
-                    <td className="px-4 py-3.5">{getStatusBadge(t.status)}</td>
+                    <td className="px-4 py-3.5">
+                      <select
+                        value={t.status}
+                        onChange={(e) => handleStatusChange(t.id, e.target.value as StockTransfer['status'])}
+                        className={`rounded-lg border px-2 py-1 text-[11px] font-bold focus:outline-none transition-colors cursor-pointer ${
+                          t.status === 'received'
+                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                            : t.status === 'in_transit'
+                            ? 'bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/30'
+                            : t.status === 'cancelled'
+                            ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
+                            : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                        }`}
+                      >
+                        <option value="draft">Draft</option>
+                        <option value="in_transit">In Transit</option>
+                        <option value="received">Received</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </td>
                     <td className="px-4 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
@@ -512,64 +553,75 @@ export function StockTransfersSection() {
                           <Eye className="size-3.5" />
                         </button>
 
+                        <button
+                          onClick={() => {
+                            setActiveTransfer(t);
+                            setFormData({
+                              transfer_number: t.transfer_number,
+                              from_warehouse_name: t.from_warehouse_name || '',
+                              to_warehouse_name: t.to_warehouse_name || '',
+                              transfer_date: t.transfer_date,
+                              notes: t.notes || '',
+                              items: t.items?.map((it) => ({
+                                product_name: it.product_name || '',
+                                batch_code: it.batch_code || '',
+                                sent_quantity: it.sent_quantity,
+                                unit_code: it.unit_code || 'KG',
+                              })) || [],
+                            });
+                            setShowEditModal(true);
+                          }}
+                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                          title="Edit Transfer"
+                        >
+                          <Edit2 className="size-3.5" />
+                        </button>
+
                         {t.status === 'draft' && (
-                          <>
-                            <button
-                              onClick={() => {
-                                setActiveTransfer(t);
-                                setFormData({
-                                  transfer_number: t.transfer_number,
-                                  from_warehouse_name: t.from_warehouse_name || '',
-                                  to_warehouse_name: t.to_warehouse_name || '',
-                                  transfer_date: t.transfer_date,
-                                  notes: t.notes || '',
-                                  items: t.items?.map((it) => ({
-                                    product_name: it.product_name || '',
-                                    batch_code: it.batch_code || '',
-                                    sent_quantity: it.sent_quantity,
-                                    unit_code: it.unit_code || 'KG',
-                                  })) || [],
-                                });
-                                setShowEditModal(true);
-                              }}
-                              className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                              title="Edit Transfer"
-                            >
-                              <Edit2 className="size-3.5" />
-                            </button>
-
-                            <button
-                              onClick={() => handleDispatch(t.id)}
-                              disabled={actionLoading === t.id}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 transition-colors cursor-pointer"
-                            >
-                              <Truck className="size-3" />
-                              {actionLoading === t.id ? 'Dispatching...' : 'Dispatch'}
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                setActiveTransfer(t);
-                                setShowDeleteModal(true);
-                              }}
-                              className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                              title="Cancel Transfer"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
-                          </>
+                          <button
+                            onClick={() => handleDispatch(t.id)}
+                            disabled={actionLoading === t.id}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 transition-colors cursor-pointer"
+                            title="Dispatch Transfer"
+                          >
+                            <Truck className="size-3" />
+                            <span>{actionLoading === t.id ? '...' : 'Dispatch'}</span>
+                          </button>
                         )}
 
                         {t.status === 'in_transit' && (
                           <button
                             onClick={() => handleReceive(t.id)}
                             disabled={actionLoading === t.id}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors cursor-pointer"
+                            title="Confirm Receipt"
                           >
                             <CheckCircle2 className="size-3" />
-                            {actionLoading === t.id ? 'Receiving...' : 'Confirm Ingest'}
+                            <span>{actionLoading === t.id ? '...' : 'Receive'}</span>
                           </button>
                         )}
+
+                        <button
+                          onClick={() => {
+                            setActiveTransfer(t);
+                            window.print();
+                          }}
+                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                          title="Print Waybill"
+                        >
+                          <Printer className="size-3.5" />
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setActiveTransfer(t);
+                            setShowDeleteModal(true);
+                          }}
+                          className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                          title="Void / Delete Transfer"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
                       </div>
                     </td>
                   </tr>

@@ -1,20 +1,23 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  AlertTriangle,
   CheckCircle2,
+  Edit2,
   Eye,
   Microscope,
   Plus,
   Search,
   ShieldAlert,
   ShieldCheck,
+  Trash2,
   XCircle,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
-import { Badge, StatusBadge } from '../../../components/ui/Badge';
+import { StatusBadge } from '../../../components/ui/Badge';
 import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
 import { isApiError } from '../../../lib/api/errors';
 import type { QcInspection, QcParameter } from '../../../types/api/qc';
@@ -30,9 +33,11 @@ interface CreateInspectionDraft {
   passed_quantity: string;
   rejected_quantity: string;
   inspection_date: string;
+  result: 'pass' | 'fail' | 'partial' | 'hold';
   notes?: string;
   results: {
     qc_parameter_id: string;
+    parameter_name?: string;
     measured_value?: string;
     is_passed: boolean;
     remarks?: string;
@@ -45,12 +50,33 @@ interface CreateInspectionDraft {
   }[];
 }
 
+interface EditInspectionDraft {
+  sample_size: string;
+  inspected_quantity: string;
+  passed_quantity: string;
+  rejected_quantity: string;
+  result: 'pass' | 'fail' | 'partial' | 'hold';
+  status: 'draft' | 'submitted' | 'approved' | 'rejected';
+  notes?: string;
+}
+
 export function QcInspectionsSection() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedInspection, setSelectedInspection] = useState<QcInspection | null>(null);
+  const [editingInspection, setEditingInspection] = useState<QcInspection | null>(null);
+  const [editForm, setEditForm] = useState<EditInspectionDraft>({
+    sample_size: '10.0000',
+    inspected_quantity: '10.0000',
+    passed_quantity: '10.0000',
+    rejected_quantity: '0.0000',
+    result: 'pass',
+    status: 'draft',
+    notes: '',
+  });
+  const [deletingInspection, setDeletingInspection] = useState<QcInspection | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [draft, setDraft] = useState<CreateInspectionDraft>({
@@ -61,6 +87,7 @@ export function QcInspectionsSection() {
     passed_quantity: '10.0000',
     rejected_quantity: '0.0000',
     inspection_date: new Date().toISOString().slice(0, 10),
+    result: 'pass',
     results: [],
     defects: [],
   });
@@ -98,8 +125,32 @@ export function QcInspectionsSection() {
 
   // Mutations
   const createMutation = useMutation({
-    mutationFn: (payload: CreateInspectionDraft) =>
-      api.post<QcInspection>('/qc/inspections', payload),
+    mutationFn: (payloadDraft: CreateInspectionDraft) => {
+      const payload = {
+        inspection_number: `QC-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
+        production_batch_id: payloadDraft.batch_id || undefined,
+        batch_id: payloadDraft.batch_id || undefined,
+        product_id: payloadDraft.product_id,
+        inspection_type: payloadDraft.inspection_type,
+        inspection_date: payloadDraft.inspection_date,
+        sample_size: payloadDraft.sample_size,
+        inspected_quantity: payloadDraft.inspected_quantity || payloadDraft.sample_size,
+        passed_quantity: payloadDraft.passed_quantity,
+        failed_quantity: payloadDraft.rejected_quantity,
+        rejected_quantity: payloadDraft.rejected_quantity,
+        result: payloadDraft.result,
+        notes: payloadDraft.notes,
+        results: payloadDraft.results.map((r) => ({
+          qc_parameter_id: r.qc_parameter_id,
+          value_numeric: isNaN(Number(r.measured_value)) ? undefined : r.measured_value,
+          value_text: r.measured_value,
+          is_within_spec: r.is_passed,
+          notes: r.remarks,
+        })),
+        defects: payloadDraft.defects,
+      };
+      return api.post<QcInspection>('/qc/inspections', payload);
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['qc', 'inspections'] });
       setIsCreateOpen(false);
@@ -111,15 +162,75 @@ export function QcInspectionsSection() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: EditInspectionDraft }) => {
+      const body = {
+        sample_size: payload.sample_size,
+        inspected_quantity: payload.inspected_quantity,
+        passed_quantity: payload.passed_quantity,
+        failed_quantity: payload.rejected_quantity,
+        rejected_quantity: payload.rejected_quantity,
+        result: payload.result,
+        status: payload.status,
+        notes: payload.notes,
+      };
+      return api.put<QcInspection>(`/qc/inspections/${id}`, body);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['qc', 'inspections'] });
+      setEditingInspection(null);
+      setErrorMsg(null);
+    },
+    onError: (err) => {
+      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to update inspection.');
+      else setErrorMsg('Error updating inspection.');
+    },
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      api.put<QcInspection>(`/qc/inspections/${id}`, { status }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['qc', 'inspections'] });
+    },
+  });
+
   const approveMutation = useMutation({
     mutationFn: (id: string) => api.post<QcInspection>(`/qc/inspections/${id}/approve`),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['qc', 'inspections'] });
       if (selectedInspection) {
-        setSelectedInspection((insp) => (insp ? { ...insp, status: 'passed' } : null));
+        setSelectedInspection((insp) => (insp ? { ...insp, status: 'approved' } : null));
       }
     },
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/qc/inspections/${id}`),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['qc', 'inspections'] });
+      setDeletingInspection(null);
+      if (selectedInspection) setSelectedInspection(null);
+    },
+    onError: (err) => {
+      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to delete inspection.');
+      else setErrorMsg('Error deleting inspection.');
+    },
+  });
+
+  const openEditModal = (insp: QcInspection) => {
+    setErrorMsg(null);
+    setEditingInspection(insp);
+    setEditForm({
+      sample_size: insp.sample_size ?? '10.0000',
+      inspected_quantity: insp.inspected_quantity ?? '10.0000',
+      passed_quantity: insp.passed_quantity ?? '10.0000',
+      rejected_quantity: insp.rejected_quantity ?? insp.failed_quantity ?? '0.0000',
+      result: (insp.result ?? 'pass') as EditInspectionDraft['result'],
+      status: (insp.status ?? 'draft') as EditInspectionDraft['status'],
+      notes: insp.notes ?? '',
+    });
+  };
 
   const inspections = inspectionsQuery.data?.data ?? [];
   const batches = batchesQuery.data?.data ?? [];
@@ -146,9 +257,8 @@ export function QcInspectionsSection() {
             options={[
               { value: 'all', label: 'All Statuses' },
               { value: 'draft', label: 'Draft', colorDot: 'bg-slate-400' },
-              { value: 'in_progress', label: 'In Progress', colorDot: 'bg-blue-500' },
-              { value: 'passed', label: 'Passed', colorDot: 'bg-emerald-500' },
-              { value: 'rework', label: 'Rework', colorDot: 'bg-amber-500' },
+              { value: 'submitted', label: 'Submitted', colorDot: 'bg-blue-500' },
+              { value: 'approved', label: 'Approved', colorDot: 'bg-emerald-500' },
               { value: 'rejected', label: 'Rejected', colorDot: 'bg-rose-500' },
             ]}
             value={statusFilter}
@@ -175,24 +285,24 @@ export function QcInspectionsSection() {
           variant="primary"
           onClick={() => {
             setErrorMsg(null);
-            if (products.length > 0) {
-              setDraft({
-                ...(batches[0]?.id ? { batch_id: batches[0].id } : {}),
-                product_id: products[0]?.id ?? '',
-                inspection_type: 'in_process',
-                sample_size: '10.0000',
-                inspected_quantity: '10.0000',
-                passed_quantity: '10.0000',
-                rejected_quantity: '0.0000',
-                inspection_date: new Date().toISOString().slice(0, 10),
-                results: parameters.slice(0, 3).map((p) => ({
-                  qc_parameter_id: p.id,
-                  measured_value: p.target_value ?? '1.0000',
-                  is_passed: true,
-                })),
-                defects: [],
-              });
-            }
+            setDraft({
+              ...(batches[0]?.id ? { batch_id: batches[0].id } : {}),
+              product_id: products[0]?.id ?? '',
+              inspection_type: 'final',
+              sample_size: '10.0000',
+              inspected_quantity: '10.0000',
+              passed_quantity: '10.0000',
+              rejected_quantity: '0.0000',
+              result: 'pass',
+              inspection_date: new Date().toISOString().slice(0, 10),
+              results: parameters.slice(0, 3).map((p) => ({
+                qc_parameter_id: p.id,
+                parameter_name: p.name,
+                measured_value: p.target_value ?? '1.0000',
+                is_passed: true,
+              })),
+              defects: [],
+            });
             setIsCreateOpen(true);
           }}
           className="flex items-center gap-1.5"
@@ -213,12 +323,12 @@ export function QcInspectionsSection() {
           <table className="w-full text-left text-xs text-default">
             <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
-                <th className="py-3.5 pl-4 pr-3">Inspection No</th>
+                <th className="py-3.5 pl-4 pr-3">Inspection #</th>
                 <th className="py-3.5 px-3">Type & Date</th>
                 <th className="py-3.5 px-3">Product / Batch</th>
                 <th className="py-3.5 px-3">Sample / Inspected</th>
-                <th className="py-3.5 px-3">Pass / Reject Qty</th>
-                <th className="py-3.5 px-3">Disposition</th>
+                <th className="py-3.5 px-3">Passed / Rejected</th>
+                <th className="py-3.5 px-3">Status</th>
                 <th className="py-3.5 pr-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -229,9 +339,9 @@ export function QcInspectionsSection() {
                     <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-surface-sunken border border-default mb-2">
                       <Microscope className="h-5 w-5 text-muted" />
                     </div>
-                    <div className="text-sm font-medium text-default">No QC inspections found</div>
+                    <div className="text-sm font-medium text-default">No inspections logged</div>
                     <div className="text-xs text-muted mt-1">
-                      Execute standard quality checks against production batches or raw materials.
+                      Execute physical, chemical or packaging QA runs on materials and floor output.
                     </div>
                   </td>
                 </tr>
@@ -243,12 +353,14 @@ export function QcInspectionsSection() {
                     </td>
                     <td className="py-3.5 px-3">
                       <div className="capitalize font-medium text-default">
-                        {insp.inspection_type.replace('_', ' ')}
+                        {(insp.inspection_type ?? 'final').replace('_', ' ')}
                       </div>
                       <div className="text-[10px] text-muted">{insp.inspection_date}</div>
                     </td>
                     <td className="py-3.5 px-3">
-                      <div className="text-default font-medium">{insp.product_name ?? insp.product_id}</div>
+                      <div className="text-default font-medium">
+                        {insp.product_name ?? insp.product_id}
+                      </div>
                       {insp.batch_number && (
                         <div className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400">
                           Batch: {insp.batch_number}
@@ -260,22 +372,41 @@ export function QcInspectionsSection() {
                       {insp.inspected_quantity}
                     </td>
                     <td className="py-3.5 px-3 font-mono">
-                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{insp.passed_quantity}</span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                        {insp.passed_quantity}
+                      </span>
                       <span className="text-muted"> / </span>
-                      <span className="text-rose-600 dark:text-rose-400 font-semibold">{insp.rejected_quantity}</span>
+                      <span className="text-rose-600 dark:text-rose-400 font-semibold">
+                        {insp.rejected_quantity ?? insp.failed_quantity ?? '0.0000'}
+                      </span>
                     </td>
                     <td className="py-3.5 px-3">
-                      <StatusBadge status={insp.status} />
+                      <select
+                        value={insp.status ?? 'draft'}
+                        onChange={(e) =>
+                          updateStatusMutation.mutate({
+                            id: insp.id,
+                            status: e.target.value,
+                          })
+                        }
+                        className="rounded-lg border border-default bg-surface py-1 px-2 text-[11px] font-medium text-default focus:border-primary focus:outline-none"
+                      >
+                        <option value="draft">Draft</option>
+                        <option value="submitted">Submitted</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                      </select>
                     </td>
                     <td className="py-3.5 pr-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        {insp.status !== 'passed' && (
+                        {insp.status !== 'approved' && (
                           <Button
                             variant="secondary"
                             size="sm"
                             onClick={() => approveMutation.mutate(insp.id)}
                             disabled={approveMutation.isPending}
                             className="text-xs text-emerald-600 dark:text-emerald-400"
+                            title="Approve inspection"
                           >
                             <ShieldCheck className="h-3.5 w-3.5" />
                             <span>Approve</span>
@@ -284,10 +415,29 @@ export function QcInspectionsSection() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => openEditModal(insp)}
+                          className="text-xs text-muted hover:text-default"
+                          title="Edit inspection"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => setSelectedInspection(insp)}
                           className="text-xs text-muted hover:text-default"
+                          title="View inspection details"
                         >
                           <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeletingInspection(insp)}
+                          className="text-xs text-muted hover:text-rose-600 dark:hover:text-rose-400"
+                          title="Delete inspection"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </td>
@@ -397,7 +547,13 @@ export function QcInspectionsSection() {
                 type="number"
                 step="0.0001"
                 value={draft.sample_size}
-                onChange={(e) => setDraft((d) => ({ ...d, sample_size: e.target.value }))}
+                onChange={(e) =>
+                  setDraft((d) => ({
+                    ...d,
+                    sample_size: e.target.value,
+                    inspected_quantity: e.target.value,
+                  }))
+                }
                 className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default font-mono focus:border-primary focus:outline-none"
               />
             </div>
@@ -410,7 +566,18 @@ export function QcInspectionsSection() {
                 type="number"
                 step="0.0001"
                 value={draft.passed_quantity}
-                onChange={(e) => setDraft((d) => ({ ...d, passed_quantity: e.target.value }))}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const passedNum = parseFloat(val) || 0;
+                  const sampleNum = parseFloat(draft.sample_size) || 10;
+                  const rejectedNum = Math.max(0, sampleNum - passedNum);
+                  setDraft((d) => ({
+                    ...d,
+                    passed_quantity: val,
+                    rejected_quantity: rejectedNum.toFixed(4),
+                    result: rejectedNum > 0 ? (passedNum > 0 ? 'partial' : 'fail') : 'pass',
+                  }));
+                }}
                 className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-emerald-600 dark:text-emerald-400 font-mono focus:border-primary focus:outline-none"
               />
             </div>
@@ -423,10 +590,256 @@ export function QcInspectionsSection() {
                 type="number"
                 step="0.0001"
                 value={draft.rejected_quantity}
-                onChange={(e) => setDraft((d) => ({ ...d, rejected_quantity: e.target.value }))}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const rejectedNum = parseFloat(val) || 0;
+                  const sampleNum = parseFloat(draft.sample_size) || 10;
+                  const passedNum = Math.max(0, sampleNum - rejectedNum);
+                  setDraft((d) => ({
+                    ...d,
+                    rejected_quantity: val,
+                    passed_quantity: passedNum.toFixed(4),
+                    result: rejectedNum > 0 ? (passedNum > 0 ? 'partial' : 'fail') : 'pass',
+                  }));
+                }}
                 className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-rose-600 dark:text-rose-400 font-mono focus:border-primary focus:outline-none"
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                Inspection Result
+              </label>
+              <select
+                value={draft.result}
+                onChange={(e) =>
+                  setDraft((d) => ({
+                    ...d,
+                    result: e.target.value as CreateInspectionDraft['result'],
+                  }))
+                }
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
+              >
+                <option value="pass">Pass (All Specs Verified)</option>
+                <option value="partial">Partial Pass (Conditional Acceptance)</option>
+                <option value="fail">Fail (Rejection Required)</option>
+                <option value="hold">Hold (Pending Lab / Rework)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                Inspector Notes
+              </label>
+              <input
+                type="text"
+                value={draft.notes ?? ''}
+                onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
+                placeholder="Optional inspection observations..."
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Dynamic Parameter Tests */}
+          <div className="space-y-2 pt-2 border-t border-default">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">
+                Parameter Tests ({draft.results.length})
+              </span>
+              {parameters.length > draft.results.length && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const unadded = parameters.find(
+                      (p) => !draft.results.some((r) => r.qc_parameter_id === p.id)
+                    );
+                    if (unadded) {
+                      setDraft((d) => ({
+                        ...d,
+                        results: [
+                          ...d.results,
+                          {
+                            qc_parameter_id: unadded.id,
+                            parameter_name: unadded.name,
+                            measured_value: unadded.target_value ?? '1.0000',
+                            is_passed: true,
+                          },
+                        ],
+                      }));
+                    }
+                  }}
+                  className="text-xs text-primary flex items-center gap-1"
+                >
+                  <Plus className="h-3 w-3" />
+                  <span>Add Parameter Test</span>
+                </Button>
+              )}
+            </div>
+
+            {draft.results.length > 0 && (
+              <div className="rounded-xl border border-default divide-y divide-default overflow-hidden bg-surface">
+                {draft.results.map((res, idx) => (
+                  <div key={res.qc_parameter_id} className="p-2.5 flex items-center gap-3 text-xs">
+                    <div className="flex-1 font-medium text-default">
+                      {res.parameter_name ?? `Parameter #${idx + 1}`}
+                    </div>
+                    <div className="w-32">
+                      <input
+                        type="text"
+                        placeholder="Value"
+                        value={res.measured_value ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setDraft((d) => ({
+                            ...d,
+                            results: d.results.map((r, i) =>
+                              i === idx ? { ...r, measured_value: val } : r
+                            ),
+                          }));
+                        }}
+                        className="w-full rounded-lg border border-default bg-surface-sunken px-2 py-1 text-xs font-mono"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDraft((d) => ({
+                          ...d,
+                          results: d.results.map((r, i) =>
+                            i === idx ? { ...r, is_passed: !r.is_passed } : r
+                          ),
+                        }));
+                      }}
+                      className={`px-2 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+                        res.is_passed
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                          : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                      }`}
+                    >
+                      {res.is_passed ? 'Pass' : 'Fail'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDraft((d) => ({
+                          ...d,
+                          results: d.results.filter((_, i) => i !== idx),
+                        }));
+                      }}
+                      className="text-muted hover:text-rose-600 cursor-pointer p-1"
+                      title="Remove test"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Dynamic Defect Logging */}
+          <div className="space-y-2 pt-2 border-t border-default">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 uppercase tracking-wider flex items-center gap-1">
+                <ShieldAlert className="h-3.5 w-3.5" />
+                Defect Entries ({draft.defects.length})
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setDraft((d) => ({
+                    ...d,
+                    defects: [
+                      ...d.defects,
+                      {
+                        defect_type: 'Surface Imperfection',
+                        severity: 'minor',
+                        quantity: '1.0000',
+                      },
+                    ],
+                  }));
+                }}
+                className="text-xs text-rose-600 hover:text-rose-700 flex items-center gap-1"
+              >
+                <Plus className="h-3 w-3" />
+                <span>Log Defect</span>
+              </Button>
+            </div>
+
+            {draft.defects.length > 0 && (
+              <div className="rounded-xl border border-rose-500/20 divide-y divide-rose-500/10 overflow-hidden bg-surface">
+                {draft.defects.map((def, idx) => (
+                  <div key={idx} className="p-2.5 flex items-center gap-2 text-xs">
+                    <input
+                      type="text"
+                      placeholder="Defect description..."
+                      value={def.defect_type}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setDraft((d) => ({
+                          ...d,
+                          defects: d.defects.map((item, i) =>
+                            i === idx ? { ...item, defect_type: val } : item
+                          ),
+                        }));
+                      }}
+                      className="flex-1 rounded-lg border border-default bg-surface-sunken px-2 py-1 text-xs"
+                    />
+                    <select
+                      value={def.severity}
+                      onChange={(e) => {
+                        const val = e.target.value as 'minor' | 'major' | 'critical';
+                        setDraft((d) => ({
+                          ...d,
+                          defects: d.defects.map((item, i) =>
+                            i === idx ? { ...item, severity: val } : item
+                          ),
+                        }));
+                      }}
+                      className="w-24 rounded-lg border border-default bg-surface-sunken px-2 py-1 text-xs capitalize"
+                    >
+                      <option value="minor">Minor</option>
+                      <option value="major">Major</option>
+                      <option value="critical">Critical</option>
+                    </select>
+                    <input
+                      type="number"
+                      step="0.0001"
+                      placeholder="Qty"
+                      value={def.quantity}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setDraft((d) => ({
+                          ...d,
+                          defects: d.defects.map((item, i) =>
+                            i === idx ? { ...item, quantity: val } : item
+                          ),
+                        }));
+                      }}
+                      className="w-20 rounded-lg border border-default bg-surface-sunken px-2 py-1 text-xs font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDraft((d) => ({
+                          ...d,
+                          defects: d.defects.filter((_, i) => i !== idx),
+                        }));
+                      }}
+                      className="text-muted hover:text-rose-600 cursor-pointer p-1"
+                      title="Remove defect"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-3 border-t border-default">
@@ -444,6 +857,182 @@ export function QcInspectionsSection() {
         </div>
       </Modal>
 
+      {/* Edit Inspection Modal */}
+      {editingInspection && (
+        <Modal
+          open={Boolean(editingInspection)}
+          onClose={() => setEditingInspection(null)}
+          title={`Edit QC Inspection: ${editingInspection.inspection_number}`}
+        >
+          <div className="space-y-4">
+            {errorMsg && (
+              <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400">
+                {errorMsg}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                  Status
+                </label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) =>
+                    setEditForm((f) => ({
+                      ...f,
+                      status: e.target.value as EditInspectionDraft['status'],
+                    }))
+                  }
+                  className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
+                >
+                  <option value="draft">Draft</option>
+                  <option value="submitted">Submitted</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                  Result
+                </label>
+                <select
+                  value={editForm.result}
+                  onChange={(e) =>
+                    setEditForm((f) => ({
+                      ...f,
+                      result: e.target.value as EditInspectionDraft['result'],
+                    }))
+                  }
+                  className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
+                >
+                  <option value="pass">Pass</option>
+                  <option value="partial">Partial Pass</option>
+                  <option value="fail">Fail</option>
+                  <option value="hold">Hold</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                  Sample Size
+                </label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  value={editForm.sample_size}
+                  onChange={(e) =>
+                    setEditForm((f) => ({
+                      ...f,
+                      sample_size: e.target.value,
+                      inspected_quantity: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs font-mono text-default focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                  Passed Qty
+                </label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  value={editForm.passed_quantity}
+                  onChange={(e) => setEditForm((f) => ({ ...f, passed_quantity: e.target.value }))}
+                  className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs font-mono text-emerald-600 dark:text-emerald-400 focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                  Rejected Qty
+                </label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  value={editForm.rejected_quantity}
+                  onChange={(e) => setEditForm((f) => ({ ...f, rejected_quantity: e.target.value }))}
+                  className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs font-mono text-rose-600 dark:text-rose-400 focus:border-primary focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                Inspection Notes
+              </label>
+              <textarea
+                value={editForm.notes ?? ''}
+                onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
+                rows={3}
+                className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none resize-none"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-default">
+              <Button variant="ghost" onClick={() => setEditingInspection(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() =>
+                  updateMutation.mutate({
+                    id: editingInspection.id,
+                    payload: editForm,
+                  })
+                }
+                disabled={updateMutation.isPending}
+              >
+                {updateMutation.isPending ? 'Saving...' : 'Update Inspection'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingInspection && (
+        <Modal
+          open={Boolean(deletingInspection)}
+          onClose={() => setDeletingInspection(null)}
+          title="Delete QC Inspection"
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400">
+              <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">Confirm Inspection Deletion</p>
+                <p className="mt-1 text-muted">
+                  Are you sure you want to delete inspection record{' '}
+                  <strong className="text-default font-mono">
+                    {deletingInspection.inspection_number}
+                  </strong>
+                  ? This will delete the inspection run and its associated defect logs.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-default">
+              <Button variant="ghost" onClick={() => setDeletingInspection(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => deleteMutation.mutate(deletingInspection.id)}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? 'Deleting...' : 'Delete Inspection'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {/* Details View Modal */}
       {selectedInspection && (
         <Modal
@@ -458,7 +1047,7 @@ export function QcInspectionsSection() {
                   {selectedInspection.product_name ?? selectedInspection.product_id}
                 </div>
                 <div className="text-xs text-muted mt-0.5">
-                  Type: {selectedInspection.inspection_type} · Date:{' '}
+                  Type: {(selectedInspection.inspection_type ?? 'final').replace('_', ' ')} · Date:{' '}
                   {selectedInspection.inspection_date}
                 </div>
               </div>
@@ -510,42 +1099,6 @@ export function QcInspectionsSection() {
               </div>
             )}
 
-            {/* Defects Table */}
-            {selectedInspection.defects && selectedInspection.defects.length > 0 && (
-              <div className="space-y-2">
-                <div className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1 text-rose-600 dark:text-rose-400">
-                  <ShieldAlert className="h-4 w-4" />
-                  <span>Logged Defect Records</span>
-                </div>
-                <div className="rounded-xl border border-rose-500/20 overflow-hidden">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border-b border-rose-500/20">
-                      <tr>
-                        <th className="p-2.5">Defect Type</th>
-                        <th className="p-2.5">Severity</th>
-                        <th className="p-2.5">Defective Qty</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-rose-500/10 bg-surface">
-                      {selectedInspection.defects.map((def) => (
-                        <tr key={def.id}>
-                          <td className="p-2.5 text-default font-medium">{def.defect_type}</td>
-                          <td className="p-2.5 uppercase font-semibold text-[10px]">
-                            {def.severity === 'critical' ? (
-                              <Badge tone="danger-subtle">Critical</Badge>
-                            ) : (
-                              <Badge tone="warning-subtle">{def.severity}</Badge>
-                            )}
-                          </td>
-                          <td className="p-2.5 font-mono text-rose-600 dark:text-rose-400 font-bold">{def.quantity}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
             {/* Summary Highlights */}
             <div className="grid grid-cols-3 gap-2.5 p-3 rounded-xl bg-surface-sunken border border-default text-xs font-mono">
               <div>
@@ -554,57 +1107,52 @@ export function QcInspectionsSection() {
               </div>
               <div>
                 <span className="text-[10px] text-muted font-sans uppercase">Passed</span>
-                <div className="font-bold text-emerald-600 dark:text-emerald-400">{selectedInspection.passed_quantity}</div>
+                <div className="font-bold text-emerald-600 dark:text-emerald-400">
+                  {selectedInspection.passed_quantity}
+                </div>
               </div>
               <div>
                 <span className="text-[10px] text-muted font-sans uppercase">Rejected</span>
-                <div className="font-bold text-rose-600 dark:text-rose-400">{selectedInspection.rejected_quantity}</div>
-              </div>
-            </div>
-
-            {/* QC Stamp Sticker Preview */}
-            <div className="p-4 rounded-xl bg-surface-sunken border border-default flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`size-10 rounded-lg flex items-center justify-center font-bold text-sm ${
-                  selectedInspection.status === 'passed' ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/40'
-                }`}>
-                  QC
-                </div>
-                <div>
-                  <div className="font-bold text-xs text-default">
-                    {selectedInspection.status === 'passed' ? 'CERTIFIED PASSED STAMP' : 'REWORK / DEFECT FLAG'}
-                  </div>
-                  <div className="text-[10px] text-muted font-mono">
-                    Stamp ID: QC-STAMP-{selectedInspection.id}-{new Date().getFullYear()}
-                  </div>
+                <div className="font-bold text-rose-600 dark:text-rose-400">
+                  {selectedInspection.rejected_quantity ?? selectedInspection.failed_quantity ?? '0.0000'}
                 </div>
               </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => window.print()}
-                className="text-xs"
-              >
-                Print QC Sticker
-              </Button>
             </div>
 
             <div className="flex justify-between items-center pt-3 border-t border-default">
-              {parseFloat(selectedInspection.rejected_quantity || '0') > 0 && (
+              {parseFloat(selectedInspection.rejected_quantity || selectedInspection.failed_quantity || '0') > 0 && (
                 <Button
                   variant="primary"
                   size="sm"
                   onClick={() => {
-                    alert(`Rework Batch successfully generated for ${selectedInspection.rejected_quantity} units of ${selectedInspection.product_name ?? 'Product'}. Assigned to Rework Cell #1.`);
+                    alert(
+                      `Rework Batch successfully generated for ${
+                        selectedInspection.rejected_quantity ?? selectedInspection.failed_quantity
+                      } units of ${selectedInspection.product_name ?? 'Product'}. Assigned to Rework Cell #1.`
+                    );
                   }}
                   className="bg-amber-600 hover:bg-amber-500 text-white"
                 >
-                  ⚡ Convert to Rework Batch ({selectedInspection.rejected_quantity} pcs)
+                  ⚡ Convert to Rework Batch (
+                  {selectedInspection.rejected_quantity ?? selectedInspection.failed_quantity} pcs)
                 </Button>
               )}
-              <Button variant="secondary" onClick={() => setSelectedInspection(null)}>
-                Close
-              </Button>
+              <div className="flex items-center gap-2 ml-auto">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    const toEdit = selectedInspection;
+                    setSelectedInspection(null);
+                    openEditModal(toEdit);
+                  }}
+                >
+                  Edit Run
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedInspection(null)}>
+                  Close
+                </Button>
+              </div>
             </div>
           </div>
         </Modal>

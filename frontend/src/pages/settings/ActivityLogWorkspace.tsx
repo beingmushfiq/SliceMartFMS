@@ -9,6 +9,7 @@ import {
   Sparkles,
   ChevronLeft,
   ChevronRight,
+  Calendar,
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
 import { Button } from '../../components/ui/Button';
@@ -60,12 +61,34 @@ export const ActivityLogWorkspace: React.FC = () => {
     if (endDate) params.end_date = endDate;
 
     api
-      .get<{ data: AuditLogEntry[]; meta: PaginationMeta }>('/audit-logs', { params })
+      .get<AuditLogEntry[]>('/audit-logs', { params })
       .then((res) => {
         if (!ignore) {
-          setLogs(res.data.data ?? []);
-          if (res.data.meta) {
-            setMeta(res.data.meta);
+          const items: AuditLogEntry[] = Array.isArray(res.data)
+            ? res.data
+            : Array.isArray((res.data as any)?.data)
+              ? (res.data as any).data
+              : [];
+          setLogs(items);
+
+          const pagination = (res.meta as any)?.total !== undefined
+            ? (res.meta as any)
+            : (res.data as any)?.meta;
+
+          if (pagination) {
+            setMeta({
+              total: Number(pagination.total ?? items.length),
+              current_page: Number(pagination.current_page ?? page),
+              per_page: Number(pagination.per_page ?? 25),
+              last_page: Number(pagination.last_page ?? 1),
+            });
+          } else {
+            setMeta({
+              total: items.length,
+              current_page: page,
+              per_page: 25,
+              last_page: 1,
+            });
           }
           setLoading(false);
         }
@@ -126,6 +149,9 @@ export const ActivityLogWorkspace: React.FC = () => {
   // Metrics from current dataset
   const updatesCount = logs.filter((l) => l.action.toLowerCase().includes('update')).length;
   const createsCount = logs.filter((l) => l.action.toLowerCase().includes('create')).length;
+  const approvesCount = logs.filter((l) =>
+    l.action.toLowerCase().includes('approve') || l.action.toLowerCase().includes('verify')
+  ).length;
   const deletesCount = logs.filter((l) =>
     l.action.toLowerCase().includes('delete') || l.action.toLowerCase().includes('void')
   ).length;
@@ -176,11 +202,21 @@ export const ActivityLogWorkspace: React.FC = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <div className="rounded-2xl border border-default bg-surface p-4 space-y-1 shadow-2xs">
           <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Total Recorded Logs</span>
           <div className="text-2xl font-extrabold text-default font-mono">{meta.total}</div>
           <span className="text-[11px] text-muted">Historical activities</span>
+        </div>
+
+        <div className="rounded-2xl border border-default bg-surface p-4 space-y-1 shadow-2xs">
+          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+            New Record Creates
+          </span>
+          <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
+            {createsCount}
+          </div>
+          <span className="text-[11px] text-muted">Initial creations in page</span>
         </div>
 
         <div className="rounded-2xl border border-default bg-surface p-4 space-y-1 shadow-2xs">
@@ -194,13 +230,13 @@ export const ActivityLogWorkspace: React.FC = () => {
         </div>
 
         <div className="rounded-2xl border border-default bg-surface p-4 space-y-1 shadow-2xs">
-          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-            New Record Creates
+          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+            Approvals & Status
           </span>
-          <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-            {createsCount}
+          <div className="text-2xl font-extrabold text-blue-600 dark:text-blue-400 font-mono">
+            {approvesCount}
           </div>
-          <span className="text-[11px] text-muted">Initial creations in page</span>
+          <span className="text-[11px] text-muted">Authorizations in page</span>
         </div>
 
         <div className="rounded-2xl border border-default bg-surface p-4 space-y-1 shadow-2xs">
@@ -219,9 +255,9 @@ export const ActivityLogWorkspace: React.FC = () => {
         onSubmit={handleApplyFilter}
         className="rounded-2xl border border-default bg-surface p-4 space-y-3 shadow-xs"
       >
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-12">
           {/* Keyword Search */}
-          <div className="relative sm:col-span-2">
+          <div className="relative sm:col-span-2 md:col-span-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted" />
             <input
               type="text"
@@ -233,14 +269,14 @@ export const ActivityLogWorkspace: React.FC = () => {
           </div>
 
           {/* Action Filter */}
-          <div>
+          <div className="md:col-span-2">
             <SelectDropdown
               options={[
                 { value: 'all', label: 'All Action Types' },
                 { value: 'create', label: 'CREATE', colorDot: 'bg-emerald-500' },
-                { value: 'update', label: 'UPDATE (Edit)', colorDot: 'bg-blue-500' },
+                { value: 'update', label: 'UPDATE (Edit)', colorDot: 'bg-amber-500' },
+                { value: 'approve', label: 'APPROVE', colorDot: 'bg-blue-500' },
                 { value: 'delete', label: 'DELETE', colorDot: 'bg-rose-500' },
-                { value: 'approve', label: 'APPROVE', colorDot: 'bg-amber-500' },
                 { value: 'void', label: 'VOID', colorDot: 'bg-purple-500' },
               ]}
               value={selectedAction}
@@ -255,7 +291,7 @@ export const ActivityLogWorkspace: React.FC = () => {
           </div>
 
           {/* Entity Type Filter */}
-          <div>
+          <div className="md:col-span-2">
             <SelectDropdown
               options={[
                 { value: 'all', label: 'All Entity Models' },
@@ -281,8 +317,23 @@ export const ActivityLogWorkspace: React.FC = () => {
             />
           </div>
 
-          {/* Filter Buttons */}
-          <div className="flex items-center gap-2">
+          {/* Date Range Start */}
+          <div className="md:col-span-2 relative">
+            <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted pointer-events-none" />
+            <input
+              type="date"
+              title="Filter from start date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                setPage(1);
+              }}
+              className="w-full rounded-xl border border-default bg-surface-sunken pl-7 pr-2 py-1.5 text-xs text-default focus:border-primary focus:outline-none"
+            />
+          </div>
+
+          {/* Filter / Reset Buttons */}
+          <div className="md:col-span-2 flex items-center gap-2">
             <Button type="submit" variant="primary" size="sm" className="flex-1 text-xs">
               <Filter className="size-3 mr-1" />
               <span>Filter</span>
@@ -332,7 +383,6 @@ export const ActivityLogWorkspace: React.FC = () => {
                   const entityClean = log.auditable_type
                     ? log.auditable_type.split('\\').pop()
                     : 'System Record';
-                  const changedCount = log.changed_fields?.length ?? 0;
 
                   return (
                     <tr key={log.id} className="hover:bg-surface-sunken/40 transition-colors">
@@ -384,25 +434,62 @@ export const ActivityLogWorkspace: React.FC = () => {
 
                       {/* Changed Fields Badges */}
                       <td className="py-3 px-4">
-                        {changedCount > 0 ? (
-                          <div className="flex items-center gap-1 flex-wrap max-w-xs">
-                            {log.changed_fields?.slice(0, 3).map((f) => (
-                              <span
-                                key={f}
-                                className="font-mono text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/20"
-                              >
-                                {f}
+                        {(() => {
+                          const act = log.action.toLowerCase();
+                          const effectiveChanged = (log.changed_fields && log.changed_fields.length > 0)
+                            ? log.changed_fields
+                            : log.before && log.after
+                              ? Object.keys({ ...log.before, ...log.after }).filter(
+                                  (k) => JSON.stringify(log.before?.[k]) !== JSON.stringify(log.after?.[k])
+                                )
+                              : [];
+
+                          if (act.includes('create') || act.includes('store') || act.includes('insert')) {
+                            return (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">
+                                ✨ Initial Record Created
                               </span>
-                            ))}
-                            {changedCount > 3 && (
-                              <span className="text-[10px] text-muted font-mono">
-                                +{changedCount - 3} more
+                            );
+                          }
+
+                          if (act.includes('approve') || act.includes('verify')) {
+                            return (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-blue-500/10 px-2 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400 border border-blue-500/20 font-mono">
+                                ✓ Status Authorized / Approved
                               </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-[11px] text-muted italic">No state changes</span>
-                        )}
+                            );
+                          }
+
+                          if (act.includes('delete') || act.includes('destroy') || act.includes('void')) {
+                            return (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold text-rose-600 dark:text-rose-400 border border-rose-500/20 font-mono">
+                                ✕ Record Removed / Voided
+                              </span>
+                            );
+                          }
+
+                          if (effectiveChanged.length > 0) {
+                            return (
+                              <div className="flex items-center gap-1 flex-wrap max-w-xs">
+                                {effectiveChanged.slice(0, 3).map((f) => (
+                                  <span
+                                    key={f}
+                                    className="font-mono text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/20"
+                                  >
+                                    {f}
+                                  </span>
+                                ))}
+                                {effectiveChanged.length > 3 && (
+                                  <span className="text-[10px] text-muted font-mono">
+                                    +{effectiveChanged.length - 3} more
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          return <span className="text-[11px] text-muted italic">No state changes</span>;
+                        })()}
                       </td>
 
                       {/* Action Button */}

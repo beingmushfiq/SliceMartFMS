@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2,
+  Edit3,
   Plus,
   Search,
   ShieldCheck,
+  Trash2,
   UserCheck,
   Users,
 } from 'lucide-react';
@@ -39,12 +41,28 @@ interface CreateEntryDraft {
   notes?: string;
 }
 
+interface EditEntryDraft {
+  id: string;
+  worker_name?: string | undefined;
+  batch_number?: string | undefined;
+  product_name?: string | undefined;
+  good_quantity: string;
+  rework_quantity: string;
+  rejected_quantity: string;
+  piece_rate: string;
+  hours_worked?: string | undefined;
+  wage_type: 'piece_rate' | 'hourly';
+}
+
 export function WorkerProductionSection() {
   const { formatCurrency } = useCurrency();
   const [search, setSearch] = useState('');
   const [shiftFilter, setShiftFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<EditEntryDraft | null>(null);
+  const [editErrorMsg, setEditErrorMsg] = useState<string | null>(null);
 
   const [draft, setDraft] = useState<CreateEntryDraft>({
     batch_id: '',
@@ -63,13 +81,14 @@ export function WorkerProductionSection() {
 
   // Queries
   const entriesQuery = useQuery({
-    queryKey: ['production', 'worker-entries', search, shiftFilter],
+    queryKey: ['production', 'worker-entries', search, shiftFilter, statusFilter],
     queryFn: ({ signal }) =>
       api.get<WorkerProductionEntry[]>('/production/worker-entries', {
         signal,
         params: {
           ...(search.trim().length >= 2 ? { q: search.trim() } : {}),
           ...(shiftFilter !== 'all' ? { shift: shiftFilter } : {}),
+          ...(statusFilter !== 'all' ? { status: statusFilter } : {}),
         },
       }),
   });
@@ -94,45 +113,82 @@ export function WorkerProductionSection() {
     queryKey: ['production', 'employees', 'options'],
     queryFn: async ({ signal }) => {
       try {
-        const res = await api.get<Employee[]>('/workforce/employees', { signal });
-        return res;
+        return await api.get<Employee[]>('/hr/employees', { signal });
       } catch {
-        return {
-          data: [
-            {
-              id: 'emp-1',
-              employee_code: 'EMP-001',
-              first_name: 'Karim',
-              last_name: 'Hasan',
-              full_name: 'Karim Hasan',
-              status: 'active' as const,
-            },
-            {
-              id: 'emp-2',
-              employee_code: 'EMP-002',
-              first_name: 'Rahim',
-              last_name: 'Uddin',
-              full_name: 'Rahim Uddin',
-              status: 'active' as const,
-            },
-          ],
-        };
+        try {
+          return await api.get<Employee[]>('/workforce/employees', { signal });
+        } catch {
+          return { data: [] };
+        }
       }
     },
   });
 
+  const entries = entriesQuery.data?.data ?? [];
+  const summary = summaryQuery.data?.data;
+  const batches = batchesQuery.data?.data ?? [];
+  const products = productsQuery.data?.data ?? [];
+  const employees = employeesQuery.data?.data ?? [];
+
+  useEffect(() => {
+    if (isCreateOpen) {
+      setDraft((d) => {
+        const selectedBatch = batches.find((b) => b.id === d.batch_id) ?? batches[0];
+        return {
+          ...d,
+          batch_id: d.batch_id || selectedBatch?.id || '',
+          employee_id: d.employee_id || employees[0]?.id || '',
+          product_id: d.product_id || selectedBatch?.product_id || '',
+        };
+      });
+    }
+  }, [isCreateOpen, batches, employees]);
+
   // Mutations
   const createMutation = useMutation({
-    mutationFn: (payload: CreateEntryDraft) =>
-      api.post<WorkerProductionEntry>('/production/worker-entries', payload),
+    mutationFn: (payload: CreateEntryDraft) => {
+      const selectedBatch = batches.find((b) => b.id === payload.batch_id);
+      const selectedProduct = products.find(
+        (p) => p.id === (payload.product_id || selectedBatch?.product_id)
+      );
+      const mappedPayload = {
+        production_batch_id: payload.batch_id,
+        batch_id: payload.batch_id,
+        employee_id: payload.employee_id,
+        product_id: payload.product_id || selectedBatch?.product_id || selectedProduct?.id,
+        work_date: payload.work_date,
+        shift: payload.shift,
+        measure_type: 'piece',
+        quantity: payload.good_quantity,
+        good_quantity: payload.good_quantity,
+        unit_id: selectedBatch?.output_unit_id ?? selectedProduct?.base_unit_id,
+        rework_quantity: payload.rework_quantity || '0.0000',
+        rejected_quantity: payload.rejected_quantity || '0.0000',
+        rate_type: payload.wage_type,
+        wage_type: payload.wage_type,
+        rate: payload.piece_rate || '2.5000',
+        piece_rate: payload.piece_rate || '2.5000',
+        hours_worked: payload.hours_worked || (payload.wage_type === 'hourly' ? '8.00' : undefined),
+      };
+      return api.post<WorkerProductionEntry>('/production/worker-entries', mappedPayload);
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['production', 'worker-entries'] });
       setIsCreateOpen(false);
       setErrorMsg(null);
     },
     onError: (err) => {
-      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to log worker output.');
-      else setErrorMsg('Error logging worker output.');
+      if (isApiError(err)) {
+        const fieldErrors =
+          err.fields && Object.keys(err.fields).length > 0
+            ? Object.entries(err.fields)
+                .map(([field, msgs]) => `${field.replace(/_/g, ' ')}: ${msgs.join(', ')}`)
+                .join('; ')
+            : null;
+        setErrorMsg(fieldErrors || err.message || 'Failed to log worker output.');
+      } else {
+        setErrorMsg('Error logging worker output. Please check inputs.');
+      }
     },
   });
 
@@ -144,11 +200,57 @@ export function WorkerProductionSection() {
     },
   });
 
-  const entries = entriesQuery.data?.data ?? [];
-  const summary = summaryQuery.data?.data;
-  const batches = batchesQuery.data?.data ?? [];
-  const products = productsQuery.data?.data ?? [];
-  const employees = employeesQuery.data?.data ?? [];
+  const updateMutation = useMutation({
+    mutationFn: (draftPayload: EditEntryDraft) => {
+      const payload = {
+        quantity: draftPayload.good_quantity,
+        rework_quantity: draftPayload.rework_quantity,
+        rejected_quantity: draftPayload.rejected_quantity,
+        rate: draftPayload.piece_rate,
+        rate_type: draftPayload.wage_type,
+        ...(draftPayload.hours_worked ? { hours_worked: draftPayload.hours_worked } : {}),
+      };
+      return api.patch<WorkerProductionEntry>(`/production/worker-entries/${draftPayload.id}`, payload);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['production', 'worker-entries'] });
+      setEditDraft(null);
+      setEditErrorMsg(null);
+    },
+    onError: (err) => {
+      if (isApiError(err)) {
+        const fieldErrors = err.fields ? Object.values(err.fields).flat().join(', ') : null;
+        setEditErrorMsg(fieldErrors || err.message || 'Failed to update entry.');
+      } else {
+        setEditErrorMsg('Error updating entry.');
+      }
+    },
+  });
+
+  const deleteEntryMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/production/worker-entries/${id}`),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['production', 'worker-entries'] });
+    },
+    onError: (err) => {
+      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to delete worker entry.');
+    },
+  });
+
+  const formatDateDisplay = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatShiftDisplay = (shiftStr?: string) => {
+    if (!shiftStr) return 'General Shift';
+    return `${shiftStr.charAt(0).toUpperCase() + shiftStr.slice(1)} Shift`;
+  };
 
   return (
     <div className="space-y-6">
@@ -160,7 +262,7 @@ export function WorkerProductionSection() {
               Total Good Output
             </div>
             <div className="mt-1 text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
-              {summary.total_good_quantity}
+              {summary.total_good_quantity ?? '0.0000'}
             </div>
           </div>
           <div className="rounded-2xl border border-default bg-surface p-4 shadow-2xs">
@@ -168,7 +270,7 @@ export function WorkerProductionSection() {
               Rework Quantity
             </div>
             <div className="mt-1 text-2xl font-bold font-mono text-amber-600 dark:text-amber-400">
-              {summary.total_rework_quantity}
+              {summary.total_rework_quantity ?? '0.0000'}
             </div>
           </div>
           <div className="rounded-2xl border border-default bg-surface p-4 shadow-2xs">
@@ -176,7 +278,7 @@ export function WorkerProductionSection() {
               Rejected Quantity
             </div>
             <div className="mt-1 text-2xl font-bold font-mono text-rose-600 dark:text-rose-400">
-              {summary.total_rejected_quantity}
+              {summary.total_rejected_quantity ?? '0.0000'}
             </div>
           </div>
           <div className="rounded-2xl border border-default bg-surface p-4 shadow-2xs">
@@ -184,7 +286,7 @@ export function WorkerProductionSection() {
               Earned Wages
             </div>
             <div className="mt-1 text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
-              {formatCurrency(summary.total_earned)}
+              {formatCurrency(Number(summary.total_earned ?? 0))}
             </div>
           </div>
         </div>
@@ -217,26 +319,40 @@ export function WorkerProductionSection() {
             size="sm"
             aria-label="Filter production by shift"
           />
+
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'draft', label: 'Draft', colorDot: 'bg-slate-400' },
+              { value: 'verified', label: 'Verified', colorDot: 'bg-emerald-500' },
+            ]}
+            value={statusFilter}
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter production by status"
+          />
         </div>
 
         <Button
           variant="primary"
           onClick={() => {
             setErrorMsg(null);
-            if (batches.length > 0 && products.length > 0 && employees.length > 0) {
-              setDraft({
-                batch_id: batches[0]?.id ?? '',
-                employee_id: employees[0]?.id ?? '',
-                product_id: products[0]?.id ?? '',
-                work_date: new Date().toISOString().slice(0, 10),
-                shift: 'morning',
-                wage_type: 'piece_rate',
-                good_quantity: '50.0000',
-                rework_quantity: '0.0000',
-                rejected_quantity: '0.0000',
-                piece_rate: '2.5000',
-              });
-            }
+            const defaultBatch = batches[0];
+            const defaultProduct = defaultBatch
+              ? products.find((p) => p.id === defaultBatch.product_id) ?? products[0]
+              : products[0];
+            setDraft({
+              batch_id: defaultBatch?.id ?? '',
+              employee_id: employees[0]?.id ?? '',
+              product_id: defaultProduct?.id ?? defaultBatch?.product_id ?? '',
+              work_date: new Date().toISOString().slice(0, 10),
+              shift: 'morning',
+              wage_type: 'piece_rate',
+              good_quantity: '50.0000',
+              rework_quantity: '0.0000',
+              rejected_quantity: '0.0000',
+              piece_rate: '2.5000',
+            });
             setIsCreateOpen(true);
           }}
           className="flex items-center gap-1.5 min-h-11"
@@ -263,7 +379,7 @@ export function WorkerProductionSection() {
                 <th className="py-3.5 px-3">Good / Rework / Rej</th>
                 <th className="py-3.5 px-3">Earned Wage</th>
                 <th className="py-3.5 px-3">Status</th>
-                <th className="py-3.5 pr-4 text-right">Verification</th>
+                <th className="py-3.5 pr-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-default">
@@ -302,9 +418,9 @@ export function WorkerProductionSection() {
                       </div>
                     </td>
                     <td className="py-3 px-3 text-muted">
-                      <div>{entry.work_date}</div>
+                      <div className="font-medium text-default">{formatDateDisplay(entry.work_date)}</div>
                       <div className="text-[10px] uppercase font-semibold text-muted">
-                        {entry.shift}
+                        {formatShiftDisplay(entry.shift)}
                       </div>
                     </td>
                     <td className="py-3 px-3 font-mono">
@@ -314,30 +430,78 @@ export function WorkerProductionSection() {
                       <span className="text-muted"> / </span>
                       <span className="text-rose-600 dark:text-rose-400">{entry.rejected_quantity}</span>
                     </td>
-                    <td className="py-3 px-3 font-mono text-default">
-                      {entry.total_earned ? formatCurrency(entry.total_earned) : 'N/A'}
+                    <td className="py-3 px-3 font-mono text-default font-semibold">
+                      {entry.total_earned
+                        ? formatCurrency(Number(entry.total_earned))
+                        : formatCurrency(Number(entry.good_quantity || 0) * Number(entry.piece_rate || 2.5))}
                     </td>
                     <td className="py-3 px-3">
                       <StatusBadge status={entry.status} />
                     </td>
                     <td className="py-3 pr-4 text-right">
-                      {entry.status === 'draft' ? (
+                      <div className="flex items-center justify-end gap-1 flex-wrap">
+                        {entry.status === 'draft' && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => verifyMutation.mutate(entry.id)}
+                            disabled={verifyMutation.isPending}
+                            className="text-xs text-emerald-600 dark:text-emerald-400 min-h-8 flex items-center gap-1"
+                            title="Verify and Lock Entry"
+                          >
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            <span>Verify</span>
+                          </Button>
+                        )}
+
                         <Button
-                          variant="secondary"
+                          variant="ghost"
                           size="sm"
-                          onClick={() => verifyMutation.mutate(entry.id)}
-                          disabled={verifyMutation.isPending}
-                          className="text-xs text-emerald-600 dark:text-emerald-400 min-h-9 flex items-center gap-1"
+                          onClick={() => {
+                            setEditDraft({
+                              id: entry.id,
+                              worker_name: entry.employee_name,
+                              batch_number: entry.batch_number,
+                              product_name: entry.product_name,
+                              good_quantity: entry.good_quantity,
+                              rework_quantity: entry.rework_quantity,
+                              rejected_quantity: entry.rejected_quantity,
+                              piece_rate: entry.piece_rate || '2.5000',
+                              hours_worked: entry.hours_worked || '',
+                              wage_type: entry.wage_type || 'piece_rate',
+                            });
+                            setEditErrorMsg(null);
+                          }}
+                          className="text-xs min-h-8 text-muted hover:text-default"
+                          title="Edit Worker Entry"
                         >
-                          <ShieldCheck className="h-3.5 w-3.5" />
-                          <span>Verify</span>
+                          <Edit3 className="h-3.5 w-3.5" />
                         </Button>
-                      ) : (
-                        <span className="text-[11px] text-muted flex items-center justify-end gap-1">
-                          <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-                          <span>Locked</span>
-                        </span>
-                      )}
+
+                        {entry.status === 'draft' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (window.confirm('Delete this worker production entry?')) {
+                                deleteEntryMutation.mutate(entry.id);
+                              }
+                            }}
+                            disabled={deleteEntryMutation.isPending}
+                            className="text-xs text-rose-500 hover:text-rose-600 min-h-8"
+                            title="Delete Entry"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+
+                        {entry.status === 'verified' && (
+                          <span className="text-[11px] text-muted flex items-center gap-1 pl-1">
+                            <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                            <span>Locked</span>
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -384,7 +548,15 @@ export function WorkerProductionSection() {
               </label>
               <select
                 value={draft.batch_id}
-                onChange={(e) => setDraft((d) => ({ ...d, batch_id: e.target.value }))}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const b = batches.find((item) => item.id === val);
+                  setDraft((d) => ({
+                    ...d,
+                    batch_id: val,
+                    product_id: b?.product_id ?? d.product_id,
+                  }));
+                }}
                 className="w-full rounded-xl border border-default bg-surface-sunken p-2.5 text-xs text-default focus:border-primary focus:outline-none"
               >
                 {batches.map((b) => (
@@ -506,6 +678,113 @@ export function WorkerProductionSection() {
           </div>
         </div>
       </Modal>
+
+      {/* Edit Output Modal */}
+      {editDraft && (
+        <Modal
+          open={Boolean(editDraft)}
+          onClose={() => setEditDraft(null)}
+          title="Edit Worker Production Output"
+        >
+          <div className="space-y-4">
+            {editErrorMsg && (
+              <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400">
+                {editErrorMsg}
+              </div>
+            )}
+
+            <div className="rounded-xl bg-surface-sunken p-3 border border-default text-xs space-y-1">
+              <div className="font-semibold text-default">{editDraft.worker_name}</div>
+              <div className="text-muted">
+                Batch: <span className="font-mono text-default font-semibold">{editDraft.batch_number}</span> · Product: <span className="text-default">{editDraft.product_name}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                  Good Output
+                </label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  value={editDraft.good_quantity}
+                  onChange={(e) => setEditDraft((d) => (d ? { ...d, good_quantity: e.target.value } : null))}
+                  className="w-full rounded-xl border border-default bg-surface-sunken p-2.5 text-xs font-mono text-emerald-600 dark:text-emerald-400 focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                  Rework Qty
+                </label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  value={editDraft.rework_quantity}
+                  onChange={(e) => setEditDraft((d) => (d ? { ...d, rework_quantity: e.target.value } : null))}
+                  className="w-full rounded-xl border border-default bg-surface-sunken p-2.5 text-xs font-mono text-amber-600 dark:text-amber-400 focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                  Rejected Qty
+                </label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  value={editDraft.rejected_quantity}
+                  onChange={(e) => setEditDraft((d) => (d ? { ...d, rejected_quantity: e.target.value } : null))}
+                  className="w-full rounded-xl border border-default bg-surface-sunken p-2.5 text-xs font-mono text-rose-600 dark:text-rose-400 focus:border-primary focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                  Piece Rate
+                </label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  value={editDraft.piece_rate}
+                  onChange={(e) => setEditDraft((d) => (d ? { ...d, piece_rate: e.target.value } : null))}
+                  className="w-full rounded-xl border border-default bg-surface-sunken p-2.5 text-xs font-mono text-default focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                  Hours Worked
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editDraft.hours_worked ?? ''}
+                  onChange={(e) => setEditDraft((d) => (d ? { ...d, hours_worked: e.target.value } : null))}
+                  placeholder="e.g. 8.00"
+                  className="w-full rounded-xl border border-default bg-surface-sunken p-2.5 text-xs font-mono text-default focus:border-primary focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-default">
+              <Button variant="ghost" onClick={() => setEditDraft(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => editDraft && updateMutation.mutate(editDraft)}
+                disabled={updateMutation.isPending || !editDraft.good_quantity}
+              >
+                {updateMutation.isPending ? 'Updating...' : 'Update Entry'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

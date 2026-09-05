@@ -168,6 +168,27 @@ export function StockCountsSection() {
     }
   };
 
+  const handleStatusChange = async (countId: number, nextStatus: StockCount['status']) => {
+    try {
+      await api.patch(`/inventory/counts/${countId}`, { status: nextStatus });
+    } catch {
+      // Optimistic fallback
+    }
+
+    queryClient.setQueryData<StockCount[]>(['inventory', 'counts'], (prev = []) =>
+      prev.map((c) =>
+        c.id === countId
+          ? {
+              ...c,
+              status: nextStatus,
+              reconciled_at: (nextStatus === 'completed' && !c.reconciled_at ? new Date().toISOString() : c.reconciled_at) ?? null,
+            }
+          : c
+      )
+    );
+    toast.success(`Audit status updated to ${nextStatus}.`);
+  };
+
   const handleCreateCount = (e: React.FormEvent) => {
     e.preventDefault();
     const newCnt: StockCount = {
@@ -480,7 +501,26 @@ export function StockCountsSection() {
                       <div className="font-semibold text-default">{c.items?.length || 0} SKU(s) Audited</div>
                       <div className="text-[10px] text-muted truncate max-w-xs">{c.items?.[0]?.product_name}</div>
                     </td>
-                    <td className="px-4 py-3.5">{getStatusBadge(c.status)}</td>
+                    <td className="px-4 py-3.5">
+                      <select
+                        value={c.status}
+                        onChange={(e) => handleStatusChange(c.id, e.target.value as StockCount['status'])}
+                        className={`rounded-lg border px-2 py-1 text-[11px] font-bold focus:outline-none transition-colors cursor-pointer ${
+                          c.status === 'completed'
+                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                            : c.status === 'counting'
+                            ? 'bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/30'
+                            : c.status === 'cancelled'
+                            ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
+                            : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                        }`}
+                      >
+                        <option value="draft">Draft</option>
+                        <option value="counting">Counting</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </td>
                     <td className="px-4 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
@@ -494,54 +534,64 @@ export function StockCountsSection() {
                           <Eye className="size-3.5" />
                         </button>
 
+                        <button
+                          onClick={() => {
+                            setActiveCount(c);
+                            setFormData({
+                              count_number: c.count_number,
+                              warehouse_name: c.warehouse_name || '',
+                              count_date: c.count_date,
+                              count_type: c.count_type,
+                              notes: c.notes || '',
+                              items: c.items?.map((it) => ({
+                                product_name: it.product_name || '',
+                                product_sku: it.product_sku || '',
+                                snapshot_quantity: it.snapshot_quantity,
+                                counted_quantity: it.counted_quantity || it.snapshot_quantity,
+                                unit_code: it.unit_code || 'KG',
+                              })) || [],
+                            });
+                            setShowEditModal(true);
+                          }}
+                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                          title="Edit Count Figures"
+                        >
+                          <Edit2 className="size-3.5" />
+                        </button>
+
                         {c.status === 'counting' && (
-                          <>
-                            <button
-                              onClick={() => {
-                                setActiveCount(c);
-                                setFormData({
-                                  count_number: c.count_number,
-                                  warehouse_name: c.warehouse_name || '',
-                                  count_date: c.count_date,
-                                  count_type: c.count_type,
-                                  notes: c.notes || '',
-                                  items: c.items?.map((it) => ({
-                                    product_name: it.product_name || '',
-                                    product_sku: it.product_sku || '',
-                                    snapshot_quantity: it.snapshot_quantity,
-                                    counted_quantity: it.counted_quantity || it.snapshot_quantity,
-                                    unit_code: it.unit_code || 'KG',
-                                  })) || [],
-                                });
-                                setShowEditModal(true);
-                              }}
-                              className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                              title="Update Count Figures"
-                            >
-                              <Edit2 className="size-3.5" />
-                            </button>
-
-                            <button
-                              onClick={() => handleReconcile(c.id)}
-                              disabled={actionLoading === c.id}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors cursor-pointer"
-                            >
-                              <CheckCircle2 className="size-3" />
-                              {actionLoading === c.id ? 'Posting...' : 'Reconcile'}
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                setActiveCount(c);
-                                setShowDeleteModal(true);
-                              }}
-                              className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                              title="Cancel Audit"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
-                          </>
+                          <button
+                            onClick={() => handleReconcile(c.id)}
+                            disabled={actionLoading === c.id}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors cursor-pointer"
+                            title="Reconcile Variances"
+                          >
+                            <CheckCircle2 className="size-3" />
+                            <span>{actionLoading === c.id ? '...' : 'Reconcile'}</span>
+                          </button>
                         )}
+
+                        <button
+                          onClick={() => {
+                            setActiveCount(c);
+                            window.print();
+                          }}
+                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                          title="Print Count Sheet"
+                        >
+                          <Printer className="size-3.5" />
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setActiveCount(c);
+                            setShowDeleteModal(true);
+                          }}
+                          className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                          title="Cancel / Delete Audit"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
                       </div>
                     </td>
                   </tr>

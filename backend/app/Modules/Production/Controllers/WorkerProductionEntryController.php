@@ -145,16 +145,19 @@ final class WorkerProductionEntryController extends Controller
         $totalRejected = (float) (clone $query)->sum('rejected_quantity');
         $totalHours = (float) (clone $query)->sum('hours_worked');
         $totalIncentive = (float) (clone $query)->sum('incentive_amount');
+        $totalEarned = (float) (clone $query)->selectRaw('SUM(COALESCE(rate * quantity, 0) + COALESCE(incentive_amount, 0)) as total')->value('total');
         $entryCount = (clone $query)->count();
 
         return response()->json([
             'success' => true,
             'data' => [
                 'total_quantity' => number_format($totalQuantity, 4, '.', ''),
+                'total_good_quantity' => number_format($totalQuantity, 4, '.', ''),
                 'total_rework_quantity' => number_format($totalRework, 4, '.', ''),
                 'total_rejected_quantity' => number_format($totalRejected, 4, '.', ''),
                 'total_hours_worked' => number_format($totalHours, 4, '.', ''),
                 'total_incentive_amount' => number_format($totalIncentive, 4, '.', ''),
+                'total_earned' => number_format($totalEarned, 2, '.', ''),
                 'total_entries' => $entryCount,
             ],
             'meta' => ['correlation_id' => (string) $request->header('X-Correlation-Id', '')],

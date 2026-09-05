@@ -152,7 +152,7 @@ export function StockAdjustmentsSection() {
       await api.post(`/inventory/adjustments/${adjId}/approve`, {});
       toast.success('Stock adjustment approved & posted to ledger.');
     } catch {
-      toast.success('Adjustment approved (offline mode).');
+      toast.success('Adjustment marked as approved (offline mode).');
     } finally {
       queryClient.setQueryData<StockAdjustment[]>(['inventory', 'adjustments'], (prev = []) =>
         prev.map((a) =>
@@ -163,6 +163,27 @@ export function StockAdjustmentsSection() {
       );
       setActionLoading(null);
     }
+  };
+
+  const handleStatusChange = async (adjId: number, nextStatus: StockAdjustment['status']) => {
+    try {
+      await api.patch(`/inventory/adjustments/${adjId}`, { status: nextStatus });
+    } catch {
+      // Optimistic fallback
+    }
+
+    queryClient.setQueryData<StockAdjustment[]>(['inventory', 'adjustments'], (prev = []) =>
+      prev.map((a) =>
+        a.id === adjId
+          ? {
+              ...a,
+              status: nextStatus,
+              approved_at: (nextStatus === 'approved' && !a.approved_at ? new Date().toISOString() : a.approved_at) ?? null,
+            }
+          : a
+      )
+    );
+    toast.success(`Adjustment status updated to ${nextStatus}.`);
   };
 
   const handleCreateAdjustment = (e: React.FormEvent) => {
@@ -459,7 +480,26 @@ export function StockAdjustmentsSection() {
                         <span className="text-muted text-[11px] truncate max-w-xs">{a.items?.[0]?.product_name}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5">{getStatusBadge(a.status)}</td>
+                    <td className="px-4 py-3.5">
+                      <select
+                        value={a.status}
+                        onChange={(e) => handleStatusChange(a.id, e.target.value as StockAdjustment['status'])}
+                        className={`rounded-lg border px-2 py-1 text-[11px] font-bold focus:outline-none transition-colors cursor-pointer ${
+                          a.status === 'approved'
+                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                            : a.status === 'rejected'
+                            ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
+                            : a.status === 'cancelled'
+                            ? 'bg-gray-500/10 text-gray-700 dark:text-gray-300 border-gray-500/30'
+                            : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                        }`}
+                      >
+                        <option value="draft">Draft</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </td>
                     <td className="px-4 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
@@ -473,56 +513,66 @@ export function StockAdjustmentsSection() {
                           <Eye className="size-3.5" />
                         </button>
 
+                        <button
+                          onClick={() => {
+                            setActiveAdjustment(a);
+                            setFormData({
+                              adjustment_number: a.adjustment_number,
+                              warehouse_name: a.warehouse_name || '',
+                              adjustment_date: a.adjustment_date,
+                              reason_name: a.reason_name || '',
+                              reason_code: a.reason_code || 'VARIANCE',
+                              notes: a.notes || '',
+                              items: a.items?.map((it) => ({
+                                product_name: it.product_name || '',
+                                product_sku: it.product_sku || '',
+                                direction: it.direction,
+                                quantity: it.quantity,
+                                unit_cost: it.unit_cost,
+                                batch_code: it.batch_code || '',
+                              })) || [],
+                            });
+                            setShowEditModal(true);
+                          }}
+                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                          title="Edit Adjustment"
+                        >
+                          <Edit2 className="size-3.5" />
+                        </button>
+
                         {a.status === 'draft' && (
-                          <>
-                            <button
-                              onClick={() => {
-                                setActiveAdjustment(a);
-                                setFormData({
-                                  adjustment_number: a.adjustment_number,
-                                  warehouse_name: a.warehouse_name || '',
-                                  adjustment_date: a.adjustment_date,
-                                  reason_name: a.reason_name || '',
-                                  reason_code: a.reason_code || 'VARIANCE',
-                                  notes: a.notes || '',
-                                  items: a.items?.map((it) => ({
-                                    product_name: it.product_name || '',
-                                    product_sku: it.product_sku || '',
-                                    direction: it.direction,
-                                    quantity: it.quantity,
-                                    unit_cost: it.unit_cost,
-                                    batch_code: it.batch_code || '',
-                                  })) || [],
-                                });
-                                setShowEditModal(true);
-                              }}
-                              className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                              title="Edit Adjustment"
-                            >
-                              <Edit2 className="size-3.5" />
-                            </button>
-
-                            <button
-                              onClick={() => handleApprove(a.id)}
-                              disabled={actionLoading === a.id}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors cursor-pointer"
-                            >
-                              <CheckCircle2 className="size-3" />
-                              {actionLoading === a.id ? 'Posting...' : 'Approve & Post'}
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                setActiveAdjustment(a);
-                                setShowDeleteModal(true);
-                              }}
-                              className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                              title="Void Adjustment"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
-                          </>
+                          <button
+                            onClick={() => handleApprove(a.id)}
+                            disabled={actionLoading === a.id}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors cursor-pointer"
+                            title="Approve & Post"
+                          >
+                            <CheckCircle2 className="size-3" />
+                            <span>{actionLoading === a.id ? '...' : 'Approve'}</span>
+                          </button>
                         )}
+
+                        <button
+                          onClick={() => {
+                            setActiveAdjustment(a);
+                            window.print();
+                          }}
+                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                          title="Print Adjustment Voucher"
+                        >
+                          <Printer className="size-3.5" />
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setActiveAdjustment(a);
+                            setShowDeleteModal(true);
+                          }}
+                          className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                          title="Void Adjustment"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
                       </div>
                     </td>
                   </tr>

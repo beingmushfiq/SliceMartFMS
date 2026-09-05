@@ -2,13 +2,17 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Activity,
+  Box,
+  Calendar,
   CheckCircle2,
   Factory,
+  Info,
   Layers,
   Play,
   Plus,
   Search,
   Sparkles,
+  Trash2,
   TrendingUp,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
@@ -119,16 +123,38 @@ export function ProductionBatchesSection() {
 
   // Mutations
   const createMutation = useMutation({
-    mutationFn: (payload: CreateBatchDraft) =>
-      api.post<ProductionBatch>('/production/batches', payload),
+    mutationFn: (payload: CreateBatchDraft) => {
+      const selectedBom = boms.find((b) => b.id === payload.bom_id);
+      const selectedProduct = products.find((p) => p.id === payload.product_id);
+      const requestPayload = {
+        batch_number: payload.batch_number,
+        product_id: payload.product_id,
+        bill_of_material_id: payload.bom_id,
+        bom_id: payload.bom_id,
+        planned_quantity: payload.target_quantity,
+        target_quantity: payload.target_quantity,
+        batch_date: payload.scheduled_start || new Date().toISOString().slice(0, 10),
+        scheduled_start: payload.scheduled_start || new Date().toISOString().slice(0, 10),
+        output_unit_id: selectedBom?.output_unit_id || selectedProduct?.base_unit_id,
+      };
+      return api.post<ProductionBatch>('/production/batches', requestPayload);
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['production', 'batches'] });
       setIsCreateOpen(false);
       setErrorMsg(null);
     },
     onError: (err) => {
-      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to create batch.');
-      else setErrorMsg('Error creating batch.');
+      if (isApiError(err)) {
+        if (err.fields && typeof err.fields === 'object') {
+          const firstErr = Object.values(err.fields).flat()[0];
+          setErrorMsg(typeof firstErr === 'string' ? firstErr : (err.message ?? 'Failed to create batch.'));
+        } else {
+          setErrorMsg(err.message ?? 'Failed to create batch.');
+        }
+      } else {
+        setErrorMsg('Error creating batch.');
+      }
     },
   });
 
@@ -177,6 +203,38 @@ export function ProductionBatchesSection() {
       api.post<ProductionBatch>(`/production/batches/${batchId}/complete`),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['production', 'batches'] });
+    },
+  });
+
+  const closeMutation = useMutation({
+    mutationFn: (batchId: string) =>
+      api.post<ProductionBatch>(`/production/batches/${batchId}/close`),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['production', 'batches'] });
+    },
+    onError: (err) => {
+      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to close batch.');
+    },
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ batchId, status }: { batchId: string; status: string }) =>
+      api.patch<ProductionBatch>(`/production/batches/${batchId}`, { status }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['production', 'batches'] });
+    },
+    onError: (err) => {
+      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to update batch status.');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (batchId: string) => api.delete(`/production/batches/${batchId}`),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['production', 'batches'] });
+    },
+    onError: (err) => {
+      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to delete batch.');
     },
   });
 
@@ -235,16 +293,18 @@ export function ProductionBatchesSection() {
           variant="primary"
           onClick={() => {
             setErrorMsg(null);
-            if (products.length > 0 && boms.length > 0) {
-              setCreateDraft({
-                batch_number: `BAT-${Date.now().toString().slice(-6)}`,
-                product_id: products[0]?.id ?? '',
-                bom_id: boms[0]?.id ?? '',
-                target_quantity: '100.0000',
-                scheduled_start: new Date().toISOString().slice(0, 10),
-                scheduled_end: new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10),
-              });
-            }
+            const firstProduct = products[0];
+            const matchingBom = firstProduct
+              ? boms.find((b) => b.product_id === firstProduct.id) || boms[0]
+              : boms[0];
+            setCreateDraft({
+              batch_number: `BAT-${Date.now().toString().slice(-6)}`,
+              product_id: firstProduct?.id ?? '',
+              bom_id: matchingBom?.id ?? '',
+              target_quantity: '100.0000',
+              scheduled_start: new Date().toISOString().slice(0, 10),
+              scheduled_end: new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10),
+            });
             setIsCreateOpen(true);
           }}
           className="flex items-center gap-1.5 shadow-xs"
@@ -267,7 +327,7 @@ export function ProductionBatchesSection() {
               <tr>
                 <th className="py-3.5 pl-4 pr-3">Batch Number</th>
                 <th className="py-3.5 px-3">Product</th>
-                <th className="py-3.5 px-3">Target / Actual</th>
+                <th className="py-3.5 px-3">Actual / Target (Units)</th>
                 <th className="py-3.5 px-3">Yield Analytics</th>
                 <th className="py-3.5 px-3">Status</th>
                 <th className="py-3.5 px-3">Context</th>
@@ -309,9 +369,18 @@ export function ProductionBatchesSection() {
                       )}
                     </td>
                     <td className="py-3.5 px-3">
-                      <div className="font-mono text-default font-semibold">
-                        {batch.actual_quantity} /{' '}
+                      <div className="font-mono text-default font-semibold flex items-baseline gap-1">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">{batch.actual_quantity}</span>
+                        <span className="text-muted text-[11px]">/</span>
                         <span className="text-muted font-normal">{batch.target_quantity}</span>
+                      </div>
+                      <div className="mt-1 w-24 h-1.5 rounded-full bg-surface-sunken overflow-hidden border border-default/50">
+                        <div
+                          className="h-full bg-emerald-500 rounded-full transition-all"
+                          style={{
+                            width: `${Math.min(100, Math.max(0, (Number(batch.actual_quantity || 0) / (Number(batch.target_quantity) || 1)) * 100))}%`,
+                          }}
+                        />
                       </div>
                     </td>
                     <td className="py-3.5 px-3">
@@ -326,7 +395,16 @@ export function ProductionBatchesSection() {
                           )}
                         </div>
                       ) : (
-                        <span className="text-[11px] text-muted italic">Pending context</span>
+                        <button
+                          type="button"
+                          onClick={() => analyzeMutation.mutate(batch.id)}
+                          disabled={analyzeMutation.isPending}
+                          className="group flex items-center gap-1 text-[11px] text-muted hover:text-primary transition-colors cursor-pointer py-1 px-2 rounded-lg hover:bg-surface-sunken border border-dashed border-default"
+                          title="Click to calculate and analyze yield"
+                        >
+                          <Sparkles className="size-3 text-amber-500 group-hover:scale-110 transition-transform" />
+                          <span>Calculate Yield</span>
+                        </button>
                       )}
                     </td>
                     <td className="py-3.5 px-3">
@@ -336,86 +414,146 @@ export function ProductionBatchesSection() {
                       {getCompletenessBadge(batch.context_completeness)}
                     </td>
                     <td className="py-3 pr-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                      <div className="flex items-center justify-end gap-1 flex-wrap">
+                        {/* Start action */}
                         {(batch.status === 'draft' || batch.status === 'scheduled') && (
                           <Button
                             variant="secondary"
                             size="sm"
                             onClick={() => startMutation.mutate(batch.id)}
                             disabled={startMutation.isPending}
-                            className="text-xs flex items-center gap-1 text-emerald-400"
+                            className="text-xs flex items-center gap-1 text-emerald-600 dark:text-emerald-400 min-h-8"
+                            title="Start Batch"
                           >
                             <Play className="h-3 w-3" />
                             <span>Start</span>
                           </Button>
                         )}
 
+                        {/* Complete action */}
                         {batch.status === 'in_progress' && (
-                          <>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => {
-                                setErrorMsg(null);
-                                setInputDraft({
-                                  product_id: batch.product_id,
-                                  warehouse_id: warehouses[0]?.id ?? '',
-                                  planned_quantity: '50.0000',
-                                  actual_quantity: '50.0000',
-                                  unit_cost: '10.0000',
-                                });
-                                setActiveBatchModal({ batch, type: 'input' });
-                              }}
-                              className="text-xs text-blue-400"
-                            >
-                              + Material
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => {
-                                setErrorMsg(null);
-                                setOutputDraft({
-                                  product_id: batch.product_id,
-                                  warehouse_id: warehouses[0]?.id ?? '',
-                                  output_type: 'finished_good',
-                                  good_quantity: batch.target_quantity,
-                                  rejected_quantity: '0.0000',
-                                  unit_cost: '15.0000',
-                                });
-                                setActiveBatchModal({ batch, type: 'output' });
-                              }}
-                              className="text-xs text-emerald-400"
-                            >
-                              + Output
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => analyzeMutation.mutate(batch.id)}
-                              className="text-xs text-purple-400"
-                              title="Analyze Yield"
-                            >
-                              <Sparkles className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => completeMutation.mutate(batch.id)}
-                              className="text-xs text-zinc-300"
-                            >
-                              <CheckCircle2 className="h-3 w-3" />
-                            </Button>
-                          </>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => completeMutation.mutate(batch.id)}
+                            disabled={completeMutation.isPending}
+                            className="text-xs flex items-center gap-1 text-emerald-600 dark:text-emerald-400 min-h-8"
+                            title="Complete Batch"
+                          >
+                            <CheckCircle2 className="h-3 w-3" />
+                            <span>Complete</span>
+                          </Button>
                         )}
 
+                        {/* Close action */}
+                        {batch.status === 'completed' && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => closeMutation.mutate(batch.id)}
+                            disabled={closeMutation.isPending}
+                            className="text-xs flex items-center gap-1 text-purple-600 dark:text-purple-400 min-h-8"
+                            title="Close Batch"
+                          >
+                            <span>Close</span>
+                          </Button>
+                        )}
+
+                        {/* Material button */}
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            setErrorMsg(null);
+                            setInputDraft({
+                              product_id: batch.product_id,
+                              warehouse_id: warehouses[0]?.id ?? '',
+                              planned_quantity: '50.0000',
+                              actual_quantity: '50.0000',
+                              unit_cost: '10.0000',
+                            });
+                            setActiveBatchModal({ batch, type: 'input' });
+                          }}
+                          className="text-xs text-blue-600 dark:text-blue-400 min-h-8"
+                          title="Issue Raw Materials"
+                        >
+                          + Material
+                        </Button>
+
+                        {/* Output button */}
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            setErrorMsg(null);
+                            setOutputDraft({
+                              product_id: batch.product_id,
+                              warehouse_id: warehouses[0]?.id ?? '',
+                              output_type: 'finished_good',
+                              good_quantity: batch.target_quantity,
+                              rejected_quantity: '0.0000',
+                              unit_cost: '15.0000',
+                            });
+                            setActiveBatchModal({ batch, type: 'output' });
+                          }}
+                          className="text-xs text-emerald-600 dark:text-emerald-400 min-h-8"
+                          title="Record Finished Output"
+                        >
+                          + Output
+                        </Button>
+
+                        {/* Status selector */}
+                        <select
+                          value={batch.status}
+                          onChange={(e) => updateStatusMutation.mutate({ batchId: batch.id, status: e.target.value })}
+                          className="h-8 rounded-lg border border-default bg-surface-sunken px-2 text-[11px] font-medium text-default focus:border-primary focus:outline-none cursor-pointer"
+                          title="Change Batch Status"
+                        >
+                          <option value="draft">Draft</option>
+                          <option value="scheduled">Scheduled</option>
+                          <option value="in_progress">In Progress</option>
+                          <option value="completed">Completed</option>
+                          <option value="closed">Closed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+
+                        {/* Yield Analytics action */}
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => analyzeMutation.mutate(batch.id)}
+                          disabled={analyzeMutation.isPending}
+                          className="text-xs text-purple-600 dark:text-purple-400 min-h-8"
+                          title="Analyze Yield"
+                        >
+                          <Sparkles className="h-3 w-3" />
+                        </Button>
+
+                        {/* Details Modal */}
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => setActiveBatchModal({ batch, type: 'details' })}
-                          className="text-xs text-zinc-400"
+                          className="text-xs text-muted hover:text-default min-h-8"
+                          title="Batch Details"
                         >
-                          <Layers className="h-3 w-3" />
+                          <Layers className="h-3.5 w-3.5" />
+                        </Button>
+
+                        {/* Delete Batch */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to delete batch ${batch.batch_number}?`)) {
+                              deleteMutation.mutate(batch.id);
+                            }
+                          }}
+                          disabled={deleteMutation.isPending}
+                          className="text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 min-h-8"
+                          title="Delete Batch"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </td>
@@ -460,7 +598,15 @@ export function ProductionBatchesSection() {
               </label>
               <select
                 value={createDraft.product_id}
-                onChange={(e) => setCreateDraft((d) => ({ ...d, product_id: e.target.value }))}
+                onChange={(e) => {
+                  const newProductId = e.target.value;
+                  const matchingBom = boms.find((b) => b.product_id === newProductId);
+                  setCreateDraft((d) => ({
+                    ...d,
+                    product_id: newProductId,
+                    bom_id: matchingBom ? matchingBom.id : d.bom_id,
+                  }));
+                }}
                 className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
               >
                 {products.map((p) => (
@@ -480,9 +626,12 @@ export function ProductionBatchesSection() {
                 onChange={(e) => setCreateDraft((d) => ({ ...d, bom_id: e.target.value }))}
                 className="w-full rounded-xl border border-default bg-surface-sunken p-2 text-xs text-default focus:border-primary focus:outline-none"
               >
-                {boms.map((b) => (
+                {(boms.filter((b) => !createDraft.product_id || b.product_id === createDraft.product_id).length > 0
+                  ? boms.filter((b) => !createDraft.product_id || b.product_id === createDraft.product_id)
+                  : boms
+                ).map((b) => (
                   <option key={b.id} value={b.id}>
-                    {b.code} - {b.name} (v{b.version})
+                    {b.code ? `${b.code} - ` : ''}{b.name} (v{b.version})
                   </option>
                 ))}
               </select>
@@ -728,63 +877,205 @@ export function ProductionBatchesSection() {
           open={Boolean(activeBatchModal)}
           onClose={() => setActiveBatchModal(null)}
           title={`Batch Overview: ${activeBatchModal.batch.batch_number}`}
+          size="lg"
         >
           <div className="space-y-4">
+            {/* Batch Context & Header Info */}
+            <div className="rounded-xl bg-surface-sunken p-3.5 border border-border space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={activeBatchModal.batch.status} />
+                  {getCompletenessBadge(activeBatchModal.batch.context_completeness)}
+                </div>
+                {activeBatchModal.batch.batch_date && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted">
+                    <Calendar className="size-3.5 text-muted" />
+                    <span>Batch Date: <strong className="font-mono text-default">{activeBatchModal.batch.batch_date}</strong></span>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+                <div>
+                  <div className="text-[11px] font-medium uppercase tracking-wider text-muted">
+                    Product
+                  </div>
+                  <div className="font-semibold text-default mt-0.5 flex items-center gap-1.5">
+                    <Box className="size-3.5 text-primary shrink-0" />
+                    <span>{activeBatchModal.batch.product_name ?? activeBatchModal.batch.product_id}</span>
+                  </div>
+                  {activeBatchModal.batch.product_sku && (
+                    <div className="text-[10px] text-muted font-mono pl-5">
+                      SKU: {activeBatchModal.batch.product_sku}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <div className="text-[11px] font-medium uppercase tracking-wider text-muted">
+                    BOM Specification
+                  </div>
+                  <div className="font-medium text-default mt-0.5 flex items-center gap-1.5">
+                    <Factory className="size-3.5 text-muted shrink-0" />
+                    <span>{activeBatchModal.batch.bom_name ?? 'Standard Production Assembly BOM'}</span>
+                  </div>
+                  <div className="text-[10px] text-muted pl-5">
+                    Target: <span className="font-mono font-semibold text-default">{activeBatchModal.batch.target_quantity ?? activeBatchModal.batch.planned_quantity ?? '0.0000'}</span> {activeBatchModal.batch.output_unit_code ?? 'Units'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Input / Output / Loss Metrics */}
             <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-xl bg-zinc-950 p-3 border border-zinc-800">
-                <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
+              <div className="rounded-xl bg-surface-sunken p-3 border border-border">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">
                   Total Input
                 </div>
-                <div className="text-base font-bold font-mono text-zinc-100 mt-1">
-                  {activeBatchModal.batch.total_input_quantity}
+                <div className="text-base font-bold font-mono text-default mt-1">
+                  {activeBatchModal.batch.total_input_quantity || '0.0000'}
                 </div>
+                <div className="text-[10px] text-muted mt-0.5">Raw materials issued</div>
               </div>
-              <div className="rounded-xl bg-zinc-950 p-3 border border-zinc-800">
-                <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
+              <div className="rounded-xl bg-surface-sunken p-3 border border-border">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">
                   Total Output
                 </div>
-                <div className="text-base font-bold font-mono text-emerald-400 mt-1">
-                  {activeBatchModal.batch.total_output_quantity}
+                <div className="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1">
+                  {activeBatchModal.batch.total_output_quantity || activeBatchModal.batch.actual_quantity || '0.0000'}
                 </div>
+                <div className="text-[10px] text-muted mt-0.5">Finished good units</div>
               </div>
-              <div className="rounded-xl bg-zinc-950 p-3 border border-zinc-800">
-                <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
+              <div className="rounded-xl bg-surface-sunken p-3 border border-border">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">
                   Process Loss
                 </div>
-                <div className="text-base font-bold font-mono text-amber-400 mt-1">
-                  {activeBatchModal.batch.process_loss_quantity}
+                <div className="text-base font-bold font-mono text-amber-600 dark:text-amber-400 mt-1">
+                  {activeBatchModal.batch.process_loss_quantity || activeBatchModal.batch.variance_quantity || '0.0000'}
                 </div>
+                <div className="text-[10px] text-muted mt-0.5">Scrap & test variance</div>
               </div>
             </div>
 
-            <div className="rounded-xl bg-zinc-950 p-3 border border-zinc-800 space-y-2">
-              <div className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-                <Activity className="h-4 w-4 text-emerald-400" />
-                <span>Yield & Process Performance</span>
+            {/* Yield & Process Performance */}
+            <div className="rounded-xl bg-surface-sunken p-3.5 border border-border space-y-2.5">
+              <div className="text-xs font-semibold text-default flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Activity className="size-4 text-emerald-500" />
+                  <span>Yield & Process Performance</span>
+                </div>
+                {activeBatchModal.batch.yield_percentage && (
+                  <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    {activeBatchModal.batch.yield_percentage}%
+                  </span>
+                )}
               </div>
               <div className="grid grid-cols-3 gap-2 text-xs">
-                <div>
-                  <span className="text-zinc-500">Expected:</span>{' '}
-                  <span className="font-mono text-zinc-300">
-                    {activeBatchModal.batch.expected_yield_pct ?? 'N/A'}%
+                <div className="rounded-lg bg-surface/50 p-2 border border-border/40">
+                  <span className="text-muted block text-[10px] uppercase">Expected</span>
+                  <span className="font-mono text-default font-semibold">
+                    {activeBatchModal.batch.expected_yield_pct ?? '100.00'}%
                   </span>
                 </div>
-                <div>
-                  <span className="text-zinc-500">Actual:</span>{' '}
-                  <span className="font-mono text-emerald-400 font-bold">
-                    {activeBatchModal.batch.actual_yield_pct ?? 'N/A'}%
+                <div className="rounded-lg bg-surface/50 p-2 border border-border/40">
+                  <span className="text-muted block text-[10px] uppercase">Actual</span>
+                  <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                    {activeBatchModal.batch.actual_yield_pct ?? activeBatchModal.batch.yield_percentage ?? (Number(activeBatchModal.batch.total_input_quantity) > 0 ? `${((Number(activeBatchModal.batch.total_output_quantity) / Number(activeBatchModal.batch.total_input_quantity)) * 100).toFixed(2)}` : null) ?? 'Pending'}%
                   </span>
                 </div>
-                <div>
-                  <span className="text-zinc-500">Variance:</span>{' '}
-                  <span className="font-mono text-zinc-300">
-                    {activeBatchModal.batch.yield_variance_pct ?? 'N/A'}%
+                <div className="rounded-lg bg-surface/50 p-2 border border-border/40">
+                  <span className="text-muted block text-[10px] uppercase">Variance</span>
+                  <span className="font-mono text-default font-semibold">
+                    {activeBatchModal.batch.yield_variance_pct ?? activeBatchModal.batch.variance_percentage ?? '0.00'}%
                   </span>
                 </div>
               </div>
+
+              {Number(activeBatchModal.batch.total_input_quantity) === 0 && (
+                <div className="flex items-start gap-2 p-2.5 rounded-lg bg-surface/60 border border-border/60 text-[11px] text-muted">
+                  <Info className="size-3.5 text-primary shrink-0 mt-0.5" />
+                  <span>
+                    This batch is freshly initialized. Issue raw materials from inventory and log production outputs to begin real-time yield tracking.
+                  </span>
+                </div>
+              )}
             </div>
 
-            <div className="flex justify-end pt-3 border-t border-zinc-800">
+            {/* Actions / Footer */}
+            <div className="flex items-center justify-between pt-3 border-t border-border">
+              <div className="flex items-center gap-2 flex-wrap">
+                {(activeBatchModal.batch.status === 'draft' || activeBatchModal.batch.status === 'scheduled') && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      startMutation.mutate(activeBatchModal.batch.id);
+                      setActiveBatchModal(null);
+                    }}
+                    disabled={startMutation.isPending}
+                    className="flex items-center gap-1.5"
+                  >
+                    <Play className="size-3.5" />
+                    <span>Start Batch</span>
+                  </Button>
+                )}
+
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setErrorMsg(null);
+                    setInputDraft({
+                      product_id: activeBatchModal.batch.product_id,
+                      warehouse_id: warehouses[0]?.id ?? '',
+                      planned_quantity: '50.0000',
+                      actual_quantity: '50.0000',
+                      unit_cost: '10.0000',
+                    });
+                    setActiveBatchModal({ batch: activeBatchModal.batch, type: 'input' });
+                  }}
+                  className="flex items-center gap-1 text-blue-600 dark:text-blue-400"
+                >
+                  <Plus className="size-3.5" />
+                  <span>Issue Material</span>
+                </Button>
+
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setErrorMsg(null);
+                    setOutputDraft({
+                      product_id: activeBatchModal.batch.product_id,
+                      warehouse_id: warehouses[0]?.id ?? '',
+                      output_type: 'finished_good',
+                      good_quantity: activeBatchModal.batch.target_quantity,
+                      rejected_quantity: '0.0000',
+                      unit_cost: '15.0000',
+                    });
+                    setActiveBatchModal({ batch: activeBatchModal.batch, type: 'output' });
+                  }}
+                  className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400"
+                >
+                  <Plus className="size-3.5" />
+                  <span>Record Output</span>
+                </Button>
+
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    analyzeMutation.mutate(activeBatchModal.batch.id);
+                    setActiveBatchModal(null);
+                  }}
+                  disabled={analyzeMutation.isPending}
+                  className="flex items-center gap-1 text-purple-600 dark:text-purple-400"
+                >
+                  <Sparkles className="size-3.5" />
+                  <span>Analyze Yield</span>
+                </Button>
+              </div>
+
               <Button variant="secondary" onClick={() => setActiveBatchModal(null)}>
                 Close
               </Button>

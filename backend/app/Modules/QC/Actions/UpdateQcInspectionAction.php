@@ -28,9 +28,9 @@ final class UpdateQcInspectionAction extends Action
         /** @var QcInspection $inspection */
         $inspection = $input['qcInspection'];
 
-        if ($inspection->status === 'approved') {
+        if ($inspection->status === 'approved' && ! isset($input['status'])) {
             throw ValidationException::withMessages([
-                'status' => 'Cannot update an approved QC inspection.',
+                'status' => 'Cannot update an approved QC inspection unless changing status.',
             ]);
         }
 
@@ -38,7 +38,7 @@ final class UpdateQcInspectionAction extends Action
             $before = $inspection->toArray();
             $data = [];
 
-            foreach (['sample_size', 'inspected_quantity', 'passed_quantity', 'failed_quantity', 'rework_quantity', 'scrap_quantity', 'result', 'notes'] as $field) {
+            foreach (['sample_size', 'inspected_quantity', 'passed_quantity', 'failed_quantity', 'rework_quantity', 'scrap_quantity', 'result', 'status', 'notes'] as $field) {
                 if (array_key_exists($field, $input)) {
                     $data[$field] = $input[$field];
                 }

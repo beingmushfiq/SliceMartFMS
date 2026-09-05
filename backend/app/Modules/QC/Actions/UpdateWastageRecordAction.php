@@ -55,6 +55,9 @@ final class UpdateWastageRecordAction extends Action
                     ? $this->resolveId('warehouses', $input['warehouse_id'], $tenantId, 'warehouse_id')
                     : null;
             }
+            if (isset($input['stage'])) {
+                $data['stage'] = $input['stage'];
+            }
             if (array_key_exists('notes', $input)) {
                 $data['notes'] = $input['notes'];
             }

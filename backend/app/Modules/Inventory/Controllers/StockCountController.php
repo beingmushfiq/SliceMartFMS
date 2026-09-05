@@ -107,4 +107,31 @@ final class StockCountController extends Controller
 
         return new StockCountResource($reconciled);
     }
+
+    public function update(int $id, Request $request): StockCountResource
+    {
+        $tenantId = TenantContext::current()->tenantId();
+
+        $count = StockCount::where('tenant_id', $tenantId)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $fillable = ['status', 'notes', 'count_date', 'warehouse_id', 'type'];
+        $count->update($request->only($fillable));
+
+        return new StockCountResource($count->load(['warehouse', 'items.product', 'items.unit']));
+    }
+
+    public function destroy(int $id): JsonResponse
+    {
+        $tenantId = TenantContext::current()->tenantId();
+
+        $count = StockCount::where('tenant_id', $tenantId)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $count->delete();
+
+        return response()->json(['message' => 'Stock count deleted successfully.']);
+    }
 }

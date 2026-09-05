@@ -16,14 +16,34 @@ final class BillOfMaterialResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->uuid, 'product_id' => $this->product->uuid, 'version' => $this->version, 'name' => $this->name,
-            'output_quantity' => $this->output_quantity, 'output_unit_id' => $this->outputUnit->uuid, 'expected_yield_percentage' => $this->expected_yield_percentage,
-            'status' => $this->status, 'effective_from' => $this->effective_from?->toDateString(), 'effective_to' => $this->effective_to?->toDateString(),
+            'id' => $this->uuid,
+            'code' => 'BOM-'.str_pad((string) $this->id, 4, '0', STR_PAD_LEFT),
+            'product_id' => $this->product->uuid,
+            'version' => $this->version,
+            'name' => $this->name,
+            'output_quantity' => $this->output_quantity,
+            'output_unit_id' => $this->outputUnit->uuid,
+            'expected_yield_percentage' => $this->expected_yield_percentage,
+            'status' => $this->status,
+            'is_active' => $this->status === 'active',
+            'is_default' => true,
+            'effective_from' => $this->effective_from?->toDateString(),
+            'effective_to' => $this->effective_to?->toDateString(),
             'items' => $this->items->map(static fn (BillOfMaterialItem $item) => [
-                'product_id' => $item->product->uuid, 'quantity' => $item->quantity, 'unit_id' => $item->unit->uuid,
-                'wastage_allowance_percentage' => $item->wastage_allowance_percentage, 'is_optional' => $item->is_optional, 'sort_order' => $item->sort_order,
+                'id' => (string) $item->id,
+                'product_id' => $item->product->uuid,
+                'product_name' => $item->product?->name,
+                'product_sku' => $item->product?->sku,
+                'standard_cost' => (float) ($item->product?->standard_cost ?? 0),
+                'quantity' => $item->quantity,
+                'unit_id' => $item->unit->uuid,
+                'unit_code' => $item->unit?->code,
+                'wastage_allowance_percentage' => $item->wastage_allowance_percentage,
+                'is_optional' => $item->is_optional,
+                'sort_order' => $item->sort_order,
             ])->values()->all(),
-            'created_at' => $this->created_at?->toIso8601String(), 'updated_at' => $this->updated_at?->toIso8601String(),
+            'created_at' => $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
         ];
     }
 }

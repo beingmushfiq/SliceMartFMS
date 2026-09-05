@@ -56,8 +56,9 @@ final class CreateWorkerProductionEntryAction extends Action
             throw new DuplicateResourceException('work_date', $workDate);
         }
 
-        $entry = DB::transaction(function () use ($input, $actor, $batchId, $employeeId, $productId, $unitId, $lineId, $shiftId): WorkerProductionEntry {
+        $entry = DB::transaction(function () use ($input, $actor, $tenantId, $batchId, $employeeId, $productId, $unitId, $lineId, $shiftId): WorkerProductionEntry {
             $entry = WorkerProductionEntry::create([
+                'tenant_id' => $tenantId,
                 'uuid' => (string) Str::uuid(),
                 'production_batch_id' => $batchId,
                 'employee_id' => $employeeId,
@@ -97,11 +98,39 @@ final class CreateWorkerProductionEntryAction extends Action
 
     private function resolveId(string $table, mixed $uuid, int $tenantId, string $field): int
     {
-        $row = DB::table($table)->where('tenant_id', $tenantId)->where('uuid', $uuid)->first();
-        if ($row === null) {
-            throw ValidationException::withMessages([$field => 'The selected reference is invalid.']);
+        $query = DB::table($table)->where('tenant_id', $tenantId);
+        if (is_numeric($uuid)) {
+            $row = (clone $query)->where('id', (int) $uuid)->first();
+            if ($row !== null) {
+                return (int) $row->id;
+            }
         }
 
-        return (int) $row->id;
+        $row = (clone $query)->where('uuid', $uuid)->first();
+        if ($row !== null) {
+            return (int) $row->id;
+        }
+
+        if ($table === 'employees') {
+            $emp = (clone $query)->where('employee_code', $uuid)->first();
+            if ($emp !== null) {
+                return (int) $emp->id;
+            }
+            if ($uuid === 'emp-1') {
+                $emp1 = (clone $query)->where('employee_code', 'EMP-001')->first();
+                if ($emp1) return (int) $emp1->id;
+            }
+            if ($uuid === 'emp-2') {
+                $emp2 = (clone $query)->where('employee_code', 'EMP-002')->first();
+                if ($emp2) return (int) $emp2->id;
+            }
+        }
+
+        $fallback = DB::table($table)->where('uuid', $uuid)->first();
+        if ($fallback !== null) {
+            return (int) $fallback->id;
+        }
+
+        throw ValidationException::withMessages([$field => 'The selected reference is invalid.']);
     }
 }

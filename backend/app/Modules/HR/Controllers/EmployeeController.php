@@ -58,9 +58,25 @@ class EmployeeController extends Controller
             $query->where('department_id', $request->query('department_id'));
         }
 
-        $employees = $query->orderBy('display_name')->paginate(20);
+        $employees = $query->orderBy('display_name')->get()->map(function ($emp) {
+            return [
+                'id' => $emp->uuid,
+                'employee_code' => $emp->employee_code,
+                'first_name' => $emp->first_name,
+                'last_name' => $emp->last_name ?? '',
+                'full_name' => $emp->display_name ?: trim("{$emp->first_name} {$emp->last_name}"),
+                'email' => $emp->email,
+                'phone' => $emp->phone,
+                'designation' => $emp->designation?->name,
+                'department' => $emp->department?->name,
+                'status' => $emp->employment_status ?? 'active',
+            ];
+        });
 
-        return response()->json($employees);
+        return response()->json([
+            'success' => true,
+            'data' => $employees,
+        ]);
     }
 
     public function store(Request $request): JsonResponse

@@ -120,4 +120,31 @@ final class StockTransferController extends Controller
 
         return new StockTransferResource($received);
     }
+
+    public function update(int $id, Request $request): StockTransferResource
+    {
+        $tenantId = TenantContext::current()->tenantId();
+
+        $transfer = StockTransfer::where('tenant_id', $tenantId)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $fillable = ['status', 'notes', 'transfer_date', 'from_warehouse_id', 'to_warehouse_id'];
+        $transfer->update($request->only($fillable));
+
+        return new StockTransferResource($transfer->load(['fromWarehouse', 'toWarehouse', 'items.product', 'items.unit']));
+    }
+
+    public function destroy(int $id): JsonResponse
+    {
+        $tenantId = TenantContext::current()->tenantId();
+
+        $transfer = StockTransfer::where('tenant_id', $tenantId)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $transfer->delete();
+
+        return response()->json(['message' => 'Stock transfer deleted successfully.']);
+    }
 }

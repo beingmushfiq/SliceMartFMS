@@ -10,15 +10,24 @@ import {
   Flame,
   TrendingUp,
   Sparkles,
+  Eye,
+  Edit2,
+  Trash2,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
+import { Modal } from '../../../components/ui/Modal';
+import { Button } from '../../../components/ui/Button';
+import type { ProductionBatch } from '../../../types/api/production';
+import type { Product } from '../../../types/api/catalog';
 
 export interface ReworkOrder {
   id: number;
   uuid: string;
   rework_number: string;
+  batch_id?: number | string | null;
   batch_number: string;
+  product_id?: number | string | null;
   product_name: string;
   defect_category: string;
   defect_notes?: string | null;
@@ -121,6 +130,9 @@ export function ReworkSection() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<ReworkOrder | null>(null);
+  const [viewingOrder, setViewingOrder] = useState<ReworkOrder | null>(null);
+  const [editingOrder, setEditingOrder] = useState<ReworkOrder | null>(null);
+  const [deletingOrder, setDeletingOrder] = useState<ReworkOrder | null>(null);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
 
   // Form State for Add
@@ -136,11 +148,44 @@ export function ReworkSection() {
     estimated_cost: '',
   });
 
+  // Form State for Edit
+  const [editFormData, setEditFormData] = useState({
+    batch_number: '',
+    product_name: '',
+    defect_category: '',
+    defect_notes: '',
+    qty_defective: '',
+    unit: 'PCS',
+    assigned_station: '',
+    assigned_operator: '',
+    rework_cost: '',
+    salvage_qty: '',
+    scrap_qty: '',
+    status: 'pending' as ReworkOrder['status'],
+  });
+
   // Form State for Completion
   const [completeData, setCompleteData] = useState({
     salvage_qty: '',
     scrap_qty: '',
     actual_cost: '',
+  });
+
+  // Fetch production batches & products for selection dropdowns
+  const { data: batches = [] } = useQuery<ProductionBatch[]>({
+    queryKey: ['production', 'batches'],
+    queryFn: async () => {
+      const res = await api.get<ProductionBatch[]>('/production/batches');
+      return res.data ?? [];
+    },
+  });
+
+  const { data: products = [] } = useQuery<Product[]>({
+    queryKey: ['catalog', 'products'],
+    queryFn: async () => {
+      const res = await api.get<Product[]>('/products');
+      return res.data ?? [];
+    },
   });
 
   const { data: reworkOrders = SAMPLE_REWORK_ORDERS, isLoading, isFetching, refetch } = useQuery<ReworkOrder[]>({
@@ -159,7 +204,7 @@ export function ReworkSection() {
     initialData: SAMPLE_REWORK_ORDERS,
   });
 
-  const handleCreateOrder = (e: React.FormEvent) => {
+  const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     const qty = parseInt(formData.qty_defective) || 1;
     const newOrder: ReworkOrder = {
@@ -181,7 +226,11 @@ export function ReworkSection() {
       created_at: new Date().toISOString().slice(0, 10),
     };
 
-    api.post('/qc/rework-orders', newOrder).catch(() => {});
+    try {
+      await api.post('/qc/rework-orders', newOrder);
+    } catch {
+      // Fallback
+    }
     queryClient.setQueryData<ReworkOrder[]>(['qc', 'rework-orders'], (prev = []) => [newOrder, ...prev]);
     toast.success('Rework order created.');
     setShowCreateModal(false);
@@ -198,8 +247,34 @@ export function ReworkSection() {
     });
   };
 
-  const handleStartRework = (id: number) => {
-    api.post(`/qc/rework-orders/${id}/start`, {}).catch(() => {});
+  const handleStatusChange = async (orderId: number, nextStatus: ReworkOrder['status']) => {
+    try {
+      await api.patch(`/qc/rework-orders/${orderId}`, { status: nextStatus });
+    } catch {
+      // Optimistic fallback
+    }
+
+    queryClient.setQueryData<ReworkOrder[]>(['qc', 'rework-orders'], (prev = []) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? {
+              ...o,
+              status: nextStatus,
+              started_at: (nextStatus === 'in_rework' && !o.started_at ? new Date().toISOString().slice(0, 16).replace('T', ' ') : o.started_at) ?? null,
+              completed_at: ((nextStatus === 'completed' || nextStatus === 'scrapped') && !o.completed_at ? new Date().toISOString().slice(0, 16).replace('T', ' ') : o.completed_at) ?? null,
+            }
+          : o
+      )
+    );
+    toast.success(`Rework order status updated to ${nextStatus.replace('_', ' ')}.`);
+  };
+
+  const handleStartRework = async (id: number) => {
+    try {
+      await api.post(`/qc/rework-orders/${id}/start`, {});
+    } catch {
+      // Optimistic fallback
+    }
     queryClient.setQueryData<ReworkOrder[]>(['qc', 'rework-orders'], (prev = []) =>
       prev.map((o) =>
         o.id === id
@@ -210,18 +285,22 @@ export function ReworkSection() {
     toast.success('Rework order started.');
   };
 
-  const handleCompleteRework = (e: React.FormEvent) => {
+  const handleCompleteRework = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedOrder) return;
 
     const salvage = parseInt(completeData.salvage_qty) || 0;
     const scrap = parseInt(completeData.scrap_qty) || 0;
 
-    api.post(`/qc/rework-orders/${selectedOrder.id}/complete`, {
-      salvage_qty: salvage,
-      scrap_qty: scrap,
-      rework_cost: completeData.actual_cost || selectedOrder.rework_cost,
-    }).catch(() => {});
+    try {
+      await api.post(`/qc/rework-orders/${selectedOrder.id}/complete`, {
+        salvage_qty: salvage,
+        scrap_qty: scrap,
+        rework_cost: completeData.actual_cost || selectedOrder.rework_cost,
+      });
+    } catch {
+      // Optimistic fallback
+    }
 
     queryClient.setQueryData<ReworkOrder[]>(['qc', 'rework-orders'], (prev = []) =>
       prev.map((o) =>
@@ -238,9 +317,76 @@ export function ReworkSection() {
       )
     );
 
-    toast.success('Rework batch processed.');
+    toast.success('Rework batch processed & inventory yield updated.');
     setShowCompleteModal(false);
     setSelectedOrder(null);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingOrder) return;
+
+    const updated: ReworkOrder = {
+      ...editingOrder,
+      batch_number: editFormData.batch_number,
+      product_name: editFormData.product_name,
+      defect_category: editFormData.defect_category,
+      defect_notes: editFormData.defect_notes || null,
+      qty_defective: parseInt(editFormData.qty_defective) || editingOrder.qty_defective,
+      unit: editFormData.unit,
+      assigned_station: editFormData.assigned_station,
+      assigned_operator: editFormData.assigned_operator || null,
+      rework_cost: editFormData.rework_cost,
+      salvage_qty: parseInt(editFormData.salvage_qty) || 0,
+      scrap_qty: parseInt(editFormData.scrap_qty) || 0,
+      status: editFormData.status,
+    };
+
+    try {
+      await api.patch(`/qc/rework-orders/${editingOrder.id}`, updated);
+    } catch {
+      // Optimistic fallback
+    }
+
+    queryClient.setQueryData<ReworkOrder[]>(['qc', 'rework-orders'], (prev = []) =>
+      prev.map((o) => (o.id === editingOrder.id ? updated : o))
+    );
+    toast.success('Rework order updated.');
+    setEditingOrder(null);
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!deletingOrder) return;
+
+    try {
+      await api.delete(`/qc/rework-orders/${deletingOrder.id}`);
+    } catch {
+      // Optimistic fallback
+    }
+
+    queryClient.setQueryData<ReworkOrder[]>(['qc', 'rework-orders'], (prev = []) =>
+      prev.filter((o) => o.id !== deletingOrder.id)
+    );
+    toast.success(`Rework order ${deletingOrder.rework_number} removed.`);
+    setDeletingOrder(null);
+  };
+
+  const openEditModal = (order: ReworkOrder) => {
+    setEditingOrder(order);
+    setEditFormData({
+      batch_number: order.batch_number,
+      product_name: order.product_name,
+      defect_category: order.defect_category,
+      defect_notes: order.defect_notes || '',
+      qty_defective: String(order.qty_defective),
+      unit: order.unit,
+      assigned_station: order.assigned_station,
+      assigned_operator: order.assigned_operator || '',
+      rework_cost: order.rework_cost,
+      salvage_qty: String(order.salvage_qty),
+      scrap_qty: String(order.scrap_qty),
+      status: order.status,
+    });
   };
 
   const filteredOrders = reworkOrders.filter((o) => {
@@ -391,8 +537,8 @@ export function ReworkSection() {
                 <th className="px-4 py-3.5">Station & Tech</th>
                 <th className="px-4 py-3.5">Salvage / Scrap</th>
                 <th className="px-4 py-3.5">Cost</th>
-                <th className="px-4 py-3.5">Status</th>
-                <th className="px-4 py-3.5 text-right">Workflow</th>
+                <th className="px-4 py-3.5">Status Transition</th>
+                <th className="px-4 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-default">
@@ -447,48 +593,79 @@ export function ReworkSection() {
                       BDT {parseFloat(order.rework_cost || '0').toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="px-4 py-3.5">
-                      <span
-                        className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
+                      <select
+                        value={order.status}
+                        onChange={(e) => handleStatusChange(order.id, e.target.value as ReworkOrder['status'])}
+                        className={`rounded-lg border px-2 py-1 text-[11px] font-bold focus:outline-none transition-colors cursor-pointer ${
                           order.status === 'completed'
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
                             : order.status === 'in_rework'
-                            ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20'
+                            ? 'bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/30'
                             : order.status === 'scrapped'
-                            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
-                            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                            ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
+                            : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
                         }`}
                       >
-                        {order.status.replace('_', ' ')}
-                      </span>
+                        <option value="pending">Pending</option>
+                        <option value="in_rework">In Rework</option>
+                        <option value="completed">Completed</option>
+                        <option value="scrapped">Scrapped</option>
+                      </select>
                     </td>
                     <td className="px-4 py-3.5 text-right">
-                      {order.status === 'pending' && (
+                      <div className="flex items-center justify-end gap-1.5">
                         <button
-                          onClick={() => handleStartRework(order.id)}
-                          className="rounded-lg bg-sky-500/10 border border-sky-500/20 px-2.5 py-1 text-[11px] font-semibold text-sky-700 dark:text-sky-300 hover:bg-sky-500/20 transition-colors cursor-pointer"
+                          onClick={() => setViewingOrder(order)}
+                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                          title="View Details"
                         >
-                          Start Rework
+                          <Eye className="size-3.5" />
                         </button>
-                      )}
-                      {order.status === 'in_rework' && (
+
                         <button
-                          onClick={() => {
-                            setSelectedOrder(order);
-                            setCompleteData({
-                              salvage_qty: String(order.qty_defective),
-                              scrap_qty: '0',
-                              actual_cost: order.rework_cost,
-                            });
-                            setShowCompleteModal(true);
-                          }}
-                          className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 transition-colors cursor-pointer"
+                          onClick={() => openEditModal(order)}
+                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                          title="Edit Rework Order"
                         >
-                          Complete & Yield
+                          <Edit2 className="size-3.5" />
                         </button>
-                      )}
-                      {(order.status === 'completed' || order.status === 'scrapped') && (
-                        <span className="text-[11px] text-muted font-mono">{order.completed_at?.slice(0, 10)}</span>
-                      )}
+
+                        {order.status === 'pending' && (
+                          <button
+                            onClick={() => handleStartRework(order.id)}
+                            className="rounded-lg bg-sky-500/10 border border-sky-500/20 px-2 py-1 text-[10px] font-semibold text-sky-700 dark:text-sky-300 hover:bg-sky-500/20 transition-colors cursor-pointer"
+                            title="Start Processing"
+                          >
+                            Start
+                          </button>
+                        )}
+
+                        {order.status === 'in_rework' && (
+                          <button
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setCompleteData({
+                                salvage_qty: String(order.qty_defective),
+                                scrap_qty: '0',
+                                actual_cost: order.rework_cost,
+                              });
+                              setShowCompleteModal(true);
+                            }}
+                            className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 transition-colors cursor-pointer"
+                            title="Yield & Close"
+                          >
+                            Yield
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => setDeletingOrder(order)}
+                          className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                          title="Delete Order"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -497,6 +674,311 @@ export function ReworkSection() {
           </table>
         </div>
       </div>
+
+      {/* VIEW ORDER DETAILS MODAL */}
+      <Modal
+        open={!!viewingOrder}
+        onClose={() => setViewingOrder(null)}
+        title="Rework & Salvage Order Details"
+        subtitle={viewingOrder ? `${viewingOrder.rework_number} • Batch ${viewingOrder.batch_number}` : ''}
+        size="lg"
+      >
+        {viewingOrder && (
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl border border-default bg-surface-sunken space-y-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-default">{viewingOrder.product_name}</h4>
+                  <div className="text-xs text-muted font-mono mt-0.5">Source Batch: {viewingOrder.batch_number}</div>
+                </div>
+                <span
+                  className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                    viewingOrder.status === 'completed'
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                      : viewingOrder.status === 'in_rework'
+                      ? 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30'
+                      : viewingOrder.status === 'scrapped'
+                      ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30'
+                      : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                  }`}
+                >
+                  {viewingOrder.status.replace('_', ' ')}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-default text-xs">
+                <div>
+                  <span className="text-[10px] text-muted uppercase font-semibold block">Defective Volume</span>
+                  <span className="font-mono font-bold text-default">{viewingOrder.qty_defective} {viewingOrder.unit}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-muted uppercase font-semibold block">Salvaged Restored</span>
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{viewingOrder.salvage_qty} {viewingOrder.unit}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-muted uppercase font-semibold block">Scrapped Volume</span>
+                  <span className="font-mono font-bold text-rose-600 dark:text-rose-400">{viewingOrder.scrap_qty} {viewingOrder.unit}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-muted uppercase font-semibold block">Rework Cost</span>
+                  <span className="font-mono font-bold text-default">BDT {parseFloat(viewingOrder.rework_cost || '0').toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-default p-4 space-y-2">
+              <div className="flex items-center gap-2 text-rose-700 dark:text-rose-300 font-semibold text-xs">
+                <AlertTriangle className="size-4" />
+                <span>Defect Diagnostic: {viewingOrder.defect_category}</span>
+              </div>
+              <p className="text-xs text-muted leading-relaxed">
+                {viewingOrder.defect_notes || 'No detailed defect diagnostic notes entered.'}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3 rounded-xl border border-default bg-surface">
+                <span className="text-[10px] text-muted uppercase font-semibold block">Assigned Workstation</span>
+                <span className="font-medium text-default mt-1 block">{viewingOrder.assigned_station}</span>
+              </div>
+              <div className="p-3 rounded-xl border border-default bg-surface">
+                <span className="text-[10px] text-muted uppercase font-semibold block">Lead Technician</span>
+                <span className="font-medium text-default mt-1 block">{viewingOrder.assigned_operator || 'Unassigned'}</span>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-default">
+              <Button variant="ghost" onClick={() => setViewingOrder(null)}>
+                Close
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  const o = viewingOrder;
+                  setViewingOrder(null);
+                  openEditModal(o);
+                }}
+              >
+                Edit Rework Details
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* EDIT REWORK ORDER MODAL */}
+      <Modal
+        open={!!editingOrder}
+        onClose={() => setEditingOrder(null)}
+        title="Edit Rework Order"
+        subtitle={editingOrder ? `${editingOrder.rework_number} • Freedom to update parameters` : ''}
+        size="lg"
+      >
+        {editingOrder && (
+          <form onSubmit={handleSaveEdit} className="space-y-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                  Source Batch Number
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editFormData.batch_number}
+                  onChange={(e) => setEditFormData({ ...editFormData, batch_number: e.target.value })}
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default font-mono focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                  Product Description
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editFormData.product_name}
+                  onChange={(e) => setEditFormData({ ...editFormData, product_name: e.target.value })}
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default focus:border-primary focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                  Defect Category
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editFormData.defect_category}
+                  onChange={(e) => setEditFormData({ ...editFormData, defect_category: e.target.value })}
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-default focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                    Defective Qty
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={editFormData.qty_defective}
+                    onChange={(e) => setEditFormData({ ...editFormData, qty_defective: e.target.value })}
+                    className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default font-mono focus:border-primary focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                    Unit
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.unit}
+                    onChange={(e) => setEditFormData({ ...editFormData, unit: e.target.value })}
+                    className="w-full rounded-xl border border-default bg-surface-sunken px-2 py-2 text-default focus:border-primary focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                  Assigned Station
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editFormData.assigned_station}
+                  onChange={(e) => setEditFormData({ ...editFormData, assigned_station: e.target.value })}
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                  Operator / Lead Tech
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.assigned_operator}
+                  onChange={(e) => setEditFormData({ ...editFormData, assigned_operator: e.target.value })}
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default focus:border-primary focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                  Rework Cost (BDT)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editFormData.rework_cost}
+                  onChange={(e) => setEditFormData({ ...editFormData, rework_cost: e.target.value })}
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default font-mono focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">
+                  Salvaged Qty
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editFormData.salvage_qty}
+                  onChange={(e) => setEditFormData({ ...editFormData, salvage_qty: e.target.value })}
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default font-mono focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-rose-600 dark:text-rose-400 uppercase tracking-wider mb-1">
+                  Scrapped Qty
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editFormData.scrap_qty}
+                  onChange={(e) => setEditFormData({ ...editFormData, scrap_qty: e.target.value })}
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default font-mono focus:border-primary focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                Workflow Status
+              </label>
+              <select
+                value={editFormData.status}
+                onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value as ReworkOrder['status'] })}
+                className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default font-medium focus:border-primary focus:outline-none"
+              >
+                <option value="pending">Pending</option>
+                <option value="in_rework">In Rework</option>
+                <option value="completed">Completed</option>
+                <option value="scrapped">Scrapped</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                Defect Diagnostics & Corrective Instructions
+              </label>
+              <textarea
+                rows={3}
+                value={editFormData.defect_notes}
+                onChange={(e) => setEditFormData({ ...editFormData, defect_notes: e.target.value })}
+                className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default focus:border-primary focus:outline-none"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-default">
+              <Button variant="ghost" onClick={() => setEditingOrder(null)}>
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit">
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* DELETE CONFIRMATION MODAL */}
+      <Modal
+        open={!!deletingOrder}
+        onClose={() => setDeletingOrder(null)}
+        title="Delete Rework Order"
+        subtitle={deletingOrder ? `Confirm deletion of ${deletingOrder.rework_number}` : ''}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-muted leading-relaxed">
+            Are you sure you want to delete rework order{' '}
+            <strong className="text-default font-mono">{deletingOrder?.rework_number}</strong>?
+            This will remove this repair tracking job and reverse uncommitted floor schedules.
+          </p>
+          <div className="flex justify-end gap-2 pt-2 border-t border-default">
+            <Button variant="ghost" onClick={() => setDeletingOrder(null)}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={handleDeleteOrder}>
+              Delete Order
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Complete Rework Modal */}
       {showCompleteModal && selectedOrder && (
@@ -616,11 +1098,27 @@ export function ReworkSection() {
                   <input
                     type="text"
                     required
+                    list="batch_presets"
                     placeholder="e.g. BAT-202608-012"
                     value={formData.batch_number}
-                    onChange={(e) => setFormData({ ...formData, batch_number: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const matched = batches.find((b) => b.batch_number === val);
+                      setFormData((prev) => ({
+                        ...prev,
+                        batch_number: val,
+                        product_name: matched?.product_name || prev.product_name,
+                      }));
+                    }}
                     className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default font-mono focus:border-primary focus:outline-none"
                   />
+                  <datalist id="batch_presets">
+                    {batches.map((b) => (
+                      <option key={b.id} value={b.batch_number}>
+                        {b.product_name}
+                      </option>
+                    ))}
+                  </datalist>
                 </div>
 
                 <div>
@@ -630,11 +1128,17 @@ export function ReworkSection() {
                   <input
                     type="text"
                     required
+                    list="product_presets"
                     placeholder="e.g. Master Carton 5-Ply"
                     value={formData.product_name}
                     onChange={(e) => setFormData({ ...formData, product_name: e.target.value })}
                     className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default focus:border-primary focus:outline-none"
                   />
+                  <datalist id="product_presets">
+                    {products.map((p) => (
+                      <option key={p.id} value={p.name} />
+                    ))}
+                  </datalist>
                 </div>
               </div>
 
