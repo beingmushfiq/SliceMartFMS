@@ -274,7 +274,7 @@ export const ProductionStagesSection: React.FC = () => {
               required
               value={formData.label}
               onChange={(e) => setFormData({ ...formData, label: e.target.value })}
-              placeholder="e.g. Fabric Cutting, Dough Mixing, Soldering"
+              placeholder="e.g. Coil Winding, Chassis Assembly, Soldering, Burn-In Testing"
               className="w-full rounded-lg border border-default bg-surface px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none transition-colors"
             />
           </div>

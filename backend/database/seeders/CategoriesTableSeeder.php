@@ -21,7 +21,7 @@ final class CategoriesTableSeeder extends Seeder
         $raw = Category::create([
             'uuid' => (string) Str::uuid(),
             'code' => 'RAW',
-            'name' => 'Raw Ingredients & Commodities',
+            'name' => 'Electronic Components & Raw Materials',
             'path' => 'RAW',
             'is_active' => true,
         ]);
@@ -29,7 +29,7 @@ final class CategoriesTableSeeder extends Seeder
         $pkg = Category::create([
             'uuid' => (string) Str::uuid(),
             'code' => 'PKG',
-            'name' => 'Packaging Materials & Consumables',
+            'name' => 'Packaging Materials & Cartons',
             'path' => 'PKG',
             'is_active' => true,
         ]);
@@ -37,7 +37,7 @@ final class CategoriesTableSeeder extends Seeder
         $sfg = Category::create([
             'uuid' => (string) Str::uuid(),
             'code' => 'SFG',
-            'name' => 'Semi-Finished / WIP Intermediates',
+            'name' => 'Sub-Assemblies & WIP Modules',
             'path' => 'SFG',
             'is_active' => true,
         ]);
@@ -45,7 +45,7 @@ final class CategoriesTableSeeder extends Seeder
         $fg = Category::create([
             'uuid' => (string) Str::uuid(),
             'code' => 'FG',
-            'name' => 'Finished Baked Goods',
+            'name' => 'Finished Cookers & Stoves',
             'path' => 'FG',
             'is_active' => true,
         ]);
@@ -54,36 +54,36 @@ final class CategoriesTableSeeder extends Seeder
         Category::create([
             'uuid' => (string) Str::uuid(),
             'parent_id' => $raw->id,
-            'code' => 'RAW-FLR',
-            'name' => 'Grains & Flours',
-            'path' => 'RAW/RAW-FLR',
+            'code' => 'RAW-GLS',
+            'name' => 'Microcrystalline Ceramic Panels',
+            'path' => 'RAW/RAW-GLS',
             'is_active' => true,
         ]);
 
         Category::create([
             'uuid' => (string) Str::uuid(),
             'parent_id' => $raw->id,
-            'code' => 'RAW-DRY',
-            'name' => 'Fats, Oils & Dairy Products',
-            'path' => 'RAW/RAW-DRY',
+            'code' => 'RAW-COIL',
+            'name' => 'Infrared Heating Coils & Elements',
+            'path' => 'RAW/RAW-COIL',
             'is_active' => true,
         ]);
 
         Category::create([
             'uuid' => (string) Str::uuid(),
             'parent_id' => $raw->id,
-            'code' => 'RAW-SWT',
-            'name' => 'Sugars & Sweeteners',
-            'path' => 'RAW/RAW-SWT',
+            'code' => 'RAW-PCB',
+            'name' => 'Control PCBA & Power Boards',
+            'path' => 'RAW/RAW-PCB',
             'is_active' => true,
         ]);
 
         Category::create([
             'uuid' => (string) Str::uuid(),
             'parent_id' => $raw->id,
-            'code' => 'RAW-YST',
-            'name' => 'Yeast & Leavening Agents',
-            'path' => 'RAW/RAW-YST',
+            'code' => 'RAW-MET',
+            'name' => 'Stove Bodies, Cast Burners & Frames',
+            'path' => 'RAW/RAW-MET',
             'is_active' => true,
         ]);
 
@@ -91,9 +91,9 @@ final class CategoriesTableSeeder extends Seeder
         Category::create([
             'uuid' => (string) Str::uuid(),
             'parent_id' => $pkg->id,
-            'code' => 'PKG-PCH',
-            'name' => 'Printed Pouches & Food Films',
-            'path' => 'PKG/PKG-PCH',
+            'code' => 'PKG-FOAM',
+            'name' => 'Molded EPE Shockproof Foam Cushion',
+            'path' => 'PKG/PKG-FOAM',
             'is_active' => true,
         ]);
 
@@ -101,7 +101,7 @@ final class CategoriesTableSeeder extends Seeder
             'uuid' => (string) Str::uuid(),
             'parent_id' => $pkg->id,
             'code' => 'PKG-BOX',
-            'name' => 'Corrugated Master Cartons',
+            'name' => 'Color Retail Gift Boxes & Master Cartons',
             'path' => 'PKG/PKG-BOX',
             'is_active' => true,
         ]);
@@ -110,18 +110,18 @@ final class CategoriesTableSeeder extends Seeder
         Category::create([
             'uuid' => (string) Str::uuid(),
             'parent_id' => $sfg->id,
-            'code' => 'SFG-SRD',
-            'name' => 'Sourdough Starter Dough',
-            'path' => 'SFG/SFG-SRD',
+            'code' => 'SFG-BASE',
+            'name' => 'Assembled Cooker Base & Chassis Modules',
+            'path' => 'SFG/SFG-BASE',
             'is_active' => true,
         ]);
 
         Category::create([
             'uuid' => (string) Str::uuid(),
             'parent_id' => $sfg->id,
-            'code' => 'SFG-BAT',
-            'name' => 'Cake Batter & Premixes',
-            'path' => 'SFG/SFG-BAT',
+            'code' => 'SFG-BURN',
+            'name' => 'WIP Stove Burner & Gas Valve Assemblies',
+            'path' => 'SFG/SFG-BURN',
             'is_active' => true,
         ]);
 
@@ -129,36 +129,36 @@ final class CategoriesTableSeeder extends Seeder
         Category::create([
             'uuid' => (string) Str::uuid(),
             'parent_id' => $fg->id,
-            'code' => 'FG-BRD',
-            'name' => 'Sliced Sandwich Breads',
-            'path' => 'FG/FG-BRD',
+            'code' => 'FG-IRC',
+            'name' => 'Single Burner Infrared Cookers',
+            'path' => 'FG/FG-IRC',
             'is_active' => true,
         ]);
 
         Category::create([
             'uuid' => (string) Str::uuid(),
             'parent_id' => $fg->id,
-            'code' => 'FG-BUN',
-            'name' => 'Buns, Rolls & Dinner Breads',
-            'path' => 'FG/FG-BUN',
+            'code' => 'FG-IRD',
+            'name' => 'Double Burner Infrared Cookers',
+            'path' => 'FG/FG-IRD',
             'is_active' => true,
         ]);
 
         Category::create([
             'uuid' => (string) Str::uuid(),
             'parent_id' => $fg->id,
-            'code' => 'FG-MUF',
-            'name' => 'Muffins, Cupcakes & Pastries',
-            'path' => 'FG/FG-MUF',
+            'code' => 'FG-STV',
+            'name' => 'Glass-Top Infrared Gas Stoves',
+            'path' => 'FG/FG-STV',
             'is_active' => true,
         ]);
 
         Category::create([
             'uuid' => (string) Str::uuid(),
             'parent_id' => $fg->id,
-            'code' => 'FG-RSK',
-            'name' => 'Crispy Toast & Rusks',
-            'path' => 'FG/FG-RSK',
+            'code' => 'FG-SS',
+            'name' => 'Stainless Steel Double Gas Stoves',
+            'path' => 'FG/FG-SS',
             'is_active' => true,
         ]);
 

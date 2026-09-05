@@ -27,7 +27,7 @@ export interface RiderRunSheetChallanDocumentProps {
   businessConfig?: BusinessConfig;
 }
 
-export const SAMPLE_RUN_SHEET_STOPS: Record<string, RunSheetManifestStop[]> = {
+const SAMPLE_RUN_SHEET_STOPS: Record<string, RunSheetManifestStop[]> = {
   'RS-20260828-001': [
     {
       stop_number: 1,
@@ -36,11 +36,11 @@ export const SAMPLE_RUN_SHEET_STOPS: Record<string, RunSheetManifestStop[]> = {
       customer_name: 'Bengal Textile Mills Ltd (Rahim Chowdhury)',
       customer_phone: '+8801711223344',
       delivery_address: 'Plot 42, Sector 7, Uttara Commercial Area, Dhaka',
-      items_summary: 'Fresh Loaf Bread (50 pcs), Butter Croissant (20 pcs)',
+      items_summary: 'Infrared Cooker 2200W (2 units), Heating Coils (5 pcs)',
       package_count: 2,
       payment_method: 'COD',
-      cod_amount: '800.00',
-      cod_collected: '800.00',
+      cod_amount: '8000.00',
+      cod_collected: '8000.00',
       status: 'delivered',
       recipient_notes: 'Received by Security Desk (Jamal)',
     },
@@ -51,10 +51,10 @@ export const SAMPLE_RUN_SHEET_STOPS: Record<string, RunSheetManifestStop[]> = {
       customer_name: 'Urban Retailers Hub (Anika Tabassum)',
       customer_phone: '+8801822334455',
       delivery_address: 'House 14, Road 11, Dhanmondi R/A, Dhaka',
-      items_summary: 'Artisan Baguette (30 pcs), Premium Milk Bread (40 pcs)',
+      items_summary: 'Double Burner Gas Stove (2 units), Glass Panels (2 pcs)',
       package_count: 2,
       payment_method: 'COD',
-      cod_amount: '950.00',
+      cod_amount: '9500.00',
       cod_collected: '0.00',
       status: 'in_transit',
       recipient_notes: 'Call before arrival / Leave at reception',
@@ -66,10 +66,10 @@ export const SAMPLE_RUN_SHEET_STOPS: Record<string, RunSheetManifestStop[]> = {
       customer_name: 'Dhaka Superstore Mart (Zubair Al-Mamun)',
       customer_phone: '+8801712345678',
       delivery_address: 'Shop 4B, Level 1, Gulshan-2 Circle Market, Dhaka',
-      items_summary: 'Assorted Danish Pastry Packs (25 boxes)',
+      items_summary: 'Infrared Cooker 3500W Double Burner (1 unit)',
       package_count: 1,
       payment_method: 'COD',
-      cod_amount: '650.00',
+      cod_amount: '6500.00',
       cod_collected: '0.00',
       status: 'in_transit',
       recipient_notes: 'Store Manager desk handover',
@@ -95,7 +95,7 @@ export function RiderRunSheetChallanDocument({
       customer_name: `Customer Account #${i + 1}`,
       customer_phone: '+8801700000000',
       delivery_address: `${runSheet.branch_name || 'Dhaka'}, Delivery Zone ${i + 1}`,
-      items_summary: 'Bakery & Food Confectionery Packages',
+      items_summary: 'Infrared Cooker & Gas Stove Appliance Packages',
       package_count: 1,
       payment_method: 'COD',
       cod_amount: (parseFloat(runSheet.total_cod_expected || '0') / (runSheet.total_stops || 1)).toFixed(2),
@@ -143,7 +143,7 @@ export function RiderRunSheetChallanDocument({
             </div>
             <div>
               <h1 className="text-sm font-black text-slate-950 uppercase tracking-tight">
-                {businessConfig.name || 'SliceMart Bakery & Foods Ltd.'}
+                {businessConfig.name || 'SliceMart'}
               </h1>
               <p className="text-[7pt] font-bold text-slate-600 tracking-wider uppercase">
                 Fleet Logistics & Dispatch Division • রাইডার ডেলিভারি চালান

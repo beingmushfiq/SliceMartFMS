@@ -22,7 +22,7 @@ final class WarehousesTableSeeder extends Seeder
         $rawWarehouse = Warehouse::create([
             'uuid' => (string) Str::uuid(),
             'code' => 'WH-RAW-01',
-            'name' => 'Tejgaon Central Raw Ingredients Warehouse',
+            'name' => 'Tejgaon Central Electronic Components & Parts Warehouse',
             'type' => 'raw_material',
             'address' => 'Plot 45, Tejgaon Industrial Area, Dhaka',
             'is_default' => true,
@@ -30,11 +30,11 @@ final class WarehousesTableSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        $flourZone = WarehouseLocation::create([
+        $compZone = WarehouseLocation::create([
             'uuid' => (string) Str::uuid(),
             'warehouse_id' => $rawWarehouse->id,
-            'code' => 'ZONE-FLOUR',
-            'name' => 'Grain & Flour Bulk Storage Zone',
+            'code' => 'ZONE-COMP',
+            'name' => 'Ceramic Glass & Heating Coil Storage Zone',
             'type' => 'zone',
             'is_active' => true,
         ]);
@@ -42,28 +42,28 @@ final class WarehousesTableSeeder extends Seeder
         WarehouseLocation::create([
             'uuid' => (string) Str::uuid(),
             'warehouse_id' => $rawWarehouse->id,
-            'parent_id' => $flourZone->id,
-            'code' => 'SILO-01',
-            'name' => 'Flour Silo 1 (50-Ton Capacity)',
-            'type' => 'bin',
-            'is_active' => true,
-        ]);
-
-        WarehouseLocation::create([
-            'uuid' => (string) Str::uuid(),
-            'warehouse_id' => $rawWarehouse->id,
-            'parent_id' => $flourZone->id,
-            'code' => 'PALLET-FL-A1',
-            'name' => 'Pallet Racking A1 (Flour Bags)',
+            'parent_id' => $compZone->id,
+            'code' => 'RACK-GLASS',
+            'name' => 'Microcrystalline Glass Racking Bay A1',
             'type' => 'rack',
             'is_active' => true,
         ]);
 
-        $coldZone = WarehouseLocation::create([
+        WarehouseLocation::create([
             'uuid' => (string) Str::uuid(),
             'warehouse_id' => $rawWarehouse->id,
-            'code' => 'ZONE-COLD',
-            'name' => 'Temperature-Controlled Cold Storage (+4°C)',
+            'parent_id' => $compZone->id,
+            'code' => 'BIN-COIL',
+            'name' => 'Infrared Heating Elements & PCB Bin B1',
+            'type' => 'bin',
+            'is_active' => true,
+        ]);
+
+        $esdZone = WarehouseLocation::create([
+            'uuid' => (string) Str::uuid(),
+            'warehouse_id' => $rawWarehouse->id,
+            'code' => 'ZONE-ESD',
+            'name' => 'ESD-Protected Electronics Staging Zone',
             'type' => 'zone',
             'is_active' => true,
         ]);
@@ -71,9 +71,9 @@ final class WarehousesTableSeeder extends Seeder
         WarehouseLocation::create([
             'uuid' => (string) Str::uuid(),
             'warehouse_id' => $rawWarehouse->id,
-            'parent_id' => $coldZone->id,
-            'code' => 'COLD-BAY-1',
-            'name' => 'Dairy & Butter Chiller Bay 1',
+            'parent_id' => $esdZone->id,
+            'code' => 'ESD-BIN-1',
+            'name' => 'Smart Touch PCB & Sensor Rack E1',
             'type' => 'bin',
             'is_active' => true,
         ]);
@@ -82,7 +82,7 @@ final class WarehousesTableSeeder extends Seeder
         $fgWarehouse = Warehouse::create([
             'uuid' => (string) Str::uuid(),
             'code' => 'WH-FG-01',
-            'name' => 'Dhaka Main Finished Goods Distribution Depot',
+            'name' => 'Dhaka Main Finished Appliances Distribution Depot',
             'type' => 'finished_goods',
             'address' => 'Tejgaon Main Plant Logistics Bay, Dhaka',
             'is_default' => false,
@@ -94,7 +94,7 @@ final class WarehousesTableSeeder extends Seeder
             'uuid' => (string) Str::uuid(),
             'warehouse_id' => $fgWarehouse->id,
             'code' => 'DISPATCH-STAGING',
-            'name' => 'Van Loading & Dispatch Staging Area',
+            'name' => 'Truck Loading & Dispatch Staging Area',
             'type' => 'zone',
             'is_active' => true,
         ]);
@@ -102,8 +102,17 @@ final class WarehousesTableSeeder extends Seeder
         WarehouseLocation::create([
             'uuid' => (string) Str::uuid(),
             'warehouse_id' => $fgWarehouse->id,
-            'code' => 'FG-RACK-BREAD',
-            'name' => 'Bread Crate Rack B1-B8',
+            'code' => 'FG-RACK-COOKER',
+            'name' => 'Infrared Cooker Stock Rack C1-C8',
+            'type' => 'rack',
+            'is_active' => true,
+        ]);
+
+        WarehouseLocation::create([
+            'uuid' => (string) Str::uuid(),
+            'warehouse_id' => $fgWarehouse->id,
+            'code' => 'FG-RACK-STOVE',
+            'name' => 'Gas Stove Finished Stock Rack S1-S8',
             'type' => 'rack',
             'is_active' => true,
         ]);
@@ -112,9 +121,9 @@ final class WarehousesTableSeeder extends Seeder
         Warehouse::create([
             'uuid' => (string) Str::uuid(),
             'code' => 'WH-QC-HOLD',
-            'name' => 'QC Inspection & Quarantine Hold Depot',
+            'name' => 'QC Electrical Testing & Burn-In Hold Depot',
             'type' => 'quarantine',
-            'address' => 'Tejgaon Plant QC Quarantine Bay',
+            'address' => 'Tejgaon Plant QC Testing Bay',
             'is_default' => false,
             'allows_negative_stock' => false,
             'is_active' => true,

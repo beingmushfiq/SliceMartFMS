@@ -93,17 +93,17 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
         {
           id: 'b1',
           type: 'hero_banner',
-          title: 'Decades of Manufacturing Excellence',
-          subtitle: 'Pure ingredients, certified hygiene, and industrial-scale baking.',
+          title: 'Precision Engineering & Thermal Innovation',
+          subtitle: 'High-efficiency infrared cookers, induction surfaces, and precision gas stoves.',
           cta_text: 'Explore Catalog',
           cta_url: '/store',
         },
         {
           id: 'b2',
           type: 'rich_text',
-          title: 'Our Production Heritage',
+          title: 'Our Manufacturing Heritage',
           content:
-            'Founded with a mission to deliver wholesome bread and confectionery daily across the nation.',
+            'Engineered for maximum thermal transfer, energy savings, and durable microcrystalline ceramic glass technology.',
         },
       ];
     } else if (templateType === 'faq') {
@@ -116,12 +116,12 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
           title: 'Frequently Asked Questions',
           faqs: [
             {
-              q: 'When are daily bakery items dispatched?',
-              a: 'All items are baked fresh at 4:00 AM and dispatched for morning courier delivery.',
+              q: 'What cookware is compatible with SliceMart Infrared Cookers?',
+              a: 'All cookware materials work seamlessly on infrared cookers, including ceramic, stainless steel, cast iron, glass, and aluminum.',
             },
             {
-              q: 'What payment methods do you accept?',
-              a: 'We accept Cash on Delivery (COD) and all major mobile wallets.',
+              q: 'What warranty is provided with appliances?',
+              a: 'All SliceMart infrared cookers and gas stoves include a 1-year comprehensive replacement and service warranty.',
             },
           ],
         },
@@ -405,7 +405,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Premium Bread & Confectionery — Slice Mart"
+                    placeholder="e.g. Next-Gen Infrared Cookers & Stoves — SliceMart"
                     value={selectedPage.meta_title || ''}
                     onChange={(e) => setSelectedPage({ ...selectedPage, meta_title: e.target.value })}
                     className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
@@ -436,11 +436,11 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                   https://slicemart.com › pages › <span className="font-mono">{selectedPage.slug || 'untitled'}</span>
                 </div>
                 <div className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
-                  {selectedPage.meta_title || selectedPage.title || 'Page Title — Slice Mart FMS'}
+                  {selectedPage.meta_title || selectedPage.title || 'Page Title — SliceMart Appliances'}
                 </div>
                 <div className="text-xs text-muted line-clamp-2">
                   {selectedPage.meta_description ||
-                    'Discover industrial manufacturing quality, certified baking ingredients, and fresh wholesale confectionery delivered daily across Bangladesh.'}
+                    'Discover industrial-grade infrared cookers, touch-sensor double burner stoves, and energy-saving kitchen appliances engineered for modern homes.'}
                 </div>
               </div>
             </div>

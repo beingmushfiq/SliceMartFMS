@@ -473,7 +473,7 @@ export function ProductionBatchesSection() {
 
             <div>
               <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
-                BOM Recipe
+                BOM Specification
               </label>
               <select
                 value={createDraft.bom_id}

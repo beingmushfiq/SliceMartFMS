@@ -403,6 +403,17 @@ export const SettingsCenterWorkspace: React.FC = () => {
 
       if (res.data?.settings) {
         notify.success('Settings saved successfully');
+        try {
+          if (payload['brand_logo_url'] !== undefined) {
+            localStorage.setItem('brand_logo_url', String(payload['brand_logo_url'] || ''));
+          }
+          if (payload['brand_favicon_url'] !== undefined) {
+            localStorage.setItem('brand_favicon_url', String(payload['brand_favicon_url'] || ''));
+          }
+          if (payload['company_legal_name'] !== undefined) {
+            localStorage.setItem('company_name', String(payload['company_legal_name'] || ''));
+          }
+        } catch {}
         const updated = res.data.settings;
 
         const initial: Record<string, SettingFieldValue> = {};

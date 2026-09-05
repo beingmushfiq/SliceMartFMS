@@ -41,7 +41,7 @@ const SAMPLE_TERMINALS: PosTerminal[] = [
     id: 2,
     uuid: 'term-002',
     code: 'POS-GUL-02',
-    name: 'Gulshan Flagship - Counter 2 (Express Bakery)',
+    name: 'Gulshan Flagship - Counter 2 (Appliance Showroom)',
     branch_id: 1,
     branch_name: 'Gulshan Avenue Flagship Store',
     default_warehouse_id: 1,

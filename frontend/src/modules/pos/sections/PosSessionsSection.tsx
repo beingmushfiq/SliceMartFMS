@@ -467,7 +467,7 @@ export function PosSessionsSection({ onLaunchPOS }: PosSessionsSectionProps) {
                     className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-default"
                   >
                     <option value="Gulshan Flagship - Counter 1">Gulshan Counter 1 (Main Cashier)</option>
-                    <option value="Gulshan Flagship - Counter 2">Gulshan Counter 2 (Express Bakery)</option>
+                    <option value="Gulshan Flagship - Counter 2">Gulshan Counter 2 (Appliance Showroom)</option>
                     <option value="Chittagong GEC Counter 1">Chittagong GEC Counter 1</option>
                   </select>
                 </div>

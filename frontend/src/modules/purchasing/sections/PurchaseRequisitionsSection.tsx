@@ -37,41 +37,41 @@ const SAMPLE_REQUISITIONS: PurchaseRequisition[] = [
     uuid: 'pr-001',
     requisition_number: 'PR-202608-001',
     warehouse_id: 1,
-    warehouse_name: 'Central Raw Materials Silo',
+    warehouse_name: 'Central Components Warehouse',
     requisition_date: '2026-08-25',
     required_by_date: '2026-09-05',
     status: 'draft',
-    department: 'Bakery Production Line A',
-    requester_name: 'Karim Ahmed (Head Baker)',
-    notes: 'Urgent flour replenishment for upcoming weekend festival batch.',
+    department: 'Infrared Cooker Assembly Line 1',
+    requester_name: 'Karim Ahmed (Assembly Line Supervisor)',
+    notes: 'Urgent ceramic glass panels and heating coils replenishment for scheduled cooker run.',
     items: [
       {
         id: 101,
         uuid: 'pri-101',
         purchase_requisition_id: 1,
         product_id: 1,
-        product_name: 'Premium Wheat Flour (Grade A)',
-        product_sku: 'RM-FLOUR-01',
+        product_name: 'A-Grade Microcrystalline Ceramic Glass Panel (280x360mm)',
+        product_sku: 'RAW-CERAMIC-PANEL',
         quantity: '500.00',
         unit_id: 1,
-        unit_code: 'KG',
-        estimated_unit_cost: '65.00',
-        estimated_total_cost: '32500.00',
-        reason: 'Buffer inventory low',
+        unit_code: 'PCS',
+        estimated_unit_cost: '450.00',
+        estimated_total_cost: '225000.00',
+        reason: 'Buffer inventory low for cooker assembly',
       },
       {
         id: 102,
         uuid: 'pri-102',
         purchase_requisition_id: 1,
         product_id: 2,
-        product_name: 'Refined Cane Sugar (Fine Grain)',
-        product_sku: 'RM-SUGAR-01',
-        quantity: '200.00',
+        product_name: '2200W High-Efficiency Infrared Heating Coil',
+        product_sku: 'RAW-COIL-2200W',
+        quantity: '500.00',
         unit_id: 1,
-        unit_code: 'KG',
-        estimated_unit_cost: '130.00',
-        estimated_total_cost: '26000.00',
-        reason: 'Scheduled cake sponge batch',
+        unit_code: 'PCS',
+        estimated_unit_cost: '380.00',
+        estimated_total_cost: '190000.00',
+        reason: 'Scheduled single burner cooker batch',
       },
     ],
     created_at: '2026-08-25T09:30:00Z',
@@ -89,21 +89,21 @@ const SAMPLE_REQUISITIONS: PurchaseRequisition[] = [
     requester_name: 'Salma Begum (Inventory Supervisor)',
     approved_by: 1,
     approved_at: '2026-08-26T14:00:00Z',
-    notes: 'Eco-friendly kraft bread packaging bags run.',
+    notes: 'Shockproof EPE foam protective packaging run.',
     items: [
       {
         id: 103,
         uuid: 'pri-103',
         purchase_requisition_id: 2,
         product_id: 3,
-        product_name: 'Kraft Bread Bags 500g (Biodegradable)',
-        product_sku: 'PKG-BAG-KRAFT',
-        quantity: '5000.00',
+        product_name: 'Custom Molded Shockproof EPE Protection Foam (Set)',
+        product_sku: 'PKG-FOAM-IRC',
+        quantity: '1000.00',
         unit_id: 2,
-        unit_code: 'PCS',
-        estimated_unit_cost: '3.50',
-        estimated_total_cost: '17500.00',
-        reason: 'Restocking retail packs',
+        unit_code: 'SET',
+        estimated_unit_cost: '65.00',
+        estimated_total_cost: '65000.00',
+        reason: 'Restocking cooker packaging lines',
       },
     ],
     created_at: '2026-08-26T11:00:00Z',
@@ -113,8 +113,10 @@ const SAMPLE_REQUISITIONS: PurchaseRequisition[] = [
 export function PurchaseRequisitionsSection() {
   const { formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
+
+  // Filter State
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [actionLoading, setActionLoading] = useState<number | null>(null);
 
   // Modals
@@ -127,20 +129,20 @@ export function PurchaseRequisitionsSection() {
   // Form State
   const [formData, setFormData] = useState(() => ({
     requisition_number: '',
-    warehouse_name: 'Central Raw Materials Silo',
-    department: 'Bakery Production Line A',
+    warehouse_name: 'Central Components Warehouse',
+    department: 'Infrared Cooker Assembly Line 1',
     requester_name: 'Operations Manager',
     requisition_date: new Date().toISOString().slice(0, 10),
     required_by_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
     notes: '',
     items: [
       {
-        product_name: 'Premium Wheat Flour (Grade A)',
-        product_sku: 'RM-FLOUR-01',
+        product_name: 'A-Grade Microcrystalline Ceramic Glass Panel',
+        product_sku: 'RAW-CERAMIC-PANEL',
         quantity: '250',
-        unit_code: 'KG',
-        estimated_unit_cost: '65.00',
-        reason: 'Production stock replenish',
+        unit_code: 'PCS',
+        estimated_unit_cost: '450.00',
+        reason: 'Cooker assembly stock replenish',
       },
     ],
   }));
@@ -415,20 +417,20 @@ export function PurchaseRequisitionsSection() {
             onClick={() => {
               setFormData({
                 requisition_number: `PR-${new Date().toISOString().slice(0, 7).replace('-', '')}-${String(requisitions.length + 1).padStart(3, '0')}`,
-                warehouse_name: 'Central Raw Materials Silo',
-                department: 'Bakery Production Line A',
+                warehouse_name: 'Tejgaon Central Electronic Components & Parts Warehouse',
+                department: 'Cooker Assembly Line 1',
                 requester_name: 'Operations Manager',
                 requisition_date: new Date().toISOString().slice(0, 10),
                 required_by_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
                 notes: '',
                 items: [
                   {
-                    product_name: 'Premium Wheat Flour (Grade A)',
-                    product_sku: 'RM-FLOUR-01',
+                    product_name: 'Microcrystalline Ceramic Glass Panel',
+                    product_sku: 'RAW-CERAMIC-PANEL',
                     quantity: '250',
-                    unit_code: 'KG',
-                    estimated_unit_cost: '65.00',
-                    reason: 'Production stock replenish',
+                    unit_code: 'PCS',
+                    estimated_unit_cost: '450.00',
+                    reason: 'Assembly line stock replenish',
                   },
                 ],
               });

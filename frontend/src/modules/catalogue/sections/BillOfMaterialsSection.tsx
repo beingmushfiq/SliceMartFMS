@@ -118,7 +118,7 @@ export function BillOfMaterialsSection() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['catalogue', 'boms'] });
       setDeletingBOM(null);
-      notify.success('BOM recipe deleted successfully.');
+      notify.success('Bill of Materials deleted successfully.');
     },
     onError: (err) => {
       const msg = isApiError(err) ? err.message : 'Failed to delete BOM.';
@@ -146,12 +146,12 @@ export function BillOfMaterialsSection() {
   const units = unitsQuery.data?.data ?? [];
 
   const sampleComponents = [
-    { name: 'Specialty Bread Flour (Grade A)', qty: 0.65, unit: 'KG', baseCost: 75.0 },
-    { name: 'Active Dry Yeast', qty: 0.015, unit: 'KG', baseCost: 180.0 },
-    { name: 'Refined Sugar & Sea Salt', qty: 0.04, unit: 'KG', baseCost: 85.0 },
-    { name: 'Pasteurized Butter & Dairy Fat', qty: 0.05, unit: 'KG', baseCost: 450.0 },
-    { name: 'Food Grade Poly Packaging Film', qty: 1, unit: 'PC', baseCost: 4.5 },
-    { name: 'Direct Baking & Oven Utility Overhead', qty: 1, unit: 'Lot', baseCost: 15.0 },
+    { name: 'Microcrystalline Ceramic Glass Panel (280x360mm)', qty: 1.0, unit: 'PC', baseCost: 450.0 },
+    { name: '2200W Infrared Heating Coil', qty: 1.0, unit: 'PC', baseCost: 380.0 },
+    { name: 'Digital Touch Mainboard PCB', qty: 1.0, unit: 'PC', baseCost: 320.0 },
+    { name: 'Brushless DC Cooling Fan 12V', qty: 1.0, unit: 'PC', baseCost: 120.0 },
+    { name: 'Stainless Steel Chassis Bottom Case', qty: 1.0, unit: 'PC', baseCost: 260.0 },
+    { name: 'Infrared Cooker Shockproof EPE Foam Set', qty: 1.0, unit: 'SET', baseCost: 85.0 },
   ];
 
   return (
@@ -162,7 +162,7 @@ export function BillOfMaterialsSection() {
           <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
           <input
             type="text"
-            placeholder="Search BOM by recipe name or code..."
+            placeholder="Search BOM by structure name or code..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-xl border border-default bg-surface py-2 pl-9 pr-3 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none transition-colors shadow-2xs"
@@ -203,7 +203,7 @@ export function BillOfMaterialsSection() {
             <thead className="border-b border-default bg-surface-sunken/70 text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
                 <th className="py-3.5 pl-4 pr-3">BOM Code</th>
-                <th className="py-3.5 px-3">Recipe Name</th>
+                <th className="py-3.5 px-3">BOM / Structure Name</th>
                 <th className="py-3.5 px-3">Version</th>
                 <th className="py-3.5 px-3">Output Qty</th>
                 <th className="py-3.5 px-3">Default</th>
@@ -215,7 +215,7 @@ export function BillOfMaterialsSection() {
               {boms.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-10 text-center text-muted">
-                    No BOM recipes configured. Click "New Bill of Material" to create one.
+                    No Bills of Material configured. Click "New Bill of Material" to create one.
                   </td>
                 </tr>
               ) : (
@@ -258,7 +258,7 @@ export function BillOfMaterialsSection() {
                           type="button"
                           onClick={() => setViewingBOM(b)}
                           className="inline-flex items-center justify-center size-7 rounded-lg text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
-                          title="View BOM Recipe"
+                          title="View BOM Structure"
                         >
                           <Eye className="size-3.5" />
                         </button>
@@ -385,7 +385,7 @@ export function BillOfMaterialsSection() {
       <Modal
         open={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        title="Create Bill of Materials Recipe"
+        title="Create Bill of Materials"
       >
         <form
           onSubmit={(e) => {
@@ -431,11 +431,11 @@ export function BillOfMaterialsSection() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-default mb-1">Recipe / Structure Name *</label>
+            <label className="block text-xs font-semibold text-default mb-1">BOM / Assembly Structure Name *</label>
             <input
               required
               type="text"
-              placeholder="e.g. Standard White Bread Master Recipe"
+              placeholder="e.g. 2200W Infrared Cooker Assembly BOM"
               value={draft.name}
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
               className="w-full rounded-xl border border-default bg-surface px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
@@ -489,7 +489,7 @@ export function BillOfMaterialsSection() {
               className="size-4 rounded border-default text-primary focus:ring-primary/20"
             />
             <label htmlFor="create_is_default_bom" className="text-xs font-medium text-default">
-              Set as Primary Production Recipe for this Finished SKU
+              Set as Primary Production BOM for this Finished SKU
             </label>
           </div>
 
@@ -553,7 +553,7 @@ export function BillOfMaterialsSection() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-default mb-1">Recipe Name *</label>
+              <label className="block text-xs font-semibold text-default mb-1">BOM / Structure Name *</label>
               <input
                 required
                 type="text"
@@ -573,7 +573,7 @@ export function BillOfMaterialsSection() {
                   className="size-4 rounded border-default text-primary focus:ring-primary/20"
                 />
                 <label htmlFor="edit_is_default_bom" className="text-xs font-medium text-default">
-                  Default Recipe
+                  Default BOM
                 </label>
               </div>
               <div className="flex items-center gap-2">
@@ -585,7 +585,7 @@ export function BillOfMaterialsSection() {
                   className="size-4 rounded border-default text-primary focus:ring-primary/20"
                 />
                 <label htmlFor="edit_is_active_bom" className="text-xs font-medium text-default">
-                  Active Recipe
+                  Active BOM
                 </label>
               </div>
             </div>
@@ -607,7 +607,7 @@ export function BillOfMaterialsSection() {
         <Modal
           open={Boolean(viewingBOM)}
           onClose={() => setViewingBOM(null)}
-          title={`BOM Recipe Specifications: ${viewingBOM.name}`}
+          title={`BOM Specifications: ${viewingBOM.name}`}
         >
           <div className="space-y-4 text-xs">
             <div className="grid grid-cols-2 gap-3 p-4 rounded-xl bg-surface-sunken/60 border border-default">
@@ -624,7 +624,7 @@ export function BillOfMaterialsSection() {
                 <span className="font-mono text-default">{viewingBOM.output_quantity}</span>
               </div>
               <div>
-                <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">Recipe Status</span>
+                <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">BOM Status</span>
                 <span className="font-medium text-emerald-600 dark:text-emerald-400">
                   {viewingBOM.is_active ? 'Production Ready' : 'Draft / Inactive'}
                 </span>
@@ -649,12 +649,12 @@ export function BillOfMaterialsSection() {
         >
           <div className="space-y-4 text-xs">
             <p className="text-default">
-              Are you sure you want to delete recipe{' '}
+              Are you sure you want to delete BOM{' '}
               <strong className="text-primary font-mono">{deletingBOM.name}</strong> (
               {deletingBOM.code})?
             </p>
             <p className="text-muted text-[11px]">
-              This action cannot be undone if work orders are actively executing with this recipe.
+              This action cannot be undone if work orders are actively executing with this BOM.
             </p>
 
             <div className="flex justify-end gap-2.5 pt-4 border-t border-default">

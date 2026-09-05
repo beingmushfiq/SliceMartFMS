@@ -20,15 +20,15 @@ final class PricingTableSeeder extends Seeder
         $tenant = Tenant::findOrFail(1);
         TenantContext::bind($tenant->toArray());
 
-        $whiteBread = Product::where('sku', 'FG-WB-400G')->firstOrFail();
-        $sourdough = Product::where('sku', 'FG-SD-500G')->firstOrFail();
-        $briocheBuns = Product::where('sku', 'FG-BUN-6PK')->firstOrFail();
+        $cooker2200 = Product::where('sku', 'FG-IC-2200')->firstOrFail();
+        $cooker3500 = Product::where('sku', 'FG-IC-3500')->firstOrFail();
+        $stoveDouble = Product::where('sku', 'FG-GS-DOUBLE')->firstOrFail();
 
         // 1. Retail Standard Price List
         $retailList = PriceList::create([
             'uuid' => (string) Str::uuid(),
             'code' => 'PL-RETAIL-STD',
-            'name' => 'Standard Retail Counter Price List',
+            'name' => 'Standard Retail Showroom & Online Price List',
             'currency_code' => 'BDT',
             'applies_to' => 'all',
             'channel' => 'counter',
@@ -38,25 +38,25 @@ final class PricingTableSeeder extends Seeder
 
         PriceListItem::create([
             'price_list_id' => $retailList->id,
-            'product_id' => $whiteBread->id,
+            'product_id' => $cooker2200->id,
             'min_quantity' => '1.0000',
-            'unit_price' => '65.0000',
+            'unit_price' => '3450.0000',
             'discount_percentage' => '0.0000',
         ]);
 
         PriceListItem::create([
             'price_list_id' => $retailList->id,
-            'product_id' => $sourdough->id,
+            'product_id' => $cooker3500->id,
             'min_quantity' => '1.0000',
-            'unit_price' => '120.0000',
+            'unit_price' => '6200.0000',
             'discount_percentage' => '0.0000',
         ]);
 
         PriceListItem::create([
             'price_list_id' => $retailList->id,
-            'product_id' => $briocheBuns->id,
+            'product_id' => $stoveDouble->id,
             'min_quantity' => '1.0000',
-            'unit_price' => '85.0000',
+            'unit_price' => '4950.0000',
             'discount_percentage' => '0.0000',
         ]);
 
@@ -64,7 +64,7 @@ final class PricingTableSeeder extends Seeder
         $wholesaleList = PriceList::create([
             'uuid' => (string) Str::uuid(),
             'code' => 'PL-WHOLESALE-DLR',
-            'name' => 'Authorized Dealer Wholesale Price List',
+            'name' => 'Authorized Appliance Dealer Wholesale Price List',
             'currency_code' => 'BDT',
             'applies_to' => 'dealers',
             'channel' => 'dealer',
@@ -74,47 +74,47 @@ final class PricingTableSeeder extends Seeder
 
         PriceListItem::create([
             'price_list_id' => $wholesaleList->id,
-            'product_id' => $whiteBread->id,
-            'min_quantity' => '50.0000',
-            'unit_price' => '52.0000',
+            'product_id' => $cooker2200->id,
+            'min_quantity' => '10.0000',
+            'unit_price' => '2750.0000',
             'discount_percentage' => '0.0000',
         ]);
 
         PriceListItem::create([
             'price_list_id' => $wholesaleList->id,
-            'product_id' => $sourdough->id,
-            'min_quantity' => '20.0000',
-            'unit_price' => '95.0000',
+            'product_id' => $cooker3500->id,
+            'min_quantity' => '5.0000',
+            'unit_price' => '4950.0000',
             'discount_percentage' => '0.0000',
         ]);
 
         PriceListItem::create([
             'price_list_id' => $wholesaleList->id,
-            'product_id' => $briocheBuns->id,
-            'min_quantity' => '30.0000',
-            'unit_price' => '68.0000',
+            'product_id' => $stoveDouble->id,
+            'min_quantity' => '5.0000',
+            'unit_price' => '3950.0000',
             'discount_percentage' => '0.0000',
         ]);
 
         // 3. Discount Rules
         DiscountRule::create([
             'uuid' => (string) Str::uuid(),
-            'name' => 'High Volume Bread Order 5% Rebate',
+            'name' => 'Bulk Cooker Dealer 5% Tier Rebate',
             'scope' => 'order',
             'discount_type' => 'percentage',
             'value' => '5.0000',
-            'condition' => ['min_order_amount' => 10000],
+            'condition' => ['min_order_amount' => 50000],
             'priority' => 5,
             'is_active' => true,
         ]);
 
         DiscountRule::create([
             'uuid' => (string) Str::uuid(),
-            'name' => 'Corporate Customer Seasonal Flat Discount',
+            'name' => 'Appliance Store Opening Flat Incentive',
             'scope' => 'order',
             'discount_type' => 'fixed_amount',
-            'value' => '500.0000',
-            'condition' => ['min_order_amount' => 25000],
+            'value' => '2000.0000',
+            'condition' => ['min_order_amount' => 100000],
             'priority' => 10,
             'is_active' => true,
         ]);

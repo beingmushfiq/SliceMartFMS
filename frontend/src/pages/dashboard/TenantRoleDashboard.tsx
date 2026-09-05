@@ -19,6 +19,11 @@ import {
   Calendar,
   Sparkles,
   Users,
+  LayoutDashboard,
+  Warehouse,
+  Microscope,
+  ShoppingBag,
+  Factory,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -43,9 +48,17 @@ import {
 import { Button } from '../../components/ui/Button';
 import { toast } from 'sonner';
 import { promptPWAInstall, isPWAInstallable } from '../../registerSW';
+import { useAuthStore } from '../../lib/auth/authStore';
+import { useTenantBranding } from '../../lib/theme/useTenantBranding';
+import { cn } from '../../lib/utils';
+import { ExecutiveDashboardView } from './components/ExecutiveDashboardView';
+import { SalesDashboardView } from './components/SalesDashboardView';
+import { InventoryDashboardView } from './components/InventoryDashboardView';
+import { QcDashboardView } from './components/QcDashboardView';
 
 // ── Types & Datasets ──────────────────────────────────────────
 
+export type DashboardRoleView = 'executive' | 'production' | 'inventory' | 'qc' | 'sales';
 type TimeframeType = 'today' | '7days' | '30days' | 'custom';
 
 interface ProductionStat {
@@ -95,6 +108,70 @@ const TREND_30DAYS = [
 ];
 
 export const TenantRoleDashboard: React.FC = () => {
+  // ── Auth & Role Resolution ───────────────────────────────────
+  const user = useAuthStore((state) => state.user);
+  const hasPermission = useAuthStore((state) => state.hasPermission);
+  const { companyName, logoUrl } = useTenantBranding();
+
+  const roleName = user?.role || (user?.is_platform_admin ? 'Super Administrator' : '');
+
+  const canAccessExecutive = Boolean(
+    user?.is_platform_admin ||
+    hasPermission('*') ||
+    (hasPermission('core.setting.view') && hasPermission('sales.order.view') && hasPermission('production.batch.view'))
+  );
+  const canAccessProduction = hasPermission(['production.batch.view', 'production.plan.view', 'production.worker_entry.view']);
+  const canAccessInventory = hasPermission(['inventory.stock.view', 'inventory.warehouse.view', 'inventory.movement.view']);
+  const canAccessQC = hasPermission(['qc.inspection.view', 'qc.parameter.view', 'qc.wastage.view']);
+  const canAccessSales = hasPermission(['sales.order.view', 'pos.terminal.view', 'pos.sale.create', 'sales.invoice.view']);
+
+  const initialView: DashboardRoleView = useMemo(() => {
+    const slug = roleName.toLowerCase();
+    if (slug.includes('sales') || slug.includes('commercial') || slug.includes('pos')) return 'sales';
+    if (slug.includes('store') || slug.includes('warehouse') || slug.includes('inventory')) return 'inventory';
+    if (slug.includes('qc') || slug.includes('quality')) return 'qc';
+    if (slug.includes('production') || slug.includes('factory')) return 'production';
+    if (canAccessExecutive) return 'executive';
+    if (canAccessProduction) return 'production';
+    if (canAccessQC) return 'qc';
+    if (canAccessInventory) return 'inventory';
+    if (canAccessSales) return 'sales';
+    return 'executive';
+  }, [roleName, canAccessExecutive, canAccessProduction, canAccessQC, canAccessInventory, canAccessSales]);
+
+  const availableViews = useMemo(() => {
+    const views: Array<{ id: DashboardRoleView; label: string; icon: React.ComponentType<{ className?: string }> }> = [];
+    if (canAccessExecutive) {
+      views.push({ id: 'executive', label: 'Executive Overview', icon: LayoutDashboard });
+    }
+    if (canAccessProduction) {
+      views.push({ id: 'production', label: 'Factory Production', icon: Factory });
+    }
+    if (canAccessInventory) {
+      views.push({ id: 'inventory', label: 'Stock & Warehouse', icon: Warehouse });
+    }
+    if (canAccessQC) {
+      views.push({ id: 'qc', label: 'Quality Control', icon: Microscope });
+    }
+    if (canAccessSales) {
+      views.push({ id: 'sales', label: 'Sales & POS', icon: ShoppingBag });
+    }
+    return views;
+  }, [canAccessExecutive, canAccessProduction, canAccessInventory, canAccessQC, canAccessSales]);
+
+  const [userSelectedView, setUserSelectedView] = useState<DashboardRoleView | null>(null);
+
+  const activeView: DashboardRoleView = useMemo(() => {
+    if (userSelectedView && availableViews.some((v) => v.id === userSelectedView)) {
+      return userSelectedView;
+    }
+    return initialView;
+  }, [userSelectedView, availableViews, initialView]);
+
+  const setActiveView = (view: DashboardRoleView) => {
+    setUserSelectedView(view);
+  };
+
   // ── State variables ──────────────────────────────────────────
   const [isAlertBannerVisible, setIsAlertBannerVisible] = useState(true);
   const [isAlertBannerExpanded, setIsAlertBannerExpanded] = useState(true);
@@ -106,7 +183,7 @@ export const TenantRoleDashboard: React.FC = () => {
 
   // Helper to check whether PWA prompt is allowed to show
   const isPwaEligible = (): boolean => {
-    if (typeof window === 'undefined') return false;
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined' || typeof localStorage.getItem !== 'function') return false;
     const isInstalled =
       localStorage.getItem('slicemart_pwa_installed') === 'true' ||
       localStorage.getItem('pwa_installed') === 'true';
@@ -126,15 +203,6 @@ export const TenantRoleDashboard: React.FC = () => {
   });
 
   React.useEffect(() => {
-    if (!isPwaEligible()) {
-      setShowPwaPrompt(false);
-      return;
-    }
-
-    if (isPWAInstallable()) {
-      setShowPwaPrompt(true);
-    }
-
     const handleInstallAvailable = () => {
       if (isPwaEligible()) {
         setShowPwaPrompt(true);
@@ -170,7 +238,7 @@ export const TenantRoleDashboard: React.FC = () => {
     try {
       const accepted = await promptPWAInstall();
       if (accepted) {
-        toast.success('SliceMart FMS Installed', {
+        toast.success(`${companyName || 'SliceMart ERP'} Installed`, {
           description: 'Application successfully added to your home screen.',
         });
       }
@@ -283,7 +351,7 @@ export const TenantRoleDashboard: React.FC = () => {
   ];
 
   // Invoices list
-  const invoices = [
+  const invoices = useMemo(() => [
     {
       id: 'INV-0715',
       customer: 'Rahman Electronics & Hardware',
@@ -308,7 +376,7 @@ export const TenantRoleDashboard: React.FC = () => {
       status: 'CONFIRMED',
       payment: 'UNPAID',
     },
-  ];
+  ], []);
 
   const filteredInvoices = useMemo(() => {
     if (salesFilter === 'all') return invoices;
@@ -316,7 +384,7 @@ export const TenantRoleDashboard: React.FC = () => {
   }, [salesFilter, invoices]);
 
   // Production orders
-  const productionOrders = [
+  const productionOrders = useMemo(() => [
     {
       id: 'PO-00125',
       product: 'Infrared Cooker IR-101',
@@ -353,7 +421,7 @@ export const TenantRoleDashboard: React.FC = () => {
       progress: 100,
       status: 'COMPLETED',
     },
-  ];
+  ], []);
 
   const filteredOrders = useMemo(() => {
     if (orderFilter === 'all') return productionOrders;
@@ -420,9 +488,82 @@ export const TenantRoleDashboard: React.FC = () => {
   return (
     <div className="space-y-5 pb-16 max-w-[1600px] mx-auto transition-token-colors">
       {/* ─────────────────────────────────────────────────────────────
-          1. OPERATIONAL ATTENTION REQUIRED BANNER
+          0. DYNAMIC ROLE PERSPECTIVE SELECTOR
       ───────────────────────────────────────────────────────────── */}
-      {isAlertBannerVisible && (
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface border border-default p-2.5 rounded-2xl shadow-2xs">
+        <div className="flex items-center gap-2.5 min-w-0 pl-1">
+          <div className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
+            <LayoutDashboard className="size-4" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-xs font-bold text-default truncate">
+              {user?.role ?? (user?.is_platform_admin ? 'Super Administrator' : 'Operations Member')}
+            </span>
+          </div>
+        </div>
+
+        {availableViews.length > 1 && (
+          <div className="flex items-center gap-1 overflow-x-auto rounded-xl border border-default bg-surface-sunken p-1 scrollbar-none shrink-0">
+            {availableViews.map((v) => {
+              const Icon = v.icon;
+              const isActive = activeView === v.id;
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => setActiveView(v.id)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap",
+                    isActive
+                      ? "bg-surface text-default shadow-xs border border-default"
+                      : "text-muted hover:text-default hover:bg-surface/50"
+                  )}
+                >
+                  <Icon className={cn("size-3.5", isActive ? "text-primary" : "text-muted")} />
+                  <span>{v.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────
+          DYNAMIC ROLE VIEWS
+      ───────────────────────────────────────────────────────────── */}
+      {activeView === 'executive' && (
+        <ExecutiveDashboardView
+          onOpenInvoice={setSelectedInvoice}
+        />
+      )}
+
+      {activeView === 'sales' && (
+        <SalesDashboardView
+          onOpenInvoice={setSelectedInvoice}
+        />
+      )}
+
+      {activeView === 'inventory' && (
+        <InventoryDashboardView
+          attentionItems={attentionItems}
+          onOpenOrderPO={setOrderPoItem}
+          onOpenReviewStock={setReviewStockItem}
+        />
+      )}
+
+      {activeView === 'qc' && (
+        <QcDashboardView
+          qcList={qcList}
+          onOpenQC={setSelectedQCItem}
+        />
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          FACTORY PRODUCTION VIEW
+      ───────────────────────────────────────────────────────────── */}
+      {activeView === 'production' && (
+        <div className="space-y-5 animate-in fade-in duration-200">
+          {isAlertBannerVisible && (
         <div className="rounded-2xl border border-amber-500/30 bg-surface shadow-xs overflow-hidden transition-all duration-300">
           <div className="h-1 bg-linear-to-r from-red-500 via-amber-500 to-orange-400" />
           
@@ -1156,10 +1297,11 @@ export const TenantRoleDashboard: React.FC = () => {
           {/* Worker Leaderboard */}
           <div className="space-y-4">
             {workers.map((w) => (
-              <div
+              <button
+                type="button"
                 key={w.name}
                 onClick={() => setSelectedWorker(w)}
-                className="group rounded-xl border border-transparent hover:border-default hover:bg-surface-sunken/40 p-2.5 -mx-2.5 transition-all cursor-pointer space-y-1.5"
+                className="w-full text-left group rounded-xl border border-transparent hover:border-default hover:bg-surface-sunken/40 p-2.5 -mx-2.5 transition-all cursor-pointer space-y-1.5"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
@@ -1185,7 +1327,7 @@ export const TenantRoleDashboard: React.FC = () => {
                     style={{ width: `${w.rate}%` }}
                   />
                 </div>
-              </div>
+              </button>
             ))}
           </div>
 
@@ -1325,10 +1467,11 @@ export const TenantRoleDashboard: React.FC = () => {
 
           <div className="space-y-3">
             {qcList.map((qc) => (
-              <div
+              <button
+                type="button"
                 key={qc.id}
                 onClick={() => setSelectedQCItem(qc)}
-                className="group rounded-xl border border-default bg-surface-sunken/30 hover:border-primary/40 hover:bg-surface-sunken p-3 transition-all cursor-pointer space-y-1.5"
+                className="w-full text-left group rounded-xl border border-default bg-surface-sunken/30 hover:border-primary/40 hover:bg-surface-sunken p-3 transition-all cursor-pointer space-y-1.5"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -1360,7 +1503,7 @@ export const TenantRoleDashboard: React.FC = () => {
                     <span className="text-amber-500">{qc.rework} rework</span>
                   </div>
                 )}
-              </div>
+              </button>
             ))}
           </div>
 
@@ -1500,6 +1643,8 @@ export const TenantRoleDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+    </div>
+  )}
 
       {/* ─────────────────────────────────────────────────────────────
           7. FLOATING PWA INSTALL PROMPT (CONDITIONAL & THEMED)
@@ -1511,12 +1656,20 @@ export const TenantRoleDashboard: React.FC = () => {
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
-                <Sparkles className="size-4" />
+              <div className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 overflow-hidden shrink-0">
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt={companyName || 'SliceMart ERP'}
+                    className="size-5 object-contain"
+                  />
+                ) : (
+                  <Sparkles className="size-4" />
+                )}
               </div>
-              <div>
-                <h4 className="font-bold text-xs text-default">Install SliceMart FMS</h4>
-                <span className="text-[10px] text-muted">Factory Operations PWA</span>
+              <div className="min-w-0">
+                <h4 className="font-bold text-xs text-default truncate">Install {companyName || 'SliceMart ERP'}</h4>
+                <span className="text-[10px] text-muted">Business Operations Platform PWA</span>
               </div>
             </div>
             <button
@@ -1529,7 +1682,7 @@ export const TenantRoleDashboard: React.FC = () => {
             </button>
           </div>
           <p className="mt-2 text-xs text-muted leading-relaxed">
-            Add to your home screen for quick offline access, full-screen view & faster factory operations.
+            Add to your home screen for quick offline access, full-screen view & faster business operations.
           </p>
           <div className="mt-3.5 flex items-center gap-2">
             <Button
@@ -1571,7 +1724,7 @@ export const TenantRoleDashboard: React.FC = () => {
         isOpen={Boolean(selectedQCItem)}
         onClose={() => setSelectedQCItem(null)}
         qcItem={selectedQCItem}
-        onInspectDone={(_decision) => {
+        onInspectDone={() => {
           // Closed and processed
         }}
       />

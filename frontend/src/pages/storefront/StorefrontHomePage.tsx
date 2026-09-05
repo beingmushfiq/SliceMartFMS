@@ -182,9 +182,9 @@ export const StorefrontHomePage: React.FC = () => {
           <div className="size-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4 group-hover:scale-110 transition-transform">
             <Flame className="size-5" />
           </div>
-          <h3 className="text-sm font-bold text-white mb-1">Direct from Oven</h3>
+          <h3 className="text-sm font-bold text-white mb-1">Factory Direct</h3>
           <p className="text-xs text-zinc-400 leading-relaxed">
-            Zero warehouse shelf aging. Goods packaged right off the baking line.
+            Built directly in our ISO-compliant assembly plant with zero middleman markups.
           </p>
         </div>
 
@@ -382,35 +382,35 @@ export const StorefrontHomePage: React.FC = () => {
             The {config?.name ?? 'SliceMart'} Quality Journey
           </h2>
           <p className="text-xs text-zinc-400 mt-1.5">
-            How we ensure every batch meets stringent commercial food and product standards.
+            How we ensure every infrared cooker and stove meets stringent electrical safety and thermal efficiency standards.
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="p-4 rounded-xl border border-zinc-800/80 bg-zinc-900/50">
             <span className="font-mono text-xs font-bold text-emerald-400">01 / SOURCING</span>
-            <h4 className="font-bold text-white text-xs mt-1">Raw Ingredients</h4>
-            <p className="text-[11px] text-zinc-400 mt-1">Premium flour, dairy, and natural yeast inspected at gate.</p>
+            <h4 className="font-bold text-white text-xs mt-1">Components & Glass</h4>
+            <p className="text-[11px] text-zinc-400 mt-1">A-grade ceramic panels, pure copper coils, and flame-retardant chassis.</p>
           </div>
           <div className="p-4 rounded-xl border border-zinc-800/80 bg-zinc-900/50">
-            <span className="font-mono text-xs font-bold text-emerald-400">02 / RECIPE</span>
-            <h4 className="font-bold text-white text-xs mt-1">Automated BOM Mix</h4>
-            <p className="text-[11px] text-zinc-400 mt-1">Precision computer-controlled dough formulation.</p>
+            <span className="font-mono text-xs font-bold text-emerald-400">02 / ASSEMBLY</span>
+            <h4 className="font-bold text-white text-xs mt-1">Precision Assembly</h4>
+            <p className="text-[11px] text-zinc-400 mt-1">ESD-safe line with computerized torque drivers and automated PCB fitting.</p>
           </div>
           <div className="p-4 rounded-xl border border-zinc-800/80 bg-zinc-900/50">
-            <span className="font-mono text-xs font-bold text-emerald-400">03 / BAKING</span>
-            <h4 className="font-bold text-white text-xs mt-1">Industrial Ovens</h4>
-            <p className="text-[11px] text-zinc-400 mt-1">Temperature-monitored continuous conveyor baking.</p>
+            <span className="font-mono text-xs font-bold text-emerald-400">03 / TESTING</span>
+            <h4 className="font-bold text-white text-xs mt-1">Hi-Pot & Burn-In</h4>
+            <p className="text-[11px] text-zinc-400 mt-1">3750V dielectric insulation and 4-hour continuous thermal load testing.</p>
           </div>
           <div className="p-4 rounded-xl border border-zinc-800/80 bg-zinc-900/50">
             <span className="font-mono text-xs font-bold text-emerald-400">04 / QC CHECK</span>
-            <h4 className="font-bold text-white text-xs mt-1">Microbiological QA</h4>
-            <p className="text-[11px] text-zinc-400 mt-1">Multi-point defect and weight tolerance verification.</p>
+            <h4 className="font-bold text-white text-xs mt-1">Sensor & Safety QA</h4>
+            <p className="text-[11px] text-zinc-400 mt-1">Overheat sensor calibration, touch panel responsiveness, and leak tests.</p>
           </div>
           <div className="p-4 rounded-xl border border-zinc-800/80 bg-zinc-900/50">
             <span className="font-mono text-xs font-bold text-emerald-400">05 / DISPATCH</span>
-            <h4 className="font-bold text-white text-xs mt-1">Same-Day Direct</h4>
-            <p className="text-[11px] text-zinc-400 mt-1">Packaged sterilely and handed directly to delivery fleet.</p>
+            <h4 className="font-bold text-white text-xs mt-1">Drop-Tested Packaging</h4>
+            <p className="text-[11px] text-zinc-400 mt-1">Custom molded EPE foam buffer and reinforced carton dispatch.</p>
           </div>
         </div>
       </section>
@@ -514,7 +514,7 @@ export const StorefrontHomePage: React.FC = () => {
             Join the {config?.name ?? 'SliceMart'} VIP Club
           </h2>
           <p className="text-xs text-zinc-300">
-            Get instant alerts when daily fresh batches come out of the oven, plus exclusive 10% discount codes.
+            Get instant alerts when new cooker models and stove editions launch, plus exclusive warranty perks.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
@@ -525,7 +525,7 @@ export const StorefrontHomePage: React.FC = () => {
             />
             <button
               type="button"
-              onClick={() => alert('Thank you for subscribing to our VIP Fresh Batch updates!')}
+              onClick={() => alert('Thank you for subscribing to SliceMart Appliance updates!')}
               className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs transition-all shadow-md cursor-pointer"
             >
               Subscribe

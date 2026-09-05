@@ -1,7 +1,7 @@
 {
-  "name": "Slice Mart FMS",
-  "short_name": "Slice Mart FMS",
-  "description": "Production, Inventory, 2-Warehouse, QC, Workforce & Business Operations Management System for Slice Mart Bangladesh",
+  "name": "SliceMart ERP",
+  "short_name": "SliceMart ERP",
+  "description": "Production, Inventory, Multi-Warehouse, QC, Sales & Business Operations Management Platform for SliceMart Bangladesh",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0F172A",
@@ -26,7 +26,7 @@
     {
       "name": "Dashboard",
       "url": "/",
-      "description": "Factory Command Center"
+      "description": "Business Command Center"
     },
     {
       "name": "Production Orders",

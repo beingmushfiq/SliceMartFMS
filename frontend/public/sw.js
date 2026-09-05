@@ -1,8 +1,8 @@
 // ─────────────────────────────────────────────────────────────
-// SLICE MART FMS — SERVICE WORKER (PWA Offline & Cache Engine)
+// SLICEMART ERP — SERVICE WORKER (PWA Offline & Cache Engine)
 // ─────────────────────────────────────────────────────────────
 
-const CACHE_NAME = 'slicemart-fms-v1.2';
+const CACHE_NAME = 'slicemart-erp-v1.3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

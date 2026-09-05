@@ -38,6 +38,7 @@ import {
 import { useAuthStore } from '../../lib/auth/authStore';
 import { cn } from '../../lib/utils';
 import type { NotificationItem } from '../../types/api/notifications';
+import { toggleThemeWithTransition } from '../../lib/theme/themeTransition';
 import { api } from '../../lib/api/client';
 
 interface AppHeaderProps {
@@ -487,17 +488,10 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
 
   const unreadCount = notifications.filter((n) => !n.read_at).length;
 
-  const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    setTheme(next);
-    localStorage.setItem('ui.theme', next);
-    localStorage.setItem('theme', next);
-    document.documentElement.setAttribute('data-theme', next);
-    if (next === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+  const toggleTheme = (e?: React.MouseEvent) => {
+    toggleThemeWithTransition(theme, e, (next) => {
+      setTheme(next);
+    });
   };
 
   const markAllAsRead = () => {
@@ -961,9 +955,9 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
               {user?.name ? user.name.split(' ').map((n) => n[0]).slice(0, 2).join('') : 'MR'}
             </div>
             <div className="hidden text-left sm:block">
-              <div className="text-xs font-semibold text-default leading-tight">{user?.name ?? 'Mushfiqur Rahman'}</div>
+              <div className="text-xs font-semibold text-default leading-tight">{user?.name ?? 'System User'}</div>
               <div className="text-[10px] text-muted truncate max-w-30">
-                {(user as Record<string, unknown> | null)?.role as string ?? 'Factory Manager'}
+                {user?.role ?? (user?.is_platform_admin ? 'Platform Administrator' : 'Operations Member')}
               </div>
             </div>
             <ChevronDown className="hidden size-3 text-muted sm:block" />

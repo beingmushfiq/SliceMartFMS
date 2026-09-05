@@ -261,7 +261,7 @@ export const StorefrontAccountPage: React.FC = () => {
               </div>
               <h3 className="text-sm font-bold text-white">No Orders Placed Yet</h3>
               <p className="text-xs text-zinc-400 max-w-sm mx-auto">
-                Explore our freshest baked batches and treats straight from the factory ovens.
+                Explore our newest energy-efficient infrared cookers and precision gas stoves straight from the factory assembly line.
               </p>
               <Link
                 to={`/store/${subdomain}`}

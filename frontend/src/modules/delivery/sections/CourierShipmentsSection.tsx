@@ -424,7 +424,7 @@ export const CourierShipmentsSection: React.FC<CourierShipmentsSectionProps> = (
                   value={bookNotes}
                   onChange={(e) => setBookNotes(e.target.value)}
                   rows={3}
-                  placeholder="e.g. Fragile bakery items, handle with care."
+                  placeholder="e.g. Fragile ceramic glass appliances, handle with care."
                   style={{
                     width: '100%',
                     padding: '8px 12px',

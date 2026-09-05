@@ -19,12 +19,12 @@ final class PartiesTableSeeder extends Seeder
         $tenant = Tenant::findOrFail(1);
         TenantContext::bind($tenant->toArray());
 
-        // 1. Raw Material & Packaging Suppliers
-        $bengalFlour = Party::create([
+        // 1. Raw Material & Component Suppliers
+        $bengalGlass = Party::create([
             'uuid' => (string) Str::uuid(),
-            'code' => 'SUPP-BENGAL-FLOUR',
-            'name' => 'Bengal Flour Mills Ltd.',
-            'legal_name' => 'Bengal Industrial Flour & Grain Products Ltd.',
+            'code' => 'SUPP-BENGAL-GLASS',
+            'name' => 'Bengal Glass & Ceramic Industries Ltd.',
+            'legal_name' => 'Bengal Industrial Glass & Ceramic Products Ltd.',
             'is_supplier' => true,
             'is_customer' => false,
             'is_dealer' => false,
@@ -32,8 +32,8 @@ final class PartiesTableSeeder extends Seeder
             'type' => 'business',
             'tax_identifier' => 'BIN-1122334455',
             'phone' => '+88028811223',
-            'email' => 'sales@bengalflour.com.bd',
-            'credit_limit' => '500000.0000',
+            'email' => 'sales@bengalglass.com.bd',
+            'credit_limit' => '800000.0000',
             'credit_days' => 30,
             'opening_balance' => '0.0000',
             'current_balance' => '0.0000',
@@ -42,7 +42,7 @@ final class PartiesTableSeeder extends Seeder
 
         PartyAddress::create([
             'uuid' => (string) Str::uuid(),
-            'party_id' => $bengalFlour->id,
+            'party_id' => $bengalGlass->id,
             'type' => 'billing',
             'line1' => 'Plot 12, Postogola Industrial Area',
             'city' => 'Dhaka',
@@ -53,19 +53,19 @@ final class PartiesTableSeeder extends Seeder
 
         PartyContact::create([
             'uuid' => (string) Str::uuid(),
-            'party_id' => $bengalFlour->id,
+            'party_id' => $bengalGlass->id,
             'name' => 'Nazmul Huda',
             'designation' => 'Senior Corporate Sales Manager',
             'phone' => '+8801711223344',
-            'email' => 'nazmul@bengalflour.com.bd',
+            'email' => 'nazmul@bengalglass.com.bd',
             'is_primary' => true,
         ]);
 
-        $pureDairy = Party::create([
+        $deltaElectronics = Party::create([
             'uuid' => (string) Str::uuid(),
-            'code' => 'SUPP-PURE-DAIRY',
-            'name' => 'Pure Pasture Dairy Ltd.',
-            'legal_name' => 'Pure Pasture Dairy Agro Farms Ltd.',
+            'code' => 'SUPP-DELTA-ELEC',
+            'name' => 'Delta Micro Electronics Ltd.',
+            'legal_name' => 'Delta Electronics & Hardware Components Ltd.',
             'is_supplier' => true,
             'is_customer' => false,
             'is_dealer' => false,
@@ -73,9 +73,9 @@ final class PartiesTableSeeder extends Seeder
             'type' => 'business',
             'tax_identifier' => 'BIN-5566778899',
             'phone' => '+88029988776',
-            'email' => 'orders@puredairy.com.bd',
-            'credit_limit' => '250000.0000',
-            'credit_days' => 15,
+            'email' => 'orders@deltaelec.com.bd',
+            'credit_limit' => '600000.0000',
+            'credit_days' => 20,
             'opening_balance' => '0.0000',
             'current_balance' => '0.0000',
             'status' => 'active',
@@ -83,11 +83,11 @@ final class PartiesTableSeeder extends Seeder
 
         PartyAddress::create([
             'uuid' => (string) Str::uuid(),
-            'party_id' => $pureDairy->id,
+            'party_id' => $deltaElectronics->id,
             'type' => 'shipping',
-            'line1' => 'Sreemangal Road, Dairy Industrial Zone',
-            'city' => 'Moulvibazar',
-            'district' => 'Sylhet',
+            'line1' => 'Plot 4, Mirpur Industrial Sector',
+            'city' => 'Dhaka',
+            'district' => 'Dhaka',
             'country_code' => 'BGD',
             'is_default' => true,
         ]);
@@ -96,6 +96,7 @@ final class PartiesTableSeeder extends Seeder
             'uuid' => (string) Str::uuid(),
             'code' => 'SUPP-PACKMASTER',
             'name' => 'PackMaster Packaging Industries Ltd.',
+            'legal_name' => 'PackMaster Protective Enclosures Ltd.',
             'is_supplier' => true,
             'is_customer' => false,
             'is_dealer' => false,
@@ -104,18 +105,18 @@ final class PartiesTableSeeder extends Seeder
             'tax_identifier' => 'BIN-4433221100',
             'phone' => '+88027766554',
             'email' => 'sales@packmaster.com.bd',
-            'credit_limit' => '150000.0000',
+            'credit_limit' => '300000.0000',
             'credit_days' => 20,
             'opening_balance' => '0.0000',
             'current_balance' => '0.0000',
             'status' => 'active',
         ]);
 
-        // 2. Retail Supermarkets & Institutional Customers
+        // 2. Retail Supermarkets & Appliance Dealers
         $shwapno = Party::create([
             'uuid' => (string) Str::uuid(),
             'code' => 'CUST-SHWAPNO',
-            'name' => 'Shwapno Superstores (ACI Logistics)',
+            'name' => 'Shwapno Superstores (Electronics Division)',
             'legal_name' => 'ACI Logistics Limited',
             'is_supplier' => false,
             'is_customer' => true,
@@ -125,7 +126,7 @@ final class PartiesTableSeeder extends Seeder
             'tax_identifier' => 'BIN-3344556677',
             'phone' => '+88028877665',
             'email' => 'procurement@shwapno.com',
-            'credit_limit' => '1000000.0000',
+            'credit_limit' => '1500000.0000',
             'credit_days' => 45,
             'opening_balance' => '0.0000',
             'current_balance' => '0.0000',
@@ -147,7 +148,7 @@ final class PartiesTableSeeder extends Seeder
             'uuid' => (string) Str::uuid(),
             'party_id' => $shwapno->id,
             'name' => 'Tariqul Islam',
-            'designation' => 'Category Manager (Bakery & Fresh Foods)',
+            'designation' => 'Category Manager (Kitchen Appliances)',
             'phone' => '+8801811223344',
             'email' => 'tariqul@shwapno.com',
             'is_primary' => true,
@@ -165,28 +166,27 @@ final class PartiesTableSeeder extends Seeder
             'type' => 'business',
             'tax_identifier' => 'BIN-6677889900',
             'phone' => '+88029876500',
-            'email' => 'bakery@unimart.com.bd',
-            'credit_limit' => '500000.0000',
+            'email' => 'appliances@unimart.com.bd',
+            'credit_limit' => '800000.0000',
             'credit_days' => 30,
             'opening_balance' => '0.0000',
             'current_balance' => '0.0000',
             'status' => 'active',
         ]);
 
-        // 3. Walk-in / Counter Retail Customer Sentinel
+        // 3. Walk-in / Showroom Retail Customer Sentinel
         Party::create([
             'uuid' => (string) Str::uuid(),
             'code' => 'CUST-WALKIN-GEN',
-            'name' => 'General Walk-In Retail Customer',
+            'name' => 'General Walk-In Showroom Customer',
+            'legal_name' => 'Cash Sale Walk-In Customer',
             'is_supplier' => false,
             'is_customer' => true,
             'is_dealer' => false,
             'is_agent' => false,
             'type' => 'individual',
-            'credit_limit' => '0.0000',
-            'credit_days' => 0,
-            'opening_balance' => '0.0000',
-            'current_balance' => '0.0000',
+            'phone' => '+8801000000000',
+            'email' => 'walkin@slicemart.com',
             'status' => 'active',
         ]);
 

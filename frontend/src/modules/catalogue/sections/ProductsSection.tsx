@@ -433,14 +433,14 @@ export function ProductsSection() {
               } else {
                 setSelectedLabelProduct({
                   id: 'sample',
-                  sku: 'FG-BRD-001',
-                  name: 'Artisan Sourdough Bread (500g)',
+                  sku: 'FG-IC-2200',
+                  name: 'Infrared Cooker 2200W (SM-IC220)',
                   type: 'finished',
                   base_unit_id: '1',
                   category_id: null,
                   brand_id: null,
-                  standard_cost: '45.00',
-                  default_sale_price: '85.00',
+                  standard_cost: '2100.00',
+                  default_sale_price: '3200.00',
                   is_stock_tracked: true,
                   is_online: true,
                   status: 'active',
@@ -773,7 +773,7 @@ export function ProductsSection() {
                 <input
                   required
                   type="text"
-                  placeholder="e.g. Artisan Sourdough Bread (500g)"
+                  placeholder="e.g. Infrared Cooker 2200W (SM-IC220)"
                   value={draft.name}
                   onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                   className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
@@ -2191,7 +2191,7 @@ export function ProductsSection() {
             <input
               required
               type="text"
-              placeholder="e.g. Artisan Breads, Dairy & Butter, Sweet Pastry"
+              placeholder="e.g. Infrared Cookers, Gas Stoves, Electronic Components"
               value={quickCategoryDraft.name}
               onChange={(e) => setQuickCategoryDraft({ ...quickCategoryDraft, name: e.target.value })}
               className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"

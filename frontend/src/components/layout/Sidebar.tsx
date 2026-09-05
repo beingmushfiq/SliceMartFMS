@@ -15,12 +15,23 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const user = useAuthStore((state) => state.user);
   const hasPermission = useAuthStore((state) => state.hasPermission);
   const tenant = useAuthStore((state) => state.tenant);
   const isModuleEnabled = useTenantCapabilityStore((state) => state.isModuleEnabled);
   const getTerm = useTenantCapabilityStore((state) => state.getTerm);
   const [searchQuery, setSearchQuery] = useState('');
   const location = useLocation();
+
+  const workspaceSubtitle = useMemo(() => {
+    if (!user?.role) return 'Operations Workspace';
+    if (user.role.includes('Super Administrator') || user.is_platform_admin) return 'Executive Command';
+    if (user.role.includes('Production')) return 'Production Workspace';
+    if (user.role.includes('QC') || user.role.includes('Quality')) return 'Quality & Assurance';
+    if (user.role.includes('Store') || user.role.includes('Warehouse')) return 'Warehouse & Logistics';
+    if (user.role.includes('Sales') || user.role.includes('Commercial')) return 'Commercial & Retail';
+    return `${user.role} Workspace`;
+  }, [user]);
 
   const isItemActive = (to: string, isActive: boolean) => {
     if (isActive) return true;
@@ -98,7 +109,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="text-[10px] font-medium text-muted truncate flex items-center gap-1">
                   <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
-                  Production Workspace
+                  {workspaceSubtitle}
                 </span>
               </div>
             </div>

@@ -54,7 +54,7 @@ final class RolesAndPermissionsSeeder extends Seeder
             [
                 'uuid' => (string) Str::uuid(),
                 'name' => 'Production Manager',
-                'description' => 'Manages batch recipes, production schedules, shift logs, and factory output',
+                'description' => 'Manages cooker & stove assembly BOMs, production schedules, shift logs, and assembly floor output',
                 'is_system' => false,
             ]
         );

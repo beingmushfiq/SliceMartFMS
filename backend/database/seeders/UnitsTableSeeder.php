@@ -91,6 +91,16 @@ final class UnitsTableSeeder extends Seeder
             'is_active' => true,
         ]);
 
+        $set = Unit::create([
+            'uuid' => (string) Str::uuid(),
+            'code' => 'SET',
+            'name' => 'Set',
+            'type' => 'count',
+            'is_base' => false,
+            'precision' => 0,
+            'is_active' => true,
+        ]);
+
         $doz = Unit::create([
             'uuid' => (string) Str::uuid(),
             'code' => 'DOZ',
