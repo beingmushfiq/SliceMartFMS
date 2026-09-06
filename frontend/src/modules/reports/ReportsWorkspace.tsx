@@ -507,7 +507,7 @@ export const ReportsWorkspace: React.FC = () => {
           <span className="text-[11px] text-slate-400">Click any card to load live schema & telemetry</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[360px] overflow-y-auto p-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-90 overflow-y-auto p-1">
           {filteredDefinitions.map((def) => {
             const isSelected = def.code === selectedReportCode;
             const ModIcon = MODULE_ICONS[def.module] || Layers;
