@@ -55,6 +55,9 @@ export interface PosCheckoutItemPayload {
   unit_id: number;
   unit_price: string;
   variant_id?: number | null;
+  discount_type?: 'flat' | 'percentage';
+  discount_value?: string;
+  discount_percentage?: string;
   discount_amount?: string;
   tax_profile_id?: number | null;
   tax_amount?: string;
@@ -72,6 +75,8 @@ export interface PosCheckoutPayload {
   customer_name?: string | null;
   customer_phone?: string | null;
   order_date?: string;
+  order_discount_type?: 'flat' | 'percentage';
+  order_discount_value?: string;
   discount_amount?: string;
   round_off?: string;
   notes?: string | null;

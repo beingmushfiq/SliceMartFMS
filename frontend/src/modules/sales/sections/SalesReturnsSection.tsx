@@ -638,7 +638,10 @@ export function SalesReturnsSection() {
               {/* Items Line Builder */}
               <div className="border border-default rounded-xl p-3 bg-surface-sunken/40 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-default">Returned Items & Condition</span>
+                  <div>
+                    <span className="font-semibold text-default">Returned Items & Net Refund Pricing</span>
+                    <p className="text-[10px] text-muted">Net rate reflects unit price paid after deducting line and full-order discounts.</p>
+                  </div>
                   <button
                     type="button"
                     onClick={addItemToForm}
@@ -646,6 +649,14 @@ export function SalesReturnsSection() {
                   >
                     <Plus className="size-3" /> Add Item Line
                   </button>
+                </div>
+
+                <div className="grid grid-cols-12 gap-2 text-[10px] font-semibold text-muted px-1">
+                  <div className="col-span-5">Product Description</div>
+                  <div className="col-span-2">Return Qty</div>
+                  <div className="col-span-2">Net Rate (৳)</div>
+                  <div className="col-span-2">Disposition</div>
+                  <div className="col-span-1 text-center">Del</div>
                 </div>
 
                 {formData.items.map((item, idx) => (

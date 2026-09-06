@@ -5,6 +5,7 @@ import {
   Clock,
   CreditCard,
   DollarSign,
+  FileText,
   Minus,
   PauseCircle,
   PlayCircle,
@@ -20,9 +21,14 @@ import {
 } from 'lucide-react';
 import type { PosSession, PosCheckoutPayload, PosCheckoutPaymentPayload, PosCheckoutResult, PosHeldSale } from '../../types/api/pos';
 import type { Product } from '../../types/api/catalog';
+import type { Invoice } from '../../types/api/sales';
 import { api } from '../../lib/api/client';
 import { useCurrency } from '../../hooks/useCurrency';
 import { notify } from '../../components/ui/Toast';
+import { useDocumentPrint } from '../../components/print/useDocumentPrint';
+import { ThermalReceipt } from '../../components/print/receipts/ThermalReceipt';
+import { SalesInvoiceDocument } from '../../components/print/documents/SalesInvoiceDocument';
+import { useBusinessConfig } from '../../lib/document/useBusinessConfig';
 
 export type PosPaymentMethod = 'cash' | 'card' | 'mobile_banking' | 'credit_adjustment';
 
@@ -39,6 +45,7 @@ interface CartItem {
   quantity: number;
   unit_price: number;
   discount: number;
+  discount_type: 'flat' | 'percentage';
 }
 
 interface POSShellProps {
@@ -56,6 +63,8 @@ interface CartSlot {
   cashTendered: string;
   isSplitPayment?: boolean;
   splitPayments?: PosPaymentLine[];
+  order_discount_type?: 'flat' | 'percentage';
+  order_discount_value?: string;
 }
 
 export function POSShell({ session, onExit }: POSShellProps) {
@@ -65,9 +74,9 @@ export function POSShell({ session, onExit }: POSShellProps) {
   // Multi-cart slots (up to 5 concurrent held transactions)
   const [activeSlotIndex, setActiveSlotIndex] = useState<number>(0);
   const [slots, setSlots] = useState<CartSlot[]>([
-    { id: 1, label: 'Cart 1', cart: [], customerName: '', customerPhone: '', tenderMethod: 'cash', cashTendered: '', isSplitPayment: false, splitPayments: [] },
-    { id: 2, label: 'Cart 2 (Hold)', cart: [], customerName: '', customerPhone: '', tenderMethod: 'cash', cashTendered: '', isSplitPayment: false, splitPayments: [] },
-    { id: 3, label: 'Cart 3 (Hold)', cart: [], customerName: '', customerPhone: '', tenderMethod: 'cash', cashTendered: '', isSplitPayment: false, splitPayments: [] },
+    { id: 1, label: 'Cart 1', cart: [], customerName: '', customerPhone: '', tenderMethod: 'cash', cashTendered: '', isSplitPayment: false, splitPayments: [], order_discount_type: 'flat', order_discount_value: '' },
+    { id: 2, label: 'Cart 2 (Hold)', cart: [], customerName: '', customerPhone: '', tenderMethod: 'cash', cashTendered: '', isSplitPayment: false, splitPayments: [], order_discount_type: 'flat', order_discount_value: '' },
+    { id: 3, label: 'Cart 3 (Hold)', cart: [], customerName: '', customerPhone: '', tenderMethod: 'cash', cashTendered: '', isSplitPayment: false, splitPayments: [], order_discount_type: 'flat', order_discount_value: '' },
   ]);
 
   const currentSlot = slots[activeSlotIndex] ?? slots[0]!;
@@ -79,6 +88,8 @@ export function POSShell({ session, onExit }: POSShellProps) {
   const isSplitPayment = currentSlot.isSplitPayment ?? false;
   const splitPayments = currentSlot.splitPayments ?? [];
 
+  const { printDocument } = useDocumentPrint();
+  const { config: businessConfig } = useBusinessConfig();
   const [checkingOut, setCheckingOut] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<PosCheckoutResult | null>(null);
   const [lastCompletedPayments, setLastCompletedPayments] = useState<PosCheckoutPaymentPayload[]>([]);
@@ -120,8 +131,10 @@ export function POSShell({ session, onExit }: POSShellProps) {
     queryKey: ['pos', 'held-sales', session.id],
     queryFn: async () => {
       try {
-        const res = await api.get<{ data: PosHeldSale[] }>(`/pos/held-sales?pos_session_id=${session.id}`);
-        return res.data.data ?? [];
+        const res = await api.get<PosHeldSale[] | { data: PosHeldSale[] }>(`/pos/held-sales?pos_session_id=${session.id}`);
+        const raw = res.data;
+        const list = Array.isArray(raw) ? raw : (raw as { data?: PosHeldSale[] })?.data ?? [];
+        return list;
       } catch {
         return [];
       }
@@ -172,6 +185,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
               quantity: 1,
               unit_price: price,
               discount: 0,
+              discount_type: 'flat' as const,
             },
           ];
       return { ...prev, cart: updatedCart };
@@ -193,6 +207,44 @@ export function POSShell({ session, onExit }: POSShellProps) {
     });
   };
 
+  const updateItemQuantity = (productId: string | number, qty: number) => {
+    updateCurrentSlot((prev) => ({
+      ...prev,
+      cart: prev.cart.map((item) =>
+        String(item.product.id) === String(productId) ? { ...item, quantity: Math.max(0.001, qty) } : item
+      ),
+    }));
+  };
+
+  const updateItemPrice = (productId: string | number, price: number) => {
+    updateCurrentSlot((prev) => ({
+      ...prev,
+      cart: prev.cart.map((item) =>
+        String(item.product.id) === String(productId) ? { ...item, unit_price: Math.max(0, price) } : item
+      ),
+    }));
+  };
+
+  const updateItemDiscount = (productId: string | number, discount: number) => {
+    updateCurrentSlot((prev) => ({
+      ...prev,
+      cart: prev.cart.map((item) =>
+        String(item.product.id) === String(productId) ? { ...item, discount: Math.max(0, discount) } : item
+      ),
+    }));
+  };
+
+  const toggleItemDiscountType = (productId: string | number) => {
+    updateCurrentSlot((prev) => ({
+      ...prev,
+      cart: prev.cart.map((item) =>
+        String(item.product.id) === String(productId)
+          ? { ...item, discount_type: item.discount_type === 'percentage' ? 'flat' : 'percentage' }
+          : item
+      ),
+    }));
+  };
+
   const removeFromCart = (productId: string | number) => {
     updateCurrentSlot((prev) => ({
       ...prev,
@@ -208,13 +260,39 @@ export function POSShell({ session, onExit }: POSShellProps) {
       cashTendered: '',
       isSplitPayment: false,
       splitPayments: [],
+      order_discount_type: 'flat',
+      order_discount_value: '',
     });
   };
 
-  // Calculations
+  // Calculations with dual-mode item discounts & order discount
   const subtotal = cart.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
-  const discountTotal = cart.reduce((sum, item) => sum + item.discount, 0);
-  const grandTotal = Math.max(0, subtotal - discountTotal);
+
+  const itemDiscounts = cart.map((item) => {
+    const lineGross = item.quantity * item.unit_price;
+    const isPct = item.discount_type === 'percentage';
+    const discAmt = isPct ? lineGross * (item.discount / 100) : Math.min(lineGross, item.discount || 0);
+    const lineNet = Math.max(0, lineGross - discAmt);
+    return {
+      productId: item.product.id,
+      lineGross,
+      discAmt,
+      lineNet,
+    };
+  });
+
+  const totalLineDiscounts = itemDiscounts.reduce((sum, i) => sum + i.discAmt, 0);
+  const netSubtotalBeforeOrderDisc = Math.max(0, subtotal - totalLineDiscounts);
+
+  const orderDiscType = currentSlot.order_discount_type || 'flat';
+  const orderDiscVal = Math.max(0, parseFloat(currentSlot.order_discount_value || '0') || 0);
+  const orderDiscountAmount =
+    orderDiscType === 'percentage'
+      ? netSubtotalBeforeOrderDisc * (orderDiscVal / 100)
+      : Math.min(netSubtotalBeforeOrderDisc, orderDiscVal);
+
+  const discountTotal = totalLineDiscounts + orderDiscountAmount;
+  const grandTotal = Math.max(0, netSubtotalBeforeOrderDisc - orderDiscountAmount);
 
   const singleChangeGiven =
     tenderMethod === 'cash' && parseFloat(cashTendered || '0') > grandTotal
@@ -240,16 +318,20 @@ export function POSShell({ session, onExit }: POSShellProps) {
         });
         return;
       }
-      paymentsPayload = activePayments.map((p) => ({
-        method: p.method,
-        amount: p.amount.toFixed(4),
-        change_given: (p.changeGiven ?? 0).toFixed(4),
-      }));
+      paymentsPayload = activePayments.map((p) => {
+        const tenderAmt = p.method === 'cash' && (p.cashReceived ?? 0) > p.amount ? (p.cashReceived ?? 0) : p.amount;
+        return {
+          method: p.method,
+          amount: tenderAmt.toFixed(4),
+          change_given: (p.changeGiven ?? 0).toFixed(4),
+        };
+      });
     } else {
+      const cashTenderNum = tenderMethod === 'cash' ? (parseFloat(cashTendered || '0') || grandTotal) : grandTotal;
       paymentsPayload = [
         {
           method: tenderMethod,
-          amount: grandTotal.toFixed(4),
+          amount: (tenderMethod === 'cash' && cashTenderNum >= grandTotal ? cashTenderNum : grandTotal).toFixed(4),
           change_given: singleChangeGiven.toFixed(4),
         },
       ];
@@ -262,35 +344,118 @@ export function POSShell({ session, onExit }: POSShellProps) {
       customer_name: customerName || 'Walk-in Customer',
       customer_phone: customerPhone || null,
       order_date: new Date().toISOString().slice(0, 10),
+      order_discount_type: orderDiscType,
+      order_discount_value: orderDiscVal.toFixed(4),
       discount_amount: discountTotal.toFixed(4),
-      items: cart.map((item) => ({
-        product_id: Number(item.product.product_id ?? item.product.id) || 1,
-        quantity: item.quantity.toFixed(4),
-        unit_id: Number(item.product.unit_id ?? item.product.base_unit_id) || 1,
-        unit_price: item.unit_price.toFixed(4),
-      })),
+      items: cart.map((item) => {
+        const lineGross = item.quantity * item.unit_price;
+        const isPct = item.discount_type === 'percentage';
+        const discAmt = isPct ? lineGross * (item.discount / 100) : Math.min(lineGross, item.discount || 0);
+        return {
+          product_id: Number(item.product.product_id ?? item.product.id) || 1,
+          quantity: item.quantity.toFixed(4),
+          unit_id: Number(item.product.unit_id ?? item.product.base_unit_id) || 1,
+          unit_price: item.unit_price.toFixed(4),
+          discount_type: item.discount_type,
+          ...(item.discount > 0 ? { discount_value: item.discount.toFixed(4) } : {}),
+          ...(discAmt > 0 ? { discount_amount: discAmt.toFixed(4) } : {}),
+          discount_percentage: isPct
+            ? item.discount.toFixed(4)
+            : lineGross > 0
+            ? ((discAmt / lineGross) * 100).toFixed(4)
+            : '0.0000',
+        };
+      }),
       payments: paymentsPayload,
     };
 
     try {
-      const res = await api.post<{ data: PosCheckoutResult }>('/pos/checkout', payload);
+      const res = await api.post<PosCheckoutResult | { data: PosCheckoutResult }>('/pos/checkout', payload);
+      const checkoutResult: PosCheckoutResult | undefined =
+        res.data && 'order' in res.data
+          ? (res.data as PosCheckoutResult)
+          : (res.data as unknown as { data?: PosCheckoutResult })?.data;
+
+      if (!checkoutResult || !checkoutResult.order) {
+        throw new Error('Invalid checkout response received from server');
+      }
+
       setLastCompletedPayments(paymentsPayload);
-      setLastReceipt(res.data.data);
+      setLastReceipt(checkoutResult);
       clearCart();
       notify.success('Checkout completed', {
-        description: `Order #${res.data.data.order.order_number} confirmed.`,
+        description: `Order #${checkoutResult.order.order_number} confirmed.`,
       });
     } catch (err: unknown) {
       console.error('POS Checkout Failed', err);
-      const apiErr = err as { response?: { data?: { message?: string } } };
+      const apiErr = err as { message?: string; response?: { data?: { message?: string } } };
       notify.error('Checkout failed', {
         description:
+          apiErr.message ||
           apiErr.response?.data?.message ||
           'Please ensure terminal session is active and stock is valid.',
       });
     } finally {
       setCheckingOut(false);
     }
+  };
+
+  const handlePrintReceipt = (format: 'thermal' | 'a4' = 'thermal') => {
+    if (!lastReceipt) return;
+
+    const printableInvoice: Invoice = {
+      ...lastReceipt.invoice,
+      customer_name: lastReceipt.order.customer_name || lastReceipt.invoice.customer_name || 'Walk-in Customer',
+      sales_order_number: lastReceipt.order.order_number || lastReceipt.invoice.sales_order_number || 'DIRECT-POS',
+      items: (lastReceipt.invoice.items && lastReceipt.invoice.items.length > 0)
+        ? lastReceipt.invoice.items
+        : (lastReceipt.order.items ?? []).map((it) => ({
+            id: it.id,
+            uuid: it.uuid || `item-${it.id}`,
+            invoice_id: lastReceipt.invoice.id,
+            product_id: it.product_id,
+            product_name: it.product_name || 'Item',
+            quantity: String(it.quantity),
+            unit_price: String(it.unit_price),
+            line_total: String(it.line_total),
+            discount_amount: String(it.discount_amount ?? '0'),
+            tax_amount: String(it.tax_amount ?? '0'),
+            sort_order: 0,
+          })),
+    };
+
+    if (format === 'a4') {
+      printDocument(
+        <SalesInvoiceDocument
+          invoice={printableInvoice}
+          businessConfig={businessConfig}
+          copyType="CUSTOMER COPY"
+        />,
+        {
+          pageClass: 'print-page-a4',
+          documentTitle: `Tax-Invoice-${lastReceipt.invoice.invoice_number}`,
+        }
+      );
+      return;
+    }
+
+    const cashTender = lastCompletedPayments.find((p) => p.method === 'cash');
+
+    printDocument(
+      <ThermalReceipt
+        invoice={printableInvoice}
+        businessConfig={businessConfig}
+        paperWidth="80mm"
+        cashierName={session.operator_name || 'Tanvir Hossain (Cashier A)'}
+        terminalName={session.terminal_name || 'Gulshan Flagship - Counter 1'}
+        {...(cashTender?.amount ? { tenderedCash: cashTender.amount } : {})}
+        {...(cashTender?.change_given ? { changeAmount: cashTender.change_given } : {})}
+      />,
+      {
+        pageClass: 'print-page-thermal-80',
+        documentTitle: `Receipt-${lastReceipt.invoice.invoice_number}`,
+      }
+    );
   };
 
   const handleParkSale = async (e?: React.FormEvent) => {
@@ -583,42 +748,110 @@ export function POSShell({ session, onExit }: POSShellProps) {
                 <p className="text-[10px] text-muted">Scan barcode (F2) or click items to add</p>
               </div>
             ) : (
-              cart.map((item) => (
-                <div key={item.product.id} className="flex items-center justify-between py-2.5">
-                  <div className="flex-1 pr-2">
-                    <p className="font-medium text-xs text-default line-clamp-1">
-                      {item.product.name}
-                    </p>
-                    <p className="font-mono text-[10px] text-muted">
-                      {formatCurrency(item.unit_price)} / unit
-                    </p>
-                  </div>
+              cart.map((item) => {
+                const lineGross = item.quantity * item.unit_price;
+                const isPct = item.discount_type === 'percentage';
+                const discAmt = isPct ? lineGross * (item.discount / 100) : Math.min(lineGross, item.discount || 0);
+                const lineTotal = Math.max(0, lineGross - discAmt);
+                return (
+                  <div key={item.product.id} className="py-2.5 border-b border-default/60 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-xs text-default truncate" title={item.product.name}>
+                          {item.product.name}
+                        </p>
+                        <p className="font-mono text-[10px] text-muted">
+                          {item.product.sku}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
+                          {formatCurrency(lineTotal)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeFromCart(item.product.id)}
+                          className="p-1 text-muted hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 rounded cursor-pointer transition-colors"
+                          title="Remove item"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
 
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => updateQuantity(item.product.id, -1)}
-                      className="flex h-6 w-6 items-center justify-center rounded-lg border border-default bg-surface text-default hover:bg-surface-sunken cursor-pointer transition-colors"
-                    >
-                      <Minus className="h-3 w-3" />
-                    </button>
-                    <span className="w-6 text-center font-mono font-bold text-xs text-default">
-                      {item.quantity}
-                    </span>
-                    <button
-                      onClick={() => updateQuantity(item.product.id, 1)}
-                      className="flex h-6 w-6 items-center justify-center rounded-lg border border-default bg-surface text-default hover:bg-surface-sunken cursor-pointer transition-colors"
-                    >
-                      <Plus className="h-3 w-3" />
-                    </button>
-                    <button
-                      onClick={() => removeFromCart(item.product.id)}
-                      className="ml-1 text-muted hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer transition-colors"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    {/* Editable Quantity, Price, and Discount Strip */}
+                    <div className="grid grid-cols-3 gap-1.5 bg-surface-sunken/50 p-1.5 rounded-lg border border-default/50 text-[11px]">
+                      {/* Qty Input with - / + */}
+                      <div className="flex flex-col gap-0.5">
+                        <label className="text-[10px] font-semibold text-muted">Qty</label>
+                        <div className="flex items-center gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(item.product.id, -1)}
+                            className="flex h-6 w-5 shrink-0 items-center justify-center rounded border border-default bg-surface text-default hover:bg-surface-sunken cursor-pointer transition-colors"
+                          >
+                            <Minus className="h-2.5 w-2.5" />
+                          </button>
+                          <input
+                            type="number"
+                            min="0.001"
+                            step="any"
+                            value={item.quantity}
+                            onChange={(e) => updateItemQuantity(item.product.id, parseFloat(e.target.value) || 0)}
+                            className="h-6 w-full rounded border border-default bg-surface px-1 text-center font-mono font-bold text-xs text-default focus:border-primary focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(item.product.id, 1)}
+                            className="flex h-6 w-5 shrink-0 items-center justify-center rounded border border-default bg-surface text-default hover:bg-surface-sunken cursor-pointer transition-colors"
+                          >
+                            <Plus className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Unit Price (Rate) */}
+                      <div className="flex flex-col gap-0.5">
+                        <label className="text-[10px] font-semibold text-muted">Price (৳)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={item.unit_price}
+                          onChange={(e) => updateItemPrice(item.product.id, parseFloat(e.target.value) || 0)}
+                          className="h-6 w-full rounded border border-default bg-surface px-1 text-right font-mono font-bold text-xs text-default focus:border-primary focus:outline-none"
+                        />
+                      </div>
+
+                      {/* Line Discount with Dual Mode Toggle */}
+                      <div className="flex flex-col gap-0.5">
+                        <label className="text-[10px] font-semibold text-muted">
+                          Disc ({item.discount_type === 'percentage' ? '%' : '৳'})
+                        </label>
+                        <div className="flex items-center">
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            placeholder="0"
+                            value={item.discount === 0 ? '' : item.discount}
+                            onChange={(e) => updateItemDiscount(item.product.id, Math.max(0, parseFloat(e.target.value) || 0))}
+                            className="h-6 w-full rounded-l border border-default bg-surface px-1 text-right font-mono font-bold text-xs text-rose-600 dark:text-rose-400 focus:border-primary focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => toggleItemDiscountType(item.product.id)}
+                            className="flex h-6 w-5 shrink-0 items-center justify-center rounded-r border border-l-0 border-default bg-surface-sunken hover:bg-surface font-bold text-[10px] text-muted hover:text-default cursor-pointer transition-colors"
+                            title="Toggle Flat (৳) or Percentage (%)"
+                          >
+                            {item.discount_type === 'percentage' ? '%' : '৳'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
@@ -870,18 +1103,63 @@ export function POSShell({ session, onExit }: POSShellProps) {
             )}
 
             {/* Order Summary Breakdown */}
-            <div className="space-y-1 text-xs text-muted border-t border-default pt-2 font-mono">
+            <div className="space-y-1.5 text-xs text-muted border-t border-default pt-2 font-mono">
               <div className="flex justify-between">
                 <span>Subtotal:</span>
                 <span>{formatCurrency(subtotal)}</span>
               </div>
+              {totalLineDiscounts > 0 && (
+                <div className="flex justify-between text-rose-600 dark:text-rose-400 font-medium text-[11px]">
+                  <span>Item Discounts:</span>
+                  <span>-{formatCurrency(totalLineDiscounts)}</span>
+                </div>
+              )}
+              {/* Order Discount Row with Dual-Mode Toggle */}
+              <div className="flex items-center justify-between gap-2 py-0.5">
+                <span className="font-medium text-default font-sans">Order Discount:</span>
+                <div className="flex items-center">
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder="0"
+                    value={currentSlot.order_discount_value || ''}
+                    onChange={(e) => updateCurrentSlot({ order_discount_value: e.target.value })}
+                    className="h-6 w-16 rounded-l border border-default bg-surface px-1 text-right font-mono font-bold text-xs text-rose-600 dark:text-rose-400 focus:border-primary focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateCurrentSlot({
+                        order_discount_type: (currentSlot.order_discount_type || 'flat') === 'flat' ? 'percentage' : 'flat',
+                      })
+                    }
+                    className="flex h-6 w-5 items-center justify-center rounded-r border border-l-0 border-default bg-surface-sunken hover:bg-surface font-bold text-[10px] text-muted hover:text-default cursor-pointer transition-colors"
+                    title="Toggle Flat (৳) or Percentage (%)"
+                  >
+                    {(currentSlot.order_discount_type || 'flat') === 'percentage' ? '%' : '৳'}
+                  </button>
+                </div>
+              </div>
+              {orderDiscountAmount > 0 && (
+                <div className="flex justify-between text-rose-600 dark:text-rose-400 font-medium text-[11px]">
+                  <span>Order Disc Amount:</span>
+                  <span>-{formatCurrency(orderDiscountAmount)}</span>
+                </div>
+              )}
+              {discountTotal > 0 && (
+                <div className="flex justify-between text-rose-600 dark:text-rose-400 font-bold border-t border-default/40 pt-1">
+                  <span>Total Discount:</span>
+                  <span>-{formatCurrency(discountTotal)}</span>
+                </div>
+              )}
               {changeGiven > 0 && (
                 <div className="flex justify-between text-amber-600 dark:text-amber-400">
                   <span>Change Return:</span>
                   <span>{formatCurrency(changeGiven)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-sm font-bold text-default pt-1">
+              <div className="flex justify-between text-sm font-bold text-default pt-1 border-t border-default/60">
                 <span className="font-sans">Total Payable:</span>
                 <span className="text-emerald-600 dark:text-emerald-400">{formatCurrency(grandTotal)}</span>
               </div>
@@ -1071,51 +1349,95 @@ export function POSShell({ session, onExit }: POSShellProps) {
               Invoice #{lastReceipt.invoice.invoice_number}
             </p>
 
-            <div className="mt-4 rounded-xl border border-default bg-surface-sunken p-4 font-mono text-xs space-y-2">
-              <div className="flex justify-between text-muted">
-                <span>Order No:</span>
-                <span className="text-default">{lastReceipt.order.order_number}</span>
-              </div>
-              <div className="flex justify-between text-muted">
-                <span>Amount Paid:</span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                  {formatCurrency(lastReceipt.order.total_amount)}
-                </span>
-              </div>
-              {lastCompletedPayments.length > 0 && (
-                <div className="border-t border-default/60 pt-1.5 mt-1 space-y-1 text-[11px]">
-                  <span className="text-muted font-sans font-semibold">Tender Breakdown:</span>
-                  {lastCompletedPayments.map((p, idx) => (
-                    <div key={idx} className="flex justify-between">
-                      <span className="capitalize text-default">
-                        {p.method === 'mobile_banking'
-                          ? 'bKash/Nagad'
-                          : p.method === 'credit_adjustment'
-                          ? 'Credit Adjustment'
-                          : p.method}:
-                      </span>
-                      <span className="font-bold text-default">{formatCurrency(parseFloat(p.amount))}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="flex justify-between text-muted">
-                <span>Session:</span>
-                <span className="text-default">{lastReceipt.session.session_number}</span>
-              </div>
-            </div>
+            {(() => {
+              const receiptTotalChange = lastCompletedPayments.reduce(
+                (sum, p) => sum + (parseFloat(p.change_given ?? '0') || 0),
+                0
+              );
+              return (
+                <div className="mt-4 rounded-xl border border-default bg-surface-sunken p-4 font-mono text-xs space-y-2.5">
+                  <div className="flex justify-between text-muted">
+                    <span>Order No:</span>
+                    <span className="text-default font-semibold">{lastReceipt.order.order_number}</span>
+                  </div>
+                  <div className="flex justify-between text-muted">
+                    <span>Total Bill:</span>
+                    <span className="text-default font-bold">
+                      {formatCurrency(lastReceipt.order.total_amount)}
+                    </span>
+                  </div>
 
-            <div className="mt-6 flex gap-2">
+                  {lastCompletedPayments.length > 0 && (
+                    <div className="border-t border-default/60 pt-2 space-y-1.5 text-[11px]">
+                      <div className="flex justify-between text-muted font-sans font-semibold">
+                        <span>Tender Breakdown:</span>
+                        {lastCompletedPayments.length > 1 && <span>Amount</span>}
+                      </div>
+                      {lastCompletedPayments.map((p, idx) => (
+                        <div key={idx} className="flex justify-between">
+                          <span className="capitalize text-default">
+                            {p.method === 'mobile_banking'
+                              ? 'bKash / Nagad'
+                              : p.method === 'credit_adjustment'
+                              ? 'Credit Adjustment'
+                              : p.method === 'cash'
+                              ? 'Cash Tendered'
+                              : p.method === 'card'
+                              ? 'Card / POS'
+                              : p.method}:
+                          </span>
+                          <span className="font-bold text-default">{formatCurrency(parseFloat(p.amount))}</span>
+                        </div>
+                      ))}
+                      {receiptTotalChange > 0 && (
+                        <div className="flex justify-between items-center bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded-lg font-bold text-xs mt-1">
+                          <span className="font-sans">Change Returned:</span>
+                          <span className="font-mono">{formatCurrency(receiptTotalChange)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex justify-between border-t border-default/60 pt-2 text-muted">
+                    <span className="font-semibold text-default font-sans">Net Paid:</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm">
+                      {formatCurrency(lastReceipt.order.total_amount)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between text-muted text-[10px] pt-0.5">
+                    <span>Session:</span>
+                    <span className="text-default">{lastReceipt.session.session_number}</span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="mt-6 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handlePrintReceipt('thermal')}
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-default bg-surface-sunken py-2.5 px-3 text-xs font-semibold text-default hover:bg-surface hover:border-primary/50 cursor-pointer transition-all shadow-2xs"
+                  title="Print 80mm POS Thermal Receipt"
+                >
+                  <Printer className="h-3.5 w-3.5 text-primary" />
+                  Thermal (80mm)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePrintReceipt('a4')}
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-default bg-surface-sunken py-2.5 px-3 text-xs font-semibold text-default hover:bg-surface hover:border-primary/50 cursor-pointer transition-all shadow-2xs"
+                  title="Print standard full-page A4 Tax Invoice"
+                >
+                  <FileText className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                  A4 Invoice
+                </button>
+              </div>
               <button
-                onClick={() => window.print()}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-default bg-surface-sunken py-2 text-xs font-medium text-default hover:bg-surface cursor-pointer transition-colors"
-              >
-                <Printer className="h-3.5 w-3.5" />
-                Print Receipt
-              </button>
-              <button
+                type="button"
                 onClick={() => setLastReceipt(null)}
-                className="flex-1 rounded-xl bg-primary py-2 text-xs font-bold text-white hover:bg-primary-hover cursor-pointer transition-colors"
+                className="w-full rounded-xl bg-primary py-2.5 text-xs font-bold text-white hover:bg-primary-hover cursor-pointer transition-colors shadow-sm flex items-center justify-center gap-1.5"
               >
                 Next Sale
               </button>

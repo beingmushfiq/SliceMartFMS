@@ -65,26 +65,26 @@
   body {
     height: auto !important;
     min-height: 0 !important;
-    max-height: 100% !important;
+    max-height: none !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
-    overflow: hidden !important;
+    overflow: visible !important;
   }
 
   #print-root {
     display: block !important;
     position: static !important;
     width: 100% !important;
-    max-height: 100% !important;
+    max-height: none !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
-    overflow: hidden !important;
-    break-after: avoid !important;
-    page-break-after: avoid !important;
+    overflow: visible !important;
+    break-after: auto !important;
+    page-break-after: auto !important;
   }
 
   /* Page specific class bindings */

@@ -196,8 +196,11 @@ class PermissionCatalogue
         'pos.terminal.manage',
         'pos.session.view',
         'pos.session.create',
+        'pos.session.open',
+        'pos.session.close',
         'pos.session.lock',
         'pos.sale.create',
+        'pos.checkout',
 
         // Logistics & Delivery
         'logistics.delivery_order.view',

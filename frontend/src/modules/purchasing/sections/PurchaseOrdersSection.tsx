@@ -32,6 +32,8 @@ interface PoFormItem {
   quantity: string;
   unit_code: string;
   unit_price: string;
+  discount_type?: 'flat' | 'percentage';
+  discount_amount?: string;
   tax_rate: string;
 }
 
@@ -189,7 +191,19 @@ export function PurchaseOrdersSection() {
   const { config: businessConfig } = useBusinessConfig();
 
   // Form State
-  const [formData, setFormData] = useState(() => ({
+  const [formData, setFormData] = useState<{
+    po_number: string;
+    supplier_name: string;
+    warehouse_name: string;
+    order_date: string;
+    expected_delivery_date: string;
+    currency_code: string;
+    terms_and_conditions: string;
+    notes: string;
+    order_discount_type: 'flat' | 'percentage';
+    order_discount_value: string;
+    items: PoFormItem[];
+  }>(() => ({
     po_number: '',
     supplier_name: 'Bengal Glass & Ceramic Ltd.',
     warehouse_name: 'Tejgaon Central Electronic Components & Parts Warehouse',
@@ -198,6 +212,8 @@ export function PurchaseOrdersSection() {
     currency_code: 'BDT',
     terms_and_conditions: 'Net 30 Days upon inspection pass.',
     notes: '',
+    order_discount_type: 'flat',
+    order_discount_value: '',
     items: [
       {
         product_name: 'Microcrystalline Ceramic Glass Panel',
@@ -205,6 +221,8 @@ export function PurchaseOrdersSection() {
         quantity: '500',
         unit_code: 'PCS',
         unit_price: '450.00',
+        discount_type: 'flat',
+        discount_amount: '0.00',
         tax_rate: '5.00',
       },
     ],
@@ -248,14 +266,51 @@ export function PurchaseOrdersSection() {
     }
   };
 
-  const handleCreateOrder = (e: React.FormEvent) => {
-    e.preventDefault();
-    const calculatedSubtotal = formData.items.reduce(
+  const calculatePoTotals = (
+    items: PoFormItem[],
+    orderDiscType: 'flat' | 'percentage',
+    orderDiscValStr: string
+  ) => {
+    const grossSubtotal = items.reduce(
       (sum, it) => sum + parseFloat(it.quantity || '0') * parseFloat(it.unit_price || '0'),
       0
     );
-    const calculatedTax = calculatedSubtotal * 0.05;
-    const calculatedGrand = calculatedSubtotal + calculatedTax;
+    const itemDiscounts = items.map((it) => {
+      const lineGross = parseFloat(it.quantity || '0') * parseFloat(it.unit_price || '0');
+      const isPct = it.discount_type === 'percentage';
+      const discVal = parseFloat(it.discount_amount || '0') || 0;
+      const discAmt = isPct ? lineGross * (discVal / 100) : Math.min(lineGross, discVal);
+      const lineNet = Math.max(0, lineGross - discAmt);
+      return { lineGross, discAmt, lineNet };
+    });
+    const totalLineDiscounts = itemDiscounts.reduce((sum, i) => sum + i.discAmt, 0);
+    const netSubtotalBeforeOrderDisc = Math.max(0, grossSubtotal - totalLineDiscounts);
+
+    const orderDiscVal = Math.max(0, parseFloat(orderDiscValStr || '0') || 0);
+    const orderDiscountAmount =
+      orderDiscType === 'percentage'
+        ? netSubtotalBeforeOrderDisc * (orderDiscVal / 100)
+        : Math.min(netSubtotalBeforeOrderDisc, orderDiscVal);
+
+    const totalDiscount = totalLineDiscounts + orderDiscountAmount;
+    const taxableAmount = Math.max(0, netSubtotalBeforeOrderDisc - orderDiscountAmount);
+    const calculatedTax = taxableAmount * 0.05;
+    const grandTotal = taxableAmount + calculatedTax;
+
+    return {
+      grossSubtotal,
+      totalLineDiscounts,
+      orderDiscountAmount,
+      totalDiscount,
+      taxableAmount,
+      calculatedTax,
+      grandTotal,
+    };
+  };
+
+  const handleCreateOrder = (e: React.FormEvent) => {
+    e.preventDefault();
+    const totals = calculatePoTotals(formData.items, formData.order_discount_type, formData.order_discount_value);
 
     const newPo: PurchaseOrder = {
       id: Date.now(),
@@ -271,38 +326,70 @@ export function PurchaseOrdersSection() {
       expected_delivery_date: formData.expected_delivery_date,
       currency_code: formData.currency_code,
       exchange_rate: '1.0000',
-      subtotal_amount: calculatedSubtotal.toFixed(2),
-      discount_amount: '0.00',
-      tax_amount: calculatedTax.toFixed(2),
-      grand_total: calculatedGrand.toFixed(2),
+      subtotal_amount: totals.grossSubtotal.toFixed(2),
+      discount_amount: totals.totalDiscount.toFixed(2),
+      tax_amount: totals.calculatedTax.toFixed(2),
+      grand_total: totals.grandTotal.toFixed(2),
       received_value: '0.00',
       billed_value: '0.00',
       status: 'draft',
       notes: formData.notes,
       terms_and_conditions: formData.terms_and_conditions,
-      items: formData.items.map((it, idx) => ({
-        id: Date.now() + idx,
-        uuid: `poi-${Date.now() + idx}`,
-        purchase_order_id: Date.now(),
-        product_id: idx + 1,
-        product_name: it.product_name,
-        product_sku: it.product_sku,
-        quantity: it.quantity,
-        received_quantity: '0.00',
-        billed_quantity: '0.00',
-        unit_id: 1,
-        unit_code: it.unit_code,
-        unit_price: it.unit_price,
-        discount_amount: '0.00',
-        tax_rate: it.tax_rate,
-        tax_amount: (parseFloat(it.quantity) * parseFloat(it.unit_price) * 0.05).toFixed(2),
-        subtotal_amount: (parseFloat(it.quantity) * parseFloat(it.unit_price)).toFixed(2),
-        total_amount: (parseFloat(it.quantity) * parseFloat(it.unit_price) * 1.05).toFixed(2),
-      })),
+      items: formData.items.map((it, idx) => {
+        const qty = parseFloat(it.quantity || '0');
+        const price = parseFloat(it.unit_price || '0');
+        const lineGross = qty * price;
+        const isPct = it.discount_type === 'percentage';
+        const discVal = parseFloat(it.discount_amount || '0') || 0;
+        const lineItemDisc = isPct ? lineGross * (discVal / 100) : Math.min(lineGross, discVal);
+        const lineNet = Math.max(0, lineGross - lineItemDisc);
+        // Proportional order discount share
+        const allocatedOrderDisc =
+          totals.grossSubtotal > 0 && totals.orderDiscountAmount > 0
+            ? (totals.orderDiscountAmount * lineNet) / (totals.grossSubtotal - totals.totalLineDiscounts || 1)
+            : 0;
+        const totalEffectiveDisc = lineItemDisc + allocatedOrderDisc;
+        const netAfterAllDisc = Math.max(0, lineGross - totalEffectiveDisc);
+        const lineTax = netAfterAllDisc * 0.05;
+        const lineTotal = netAfterAllDisc + lineTax;
+        return {
+          id: Date.now() + idx,
+          uuid: `poi-${Date.now() + idx}`,
+          purchase_order_id: Date.now(),
+          product_id: idx + 1,
+          product_name: it.product_name,
+          product_sku: it.product_sku,
+          quantity: it.quantity,
+          received_quantity: '0.00',
+          billed_quantity: '0.00',
+          unit_id: 1,
+          unit_code: it.unit_code,
+          unit_price: it.unit_price,
+          discount_amount: totalEffectiveDisc.toFixed(2),
+          tax_rate: it.tax_rate,
+          tax_amount: lineTax.toFixed(2),
+          subtotal_amount: lineGross.toFixed(2),
+          total_amount: lineTotal.toFixed(2),
+        };
+      }),
       created_at: new Date().toISOString(),
     };
 
-    api.post('/purchasing/orders', newPo).catch(() => {});
+    api.post('/purchasing/orders', {
+      ...newPo,
+      order_discount_type: formData.order_discount_type || 'flat',
+      order_discount_value: String(formData.order_discount_value || '0'),
+      items: formData.items.map((it, idx) => ({
+        product_id: idx + 1,
+        quantity: it.quantity,
+        unit_id: 1,
+        unit_price: it.unit_price,
+        discount_type: it.discount_type || 'flat',
+        discount_value: String(it.discount_amount || '0'),
+        discount_amount: String(it.discount_amount || '0'),
+        tax_rate: it.tax_rate,
+      })),
+    }).catch(() => {});
     queryClient.setQueryData<PurchaseOrder[]>(['purchasing', 'orders'], (prev = []) => [newPo, ...prev]);
     toast.success('Purchase order created.');
     setShowCreateModal(false);
@@ -312,6 +399,45 @@ export function PurchaseOrdersSection() {
     e.preventDefault();
     if (!activeOrder) return;
 
+    const totals = calculatePoTotals(formData.items, formData.order_discount_type, formData.order_discount_value);
+
+    const updatedItems = formData.items.map((it, idx) => {
+      const qty = parseFloat(it.quantity || '0');
+      const price = parseFloat(it.unit_price || '0');
+      const lineGross = qty * price;
+      const isPct = it.discount_type === 'percentage';
+      const discVal = parseFloat(it.discount_amount || '0') || 0;
+      const lineItemDisc = isPct ? lineGross * (discVal / 100) : Math.min(lineGross, discVal);
+      const lineNet = Math.max(0, lineGross - lineItemDisc);
+      const allocatedOrderDisc =
+        totals.grossSubtotal > 0 && totals.orderDiscountAmount > 0
+          ? (totals.orderDiscountAmount * lineNet) / (totals.grossSubtotal - totals.totalLineDiscounts || 1)
+          : 0;
+      const totalEffectiveDisc = lineItemDisc + allocatedOrderDisc;
+      const netAfterAllDisc = Math.max(0, lineGross - totalEffectiveDisc);
+      const lineTax = netAfterAllDisc * 0.05;
+      const lineTotal = netAfterAllDisc + lineTax;
+      return {
+        id: activeOrder.items?.[idx]?.id ?? Date.now() + idx,
+        uuid: activeOrder.items?.[idx]?.uuid ?? `poi-${Date.now() + idx}`,
+        purchase_order_id: activeOrder.id,
+        product_id: activeOrder.items?.[idx]?.product_id ?? idx + 1,
+        product_name: it.product_name,
+        product_sku: it.product_sku,
+        quantity: it.quantity,
+        received_quantity: activeOrder.items?.[idx]?.received_quantity ?? '0.00',
+        billed_quantity: activeOrder.items?.[idx]?.billed_quantity ?? '0.00',
+        unit_id: activeOrder.items?.[idx]?.unit_id ?? 1,
+        unit_code: it.unit_code,
+        unit_price: it.unit_price,
+        discount_amount: totalEffectiveDisc.toFixed(2),
+        tax_rate: it.tax_rate,
+        tax_amount: lineTax.toFixed(2),
+        subtotal_amount: lineGross.toFixed(2),
+        total_amount: lineTotal.toFixed(2),
+      };
+    });
+
     queryClient.setQueryData<PurchaseOrder[]>(['purchasing', 'orders'], (prev = []) =>
       prev.map((o) =>
         o.id === activeOrder.id
@@ -320,8 +446,13 @@ export function PurchaseOrdersSection() {
               supplier_name: formData.supplier_name,
               warehouse_name: formData.warehouse_name,
               expected_delivery_date: formData.expected_delivery_date,
+              subtotal_amount: totals.grossSubtotal.toFixed(2),
+              discount_amount: totals.totalDiscount.toFixed(2),
+              tax_amount: totals.calculatedTax.toFixed(2),
+              grand_total: totals.grandTotal.toFixed(2),
               notes: formData.notes,
               terms_and_conditions: formData.terms_and_conditions,
+              items: updatedItems,
             }
           : o
       )
@@ -352,6 +483,8 @@ export function PurchaseOrdersSection() {
           quantity: '100',
           unit_code: 'KG',
           unit_price: '50.00',
+          discount_type: 'flat',
+          discount_amount: '0.00',
           tax_rate: '5.00',
         },
       ],
@@ -484,6 +617,8 @@ export function PurchaseOrdersSection() {
                 currency_code: currencyCode,
                 terms_and_conditions: 'Net 30 Days upon inspection pass.',
                 notes: '',
+                order_discount_type: 'flat',
+                order_discount_value: '',
                 items: [
                   {
                     product_name: 'Microcrystalline Ceramic Glass Panel',
@@ -491,6 +626,8 @@ export function PurchaseOrdersSection() {
                     quantity: '500',
                     unit_code: 'PCS',
                     unit_price: '450.00',
+                    discount_type: 'flat',
+                    discount_amount: '0.00',
                     tax_rate: '5.00',
                   },
                 ],
@@ -607,12 +744,16 @@ export function PurchaseOrdersSection() {
                                   currency_code: o.currency_code,
                                   terms_and_conditions: o.terms_and_conditions || '',
                                   notes: o.notes || '',
+                                  order_discount_type: 'flat',
+                                  order_discount_value: o.discount_amount || '0.00',
                                   items: o.items?.map((it) => ({
                                     product_name: it.product_name || '',
                                     product_sku: it.product_sku || '',
                                     quantity: it.quantity,
                                     unit_code: it.unit_code || 'KG',
                                     unit_price: it.unit_price,
+                                    discount_type: 'flat' as const,
+                                    discount_amount: it.discount_amount || '0.00',
                                     tax_rate: it.tax_rate,
                                   })) || [],
                                 });
@@ -726,54 +867,94 @@ export function PurchaseOrdersSection() {
                   </button>
                 </div>
 
+                {/* Items Grid Header */}
+                <div className="grid grid-cols-12 gap-2 text-[10px] font-semibold text-muted px-1">
+                  <div className="col-span-4">Product Description</div>
+                  <div className="col-span-2">Qty</div>
+                  <div className="col-span-1">Unit</div>
+                  <div className="col-span-2">Unit Price (৳)</div>
+                  <div className="col-span-2">Discount (৳)</div>
+                  <div className="col-span-1 text-center">Del</div>
+                </div>
+
                 {formData.items.map((item, idx) => (
                   <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-surface p-2.5 rounded-lg border border-default">
-                    <div className="col-span-5">
+                    <div className="col-span-4">
                       <input
                         type="text"
                         placeholder="Product Description"
                         value={item.product_name}
                         onChange={(e) => updateFormItem(idx, { product_name: e.target.value })}
-                        className="w-full rounded-lg border border-default bg-surface-sunken px-2 py-1.5 text-xs text-default"
+                        className="w-full rounded-lg border border-default bg-surface-sunken px-2 py-1.5 text-xs text-default focus:border-primary focus:outline-none"
                         required
                       />
                     </div>
                     <div className="col-span-2">
                       <input
                         type="number"
+                        min="0.001"
+                        step="any"
                         placeholder="Qty"
                         value={item.quantity}
                         onChange={(e) => updateFormItem(idx, { quantity: e.target.value })}
-                        className="w-full rounded-lg border border-default bg-surface-sunken px-2 py-1.5 text-xs text-default font-mono"
+                        className="w-full rounded-lg border border-default bg-surface-sunken px-2 py-1.5 text-xs text-default font-mono focus:border-primary focus:outline-none"
                         required
                       />
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-1">
                       <input
                         type="text"
-                        placeholder="Unit (KG)"
+                        placeholder="KG"
                         value={item.unit_code}
                         onChange={(e) => updateFormItem(idx, { unit_code: e.target.value })}
-                        className="w-full rounded-lg border border-default bg-surface-sunken px-2 py-1.5 text-xs text-default font-mono uppercase"
+                        className="w-full rounded-lg border border-default bg-surface-sunken px-1 py-1.5 text-xs text-default font-mono uppercase text-center focus:border-primary focus:outline-none"
                         required
                       />
                     </div>
                     <div className="col-span-2">
                       <input
                         type="number"
+                        min="0"
+                        step="any"
                         placeholder="Unit Price"
                         value={item.unit_price}
                         onChange={(e) => updateFormItem(idx, { unit_price: e.target.value })}
-                        className="w-full rounded-lg border border-default bg-surface-sunken px-2 py-1.5 text-xs text-default font-mono"
+                        className="w-full rounded-lg border border-default bg-surface-sunken px-2 py-1.5 text-xs text-default font-mono text-right focus:border-primary focus:outline-none"
                         required
                       />
+                    </div>
+                    <div className="col-span-2">
+                      <div className="flex items-center">
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          placeholder="0.00"
+                          value={item.discount_amount || ''}
+                          onChange={(e) => updateFormItem(idx, { discount_amount: e.target.value })}
+                          className="w-full rounded-l-lg border border-default bg-surface-sunken px-2 py-1.5 text-xs text-rose-600 dark:text-rose-400 font-mono text-right focus:border-primary focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateFormItem(idx, {
+                              discount_type: item.discount_type === 'percentage' ? 'flat' : 'percentage',
+                            })
+                          }
+                          className="flex h-7.5 w-6 shrink-0 items-center justify-center rounded-r-lg border border-l-0 border-default bg-surface hover:bg-surface-sunken font-bold text-[10px] text-muted hover:text-default cursor-pointer transition-colors"
+                          title="Toggle Flat (৳) or Percentage (%)"
+                        >
+                          {item.discount_type === 'percentage' ? '%' : '৳'}
+                        </button>
+                      </div>
                     </div>
                     <div className="col-span-1 text-center">
                       {formData.items.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeItemFromForm(idx)}
-                          className="text-rose-500 hover:text-rose-700 cursor-pointer"
+                          className="text-rose-500 hover:text-rose-700 cursor-pointer p-1"
+                          title="Remove item line"
                         >
                           ✕
                         </button>
@@ -781,6 +962,74 @@ export function PurchaseOrdersSection() {
                     </div>
                   </div>
                 ))}
+
+                {/* Order Discount Row & Summary Breakdown */}
+                {(() => {
+                  const totals = calculatePoTotals(formData.items, formData.order_discount_type, formData.order_discount_value);
+                  return (
+                    <div className="space-y-2 pt-2 border-t border-default/60">
+                      <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-surface border border-default">
+                        <span className="text-xs font-semibold text-default">
+                          Full PO Order Discount
+                          <span className="block text-[10px] text-muted font-normal">
+                            Discount applied on procurement subtotal
+                          </span>
+                        </span>
+                        <div className="flex items-center">
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            placeholder="0.00"
+                            value={formData.order_discount_value}
+                            onChange={(e) => setFormData({ ...formData, order_discount_value: e.target.value })}
+                            className="w-24 rounded-l-lg border border-default bg-surface-sunken px-2 py-1.5 text-xs text-rose-600 dark:text-rose-400 font-mono text-right focus:border-primary focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFormData({
+                                ...formData,
+                                order_discount_type: formData.order_discount_type === 'percentage' ? 'flat' : 'percentage',
+                              })
+                            }
+                            className="flex h-7.5 w-7 shrink-0 items-center justify-center rounded-r-lg border border-l-0 border-default bg-surface-sunken hover:bg-surface font-bold text-[10px] text-muted hover:text-default cursor-pointer transition-colors"
+                            title="Toggle Flat (৳) or Percentage (%)"
+                          >
+                            {formData.order_discount_type === 'percentage' ? '%' : '৳'}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1 text-xs font-mono pr-1">
+                        <div className="flex justify-between w-56 text-muted">
+                          <span>Gross Subtotal:</span>
+                          <span>{formatCurrency(totals.grossSubtotal)}</span>
+                        </div>
+                        {totals.totalLineDiscounts > 0 && (
+                          <div className="flex justify-between w-56 text-rose-600 dark:text-rose-400">
+                            <span>Item Discounts:</span>
+                            <span>-{formatCurrency(totals.totalLineDiscounts)}</span>
+                          </div>
+                        )}
+                        {totals.orderDiscountAmount > 0 && (
+                          <div className="flex justify-between w-56 text-rose-600 dark:text-rose-400">
+                            <span>Order Discount:</span>
+                            <span>-{formatCurrency(totals.orderDiscountAmount)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between w-56 text-muted">
+                          <span>Est. Tax (5%):</span>
+                          <span>+{formatCurrency(totals.calculatedTax)}</span>
+                        </div>
+                        <div className="flex justify-between w-56 font-bold text-emerald-600 dark:text-emerald-400 pt-1 border-t border-default/60">
+                          <span>Grand Total:</span>
+                          <span>{formatCurrency(totals.grandTotal)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div>
@@ -912,11 +1161,11 @@ export function PurchaseOrdersSection() {
       {/* EDIT PO MODAL */}
       {showEditModal && activeOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-xl rounded-2xl border border-default bg-surface p-6 shadow-xl">
+          <div className="w-full max-w-2xl rounded-2xl border border-default bg-surface p-6 shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-default pb-4 mb-4">
               <div>
                 <h3 className="text-base font-bold text-default">Edit Purchase Order ({activeOrder.po_number})</h3>
-                <p className="text-xs text-muted mt-0.5">Update procurement parameters</p>
+                <p className="text-xs text-muted mt-0.5">Update procurement parameters, quantities, prices & discounts</p>
               </div>
               <button onClick={() => setShowEditModal(false)} className="text-muted hover:text-default cursor-pointer">
                 ✕
@@ -945,6 +1194,184 @@ export function PurchaseOrdersSection() {
                     required
                   />
                 </div>
+              </div>
+
+              {/* Items Builder */}
+              <div className="border border-default rounded-xl p-3 bg-surface-sunken/40 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-default">Order Items, Quantities & Pricing</span>
+                  <button
+                    type="button"
+                    onClick={addItemToForm}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline cursor-pointer"
+                  >
+                    <Plus className="size-3" /> Add Item Line
+                  </button>
+                </div>
+
+                {/* Items Grid Header */}
+                <div className="grid grid-cols-12 gap-2 text-[10px] font-semibold text-muted px-1">
+                  <div className="col-span-4">Product Description</div>
+                  <div className="col-span-2">Qty</div>
+                  <div className="col-span-1">Unit</div>
+                  <div className="col-span-2">Unit Price (৳)</div>
+                  <div className="col-span-2">Discount (৳)</div>
+                  <div className="col-span-1 text-center">Del</div>
+                </div>
+
+                {formData.items.map((item, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-surface p-2.5 rounded-lg border border-default">
+                    <div className="col-span-4">
+                      <input
+                        type="text"
+                        placeholder="Product Description"
+                        value={item.product_name}
+                        onChange={(e) => updateFormItem(idx, { product_name: e.target.value })}
+                        className="w-full rounded-lg border border-default bg-surface-sunken px-2 py-1.5 text-xs text-default focus:border-primary focus:outline-none"
+                        required
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <input
+                        type="number"
+                        min="0.001"
+                        step="any"
+                        placeholder="Qty"
+                        value={item.quantity}
+                        onChange={(e) => updateFormItem(idx, { quantity: e.target.value })}
+                        className="w-full rounded-lg border border-default bg-surface-sunken px-2 py-1.5 text-xs text-default font-mono focus:border-primary focus:outline-none"
+                        required
+                      />
+                    </div>
+                    <div className="col-span-1">
+                      <input
+                        type="text"
+                        placeholder="KG"
+                        value={item.unit_code}
+                        onChange={(e) => updateFormItem(idx, { unit_code: e.target.value })}
+                        className="w-full rounded-lg border border-default bg-surface-sunken px-1 py-1.5 text-xs text-default font-mono uppercase text-center focus:border-primary focus:outline-none"
+                        required
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        placeholder="Unit Price"
+                        value={item.unit_price}
+                        onChange={(e) => updateFormItem(idx, { unit_price: e.target.value })}
+                        className="w-full rounded-lg border border-default bg-surface-sunken px-2 py-1.5 text-xs text-default font-mono text-right focus:border-primary focus:outline-none"
+                        required
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <div className="flex items-center">
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          placeholder="0.00"
+                          value={item.discount_amount || ''}
+                          onChange={(e) => updateFormItem(idx, { discount_amount: e.target.value })}
+                          className="w-full rounded-l-lg border border-default bg-surface-sunken px-2 py-1.5 text-xs text-rose-600 dark:text-rose-400 font-mono text-right focus:border-primary focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateFormItem(idx, {
+                              discount_type: item.discount_type === 'percentage' ? 'flat' : 'percentage',
+                            })
+                          }
+                          className="flex h-7.5 w-6 shrink-0 items-center justify-center rounded-r-lg border border-l-0 border-default bg-surface hover:bg-surface-sunken font-bold text-[10px] text-muted hover:text-default cursor-pointer transition-colors"
+                          title="Toggle Flat (৳) or Percentage (%)"
+                        >
+                          {item.discount_type === 'percentage' ? '%' : '৳'}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="col-span-1 text-center">
+                      {formData.items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeItemFromForm(idx)}
+                          className="text-rose-500 hover:text-rose-700 cursor-pointer p-1"
+                          title="Remove item line"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Edit Order Discount Row & Summary Breakdown */}
+                {(() => {
+                  const totals = calculatePoTotals(formData.items, formData.order_discount_type, formData.order_discount_value);
+                  return (
+                    <div className="space-y-2 pt-2 border-t border-default/60">
+                      <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-surface border border-default">
+                        <span className="text-xs font-semibold text-default">
+                          Full PO Order Discount
+                          <span className="block text-[10px] text-muted font-normal">
+                            Discount applied on procurement subtotal
+                          </span>
+                        </span>
+                        <div className="flex items-center">
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            placeholder="0.00"
+                            value={formData.order_discount_value}
+                            onChange={(e) => setFormData({ ...formData, order_discount_value: e.target.value })}
+                            className="w-24 rounded-l-lg border border-default bg-surface-sunken px-2 py-1.5 text-xs text-rose-600 dark:text-rose-400 font-mono text-right focus:border-primary focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFormData({
+                                ...formData,
+                                order_discount_type: formData.order_discount_type === 'percentage' ? 'flat' : 'percentage',
+                              })
+                            }
+                            className="flex h-7.5 w-7 shrink-0 items-center justify-center rounded-r-lg border border-l-0 border-default bg-surface-sunken hover:bg-surface font-bold text-[10px] text-muted hover:text-default cursor-pointer transition-colors"
+                            title="Toggle Flat (৳) or Percentage (%)"
+                          >
+                            {formData.order_discount_type === 'percentage' ? '%' : '৳'}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1 text-xs font-mono pr-1">
+                        <div className="flex justify-between w-56 text-muted">
+                          <span>Gross Subtotal:</span>
+                          <span>{formatCurrency(totals.grossSubtotal)}</span>
+                        </div>
+                        {totals.totalLineDiscounts > 0 && (
+                          <div className="flex justify-between w-56 text-rose-600 dark:text-rose-400">
+                            <span>Item Discounts:</span>
+                            <span>-{formatCurrency(totals.totalLineDiscounts)}</span>
+                          </div>
+                        )}
+                        {totals.orderDiscountAmount > 0 && (
+                          <div className="flex justify-between w-56 text-rose-600 dark:text-rose-400">
+                            <span>Order Discount:</span>
+                            <span>-{formatCurrency(totals.orderDiscountAmount)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between w-56 text-muted">
+                          <span>Est. Tax (5%):</span>
+                          <span>+{formatCurrency(totals.calculatedTax)}</span>
+                        </div>
+                        <div className="flex justify-between w-56 font-bold text-emerald-600 dark:text-emerald-400 pt-1 border-t border-default/60">
+                          <span>Grand Total:</span>
+                          <span>{formatCurrency(totals.grandTotal)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div>

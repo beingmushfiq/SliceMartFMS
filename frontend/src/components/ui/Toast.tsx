@@ -33,6 +33,7 @@
 // self-hiding box cannot carry information the user must act on.
 // ═══════════════════════════════════════════════════════════════════════════
 
+import { useState, useEffect } from 'react';
 import { CircleCheckBig, CircleX, Info, TriangleAlert } from 'lucide-react';
 import { Toaster as SonnerToaster, toast } from 'sonner';
 
@@ -54,32 +55,51 @@ const TRANSIENT_MS = 4000;
    ─────────────────────────────────────────────────────────────────────────── */
 
 export function Toaster() {
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof document === 'undefined') return 'light';
+    return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+  });
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const syncTheme = () => {
+      setTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    };
+    syncTheme();
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class', 'data-theme'],
+    });
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <SonnerToaster
       position="top-right"
-      theme="light"
+      theme={theme}
       richColors={false}
       closeButton
       duration={TRANSIENT_MS}
       visibleToasts={5}
       icons={{
         success: (
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-success-subtle text-success ring-1 ring-success/25 shadow-xs">
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-success-subtle text-success ring-1 ring-success/30 shadow-2xs">
             <CircleCheckBig className="size-4" />
           </div>
         ),
         info: (
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-info-subtle text-info ring-1 ring-info/25 shadow-xs">
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-info-subtle text-info ring-1 ring-info/30 shadow-2xs">
             <Info className="size-4" />
           </div>
         ),
         warning: (
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-warning-subtle text-warning ring-1 ring-warning/25 shadow-xs">
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-warning-subtle text-warning ring-1 ring-warning/30 shadow-2xs">
             <TriangleAlert className="size-4" />
           </div>
         ),
         error: (
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-danger-subtle text-danger ring-1 ring-danger/25 shadow-xs">
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-danger-subtle text-danger ring-1 ring-danger/30 shadow-2xs">
             <CircleX className="size-4" />
           </div>
         ),
@@ -88,12 +108,12 @@ export function Toaster() {
         unstyled: true,
         classNames: {
           toast:
-            'group flex items-start w-[24rem] max-w-[calc(100vw-2rem)] gap-3 p-3.5 rounded-xl bg-surface-raised/98 backdrop-blur-md text-default border shadow-2xl transition-all duration-200',
-          success: 'border-l-[4px] border-l-success border-default',
-          error: 'border-l-[4px] border-l-danger border-default',
-          warning: 'border-l-[4px] border-l-warning border-default',
-          info: 'border-l-[4px] border-l-info border-default',
-          default: 'border-default',
+            'group flex items-start w-[24rem] max-w-[calc(100vw-2rem)] gap-3.5 p-4 rounded-xl bg-surface-raised text-default border border-strong shadow-xl shadow-slate-900/10 dark:shadow-black/70 ring-1 ring-black/5 dark:ring-white/10 transition-all duration-200',
+          success: 'border-l-[4px] border-l-success border-strong',
+          error: 'border-l-[4px] border-l-danger border-strong',
+          warning: 'border-l-[4px] border-l-warning border-strong',
+          info: 'border-l-[4px] border-l-info border-strong',
+          default: 'border-strong',
           content: 'flex-1 min-w-0 pt-0.5',
           title: 'font-semibold text-sm leading-snug text-default tracking-tight',
           description: 'text-xs text-muted leading-relaxed mt-1 font-normal',
