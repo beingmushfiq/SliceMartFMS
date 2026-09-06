@@ -14,13 +14,25 @@ import {
   Search,
   ShoppingBag,
   Smartphone,
+  Split,
   Trash2,
   X,
 } from 'lucide-react';
-import type { PosSession, PosCheckoutPayload, PosCheckoutResult, PosHeldSale } from '../../types/api/pos';
+import type { PosSession, PosCheckoutPayload, PosCheckoutPaymentPayload, PosCheckoutResult, PosHeldSale } from '../../types/api/pos';
 import type { Product } from '../../types/api/catalog';
 import { api } from '../../lib/api/client';
 import { useCurrency } from '../../hooks/useCurrency';
+import { notify } from '../../components/ui/Toast';
+
+export type PosPaymentMethod = 'cash' | 'card' | 'mobile_banking' | 'credit_adjustment';
+
+export interface PosPaymentLine {
+  id: string;
+  method: PosPaymentMethod;
+  amount: number;
+  cashReceived?: number;
+  changeGiven?: number;
+}
 
 interface CartItem {
   product: Product;
@@ -40,8 +52,10 @@ interface CartSlot {
   cart: CartItem[];
   customerName: string;
   customerPhone: string;
-  tenderMethod: 'cash' | 'card' | 'mobile_banking';
+  tenderMethod: PosPaymentMethod;
   cashTendered: string;
+  isSplitPayment?: boolean;
+  splitPayments?: PosPaymentLine[];
 }
 
 export function POSShell({ session, onExit }: POSShellProps) {
@@ -51,9 +65,9 @@ export function POSShell({ session, onExit }: POSShellProps) {
   // Multi-cart slots (up to 5 concurrent held transactions)
   const [activeSlotIndex, setActiveSlotIndex] = useState<number>(0);
   const [slots, setSlots] = useState<CartSlot[]>([
-    { id: 1, label: 'Cart 1', cart: [], customerName: '', customerPhone: '', tenderMethod: 'cash', cashTendered: '' },
-    { id: 2, label: 'Cart 2 (Hold)', cart: [], customerName: '', customerPhone: '', tenderMethod: 'cash', cashTendered: '' },
-    { id: 3, label: 'Cart 3 (Hold)', cart: [], customerName: '', customerPhone: '', tenderMethod: 'cash', cashTendered: '' },
+    { id: 1, label: 'Cart 1', cart: [], customerName: '', customerPhone: '', tenderMethod: 'cash', cashTendered: '', isSplitPayment: false, splitPayments: [] },
+    { id: 2, label: 'Cart 2 (Hold)', cart: [], customerName: '', customerPhone: '', tenderMethod: 'cash', cashTendered: '', isSplitPayment: false, splitPayments: [] },
+    { id: 3, label: 'Cart 3 (Hold)', cart: [], customerName: '', customerPhone: '', tenderMethod: 'cash', cashTendered: '', isSplitPayment: false, splitPayments: [] },
   ]);
 
   const currentSlot = slots[activeSlotIndex] ?? slots[0]!;
@@ -62,9 +76,12 @@ export function POSShell({ session, onExit }: POSShellProps) {
   const customerPhone = currentSlot.customerPhone;
   const tenderMethod = currentSlot.tenderMethod;
   const cashTendered = currentSlot.cashTendered;
+  const isSplitPayment = currentSlot.isSplitPayment ?? false;
+  const splitPayments = currentSlot.splitPayments ?? [];
 
   const [checkingOut, setCheckingOut] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<PosCheckoutResult | null>(null);
+  const [lastCompletedPayments, setLastCompletedPayments] = useState<PosCheckoutPaymentPayload[]>([]);
   const [isParkModalOpen, setIsParkModalOpen] = useState(false);
   const [parkNote, setParkNote] = useState('');
   const [isParkedDrawerOpen, setIsParkedDrawerOpen] = useState(false);
@@ -87,8 +104,15 @@ export function POSShell({ session, onExit }: POSShellProps) {
   const { data: products = [], isLoading: loadingProducts, isFetching: fetchingProducts, refetch: refetchProducts } = useQuery<Product[]>({
     queryKey: ['catalog', 'products', 'pos'],
     queryFn: async () => {
-      const res = await api.get<Product[]>('/catalog/products');
-      return res.data ?? [];
+      try {
+        const res = await api.get<{ data?: Product[] } | Product[]>('/products?per_page=100');
+        const raw = res.data;
+        const list = Array.isArray(raw) ? raw : (raw?.data ?? []);
+        return list;
+      } catch (err) {
+        console.error('Failed to load products for POS', err);
+        return [];
+      }
     },
   });
 
@@ -116,7 +140,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
         customerNameInputRef.current?.focus();
       } else if (e.key === 'F9') {
         e.preventDefault();
-        const methods = ['cash', 'card', 'mobile_banking'] as const;
+        const methods: readonly PosPaymentMethod[] = ['cash', 'card', 'mobile_banking', 'credit_adjustment'];
         const currentIdx = methods.indexOf(tenderMethod);
         const nextIdx = (currentIdx + 1) % methods.length;
         const nextMethod = methods[nextIdx] ?? 'cash';
@@ -134,6 +158,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
   const addToCart = (product: Product) => {
     updateCurrentSlot((prev) => {
       const existing = prev.cart.find((item) => String(item.product.id) === String(product.id));
+      const price = parseFloat(product.default_sale_price || product.standard_cost || '100') || 100;
       const updatedCart = existing
         ? prev.cart.map((item) =>
             String(item.product.id) === String(product.id)
@@ -145,7 +170,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
             {
               product,
               quantity: 1,
-              unit_price: 100,
+              unit_price: price,
               discount: 0,
             },
           ];
@@ -181,6 +206,8 @@ export function POSShell({ session, onExit }: POSShellProps) {
       customerName: '',
       customerPhone: '',
       cashTendered: '',
+      isSplitPayment: false,
+      splitPayments: [],
     });
   };
 
@@ -188,13 +215,46 @@ export function POSShell({ session, onExit }: POSShellProps) {
   const subtotal = cart.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
   const discountTotal = cart.reduce((sum, item) => sum + item.discount, 0);
   const grandTotal = Math.max(0, subtotal - discountTotal);
-  const changeGiven =
+
+  const singleChangeGiven =
     tenderMethod === 'cash' && parseFloat(cashTendered || '0') > grandTotal
       ? parseFloat(cashTendered) - grandTotal
       : 0;
 
+  const splitTotalTendered = splitPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  const splitTotalChange = splitPayments.reduce((sum, p) => sum + (Number(p.changeGiven) || 0), 0);
+  const splitRemainingDue = Math.max(0, grandTotal - splitTotalTendered);
+  const changeGiven = isSplitPayment ? splitTotalChange : singleChangeGiven;
+
   const handleCheckout = async () => {
     if (cart.length === 0) return;
+
+    let paymentsPayload: PosCheckoutPaymentPayload[];
+
+    if (isSplitPayment) {
+      const activePayments = splitPayments.filter((p) => p.amount > 0);
+      const totalPaid = activePayments.reduce((s, p) => s + p.amount, 0);
+      if (totalPaid < grandTotal - 0.01) {
+        notify.warning('Payment incomplete', {
+          description: `Please allocate remaining ${formatCurrency(grandTotal - totalPaid)} across payment methods.`,
+        });
+        return;
+      }
+      paymentsPayload = activePayments.map((p) => ({
+        method: p.method,
+        amount: p.amount.toFixed(4),
+        change_given: (p.changeGiven ?? 0).toFixed(4),
+      }));
+    } else {
+      paymentsPayload = [
+        {
+          method: tenderMethod,
+          amount: grandTotal.toFixed(4),
+          change_given: singleChangeGiven.toFixed(4),
+        },
+      ];
+    }
+
     setCheckingOut(true);
 
     const payload: PosCheckoutPayload = {
@@ -204,27 +264,30 @@ export function POSShell({ session, onExit }: POSShellProps) {
       order_date: new Date().toISOString().slice(0, 10),
       discount_amount: discountTotal.toFixed(4),
       items: cart.map((item) => ({
-        product_id: parseInt(String(item.product.id), 10) || 1,
+        product_id: Number(item.product.product_id ?? item.product.id) || 1,
         quantity: item.quantity.toFixed(4),
-        unit_id: parseInt(String(item.product.base_unit_id), 10) || 1,
+        unit_id: Number(item.product.unit_id ?? item.product.base_unit_id) || 1,
         unit_price: item.unit_price.toFixed(4),
       })),
-      payments: [
-        {
-          method: tenderMethod,
-          amount: grandTotal.toFixed(4),
-          change_given: changeGiven.toFixed(4),
-        },
-      ],
+      payments: paymentsPayload,
     };
 
     try {
       const res = await api.post<{ data: PosCheckoutResult }>('/pos/checkout', payload);
+      setLastCompletedPayments(paymentsPayload);
       setLastReceipt(res.data.data);
       clearCart();
-    } catch (err) {
+      notify.success('Checkout completed', {
+        description: `Order #${res.data.data.order.order_number} confirmed.`,
+      });
+    } catch (err: unknown) {
       console.error('POS Checkout Failed', err);
-      alert('Checkout failed. Please ensure terminal session is active and stock is valid.');
+      const apiErr = err as { response?: { data?: { message?: string } } };
+      notify.error('Checkout failed', {
+        description:
+          apiErr.response?.data?.message ||
+          'Please ensure terminal session is active and stock is valid.',
+      });
     } finally {
       setCheckingOut(false);
     }
@@ -249,15 +312,22 @@ export function POSShell({ session, onExit }: POSShellProps) {
           customerPhone,
           tenderMethod,
           cashTendered,
+          isSplitPayment,
+          splitPayments,
         },
       });
       clearCart();
       setParkNote('');
       setIsParkModalOpen(false);
       refetchHeldSales();
+      notify.success('Sale parked to drawer', {
+        description: 'You can resume this transaction anytime from the parked sales drawer.',
+      });
     } catch (err) {
       console.error('Failed to park sale', err);
-      alert('Could not hold sale. Please try again.');
+      notify.error('Could not hold sale', {
+        description: 'Failed to hold sale in cloud drawer. Please try again.',
+      });
     } finally {
       setHoldingSale(false);
     }
@@ -271,12 +341,15 @@ export function POSShell({ session, onExit }: POSShellProps) {
       if (!confirmReplace) return;
     }
     const payload = heldSale.cart_payload;
+    const payloadExtra = payload as { isSplitPayment?: boolean; splitPayments?: PosPaymentLine[] };
     updateCurrentSlot({
       cart: (payload.items as unknown as CartItem[]) || [],
       customerName: payload.customerName || '',
       customerPhone: payload.customerPhone || '',
       tenderMethod: payload.tenderMethod || 'cash',
       cashTendered: payload.cashTendered || '',
+      isSplitPayment: Boolean(payloadExtra.isSplitPayment),
+      splitPayments: payloadExtra.splitPayments || [],
     });
     try {
       await api.delete(`/pos/held-sales/${heldSale.id}`);
@@ -292,16 +365,18 @@ export function POSShell({ session, onExit }: POSShellProps) {
     try {
       await api.delete(`/pos/held-sales/${id}`);
       refetchHeldSales();
+      notify.info('Parked sale discarded');
     } catch (err) {
       console.error('Error discarding held sale', err);
-      alert('Failed to discard held sale.');
+      notify.error('Failed to discard held sale');
     }
   };
 
   const filteredProducts = products.filter(
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.sku.toLowerCase().includes(search.toLowerCase())
+      p.sku.toLowerCase().includes(search.toLowerCase()) ||
+      (p.barcode && p.barcode.toLowerCase().includes(search.toLowerCase()))
   );
 
   return (
@@ -377,6 +452,23 @@ export function POSShell({ session, onExit }: POSShellProps) {
                 placeholder="Scan barcode or search products (SKU, Name)..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const trimmed = search.trim().toLowerCase();
+                    if (!trimmed) return;
+                    const match =
+                      products.find(
+                        (p) =>
+                          (p.barcode && p.barcode.toLowerCase() === trimmed) ||
+                          p.sku.toLowerCase() === trimmed
+                      ) || (filteredProducts.length === 1 ? filteredProducts[0] : null);
+                    if (match) {
+                      addToCart(match);
+                      setSearch('');
+                    }
+                  }
+                }}
                 className="h-11 w-full rounded-xl border border-default bg-surface-sunken pl-10 pr-4 text-sm text-default placeholder:text-muted focus:border-primary focus:outline-none"
               />
             </div>
@@ -416,7 +508,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
                     </div>
                     <div className="font-mono text-[10px] text-muted">{p.sku}</div>
                     <div className="mt-2 font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
-                      {formatCurrency(100)}
+                      {formatCurrency(parseFloat(p.default_sale_price || p.standard_cost || '100') || 100)}
                     </div>
                   </button>
                 ))}
@@ -551,59 +643,229 @@ export function POSShell({ session, onExit }: POSShellProps) {
               />
             </div>
 
-            {/* Payment Method Selector */}
-            <div className="grid grid-cols-3 gap-1.5">
+            {/* Payment Section Header with Multi-Payment Toggle */}
+            <div className="flex items-center justify-between border-t border-default pt-2.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
+                Payment Method
+              </span>
               <button
                 type="button"
-                onClick={() => updateCurrentSlot({ tenderMethod: 'cash' })}
-                className={`flex flex-col items-center gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer ${
-                  tenderMethod === 'cash'
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-default bg-surface text-muted hover:bg-surface-sunken hover:text-default'
+                onClick={() => {
+                  const nextSplit = !isSplitPayment;
+                  updateCurrentSlot((prev) => ({
+                    ...prev,
+                    isSplitPayment: nextSplit,
+                    splitPayments: nextSplit && (!prev.splitPayments || prev.splitPayments.length === 0)
+                      ? [
+                          { id: '1', method: prev.tenderMethod || 'cash', amount: grandTotal },
+                        ]
+                      : (prev.splitPayments ?? []),
+                  }));
+                }}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  isSplitPayment
+                    ? 'bg-primary text-white shadow-2xs'
+                    : 'border border-default bg-surface text-muted hover:text-default hover:bg-surface-sunken'
                 }`}
               >
-                <DollarSign className="h-3.5 w-3.5" />
-                Cash (F10)
-              </button>
-              <button
-                type="button"
-                onClick={() => updateCurrentSlot({ tenderMethod: 'card' })}
-                className={`flex flex-col items-center gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer ${
-                  tenderMethod === 'card'
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-default bg-surface text-muted hover:bg-surface-sunken hover:text-default'
-                }`}
-              >
-                <CreditCard className="h-3.5 w-3.5" />
-                Card
-              </button>
-              <button
-                type="button"
-                onClick={() => updateCurrentSlot({ tenderMethod: 'mobile_banking' })}
-                className={`flex flex-col items-center gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer ${
-                  tenderMethod === 'mobile_banking'
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-default bg-surface text-muted hover:bg-surface-sunken hover:text-default'
-                }`}
-              >
-                <Smartphone className="h-3.5 w-3.5" />
-                bKash/Nagad
+                <Split className="h-3 w-3" />
+                <span>{isSplitPayment ? 'Multi-Payment Active' : 'Split / Multiple'}</span>
               </button>
             </div>
 
-            {/* Cash Tendered Input */}
-            {tenderMethod === 'cash' && (
-              <div className="flex items-center justify-between gap-2 rounded-xl bg-surface-sunken border border-default p-2">
-                <span className="text-[11px] text-muted">Cash Received:</span>
-                <input
-                  ref={cashTenderedInputRef}
-                  type="number"
-                  step="1"
-                  placeholder={grandTotal.toString()}
-                  value={cashTendered}
-                  onChange={(e) => updateCurrentSlot({ cashTendered: e.target.value })}
-                  className="h-7 w-28 rounded-lg border border-default bg-surface px-2 text-right font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400 focus:border-primary focus:outline-none"
-                />
+            {!isSplitPayment ? (
+              <>
+                {/* Quick Single Payment Selector */}
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => updateCurrentSlot({ tenderMethod: 'cash' })}
+                    className={`flex flex-col items-center gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer ${
+                      tenderMethod === 'cash'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-default bg-surface text-muted hover:bg-surface-sunken hover:text-default'
+                    }`}
+                  >
+                    <DollarSign className="h-3.5 w-3.5" />
+                    Cash (F10)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateCurrentSlot({ tenderMethod: 'card' })}
+                    className={`flex flex-col items-center gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer ${
+                      tenderMethod === 'card'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-default bg-surface text-muted hover:bg-surface-sunken hover:text-default'
+                    }`}
+                  >
+                    <CreditCard className="h-3.5 w-3.5" />
+                    Card
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateCurrentSlot({ tenderMethod: 'mobile_banking' })}
+                    className={`flex flex-col items-center gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer ${
+                      tenderMethod === 'mobile_banking'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-default bg-surface text-muted hover:bg-surface-sunken hover:text-default'
+                    }`}
+                  >
+                    <Smartphone className="h-3.5 w-3.5" />
+                    bKash/Nagad
+                  </button>
+                </div>
+
+                {/* Cash Tendered Input */}
+                {tenderMethod === 'cash' && (
+                  <div className="flex items-center justify-between gap-2 rounded-xl bg-surface-sunken border border-default p-2">
+                    <span className="text-[11px] text-muted">Cash Received:</span>
+                    <input
+                      ref={cashTenderedInputRef}
+                      type="number"
+                      step="1"
+                      placeholder={grandTotal.toString()}
+                      value={cashTendered}
+                      onChange={(e) => updateCurrentSlot({ cashTendered: e.target.value })}
+                      className="h-7 w-28 rounded-lg border border-default bg-surface px-2 text-right font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400 focus:border-primary focus:outline-none"
+                    />
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Multi-Payment / Split Tender Panel */
+              <div className="space-y-2 rounded-xl border border-default bg-surface-sunken p-2.5">
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-0.5">
+                  {splitPayments.map((payment) => (
+                    <div
+                      key={payment.id}
+                      className="flex flex-col gap-1.5 p-2 rounded-lg bg-surface border border-default shadow-2xs"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          value={payment.method}
+                          onChange={(e) => {
+                            const newMethod = e.target.value as PosPaymentMethod;
+                            updateCurrentSlot((prev) => ({
+                              ...prev,
+                              splitPayments: (prev.splitPayments ?? []).map((p) =>
+                                p.id === payment.id ? { ...p, method: newMethod } : p
+                              ),
+                            }));
+                          }}
+                          className="h-7 rounded-lg border border-default bg-surface-sunken px-2 text-xs font-semibold text-default focus:border-primary focus:outline-none cursor-pointer flex-1"
+                        >
+                          <option value="cash">Cash</option>
+                          <option value="card">Card / POS</option>
+                          <option value="mobile_banking">bKash / Nagad</option>
+                          <option value="credit_adjustment">Customer Credit / Due</option>
+                        </select>
+
+                        <div className="relative w-28">
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted font-bold">৳</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={payment.amount || ''}
+                            onChange={(e) => {
+                              const val = Math.max(0, parseFloat(e.target.value) || 0);
+                              updateCurrentSlot((prev) => ({
+                                ...prev,
+                                splitPayments: (prev.splitPayments ?? []).map((p) =>
+                                  p.id === payment.id ? { ...p, amount: val } : p
+                                ),
+                              }));
+                            }}
+                            placeholder="Amount"
+                            className="h-7 w-full rounded-lg border border-default bg-surface-sunken pl-5 pr-2 text-right font-mono font-bold text-xs text-default focus:border-primary focus:outline-none"
+                          />
+                        </div>
+
+                        {splitPayments.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateCurrentSlot((prev) => ({
+                                ...prev,
+                                splitPayments: (prev.splitPayments ?? []).filter((p) => p.id !== payment.id),
+                              }));
+                            }}
+                            className="p-1 rounded-md text-muted hover:text-rose-500 hover:bg-surface-sunken cursor-pointer transition-colors"
+                            title="Remove payment line"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Cash received calculator per cash split */}
+                      {payment.method === 'cash' && (
+                        <div className="flex items-center justify-between text-[11px] bg-surface-sunken/60 px-2 py-1 rounded border border-default/50 font-mono">
+                          <span className="text-muted">Cash Rcvd:</span>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder={payment.amount.toString()}
+                            value={payment.cashReceived ?? ''}
+                            onChange={(e) => {
+                              const rcvd = parseFloat(e.target.value) || 0;
+                              const chg = Math.max(0, rcvd - payment.amount);
+                              updateCurrentSlot((prev) => ({
+                                ...prev,
+                                splitPayments: (prev.splitPayments ?? []).map((p) =>
+                                  p.id === payment.id ? { ...p, cashReceived: rcvd, changeGiven: chg } : p
+                                ),
+                              }));
+                            }}
+                            className="h-5 w-20 rounded border border-default bg-surface px-1 text-right text-xs font-bold focus:outline-none"
+                          />
+                          {(payment.changeGiven ?? 0) > 0 && (
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
+                              Change: {formatCurrency(payment.changeGiven ?? 0)}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-default/60">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const currentSum = splitPayments.reduce((s, p) => s + p.amount, 0);
+                      const rem = Math.max(0, grandTotal - currentSum);
+                      updateCurrentSlot((prev) => ({
+                        ...prev,
+                        splitPayments: [
+                          ...(prev.splitPayments ?? []),
+                          {
+                            id: String(Date.now()),
+                            method: (prev.splitPayments ?? []).some((p) => p.method === 'cash')
+                              ? 'mobile_banking'
+                              : 'cash',
+                            amount: rem,
+                          },
+                        ],
+                      }));
+                    }}
+                    className="flex items-center gap-1 text-[11px] font-bold text-primary hover:underline cursor-pointer"
+                  >
+                    <Plus className="h-3 w-3" />
+                    Add Method
+                  </button>
+
+                  <div className="text-[11px] font-mono font-bold">
+                    {splitRemainingDue <= 0.001 ? (
+                      <span className="text-emerald-600 dark:text-emerald-400">✓ Fully Allocated</span>
+                    ) : (
+                      <span className="text-amber-600 dark:text-amber-400">
+                        {formatCurrency(splitRemainingDue)} remaining
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -628,10 +890,14 @@ export function POSShell({ session, onExit }: POSShellProps) {
             {/* Checkout Button */}
             <button
               onClick={handleCheckout}
-              disabled={cart.length === 0 || checkingOut}
+              disabled={cart.length === 0 || checkingOut || (isSplitPayment && splitRemainingDue > 0.01)}
               className="w-full rounded-xl bg-primary py-3 text-center text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary-hover disabled:opacity-50 disabled:pointer-events-none active:scale-[0.99] cursor-pointer"
             >
-              {checkingOut ? 'Processing...' : `Complete Sale (${formatCurrency(grandTotal)})`}
+              {checkingOut
+                ? 'Processing...'
+                : isSplitPayment && splitRemainingDue > 0.01
+                ? `Complete Sale (${formatCurrency(splitRemainingDue)} remaining)`
+                : `Complete Sale (${formatCurrency(grandTotal)})`}
             </button>
 
             {/* Cashier Velocity Hotkey Bar */}
@@ -816,6 +1082,23 @@ export function POSShell({ session, onExit }: POSShellProps) {
                   {formatCurrency(lastReceipt.order.total_amount)}
                 </span>
               </div>
+              {lastCompletedPayments.length > 0 && (
+                <div className="border-t border-default/60 pt-1.5 mt-1 space-y-1 text-[11px]">
+                  <span className="text-muted font-sans font-semibold">Tender Breakdown:</span>
+                  {lastCompletedPayments.map((p, idx) => (
+                    <div key={idx} className="flex justify-between">
+                      <span className="capitalize text-default">
+                        {p.method === 'mobile_banking'
+                          ? 'bKash/Nagad'
+                          : p.method === 'credit_adjustment'
+                          ? 'Credit Adjustment'
+                          : p.method}:
+                      </span>
+                      <span className="font-bold text-default">{formatCurrency(parseFloat(p.amount))}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="flex justify-between text-muted">
                 <span>Session:</span>
                 <span className="text-default">{lastReceipt.session.session_number}</span>

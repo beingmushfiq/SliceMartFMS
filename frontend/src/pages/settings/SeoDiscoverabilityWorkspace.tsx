@@ -20,6 +20,7 @@ import { api } from '../../lib/api/client';
 import { SelectDropdown } from '../../components/ui/Dropdown';
 import { SerpPreviewCard } from '../../components/seo/SerpPreviewCard';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
+import { notify } from '../../components/ui/Toast';
 
 interface SeoSettingsState {
   default_title_template: string;
@@ -179,11 +180,13 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
       await api.put('/tenant/seo/settings', settings);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
+      notify.success('SEO settings saved successfully');
       // Refresh audit
       const auditRes = await api.get<{ data: SeoAuditResult }>('/tenant/seo/audit');
       setAuditResult(auditRes.data.data);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to save SEO settings');
+      const msg = err instanceof Error ? err.message : 'Failed to save SEO settings';
+      notify.error('Failed to save SEO settings', { description: msg });
     } finally {
       setSaving(false);
     }
@@ -203,8 +206,10 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
       setRedirects([res.data.data, ...redirects]);
       setNewSource('');
       setNewTarget('');
+      notify.success('Redirect rule created');
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to create redirect');
+      const msg = err instanceof Error ? err.message : 'Failed to create redirect';
+      notify.error('Failed to create redirect', { description: msg });
     } finally {
       setCreatingRedirect(false);
     }
@@ -215,8 +220,10 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
     try {
       await api.delete(`/tenant/redirects/${id}`);
       setRedirects(redirects.filter((r) => r.id !== id));
+      notify.info('Redirect rule deleted');
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to delete redirect');
+      const msg = err instanceof Error ? err.message : 'Failed to delete redirect';
+      notify.error('Failed to delete redirect', { description: msg });
     }
   };
 
@@ -229,8 +236,10 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
         status_code: 301,
       });
       fetchAllData();
+      notify.success('404 URL resolved with 301 redirect');
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to resolve 404 log');
+      const msg = err instanceof Error ? err.message : 'Failed to resolve 404 log';
+      notify.error('Failed to resolve 404 log', { description: msg });
     }
   };
 

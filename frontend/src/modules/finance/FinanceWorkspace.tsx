@@ -9,6 +9,7 @@ import type {
   ProductCost,
 } from '../../types/api/finance';
 import { DueCollectionSection } from './sections/DueCollectionSection';
+import { notify } from '../../components/ui/Toast';
 
 type FinanceTab = 'coa' | 'journal' | 'banking' | 'expenses' | 'costing' | 'statements' | 'due-collection';
 
@@ -357,7 +358,9 @@ export const FinanceWorkspace: React.FC = () => {
   const handlePostJournal = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isJournalBalanced) {
-      alert('Debit must exactly equal Credit to post a double-entry journal entry.');
+      notify.warning('Journal Unbalanced', {
+        description: 'Debit must exactly equal Credit to post a double-entry journal entry.',
+      });
       return;
     }
 
@@ -377,6 +380,9 @@ export const FinanceWorkspace: React.FC = () => {
       { account_id: 101, debit: '0.00', credit: '0.00', narration: '' },
       { account_id: 401, debit: '0.00', credit: '0.00', narration: '' },
     ]);
+    notify.success('Journal entry posted successfully', {
+      description: `Entry ${createdEntry.entry_number} recorded in general ledger.`,
+    });
   };
 
   return (

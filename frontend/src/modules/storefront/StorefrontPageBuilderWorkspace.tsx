@@ -12,10 +12,10 @@ import {
   Plus,
   Save,
   Trash2,
-  Check,
   Sparkles,
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
+import { notify } from '../../components/ui/Toast';
 
 export interface PageBlock {
   id: string;
@@ -47,12 +47,6 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [previewMode, setPreviewMode] = useState<'edit' | 'preview'>('edit');
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
-  };
 
   const loadPages = useCallback(async () => {
     setLoading(true);
@@ -152,9 +146,10 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
       const newPage = res.data.data ?? (res.data as unknown as CmsPage);
       setPages([...pages, newPage]);
       setSelectedPage(newPage);
-      showToast(`Created page "${title}"`);
+      notify.success(`Created page "${title}"`);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to create page');
+      const msg = err instanceof Error ? err.message : 'Failed to create page';
+      notify.error('Failed to create page', { description: msg });
     }
   };
 
@@ -175,9 +170,12 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
       const updated = res.data.data ?? (res.data as unknown as CmsPage);
       setSelectedPage(updated);
       setPages(pages.map((p) => (p.id === updated.id ? updated : p)));
-      showToast(`Page "${updated.title}" saved as ${statusToSave}!`);
+      notify.success(`Page "${updated.title}" saved`, {
+        description: `Status updated to ${statusToSave}.`,
+      });
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to save page');
+      const msg = err instanceof Error ? err.message : 'Failed to save page';
+      notify.error('Failed to save page', { description: msg });
     } finally {
       setSaving(false);
     }
@@ -238,14 +236,6 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 p-4 sm:p-6 lg:p-8">
-      {/* Toast Alert */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-950/90 px-4 py-3 text-xs font-semibold text-emerald-300 shadow-2xl backdrop-blur-xl">
-          <Check className="h-4 w-4" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-zinc-800 pb-5">
         <div>

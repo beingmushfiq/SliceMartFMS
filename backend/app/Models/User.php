@@ -173,6 +173,15 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if user has an assigned role by name or slug.
+     */
+    public function hasRole(string $roleName): bool
+    {
+        $this->loadMissing('roles');
+        return $this->roles->contains(fn (Role $role) => strcasecmp($role->name, $roleName) === 0 || strcasecmp($role->slug ?? '', $roleName) === 0);
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

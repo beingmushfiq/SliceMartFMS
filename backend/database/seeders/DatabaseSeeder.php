@@ -30,6 +30,9 @@ final class DatabaseSeeder extends Seeder
             PricingTableSeeder::class,
             StorefrontTableSeeder::class,
             EmployeesTableSeeder::class,
+            PosTableSeeder::class,
+            StockTableSeeder::class,
+            ReportDefinitionsTableSeeder::class,
         ]);
     }
 }

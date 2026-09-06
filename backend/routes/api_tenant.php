@@ -750,6 +750,7 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
         // ── Reports & RMS Engine ──────────────────────────────────────
         Route::prefix('reports')->name('reports.')->group(static function (): void {
             Route::get('/', [App\Modules\Reports\Controllers\ReportRegistryController::class, 'index'])->name('index');
+            Route::get('definitions', [App\Modules\Reports\Controllers\ReportRegistryController::class, 'index'])->name('definitions');
             Route::get('{code}/schema', [App\Modules\Reports\Controllers\ReportDataController::class, 'schema'])->name('schema');
             Route::get('{code}/data', [App\Modules\Reports\Controllers\ReportDataController::class, 'data'])->name('data');
             Route::post('{code}/export', [App\Modules\Reports\Controllers\ReportExportController::class, 'export'])->name('export');

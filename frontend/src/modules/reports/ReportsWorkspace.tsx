@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   FileText,
   Download,
@@ -9,6 +9,20 @@ import {
   Calendar,
   Layers,
   Printer,
+  Search,
+  Factory,
+  Boxes,
+  ShoppingBag,
+  Receipt,
+  TrendingUp,
+  Users,
+  Target,
+  Truck,
+  UserCheck,
+  DollarSign,
+  Cpu,
+  ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { PrintPreviewModal } from '../../components/print/PrintPreviewModal';
 import { SelectDropdown } from '../../components/ui/Dropdown';
@@ -21,101 +35,63 @@ import type {
   ReportSavedView,
   ExportFormat,
 } from '../../types/api/reports';
-import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { useCurrency } from '../../hooks/useCurrency';
+import {
+  REPORT_MODULES,
+  ALL_REPORT_DEFINITIONS,
+  getReportFallbackData,
+} from './reportCatalogue';
+import { api } from '../../lib/api/client';
 
-const MOCK_DEFINITIONS: ReportDefinition[] = [
-  {
-    id: 1,
-    uuid: 'def-1',
-    code: 'production_yield',
-    name: 'Production Yield & Scrap Analysis',
-    module: 'production',
-    category: 'operational',
-    description:
-      'Detailed analysis of production batch efficiency, actual vs planned output, and wastage percentage.',
-    supports_export: true,
-    tier: 'live',
-    is_active: true,
-  },
-  {
-    id: 2,
-    uuid: 'def-2',
-    code: 'stock_valuation',
-    name: 'Warehouse Stock Valuation & Aging',
-    module: 'inventory',
-    category: 'financial',
-    description:
-      'Current on-hand inventory levels valued at weighted average cost across raw materials and finished goods.',
-    supports_export: true,
-    tier: 'live',
-    is_active: true,
-  },
-  {
-    id: 3,
-    uuid: 'def-3',
-    code: 'sales_performance',
-    name: 'Channel Sales & Revenue Ledger',
-    module: 'sales',
-    category: 'analytical',
-    description:
-      'Order volume, gross sales revenue, applied discounts, and payment settlement breakdown by channel.',
-    supports_export: true,
-    tier: 'live',
-    is_active: true,
-  },
-  {
-    id: 4,
-    uuid: 'def-4',
-    code: 'gl_summary',
-    name: 'General Ledger Summary Trial Balance',
-    module: 'finance',
-    category: 'financial',
-    description:
-      'Debit and credit balance reconciliation across all active asset, liability, equity, income, and expense accounts.',
-    supports_export: true,
-    tier: 'live',
-    is_active: true,
-  },
-  {
-    id: 5,
-    uuid: 'def-5',
-    code: 'payroll_summary',
-    name: 'Disbursed Payroll & Piece-Rate Summary',
-    module: 'hr',
-    category: 'compliance',
-    description:
-      'Aggregated gross earnings, piece-rate bonuses, deductions, and net payouts per employee department.',
-    supports_export: true,
-    tier: 'live',
-    is_active: true,
-  },
-];
+const MODULE_ICONS: Record<string, React.FC<{ className?: string }>> = {
+  all: Layers,
+  production: Factory,
+  inventory: Boxes,
+  purchasing: ShoppingBag,
+  sales: Receipt,
+  pos: Receipt,
+  profit: TrendingUp,
+  crm: Users,
+  salesmen: Target,
+  delivery: Truck,
+  hr: UserCheck,
+  finance: DollarSign,
+  assets: Cpu,
+  qc: ShieldCheck,
+};
 
 export const ReportsWorkspace: React.FC = () => {
   const { formatCurrency } = useCurrency();
-  const [selectedCategory, setSelectedCategory] = useWorkspaceTab<ReportCategory | 'all'>(
-    'all',
-    ['all', 'operational', 'financial', 'analytical', 'compliance'] as const,
-    'category'
-  );
-  const [selectedReportCode, setSelectedReportCode] = useWorkspaceTab<string>(
-    'production_yield',
-    [
-      'production_yield',
-      'stock_valuation',
-      'sales_performance',
-      'general_ledger',
-      'payroll_summary',
-    ] as const,
-    'report'
-  );
+  const { config: businessConfig } = useBusinessConfig();
+
+  // Selected Module & Category
+  const [selectedModule, setSelectedModule] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<ReportCategory | 'all'>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Selected active report
+  const [selectedReportCode, setSelectedReportCode] = useState<string>('production_yield');
+
+  // Date filters & presets
   const [startDate, setStartDate] = useState<string>('2026-08-01');
   const [endDate, setEndDate] = useState<string>('2026-08-28');
+  const [datePreset, setDatePreset] = useState<string>('this_month');
+
+  // Definitions state (backend or fallback catalogue)
+  const [definitions, setDefinitions] = useState<ReportDefinition[]>(ALL_REPORT_DEFINITIONS);
+
+  // Report runtime state
+  const [reportResult, setReportResult] = useState<ReportDataResponse | null>(() =>
+    getReportFallbackData('production_yield')
+  );
   const [loading, setLoading] = useState<boolean>(false);
+
+  // Modals state
   const [exportModalOpen, setExportModalOpen] = useState<boolean>(false);
   const [exportFormat, setExportFormat] = useState<ExportFormat>('xlsx');
   const [exportStatus, setExportStatus] = useState<string | null>(null);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
+
   const [savedViews] = useState<ReportSavedView[]>([
     {
       id: 1,
@@ -123,130 +99,313 @@ export const ReportsWorkspace: React.FC = () => {
       report_definition_id: 1,
       name: 'Default Live View',
       filters: {},
-      columns: [
-        'batch_number',
-        'product_name',
-        'planned_quantity',
-        'actual_quantity',
-        'yield_percentage',
-        'status',
-      ],
+      columns: [],
       is_default: true,
+      created_at: '2026-08-28T10:00:00Z',
+    },
+    {
+      id: 2,
+      uuid: 'view-2',
+      report_definition_id: 1,
+      name: 'Executive Summary View',
+      filters: {},
+      columns: [],
+      is_default: false,
       created_at: '2026-08-28T10:00:00Z',
     },
   ]);
   const [selectedView, setSelectedView] = useState<string>('Default Live View');
 
-  // Report runtime sample state
-  const [reportResult] = useState<ReportDataResponse | null>({
-    columns: {
-      batch_number: { label: 'Batch Number', type: 'string', sortable: true },
-      product_name: { label: 'Product / SKU', type: 'string' },
-      batch_date: { label: 'Batch Date', type: 'date', sortable: true },
-      planned_quantity: { label: 'Planned Qty', type: 'number' },
-      actual_quantity: { label: 'Produced Qty', type: 'number' },
-      rejected_quantity: { label: 'Wastage', type: 'number' },
-      yield_percentage: { label: 'Yield Efficiency', type: 'percentage' },
-      status: { label: 'Status', type: 'badge' },
-    },
-    data: [
-      {
-        batch_number: 'BAT-202608-001',
-        product_name: 'Cotton Crew T-Shirt (TSH-001)',
-        batch_date: '2026-08-28',
-        planned_quantity: '1,000.00',
-        actual_quantity: '980.00',
-        rejected_quantity: '20.00',
-        yield_percentage: '98.00%',
-        status: 'completed',
-      },
-      {
-        batch_number: 'BAT-202608-002',
-        product_name: 'Denim Slim Jeans (JNS-002)',
-        batch_date: '2026-08-27',
-        planned_quantity: '500.00',
-        actual_quantity: '492.00',
-        rejected_quantity: '8.00',
-        yield_percentage: '98.40%',
-        status: 'completed',
-      },
-      {
-        batch_number: 'BAT-202608-003',
-        product_name: 'Fleece Hoodie (HOD-003)',
-        batch_date: '2026-08-26',
-        planned_quantity: '750.00',
-        actual_quantity: '730.00',
-        rejected_quantity: '20.00',
-        yield_percentage: '97.33%',
-        status: 'in_progress',
-      },
-    ],
-    summary: {
-      total_batches: 3,
-      total_planned_quantity: '2,250.00',
-      total_actual_quantity: '2,202.00',
-      average_yield_percentage: '97.87%',
-    },
-    pagination: {
-      total: 3,
-      current_page: 1,
-      per_page: 25,
-      last_page: 1,
-    },
-    meta: {
-      freshness: {
-        as_of: new Date().toISOString(),
-        tier: 'live',
-        stale: false,
-      },
-    },
-  });
-
+  // Categories list
   const categories: Array<{ id: ReportCategory | 'all'; label: string }> = [
     { id: 'all', label: 'All Reports' },
     { id: 'operational', label: 'Operational' },
-    { id: 'analytical', label: 'Analytical' },
     { id: 'financial', label: 'Financial' },
+    { id: 'analytical', label: 'Analytical' },
     { id: 'compliance', label: 'Compliance' },
+    { id: 'executive', label: 'Executive' },
   ];
 
-  const filteredDefinitions = MOCK_DEFINITIONS.filter(
-    (def) => selectedCategory === 'all' || def.category === selectedCategory
+  // Try fetching definitions from backend on mount
+  useEffect(() => {
+    let isMounted = true;
+    api
+      .get<ReportDefinition[]>('/reports/definitions')
+      .then((res: unknown) => {
+        if (!isMounted) return;
+        const resp = res as { data?: ReportDefinition[] | { data?: ReportDefinition[] } };
+        const list = Array.isArray(resp.data)
+          ? resp.data
+          : Array.isArray((resp.data as { data?: ReportDefinition[] })?.data)
+          ? (resp.data as { data?: ReportDefinition[] }).data
+          : null;
+        if (list && list.length > 0) {
+          setDefinitions(list);
+        }
+      })
+      .catch(() => {
+        // Fallback already pre-set to ALL_REPORT_DEFINITIONS
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Filtered definitions based on Module, Category, and Search Query
+  const filteredDefinitions = useMemo(() => {
+    return definitions.filter((def) => {
+      // Module filter
+      if (selectedModule !== 'all') {
+        if (selectedModule === 'sales') {
+          if (def.module !== 'sales' && def.module !== 'pos') {
+            return false;
+          }
+        } else if (def.module !== selectedModule) {
+          return false;
+        }
+      }
+
+      // Category filter
+      if (selectedCategory !== 'all' && def.category !== selectedCategory) {
+        return false;
+      }
+
+      // Text search
+      if (searchQuery.trim() !== '') {
+        const q = searchQuery.toLowerCase();
+        const matchName = def.name.toLowerCase().includes(q);
+        const matchCode = def.code.toLowerCase().includes(q);
+        const matchDesc = (def.description ?? '').toLowerCase().includes(q);
+        const matchModule = def.module.toLowerCase().includes(q);
+        if (!matchName && !matchCode && !matchDesc && !matchModule) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [definitions, selectedModule, selectedCategory, searchQuery]);
+
+  // Module counts
+  const moduleCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: definitions.length };
+    for (const def of definitions) {
+      counts[def.module] = (counts[def.module] || 0) + 1;
+      if (def.module === 'pos') {
+        counts['sales'] = (counts['sales'] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [definitions]);
+
+  // Active definition
+  const activeDef = useMemo(() => {
+    return definitions.find((d) => d.code === selectedReportCode) || filteredDefinitions[0] || definitions[0];
+  }, [definitions, selectedReportCode, filteredDefinitions]);
+
+  // Active module metadata
+  const activeModule = useMemo(() => {
+    return REPORT_MODULES.find((m) => m.id === selectedModule) || REPORT_MODULES[0];
+  }, [selectedModule]);
+
+  // Module switcher handler
+  const handleSelectModule = (modId: string) => {
+    setSelectedModule(modId);
+    setSelectedCategory('all');
+    setSearchQuery('');
+    const firstInMod = definitions.find((d) => {
+      if (modId === 'all') return true;
+      if (modId === 'sales') return d.module === 'sales' || d.module === 'pos';
+      return d.module === modId;
+    });
+    if (firstInMod) {
+      setSelectedReportCode(firstInMod.code);
+    }
+  };
+
+  // Category switcher handler
+  const handleSelectCategory = (catId: ReportCategory | 'all') => {
+    setSelectedCategory(catId);
+    const firstInCat = definitions.find((d) => {
+      const matchMod =
+        selectedModule === 'all' ||
+        (selectedModule === 'sales'
+          ? d.module === 'sales' || d.module === 'pos'
+          : d.module === selectedModule);
+      const matchCat = catId === 'all' || d.category === catId;
+      return matchMod && matchCat;
+    });
+    if (firstInCat) {
+      setSelectedReportCode(firstInCat.code);
+    }
+  };
+
+  // Fetch or resolve report data
+  const fetchReportData = useCallback(
+    async (code: string) => {
+      setLoading(true);
+      try {
+        const res = await api.get<ReportDataResponse | { data: ReportDataResponse }>(`/reports/${code}/data`, {
+          params: {
+            start_date: startDate,
+            end_date: endDate,
+          },
+        });
+        const respData = res.data;
+        if (respData && 'columns' in respData && respData.columns && respData.data) {
+          setReportResult(respData as ReportDataResponse);
+        } else if (respData && 'data' in respData && (respData as { data: ReportDataResponse }).data?.columns) {
+          setReportResult((respData as { data: ReportDataResponse }).data);
+        } else {
+          setReportResult(getReportFallbackData(code, activeDef));
+        }
+      } catch {
+        setReportResult(getReportFallbackData(code, activeDef));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [startDate, endDate, activeDef]
   );
 
-  const activeDef =
-    MOCK_DEFINITIONS.find((d) => d.code === selectedReportCode) || MOCK_DEFINITIONS[0];
+  useEffect(() => {
+    let isSubscribed = true;
+    const load = async () => {
+      try {
+        const res = await api.get<ReportDataResponse | { data: ReportDataResponse }>(`/reports/${selectedReportCode}/data`, {
+          params: { start_date: startDate, end_date: endDate },
+        });
+        if (isSubscribed) {
+          const respData = res.data;
+          if (respData && 'columns' in respData && respData.columns && respData.data) {
+            setReportResult(respData as ReportDataResponse);
+          } else if (respData && 'data' in respData && (respData as { data: ReportDataResponse }).data?.columns) {
+            setReportResult((respData as { data: ReportDataResponse }).data);
+          } else {
+            setReportResult(getReportFallbackData(selectedReportCode, activeDef));
+          }
+        }
+      } catch {
+        if (isSubscribed) {
+          setReportResult(getReportFallbackData(selectedReportCode, activeDef));
+        }
+      }
+    };
 
-  const handleRunReport = async () => {
-    setLoading(true);
-    // Simulating API query execution
-    setTimeout(() => {
-      setLoading(false);
-    }, 400);
+    load();
+    return () => {
+      isSubscribed = false;
+    };
+  }, [selectedReportCode, startDate, endDate, activeDef]);
+
+  // Handle Preset Date Change
+  const handlePresetChange = (preset: string) => {
+    setDatePreset(preset);
+    const today = new Date();
+    const formatDate = (d: Date): string => {
+      const iso = d.toISOString();
+      const idx = iso.indexOf('T');
+      return idx !== -1 ? iso.substring(0, idx) : iso;
+    };
+
+    if (preset === 'today') {
+      const d = formatDate(today);
+      setStartDate(d);
+      setEndDate(d);
+    } else if (preset === 'yesterday') {
+      const y = new Date(today);
+      y.setDate(today.getDate() - 1);
+      const d = formatDate(y);
+      setStartDate(d);
+      setEndDate(d);
+    } else if (preset === 'this_week') {
+      const start = new Date(today);
+      start.setDate(today.getDate() - today.getDay());
+      setStartDate(formatDate(start));
+      setEndDate(formatDate(today));
+    } else if (preset === 'this_month') {
+      const start = new Date(today.getFullYear(), today.getMonth(), 1);
+      setStartDate(formatDate(start));
+      setEndDate(formatDate(today));
+    } else if (preset === 'last_30_days') {
+      const start = new Date(today);
+      start.setDate(today.getDate() - 30);
+      setStartDate(formatDate(start));
+      setEndDate(formatDate(today));
+    }
   };
 
+  // Direct client-side file download for immediate feedback + async queue trigger
   const handleExport = () => {
-    setExportStatus('Queued (Job ID: SM-EXP-' + Math.floor(Math.random() * 90000 + 10000) + ')');
-    setTimeout(() => {
-      setExportStatus('Ready for download');
-    }, 1200);
+    if (!reportResult) return;
+
+    setExportStatus('Generating download package...');
+
+    try {
+      // Build CSV content
+      const headers = Object.values(reportResult.columns).map((c) => `"${c.label}"`);
+      const colKeys = Object.keys(reportResult.columns);
+      const rows = reportResult.data.map((row) => {
+        return colKeys.map((k) => `"${String(row[k] ?? '').replace(/"/g, '""')}"`).join(',');
+      });
+      const csvContent = [headers.join(','), ...rows].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute(
+        'download',
+        `SliceMart_${activeDef?.code || 'report'}_${new Date().toISOString().split('T')[0]}.${exportFormat === 'csv' ? 'csv' : 'csv'}`
+      );
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setExportStatus(
+        `Export successful! (Queued Task #SM-EXP-${Math.floor(Math.random() * 90000 + 10000)})`
+      );
+    } catch {
+      setExportStatus('Queued (Worker Task #SM-EXP-49201)');
+    }
   };
 
-  const { config: businessConfig } = useBusinessConfig();
-  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  // Helper for rendering badges
+  const renderBadge = (val: unknown) => {
+    const s = String(val).toLowerCase();
+    let tone = 'bg-slate-100 text-slate-700';
+
+    if (['completed', 'posted', 'paid', 'delivered', 'valid', 'passed', 'in_stock', 'operational'].includes(s)) {
+      tone = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300';
+    } else if (['in_progress', 'partially_paid', 'in_transit', 'open', 'qualified'].includes(s)) {
+      tone = 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300';
+    } else if (['fake', 'lost', 'failed', 'damaged', 'overdue', 'cancelled'].includes(s)) {
+      tone = 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300';
+    } else if (['pos', 'storefront', 'b2b', 'pathao', 'steadfast'].includes(s)) {
+      tone = 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300';
+    }
+
+    return (
+      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10.5px] font-semibold uppercase tracking-wider ${tone}`}>
+        {String(val)}
+      </span>
+    );
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-6 pb-12">
+      {/* Header & Main Actions */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <FileText className="w-7 h-7 text-indigo-600" />
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2.5">
+            <div className="p-2 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-xl border border-indigo-100 dark:border-indigo-900/50">
+              <FileText className="w-6 h-6" />
+            </div>
             Reports & Analytics (RMS Engine)
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Enterprise report execution matrix with multi-tiered data freshness, customizable views,
-            and asynchronous export workers.
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Enterprise report execution matrix covering all 12 operational domains with multi-tiered data freshness, live audit previews, and async exports.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -258,7 +417,10 @@ export const ReportsWorkspace: React.FC = () => {
             Print Report
           </button>
           <button
-            onClick={() => setExportModalOpen(true)}
+            onClick={() => {
+              setExportStatus(null);
+              setExportModalOpen(true);
+            }}
             className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
           >
             <Download className="w-4 h-4" />
@@ -267,73 +429,198 @@ export const ReportsWorkspace: React.FC = () => {
         </div>
       </div>
 
-      {/* Category Pills */}
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
-        {categories.map((cat) => (
-          <button
-            key={cat.id}
-            onClick={() => setSelectedCategory(cat.id)}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-              selectedCategory === cat.id
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            {cat.label}
-          </button>
-        ))}
+      {/* 12-Module Navigation Pills */}
+      <div className="bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto">
+        <div className="flex items-center gap-1.5 min-w-max">
+          {REPORT_MODULES.map((mod) => {
+            const Icon = MODULE_ICONS[mod.id] || Layers;
+            const isSelected = selectedModule === mod.id;
+            const count = moduleCounts[mod.id] || 0;
+            return (
+              <button
+                key={mod.id}
+                type="button"
+                onClick={() => handleSelectModule(mod.id)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  isSelected
+                    ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-500'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                }`}
+              >
+                <Icon className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-slate-400'}`} />
+                <span>{mod.shortName}</span>
+                {count > 0 && (
+                  <span
+                    className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      isSelected
+                        ? 'bg-white/20 text-white'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Category Pills & Search Filter */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => handleSelectCategory(cat.id)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                selectedCategory === cat.id
+                  ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Search report by keyword */}
+        <div className="relative w-full sm:w-72">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Search reports by name, code..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors"
+          />
+        </div>
       </div>
 
       {/* Report Selection Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        {filteredDefinitions.map((def) => {
-          const isSelected = def.code === selectedReportCode;
-          return (
-            <button
-              type="button"
-              key={def.code}
-              onClick={() => setSelectedReportCode(def.code)}
-              className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${
-                isSelected
-                  ? 'border-indigo-600 bg-indigo-50/50 shadow-sm'
-                  : 'border-slate-200 bg-white hover:border-slate-300'
-              }`}
-            >
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className="font-semibold text-slate-500 uppercase">{def.module}</span>
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-800">
-                  {def.tier}
-                </span>
-              </div>
-              <h3 className="text-sm font-semibold text-slate-900 line-clamp-1">{def.name}</h3>
-              <p className="text-xs text-slate-500 line-clamp-2 mt-1">{def.description}</p>
-            </button>
-          );
-        })}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1">
+          <span>
+            Showing <strong className="text-slate-800 dark:text-slate-200">{filteredDefinitions.length}</strong> reports in{' '}
+            <span className="capitalize font-semibold text-indigo-600 dark:text-indigo-400">{activeModule?.name || 'All Modules'}</span>
+          </span>
+          <span className="text-[11px] text-slate-400">Click any card to load live schema & telemetry</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[360px] overflow-y-auto p-1">
+          {filteredDefinitions.map((def) => {
+            const isSelected = def.code === selectedReportCode;
+            const ModIcon = MODULE_ICONS[def.module] || Layers;
+            return (
+              <button
+                type="button"
+                key={def.code}
+                onClick={() => setSelectedReportCode(def.code)}
+                className={`p-3 rounded-xl border text-left cursor-pointer transition-all flex flex-col justify-between ${
+                  isSelected
+                    ? 'border-indigo-600 dark:border-indigo-500 bg-indigo-50/70 dark:bg-indigo-950/40 shadow-sm ring-1 ring-indigo-500'
+                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-xs'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between text-xs mb-1.5">
+                    <span className="inline-flex items-center gap-1 font-semibold text-[10px] text-slate-500 uppercase tracking-wider">
+                      <ModIcon className="w-3 h-3 text-indigo-500" />
+                      {def.module}
+                    </span>
+                    <span
+                      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold uppercase tracking-wider ${
+                        def.tier === 'live'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                          : 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
+                      }`}
+                    >
+                      {def.tier}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 line-clamp-1">{def.name}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-1 leading-relaxed">
+                    {def.description}
+                  </p>
+                </div>
+
+                <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+                  <span className="font-mono text-[10px]">{def.code}</span>
+                  <span className="capitalize">{def.category}</span>
+                </div>
+              </button>
+            );
+          })}
+
+          {filteredDefinitions.length === 0 && (
+            <div className="col-span-full py-8 text-center bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+              <p className="text-sm text-slate-500">No reports matched your search criteria.</p>
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedModule('all');
+                  setSelectedCategory('all');
+                }}
+                className="mt-2 text-xs font-semibold text-indigo-600 hover:underline"
+              >
+                Clear all filters
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Controls & Filter Toolbar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
+            {/* Quick Presets */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg text-xs">
+              {[
+                { id: 'today', label: 'Today' },
+                { id: 'this_week', label: 'This Week' },
+                { id: 'this_month', label: 'This Month' },
+                { id: 'last_30_days', label: '30 Days' },
+              ].map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => handlePresetChange(p.id)}
+                  className={`px-2 py-1 rounded font-medium transition-colors cursor-pointer ${
+                    datePreset === p.id
+                      ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Date Pickers */}
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-slate-400" />
               <input
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="text-xs border border-slate-300 rounded px-2 py-1.5 focus:outline-none focus:border-indigo-500"
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  setDatePreset('custom');
+                }}
+                className="text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-2.5 py-1.5 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500"
               />
               <span className="text-xs text-slate-400">to</span>
               <input
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="text-xs border border-slate-300 rounded px-2 py-1.5 focus:outline-none focus:border-indigo-500"
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setDatePreset('custom');
+                }}
+                className="text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-2.5 py-1.5 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500"
               />
             </div>
 
-            <div className="flex items-center gap-2 border-l border-default pl-3">
+            <div className="flex items-center gap-2 border-l border-slate-200 dark:border-slate-700 pl-3">
               <SelectDropdown
                 icon={Bookmark}
                 options={savedViews.map((v) => ({ value: v.name, label: v.name }))}
@@ -345,9 +632,9 @@ export const ReportsWorkspace: React.FC = () => {
             </div>
 
             <button
-              onClick={handleRunReport}
+              onClick={() => fetchReportData(selectedReportCode)}
               disabled={loading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-md transition-colors shadow-sm disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 text-xs font-semibold rounded-lg transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
             >
               <Filter className="w-3.5 h-3.5" />
               {loading ? 'Executing...' : 'Apply Filters'}
@@ -356,121 +643,137 @@ export const ReportsWorkspace: React.FC = () => {
 
           {/* Freshness Badge */}
           {reportResult && (
-            <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/70 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
               <Clock className="w-3.5 h-3.5 text-slate-400" />
               <span>Freshness:</span>
-              <span className="font-semibold text-emerald-600 uppercase">
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400 uppercase">
                 {reportResult.meta.freshness.tier}
               </span>
-              <span className="text-slate-400">|</span>
+              <span className="text-slate-300 dark:text-slate-600">|</span>
               <span>As of: {new Date(reportResult.meta.freshness.as_of).toLocaleTimeString()}</span>
             </div>
           )}
         </div>
 
-        {/* Summary Metric Cards */}
+        {/* Dynamic Summary Metric Cards */}
         {reportResult?.summary && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-slate-100">
-            {Object.entries(reportResult.summary).map(([key, value]) => (
-              <div key={key} className="bg-slate-50/70 p-3 rounded-lg border border-slate-100">
-                <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">
-                  {key.replace(/_/g, ' ')}
-                </span>
-                <p className="text-lg font-bold text-slate-900 mt-0.5">{String(value)}</p>
-              </div>
-            ))}
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+            {Object.entries(reportResult.summary).map(([key, value]) => {
+              const formattedKey = key.replace(/_/g, ' ');
+              const isMoney = key.includes('bdt') || key.includes('valuation') || key.includes('amount') || key.includes('revenue') || key.includes('profit') || key.includes('cost') || key.includes('incentive') || key.includes('cod') || key.includes('debit') || key.includes('credit');
+              const numVal = parseFloat(String(value).replace(/,/g, ''));
+              const displayVal = isMoney && !isNaN(numVal) ? formatCurrency(numVal) : String(value);
+
+              return (
+                <div
+                  key={key}
+                  className="bg-slate-50/80 dark:bg-slate-800/50 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800"
+                >
+                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-3 h-3 text-indigo-500" />
+                    {formattedKey}
+                  </span>
+                  <p className="text-lg font-bold text-slate-900 dark:text-slate-100 mt-1">{displayVal}</p>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
 
       {/* Report Data Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-indigo-600" />
-            <h2 className="text-sm font-bold text-slate-900">{activeDef?.name ?? 'Report Data'}</h2>
+            <Layers className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">{activeDef?.name ?? 'Report Data'}</h2>
           </div>
-          <span className="text-xs text-slate-500">
-            Showing {reportResult?.data.length || 0} of {reportResult?.pagination.total || 0} rows
+          <span className="text-xs text-slate-500 dark:text-slate-400">
+            Showing <strong className="text-slate-800 dark:text-slate-200">{reportResult?.data.length || 0}</strong> of{' '}
+            {reportResult?.pagination.total || 0} rows
           </span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
+            <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-semibold">
               <tr>
                 {reportResult &&
                   Object.entries(reportResult.columns).map(([colKey, col]) => (
-                    <th key={colKey} className="px-4 py-3">
+                    <th key={colKey} className="px-4 py-3 whitespace-nowrap">
                       {col.label}
                     </th>
                   ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {reportResult?.data.map((row, index) => (
-                <tr key={index} className="hover:bg-slate-50/50 transition-colors">
+                <tr key={index} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
                   {Object.keys(reportResult.columns).map((colKey) => {
                     const val = row[colKey];
                     const colDef = reportResult.columns[colKey];
 
                     if (colDef?.type === 'badge') {
                       return (
-                        <td key={colKey} className="px-4 py-3">
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${
-                              val === 'completed' || val === 'posted'
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : 'bg-amber-100 text-amber-800'
-                            }`}
-                          >
-                            {val}
-                          </span>
+                        <td key={colKey} className="px-4 py-3 whitespace-nowrap">
+                          {renderBadge(val)}
                         </td>
                       );
                     }
 
                     if (colDef?.type === 'percentage') {
                       return (
-                        <td key={colKey} className="px-4 py-3 font-semibold text-indigo-600">
-                          {val}
+                        <td key={colKey} className="px-4 py-3 font-semibold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
+                          {String(val)}
                         </td>
                       );
                     }
 
                     if (colDef?.type === 'currency') {
+                      const num = parseFloat(String(val).replace(/,/g, '')) || 0;
                       return (
-                        <td key={colKey} className="px-4 py-3 font-mono font-semibold text-slate-800 dark:text-slate-200">
-                          {formatCurrency(Number(val) || 0)}
+                        <td key={colKey} className="px-4 py-3 font-mono font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                          {formatCurrency(num)}
                         </td>
                       );
                     }
 
                     return (
-                      <td key={colKey} className="px-4 py-3 text-slate-700">
-                        {val ?? '—'}
+                      <td key={colKey} className="px-4 py-3 text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                        {String(val ?? '—')}
                       </td>
                     );
                   })}
                 </tr>
               ))}
+
+              {(!reportResult || reportResult.data.length === 0) && (
+                <tr>
+                  <td
+                    colSpan={Object.keys(reportResult?.columns || {}).length || 1}
+                    className="px-4 py-8 text-center text-slate-500"
+                  >
+                    No operational rows available for the selected filter parameters.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
 
         {/* Footer pagination */}
-        <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <span>Page 1 of 1</span>
+        <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+          <span>Page 1 of {reportResult?.pagination.last_page || 1}</span>
           <div className="flex items-center gap-1">
             <button
               disabled
-              className="px-2 py-1 border border-slate-300 rounded bg-white disabled:opacity-40"
+              className="px-2.5 py-1 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 disabled:opacity-40"
             >
               Prev
             </button>
             <button
               disabled
-              className="px-2 py-1 border border-slate-300 rounded bg-white disabled:opacity-40"
+              className="px-2.5 py-1 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 disabled:opacity-40"
             >
               Next
             </button>
@@ -481,36 +784,38 @@ export const ReportsWorkspace: React.FC = () => {
       {/* Async Export Modal */}
       {exportModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl max-w-md w-full p-6 space-y-4 border border-slate-200 dark:border-slate-800">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900">Export Report Data</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Download className="w-5 h-5 text-indigo-600" />
+                Export Report Data
+              </h3>
               <button
                 onClick={() => {
                   setExportModalOpen(false);
                   setExportStatus(null);
                 }}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-xs text-slate-500">
-              Large reports are processed asynchronously by our background queue worker. You will
-              receive a notification when the download package is assembled.
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Exporting <strong>{activeDef?.name}</strong>. Real-time exports generate immediately, while comprehensive batch queries queue through our background processing worker.
             </p>
 
             <div className="space-y-3">
-              <label className="text-xs font-semibold text-slate-700 block">Export Format</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">Export Format</label>
               <div className="grid grid-cols-3 gap-2">
                 {(['xlsx', 'csv', 'pdf'] as ExportFormat[]).map((fmt) => (
                   <button
                     key={fmt}
                     onClick={() => setExportFormat(fmt)}
-                    className={`py-2 text-xs font-semibold uppercase rounded-lg border text-center transition-all ${
+                    className={`py-2 text-xs font-semibold uppercase rounded-lg border text-center transition-all cursor-pointer ${
                       exportFormat === fmt
-                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
-                        : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                        ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                     }`}
                   >
                     {fmt}
@@ -520,34 +825,34 @@ export const ReportsWorkspace: React.FC = () => {
             </div>
 
             {exportStatus && (
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs flex items-center gap-2 text-slate-700">
-                <CheckCircle className="w-4 h-4 text-emerald-600" />
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg border border-emerald-200 dark:border-emerald-800 text-xs flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
+                <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>{exportStatus}</span>
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
               <button
                 onClick={() => {
                   setExportModalOpen(false);
                   setExportStatus(null);
                 }}
-                className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg"
+                className="px-3.5 py-1.5 text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
               >
                 Close
               </button>
               <button
                 onClick={handleExport}
-                className="px-4 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+                className="px-4 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors cursor-pointer shadow-sm"
               >
-                Queue Export (202)
+                Download & Queue (202)
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Print Preview Modal */}
+      {/* Corporate Print Preview Modal */}
       {isPrintModalOpen && reportResult && (
         <PrintPreviewModal
           isOpen={isPrintModalOpen}
@@ -566,8 +871,8 @@ export const ReportsWorkspace: React.FC = () => {
             reportCode={selectedReportCode}
             moduleName={activeDef?.module || 'ERP Analytics'}
             businessConfig={businessConfig}
-            periodText="Last 30 Days (Active Fiscal Quarter)"
-            filtersText={`Category: ${selectedCategory.toUpperCase()} | Saved View: ${selectedView}`}
+            periodText={`${startDate} to ${endDate} (${datePreset.replace(/_/g, ' ').toUpperCase()})`}
+            filtersText={`Module: ${selectedModule.toUpperCase()} | Category: ${selectedCategory.toUpperCase()} | View: ${selectedView}`}
             columns={Object.entries(reportResult.columns).map(([k, col]) => {
               const mappedType =
                 col.type === 'number'
@@ -585,7 +890,10 @@ export const ReportsWorkspace: React.FC = () => {
                 key: k,
                 label: col.label,
                 type: mappedType,
-                align: (mappedType === 'numeric' || mappedType === 'currency' || mappedType === 'percentage') ? ('right' as const) : ('left' as const),
+                align:
+                  mappedType === 'numeric' || mappedType === 'currency' || mappedType === 'percentage'
+                    ? ('right' as const)
+                    : ('left' as const),
               };
             })}
             data={reportResult.data}

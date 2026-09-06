@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Check,
   Eye,
   Globe,
   Layout,
@@ -19,6 +18,7 @@ import type { StorefrontConfig } from '../../types/api/storefront';
 import { DomainSettingsTab } from './DomainSettingsTab';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { useCurrency } from '../../hooks/useCurrency';
+import { notify } from '../../components/ui/Toast';
 
 interface PublishedProductItem {
   id: number;
@@ -44,7 +44,6 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
   const [products, setProducts] = useState<PublishedProductItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Form State
   const [form, setForm] = useState({
@@ -65,11 +64,6 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
     min_order_amount: '',
     status: 'live' as 'draft' | 'live' | 'maintenance' | 'suspended',
   });
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 4000);
-  };
 
   useEffect(() => {
     let ignore = false;
@@ -145,10 +139,10 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
         min_order_amount: form.min_order_amount ? parseFloat(form.min_order_amount) : null,
         status: form.status,
       });
-      showToast('Storefront configuration saved successfully!');
+      notify.success('Storefront configuration saved successfully');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to save settings';
-      alert(msg);
+      notify.error('Failed to save settings', { description: msg });
     } finally {
       setSaving(false);
     }
@@ -166,14 +160,14 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
       setProducts((prev) =>
         prev.map((p) => (p.id === product.id ? { ...p, is_published: newStatus } : p))
       );
-      showToast(
+      notify.success(
         newStatus
           ? `Published "${product.name}" to storefront.`
           : `Unpublished "${product.name}".`
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to update publication status';
-      alert(msg);
+      notify.error('Failed to update publication status', { description: msg });
     }
   };
 
@@ -187,13 +181,6 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-950/90 px-4 py-3 text-xs font-semibold text-emerald-300 shadow-2xl backdrop-blur-xl">
-          <Check className="h-4 w-4" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
 
       {/* Header & Quick Links */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-default pb-5">

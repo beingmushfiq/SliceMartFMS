@@ -72,9 +72,11 @@ export default function PosWorkspace() {
     queryKey: ['pos', 'sessions'],
     queryFn: async () => {
       try {
-        const sessRes = await api.get<PosSession[]>('/pos/sessions');
-        if (sessRes.data && sessRes.data.length > 0) {
-          return sessRes.data;
+        const sessRes = await api.get<PosSession[] | { data: PosSession[] }>('/pos/sessions');
+        const raw = sessRes.data;
+        const list = Array.isArray(raw) ? raw : (raw?.data ?? []);
+        if (list.length > 0) {
+          return list;
         }
       } catch {
         // Fallback to sample data
