@@ -2,9 +2,12 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   CheckCircle2,
+  Clock,
   CreditCard,
   DollarSign,
   Minus,
+  PauseCircle,
+  PlayCircle,
   Plus,
   Printer,
   RefreshCw,
@@ -14,7 +17,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import type { PosSession, PosCheckoutPayload, PosCheckoutResult } from '../../types/api/pos';
+import type { PosSession, PosCheckoutPayload, PosCheckoutResult, PosHeldSale } from '../../types/api/pos';
 import type { Product } from '../../types/api/catalog';
 import { api } from '../../lib/api/client';
 import { useCurrency } from '../../hooks/useCurrency';
@@ -62,6 +65,10 @@ export function POSShell({ session, onExit }: POSShellProps) {
 
   const [checkingOut, setCheckingOut] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<PosCheckoutResult | null>(null);
+  const [isParkModalOpen, setIsParkModalOpen] = useState(false);
+  const [parkNote, setParkNote] = useState('');
+  const [isParkedDrawerOpen, setIsParkedDrawerOpen] = useState(false);
+  const [holdingSale, setHoldingSale] = useState(false);
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const customerNameInputRef = useRef<HTMLInputElement>(null);
   const cashTenderedInputRef = useRef<HTMLInputElement>(null);
@@ -82,6 +89,18 @@ export function POSShell({ session, onExit }: POSShellProps) {
     queryFn: async () => {
       const res = await api.get<Product[]>('/catalog/products');
       return res.data ?? [];
+    },
+  });
+
+  const { data: heldSales = [], refetch: refetchHeldSales } = useQuery<PosHeldSale[]>({
+    queryKey: ['pos', 'held-sales', session.id],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{ data: PosHeldSale[] }>(`/pos/held-sales?pos_session_id=${session.id}`);
+        return res.data.data ?? [];
+      } catch {
+        return [];
+      }
     },
   });
 
@@ -211,6 +230,74 @@ export function POSShell({ session, onExit }: POSShellProps) {
     }
   };
 
+  const handleParkSale = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (cart.length === 0) return;
+    setHoldingSale(true);
+    try {
+      await api.post('/pos/held-sales', {
+        pos_session_id: session.id,
+        pos_terminal_id: session.terminal_id,
+        reference_note: parkNote.trim() || `${customerName || 'Walk-in'} (${cart.length} items)`,
+        subtotal: subtotal.toFixed(4),
+        tax_amount: '0.0000',
+        discount_amount: discountTotal.toFixed(4),
+        total_amount: grandTotal.toFixed(4),
+        cart_payload: {
+          items: cart,
+          customerName,
+          customerPhone,
+          tenderMethod,
+          cashTendered,
+        },
+      });
+      clearCart();
+      setParkNote('');
+      setIsParkModalOpen(false);
+      refetchHeldSales();
+    } catch (err) {
+      console.error('Failed to park sale', err);
+      alert('Could not hold sale. Please try again.');
+    } finally {
+      setHoldingSale(false);
+    }
+  };
+
+  const handleResumeSale = async (heldSale: PosHeldSale) => {
+    if (cart.length > 0) {
+      const confirmReplace = window.confirm(
+        'The active cart already contains items. Overwrite active cart with this parked sale?'
+      );
+      if (!confirmReplace) return;
+    }
+    const payload = heldSale.cart_payload;
+    updateCurrentSlot({
+      cart: (payload.items as unknown as CartItem[]) || [],
+      customerName: payload.customerName || '',
+      customerPhone: payload.customerPhone || '',
+      tenderMethod: payload.tenderMethod || 'cash',
+      cashTendered: payload.cashTendered || '',
+    });
+    try {
+      await api.delete(`/pos/held-sales/${heldSale.id}`);
+      refetchHeldSales();
+      setIsParkedDrawerOpen(false);
+    } catch (err) {
+      console.error('Error clearing resumed held sale', err);
+    }
+  };
+
+  const handleDiscardHeldSale = async (id: number) => {
+    if (!window.confirm('Are you sure you want to permanently discard this parked sale?')) return;
+    try {
+      await api.delete(`/pos/held-sales/${id}`);
+      refetchHeldSales();
+    } catch (err) {
+      console.error('Error discarding held sale', err);
+      alert('Failed to discard held sale.');
+    }
+  };
+
   const filteredProducts = products.filter(
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -253,6 +340,18 @@ export function POSShell({ session, onExit }: POSShellProps) {
               </span>
             </div>
           </div>
+
+          <button
+            onClick={() => setIsParkedDrawerOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl border border-default bg-surface px-3 py-1.5 text-xs font-semibold text-default hover:bg-surface-sunken cursor-pointer transition-colors shadow-2xs"
+            title="View Parked / Held Sales"
+          >
+            <Clock className="h-4 w-4 text-amber-500" />
+            <span className="hidden sm:inline">Parked Sales</span>
+            <span className="rounded-full bg-amber-500/10 text-amber-600 px-1.5 py-0.2 text-[10px] font-bold border border-amber-500/20">
+              {heldSales.length}
+            </span>
+          </button>
 
           <button
             onClick={onExit}
@@ -365,11 +464,22 @@ export function POSShell({ session, onExit }: POSShellProps) {
                 {cart.reduce((s, i) => s + i.quantity, 0)}
               </span>
             </div>
-            {cart.length > 0 && (
-              <button onClick={clearCart} className="text-[11px] text-rose-600 dark:text-rose-400 hover:underline cursor-pointer">
-                Clear Cart
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsParkModalOpen(true)}
+                disabled={cart.length === 0}
+                className="text-[11px] font-medium text-amber-600 dark:text-amber-400 hover:underline cursor-pointer disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1"
+                title="Park this cart to resume later"
+              >
+                <PauseCircle className="h-3.5 w-3.5" />
+                Hold Sale
               </button>
-            )}
+              {cart.length > 0 && (
+                <button onClick={clearCart} className="text-[11px] text-rose-600 dark:text-rose-400 hover:underline cursor-pointer">
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Cart Items List */}
@@ -534,6 +644,154 @@ export function POSShell({ session, onExit }: POSShellProps) {
           </div>
         </div>
       </div>
+
+      {/* Park Sale Modal */}
+      {isParkModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-2xl border border-default bg-surface p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-default pb-3">
+              <div className="flex items-center gap-2">
+                <PauseCircle className="h-5 w-5 text-amber-500" />
+                <h3 className="text-base font-bold text-default">Hold / Park Active Cart</h3>
+              </div>
+              <button
+                onClick={() => setIsParkModalOpen(false)}
+                className="text-muted hover:text-default cursor-pointer text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleParkSale} className="space-y-3">
+              <p className="text-xs text-muted">
+                This will save the current cart with {cart.length} item(s) totalling{' '}
+                <span className="font-bold text-default font-mono">{formatCurrency(grandTotal)}</span> to the server queue so you can serve the next customer.
+              </p>
+
+              <div>
+                <label className="block text-xs font-semibold text-muted uppercase mb-1">
+                  Reference / Customer Note
+                </label>
+                <input
+                  type="text"
+                  value={parkNote}
+                  onChange={(e) => setParkNote(e.target.value)}
+                  placeholder={`e.g. ${customerName || 'Customer'} - Waiting for cash / Table 3`}
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-sm text-default focus:border-primary focus:outline-none"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-default">
+                <button
+                  type="button"
+                  onClick={() => setIsParkModalOpen(false)}
+                  className="px-4 py-2 text-xs font-medium border border-default rounded-xl hover:bg-surface-sunken text-default cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={holdingSale}
+                  className="px-4 py-2 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  {holdingSale ? 'Holding...' : 'Confirm & Hold Sale'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Parked Sales Drawer Modal */}
+      {isParkedDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-2xl rounded-2xl border border-default bg-surface p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-default pb-3">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-amber-500" />
+                <h3 className="text-base font-bold text-default">Parked / Held Sales Queue</h3>
+                <span className="rounded-full bg-amber-500/10 text-amber-600 px-2 py-0.5 text-xs font-bold border border-amber-500/20">
+                  {heldSales.length} on hold
+                </span>
+              </div>
+              <button
+                onClick={() => setIsParkedDrawerOpen(false)}
+                className="text-muted hover:text-default cursor-pointer text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
+              {heldSales.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-muted">
+                  <PauseCircle className="h-10 w-10 stroke-1 mb-2 text-muted" />
+                  <p className="text-sm font-medium">No sales are currently held</p>
+                  <p className="text-xs text-muted">When a customer needs time to pay, click "Hold Sale" in the cart.</p>
+                </div>
+              ) : (
+                heldSales.map((sale) => (
+                  <div
+                    key={sale.id}
+                    className="p-4 rounded-xl border border-default bg-surface-sunken flex items-center justify-between gap-4 hover:border-amber-500/40 transition-colors"
+                  >
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-default truncate">
+                          {sale.reference_note || 'Held Sale'}
+                        </span>
+                        <span className="text-[10px] font-mono text-muted bg-surface px-2 py-0.5 rounded border border-default">
+                          {new Date(sale.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted">
+                        {sale.cart_payload?.items?.length ?? 0} item(s) • Total:{' '}
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                          {formatCurrency(sale.total_amount)}
+                        </span>
+                      </p>
+                      {sale.cart_payload?.customerName && (
+                        <p className="text-[11px] text-muted">
+                          Customer: <span className="text-default font-medium">{sale.cart_payload.customerName}</span>{' '}
+                          {sale.cart_payload.customerPhone && `(${sale.cart_payload.customerPhone})`}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => handleResumeSale(sale)}
+                        className="px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer transition-colors"
+                      >
+                        <PlayCircle className="h-3.5 w-3.5" />
+                        Resume Cart
+                      </button>
+                      <button
+                        onClick={() => handleDiscardHeldSale(sale.id)}
+                        className="p-1.5 rounded-xl border border-default text-muted hover:text-rose-600 hover:bg-surface cursor-pointer transition-colors"
+                        title="Discard held sale"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-default flex justify-between items-center text-xs text-muted">
+              <span>Resuming a cart will load items into your active register slot.</span>
+              <button
+                onClick={() => setIsParkedDrawerOpen(false)}
+                className="px-4 py-2 border border-default rounded-xl hover:bg-surface-sunken text-default font-medium cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Receipt Modal */}
       {lastReceipt && (

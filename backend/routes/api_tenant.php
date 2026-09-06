@@ -34,6 +34,10 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             Route::patch('change-password', [App\Modules\Auth\Controllers\AuthController::class, 'changePassword'])->name('change-password');
         });
 
+        // ── Tenant Operational Dashboard ──────────────────────────────
+        Route::get('dashboard/metrics', [App\Modules\Platform\Controllers\TenantDashboardController::class, 'metrics'])
+            ->name('dashboard.metrics');
+
         // ── Catalogue: Units ──────────────────────────────────────────
         Route::prefix('units')->name('units.')->group(static function (): void {
             Route::get('options', [App\Modules\Catalogue\Controllers\UnitController::class, 'options'])
@@ -393,6 +397,12 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::delete('{id}', [App\Modules\Inventory\Controllers\StockCountController::class, 'destroy'])
                     ->middleware('permission:inventory.count.create')->name('destroy');
             });
+
+            Route::prefix('thresholds')->name('thresholds.')->group(static function (): void {
+                Route::get('/', [App\Modules\Inventory\Controllers\StockThresholdController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\Inventory\Controllers\StockThresholdController::class, 'store'])->name('store');
+                Route::get('alerts', [App\Modules\Inventory\Controllers\StockThresholdController::class, 'alerts'])->name('alerts');
+            });
         });
 
         // ── Purchasing & Procurement ──────────────────────────────────
@@ -522,6 +532,59 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::post('{id}/approve', [App\Modules\Sales\Controllers\SalesReturnController::class, 'approve'])
                     ->middleware('permission:sales.return.approve')->name('approve');
             });
+
+            // ── CRM Leads ────────────────────────────────────────────────
+            Route::prefix('leads')->name('leads.')->group(static function (): void {
+                Route::get('/', [App\Modules\Sales\Controllers\CrmLeadController::class, 'index'])
+                    ->name('index');
+                Route::post('/', [App\Modules\Sales\Controllers\CrmLeadController::class, 'store'])
+                    ->name('store');
+                Route::get('{id}', [App\Modules\Sales\Controllers\CrmLeadController::class, 'show'])
+                    ->name('show');
+                Route::put('{id}', [App\Modules\Sales\Controllers\CrmLeadController::class, 'update'])
+                    ->name('update');
+                Route::patch('{id}/stage', [App\Modules\Sales\Controllers\CrmLeadController::class, 'updateStage'])
+                    ->name('stage');
+                Route::post('{id}/validate-fake', [App\Modules\Sales\Controllers\CrmLeadController::class, 'validateFake'])
+                    ->name('validate-fake');
+                Route::post('{id}/convert', [App\Modules\Sales\Controllers\CrmLeadController::class, 'convert'])
+                    ->name('convert');
+                Route::post('{id}/activities', [App\Modules\Sales\Controllers\CrmLeadController::class, 'addActivity'])
+                    ->name('activities');
+            });
+
+            // ── Salesmen & Targets ─────────────────────────────────────────
+            Route::get('salesmen', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'salesmen'])
+                ->name('salesmen');
+            Route::get('salesmen/{employeeId}/dashboard', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'dashboard'])
+                ->name('salesmen.dashboard');
+
+            Route::prefix('targets')->name('targets.')->group(static function (): void {
+                Route::get('/', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'index'])
+                    ->name('index');
+                Route::post('/', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'store'])
+                    ->name('store');
+                Route::get('{id}', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'show'])
+                    ->name('show');
+                Route::put('{id}', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'update'])
+                    ->name('update');
+                Route::post('{id}/recalculate', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'recalculate'])
+                    ->name('recalculate');
+            });
+
+            // ── Incentives ────────────────────────────────────────────────
+            Route::prefix('incentives')->name('incentives.')->group(static function (): void {
+                Route::get('policies', [App\Modules\Sales\Controllers\IncentivePolicyController::class, 'policies'])
+                    ->name('policies');
+                Route::post('policies', [App\Modules\Sales\Controllers\IncentivePolicyController::class, 'storePolicy'])
+                    ->name('policies.store');
+                Route::get('calculations', [App\Modules\Sales\Controllers\IncentivePolicyController::class, 'calculations'])
+                    ->name('calculations');
+                Route::post('calculate', [App\Modules\Sales\Controllers\IncentivePolicyController::class, 'calculate'])
+                    ->name('calculate');
+                Route::post('calculations/{id}/approve', [App\Modules\Sales\Controllers\IncentivePolicyController::class, 'approve'])
+                    ->name('calculations.approve');
+            });
         });
 
         // ── POS ───────────────────────────────────────────────────────
@@ -548,6 +611,13 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
 
             Route::post('checkout', [App\Modules\Pos\Controllers\PosCheckoutController::class, 'checkout'])
                 ->middleware('permission:pos.checkout')->name('checkout');
+
+            Route::prefix('held-sales')->name('held-sales.')->group(static function (): void {
+                Route::get('/', [App\Modules\Pos\Controllers\PosHeldSaleController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\Pos\Controllers\PosHeldSaleController::class, 'store'])->name('store');
+                Route::get('{id}', [App\Modules\Pos\Controllers\PosHeldSaleController::class, 'show'])->name('show');
+                Route::delete('{id}', [App\Modules\Pos\Controllers\PosHeldSaleController::class, 'destroy'])->name('destroy');
+            });
         });
 
         // ── Logistics & Courier Dispatch ───────────────────────────────

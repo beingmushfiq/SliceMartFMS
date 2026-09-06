@@ -34,6 +34,18 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   }, [user]);
 
   const isItemActive = (to: string, isActive: boolean) => {
+    if (to.includes('?')) {
+      const [toPath, toQuery] = to.split('?');
+      const currentFull = location.pathname + location.search;
+      if (toQuery && (currentFull === to || (location.pathname === toPath && location.search.includes(toQuery)))) {
+        return true;
+      }
+      return false;
+    }
+    if (location.search && (to === '/sales' || to === '/hr' || to === '/finance' || to === '/assets')) {
+      // If there are search query params on these multi-tab workspaces, don't keep main link active if query is active
+      return false;
+    }
     if (isActive) return true;
     if (to === '/hr' && (location.pathname.startsWith('/workforce') || location.pathname.startsWith('/employees') || location.pathname.startsWith('/attendance'))) {
       return true;

@@ -1,13 +1,14 @@
-import { ArrowRightLeft, Boxes, ClipboardCheck, Scale } from 'lucide-react';
+import { AlertTriangle, ArrowRightLeft, Boxes, ClipboardCheck, Scale } from 'lucide-react';
 import { StockLedgerSection } from './sections/StockLedgerSection';
 import { StockTransfersSection } from './sections/StockTransfersSection';
 import { StockAdjustmentsSection } from './sections/StockAdjustmentsSection';
 import { StockCountsSection } from './sections/StockCountsSection';
+import { StockThresholdsSection } from './sections/StockThresholdsSection';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 
-export type InventoryTab = 'ledger' | 'transfers' | 'adjustments' | 'counts';
+export type InventoryTab = 'ledger' | 'transfers' | 'adjustments' | 'counts' | 'thresholds';
 
-const VALID_TABS: readonly InventoryTab[] = ['ledger', 'transfers', 'adjustments', 'counts'];
+const VALID_TABS: readonly InventoryTab[] = ['ledger', 'transfers', 'adjustments', 'counts', 'thresholds'];
 
 interface TabConfig {
   id: InventoryTab;
@@ -23,6 +24,13 @@ const tabs: TabConfig[] = [
     icon: Boxes,
     description:
       'Real-time multi-warehouse inventory levels and append-only stock movement audit ledger',
+  },
+  {
+    id: 'thresholds',
+    label: 'Minimum Stock & Alerts',
+    icon: AlertTriangle,
+    description:
+      'Warehouse reorder thresholds, safety stock buffers and real-time replenishment alerts',
   },
   {
     id: 'transfers',
@@ -98,6 +106,7 @@ export default function InventoryWorkspace() {
       {/* Tab Content Section */}
       <div className="pt-1">
         {activeTab === 'ledger' && <StockLedgerSection />}
+        {activeTab === 'thresholds' && <StockThresholdsSection />}
         {activeTab === 'transfers' && <StockTransfersSection />}
         {activeTab === 'adjustments' && <StockAdjustmentsSection />}
         {activeTab === 'counts' && <StockCountsSection />}

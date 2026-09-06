@@ -8,8 +8,9 @@ import type {
   Expense,
   ProductCost,
 } from '../../types/api/finance';
+import { DueCollectionSection } from './sections/DueCollectionSection';
 
-type FinanceTab = 'coa' | 'journal' | 'banking' | 'expenses' | 'costing' | 'statements';
+type FinanceTab = 'coa' | 'journal' | 'banking' | 'expenses' | 'costing' | 'statements' | 'due-collection';
 
 function createManualJournalEntry(
   entryIndex: number,
@@ -52,7 +53,7 @@ export const FinanceWorkspace: React.FC = () => {
   const { formatCurrency } = useCurrency();
   const [activeTab, setActiveTab] = useWorkspaceTab<FinanceTab>(
     'journal',
-    ['coa', 'journal', 'banking', 'expenses', 'costing', 'statements'] as const
+    ['coa', 'journal', 'banking', 'expenses', 'costing', 'statements', 'due-collection'] as const
   );
 
   // Chart of Accounts State
@@ -453,6 +454,7 @@ export const FinanceWorkspace: React.FC = () => {
         <div className="flex gap-1.5 min-w-full sm:min-w-0">
           {([
             { id: 'journal', label: 'General Ledger & Journals', count: journalEntries.length },
+            { id: 'due-collection', label: 'Due Collection & Receivables', count: 'Aging' },
             { id: 'coa', label: 'Chart of Accounts', count: accounts.length },
             { id: 'statements', label: 'Financial Statements & P&L', count: 'Live' },
             { id: 'banking', label: 'Banking & Treasury', count: bankAccounts.length },
@@ -850,6 +852,9 @@ export const FinanceWorkspace: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Tab: Due Collection & Receivables */}
+      {activeTab === 'due-collection' && <DueCollectionSection />}
 
       {/* Post Journal Entry Modal */}
       {showNewJournalModal && (

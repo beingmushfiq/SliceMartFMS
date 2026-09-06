@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   TrendingUp,
   ShoppingBag,
@@ -27,6 +28,8 @@ import {
 } from 'recharts';
 
 import type { DashboardInvoice } from './SalesDashboardView';
+import { api } from '../../../lib/api/client';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 interface ExecutiveDashboardViewProps {
   onOpenOrderPO?: (item: unknown) => void;
@@ -48,6 +51,42 @@ const REVENUE_DATA = [
 export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
   onOpenInvoice,
 }) => {
+  const { formatCurrency } = useCurrency();
+
+  const { data: metrics } = useQuery({
+    queryKey: ['tenant', 'dashboard', 'metrics'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{
+          data: {
+            commercial: {
+              today_revenue: number;
+              month_revenue: number;
+              active_orders: number;
+              total_receivable_due: number;
+            };
+            production: {
+              today_output: number;
+              target_output: number;
+              achievement_rate: number;
+              active_batches: number;
+            };
+            inventory: {
+              total_valuation: number;
+              low_stock_count: number;
+            };
+            quality: {
+              qc_pass_rate: number;
+              pending_inspections: number;
+            };
+          };
+        }>('/dashboard/metrics');
+        return res.data.data;
+      } catch {
+        return null;
+      }
+    },
+  });
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* ─────────────────────────────────────────────────────────────
@@ -103,10 +142,10 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              ৳ 75,250
+              {metrics ? formatCurrency(metrics.commercial.today_revenue) : '৳ 75,250'}
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-              +18.4% vs yesterday
+              Month: {metrics ? formatCurrency(metrics.commercial.month_revenue) : '৳ 950,000'}
             </span>
           </div>
         </div>
@@ -123,10 +162,10 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              14 Orders
+              {metrics ? `${metrics.commercial.active_orders} Orders` : '14 Orders'}
             </div>
             <span className="text-[10px] font-semibold text-muted">
-              4 Ready for Dispatch
+              Due: {metrics ? formatCurrency(metrics.commercial.total_receivable_due) : '৳ 245,000'}
             </span>
           </div>
         </div>
@@ -143,10 +182,10 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              48 pcs
+              {metrics ? `${metrics.production.today_output} pcs` : '48 pcs'}
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-              96% Target Achieved
+              {metrics ? `${metrics.production.achievement_rate}% Target Achieved` : '96% Target Achieved'}
             </span>
           </div>
         </div>
@@ -163,10 +202,10 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              ৳ 14.6M
+              {metrics ? formatCurrency(metrics.inventory.total_valuation) : '৳ 14.6M'}
             </div>
             <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-              3 Reorder Warnings
+              {metrics ? `${metrics.inventory.low_stock_count} Reorder Warnings` : '3 Reorder Warnings'}
             </span>
           </div>
         </div>
@@ -183,10 +222,10 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              97.5%
+              {metrics ? `${metrics.quality.qc_pass_rate}%` : '97.5%'}
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-              Grade A Compliance
+              {metrics ? `${metrics.quality.pending_inspections} Pending Tests` : 'Grade A Compliance'}
             </span>
           </div>
         </div>
@@ -206,7 +245,7 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
               82%
             </div>
             <span className="text-[10px] font-semibold text-muted">
-              4 Active Lines
+              {metrics ? `${metrics.production.active_batches} Active Batches` : '4 Active Lines'}
             </span>
           </div>
         </div>

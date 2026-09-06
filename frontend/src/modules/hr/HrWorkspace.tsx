@@ -13,14 +13,17 @@ import type {
   Payslip,
 } from '../../types/api/hr';
 
-type HrTab = 'employees' | 'attendance' | 'leaves' | 'payroll';
+import { WorkerPerformanceSection } from './sections/WorkerPerformanceSection';
+import { DepartmentsSetupSection } from './sections/DepartmentsSetupSection';
+
+type HrTab = 'employees' | 'attendance' | 'leaves' | 'payroll' | 'performance' | 'departments';
 type EmploymentType = 'permanent' | 'contract' | 'daily_wage' | 'piece_rate';
 
 export const HrWorkspace: React.FC = () => {
   const { formatCurrency } = useCurrency();
   const [activeTab, setActiveTab] = useWorkspaceTab<HrTab>(
     'payroll',
-    ['employees', 'attendance', 'leaves', 'payroll'] as const
+    ['employees', 'attendance', 'leaves', 'payroll', 'performance', 'departments'] as const
   );
   const [selectedEmployeeForBadge, setSelectedEmployeeForBadge] = useState<Employee | null>(null);
 
@@ -416,6 +419,8 @@ export const HrWorkspace: React.FC = () => {
             { id: 'employees', label: '👔 Employee Directory', count: employees.length },
             { id: 'attendance', label: '⏱️ Shifts & Attendance', count: attendances.length },
             { id: 'leaves', label: '🏖️ Leave Management', count: leaveRequests.length },
+            { id: 'performance', label: '⚡ Worker Performance', count: 4 },
+            { id: 'departments', label: '🏢 Departments & Setup', count: departments.length },
           ].map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -733,6 +738,18 @@ export const HrWorkspace: React.FC = () => {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Tab 5: Worker Production Performance */}
+      {activeTab === 'performance' && <WorkerPerformanceSection />}
+
+      {/* Tab 6: Departments & Setup */}
+      {activeTab === 'departments' && (
+        <DepartmentsSetupSection
+          departments={departments}
+          designations={designations}
+          shifts={shifts}
+        />
       )}
 
       {/* View Payslip Breakdown Modal */}

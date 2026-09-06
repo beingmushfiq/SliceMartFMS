@@ -1,4 +1,17 @@
-import { FileText, Receipt, ShoppingCart, Truck, Undo2, Users, Kanban } from 'lucide-react';
+import { useState } from 'react';
+import {
+  FileText,
+  Receipt,
+  ShoppingCart,
+  Truck,
+  Undo2,
+  Users,
+  Kanban,
+  Target,
+  Award,
+  UserCheck,
+  TrendingUp,
+} from 'lucide-react';
 import { SalesOrdersSection } from './sections/SalesOrdersSection';
 import { InvoicesSection } from './sections/InvoicesSection';
 import { DeliveriesSection } from './sections/DeliveriesSection';
@@ -6,12 +19,39 @@ import { PaymentsSection } from './sections/PaymentsSection';
 import { SalesReturnsSection } from './sections/SalesReturnsSection';
 import { LeadsSection } from './sections/LeadsSection';
 import { CustomersSection } from './sections/CustomersSection';
+import { SalesmenProfilesSection } from './sections/SalesmenProfilesSection';
+import { SalesmanTargetsSection } from './sections/SalesmanTargetsSection';
+import { IncentivesSection } from './sections/IncentivesSection';
+import { SalesmanDashboardSection } from './sections/SalesmanDashboardSection';
 
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 
-export type SalesTab = 'orders' | 'invoices' | 'deliveries' | 'payments' | 'returns' | 'leads' | 'customers';
+export type SalesTab =
+  | 'orders'
+  | 'invoices'
+  | 'deliveries'
+  | 'payments'
+  | 'returns'
+  | 'customers'
+  | 'leads'
+  | 'salesmen'
+  | 'targets'
+  | 'incentives'
+  | 'dashboard';
 
-const VALID_TABS: readonly SalesTab[] = ['orders', 'invoices', 'deliveries', 'payments', 'returns', 'leads', 'customers'];
+const VALID_TABS: readonly SalesTab[] = [
+  'orders',
+  'invoices',
+  'deliveries',
+  'payments',
+  'returns',
+  'customers',
+  'leads',
+  'salesmen',
+  'targets',
+  'incentives',
+  'dashboard',
+];
 
 interface TabConfig {
   id: SalesTab;
@@ -63,10 +103,35 @@ const tabs: TabConfig[] = [
     icon: Kanban,
     description: 'Opportunity pipeline, stage tracking, quotation follow-up & win/loss analytics',
   },
+  {
+    id: 'salesmen',
+    label: 'Salesmen Directory',
+    icon: UserCheck,
+    description: 'Sales representative profiles, quota achievements, lead conversion pipeline & earnings',
+  },
+  {
+    id: 'targets',
+    label: 'Sales Targets',
+    icon: Target,
+    description: 'Monthly commercial target quotas, periodic assignment, deficit tracking & audits',
+  },
+  {
+    id: 'incentives',
+    label: 'Incentive Engine',
+    icon: Award,
+    description: 'Tiered commission policies, automated quota evaluation & management approval workflows',
+  },
+  {
+    id: 'dashboard',
+    label: 'Salesman Dashboard',
+    icon: TrendingUp,
+    description: 'Representative personal dashboard with real-time target, leads, conversion & bonus metrics',
+  },
 ];
 
 export default function SalesWorkspace() {
   const [activeTab, setActiveTab] = useWorkspaceTab<SalesTab>('orders', VALID_TABS);
+  const [selectedSalesmanId, setSelectedSalesmanId] = useState<number | null>(null);
 
   const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[0];
 
@@ -122,6 +187,19 @@ export default function SalesWorkspace() {
         {activeTab === 'returns' && <SalesReturnsSection />}
         {activeTab === 'customers' && <CustomersSection />}
         {activeTab === 'leads' && <LeadsSection />}
+        {activeTab === 'salesmen' && (
+          <SalesmenProfilesSection
+            onSelectSalesmanForDashboard={(empId) => {
+              setSelectedSalesmanId(empId);
+              setActiveTab('dashboard');
+            }}
+          />
+        )}
+        {activeTab === 'targets' && <SalesmanTargetsSection />}
+        {activeTab === 'incentives' && <IncentivesSection />}
+        {activeTab === 'dashboard' && (
+          <SalesmanDashboardSection initialSalesmanId={selectedSalesmanId} />
+        )}
       </div>
     </div>
   );
