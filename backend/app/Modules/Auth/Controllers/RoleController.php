@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
 class RoleController extends Controller
@@ -147,6 +148,19 @@ class RoleController extends Controller
             'permission_ids.*' => 'integer|exists:permissions,id',
         ]);
 
+        if (!empty($validated['permission_ids'])) {
+            $catalogueNames = PermissionCatalogue::ALL_PERMISSIONS;
+            $invalidIds = Permission::whereIn('id', $validated['permission_ids'])
+                ->whereNotIn('name', $catalogueNames)
+                ->pluck('id');
+
+            if ($invalidIds->isNotEmpty()) {
+                throw ValidationException::withMessages([
+                    'permission_ids' => ['One or more permission IDs are not valid system permissions.'],
+                ]);
+            }
+        }
+
         $slug = !empty($validated['slug'])
             ? Str::slug($validated['slug'], '_')
             : Str::slug($validated['name'], '_');
@@ -223,6 +237,19 @@ class RoleController extends Controller
             'permission_ids' => 'nullable|array',
             'permission_ids.*' => 'integer|exists:permissions,id',
         ]);
+
+        if (!empty($validated['permission_ids'])) {
+            $catalogueNames = PermissionCatalogue::ALL_PERMISSIONS;
+            $invalidIds = Permission::whereIn('id', $validated['permission_ids'])
+                ->whereNotIn('name', $catalogueNames)
+                ->pluck('id');
+
+            if ($invalidIds->isNotEmpty()) {
+                throw ValidationException::withMessages([
+                    'permission_ids' => ['One or more permission IDs are not valid system permissions.'],
+                ]);
+            }
+        }
 
         $beforeState = [
             'name' => $role->name,

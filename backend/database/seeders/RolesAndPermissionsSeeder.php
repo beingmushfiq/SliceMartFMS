@@ -63,12 +63,23 @@ final class RolesAndPermissionsSeeder extends Seeder
         );
         $prodPerms = array_filter(
             $permissionModelMap,
-            static fn (string $key): bool => str_starts_with($key, 'production.')
-                || str_starts_with($key, 'qc.')
-                || str_starts_with($key, 'catalog.')
-                || str_starts_with($key, 'org.')
-                || str_starts_with($key, 'inventory.warehouse.view')
-                || str_starts_with($key, 'inventory.stock.view'),
+            static fn (string $k): bool => in_array($k, [
+                // Production — full CRUD + workflow
+                'production.plan.view', 'production.plan.create', 'production.plan.update', 'production.plan.delete', 'production.plan.approve',
+                'production.batch.view', 'production.batch.create', 'production.batch.update', 'production.batch.delete', 'production.batch.approve',
+                'production.material_issue.view', 'production.material_issue.create', 'production.material_issue.update',
+                'production.output.view', 'production.output.create', 'production.output.update',
+                'production.worker_entry.view', 'production.worker_entry.create', 'production.worker_entry.update', 'production.worker_entry.delete', 'production.worker_entry.approve',
+                // QC — view + basic CRUD
+                'qc.inspection.view', 'qc.inspection.create', 'qc.inspection.update', 'qc.inspection.approve',
+                'qc.parameter.view', 'qc.wastage.view', 'qc.wastage.create', 'qc.wastage.update',
+                // Catalog — read-only
+                'catalog.product.view', 'catalog.bom.view', 'catalog.unit.view', 'catalog.party.view',
+                // Inventory — read-only
+                'inventory.warehouse.view', 'inventory.stock.view',
+                // Org
+                'org.company.view', 'org.branch.view', 'org.factory.view', 'org.production_line.view',
+            ], true),
             ARRAY_FILTER_USE_KEY
         );
         $productionManagerRole->permissions()->sync(array_values($prodPerms));
@@ -85,8 +96,14 @@ final class RolesAndPermissionsSeeder extends Seeder
         );
         $qcPerms = array_filter(
             $permissionModelMap,
-            static fn (string $key): bool => str_starts_with($key, 'qc.')
-                || in_array($key, ['catalog.product.view', 'catalog.bom.view', 'production.batch.view', 'production.output.view'], true),
+            static fn (string $k): bool => in_array($k, [
+                'qc.inspection.view', 'qc.inspection.create', 'qc.inspection.update', 'qc.inspection.approve',
+                'qc.parameter.view', 'qc.parameter.create',
+                'qc.defect.view', 'qc.defect.create',
+                'qc.wastage.view', 'qc.wastage.create', 'qc.wastage.update', 'qc.wastage.approve',
+                'catalog.product.view', 'catalog.bom.view',
+                'production.batch.view', 'production.output.view',
+            ], true),
             ARRAY_FILTER_USE_KEY
         );
         $qcRole->permissions()->sync(array_values($qcPerms));
@@ -103,9 +120,16 @@ final class RolesAndPermissionsSeeder extends Seeder
         );
         $storePerms = array_filter(
             $permissionModelMap,
-            static fn (string $key): bool => str_starts_with($key, 'inventory.')
-                || str_starts_with($key, 'purchasing.grn.')
-                || in_array($key, ['catalog.product.view', 'catalog.unit.view', 'production.material_issue.view', 'production.material_issue.create'], true),
+            static fn (string $k): bool => in_array($k, [
+                'inventory.warehouse.view', 'inventory.warehouse.create', 'inventory.warehouse.update',
+                'inventory.stock.view', 'inventory.stock.create', 'inventory.stock.adjust',
+                'inventory.movement.view',
+                'inventory.transfer.view', 'inventory.transfer.create', 'inventory.transfer.update', 'inventory.transfer.approve',
+                'inventory.count.view', 'inventory.count.create', 'inventory.count.update', 'inventory.count.approve',
+                'purchasing.grn.view', 'purchasing.grn.create', 'purchasing.grn.approve',
+                'catalog.product.view', 'catalog.unit.view',
+                'production.material_issue.view', 'production.material_issue.create',
+            ], true),
             ARRAY_FILTER_USE_KEY
         );
         $storekeeperRole->permissions()->sync(array_values($storePerms));
@@ -122,10 +146,18 @@ final class RolesAndPermissionsSeeder extends Seeder
         );
         $salesPerms = array_filter(
             $permissionModelMap,
-            static fn (string $key): bool => str_starts_with($key, 'sales.')
-                || str_starts_with($key, 'pos.')
-                || str_starts_with($key, 'pricing.')
-                || in_array($key, ['catalog.product.view', 'catalog.party.view', 'catalog.party.manage', 'inventory.stock.view'], true),
+            static fn (string $k): bool => in_array($k, [
+                'sales.lead.view', 'sales.lead.create', 'sales.lead.update', 'sales.lead.delete',
+                'sales.order.view', 'sales.order.create', 'sales.order.approve',
+                'sales.invoice.view', 'sales.invoice.create', 'sales.invoice.approve', 'sales.invoice.print',
+                'sales.return.view', 'sales.return.create',
+                'pos.terminal.view', 'pos.session.view', 'pos.session.open', 'pos.session.close',
+                'pos.sale.view', 'pos.sale.create',
+                'pricing.price_list.view', 'pricing.discount_rule.view', 'pricing.tax_profile.view',
+                'catalog.product.view',
+                'catalog.party.view', 'catalog.party.create', 'catalog.party.update',
+                'inventory.stock.view',
+            ], true),
             ARRAY_FILTER_USE_KEY
         );
         $salesRole->permissions()->sync(array_values($salesPerms));

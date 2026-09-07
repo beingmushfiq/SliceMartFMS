@@ -9,6 +9,7 @@ import { OrderProcessingModal } from '../components/OrderProcessingModal';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
 import { ConfirmDialog } from '../../../components/ui/Modal';
 import { notify } from '../../../components/ui/Toast';
+import { useAuthStore } from '../../../lib/auth/authStore';
 
 interface SalesOrdersSectionProps {
   onNavigateToTab?: (tab: string) => void;
@@ -25,6 +26,11 @@ interface SoFormItem {
 }
 
 export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps = {}) {
+  const { hasPermission } = useAuthStore();
+  const canCreateOrder = hasPermission('sales.order.create');
+  const canApproveOrder = hasPermission('sales.order.approve');
+  const canDeleteOrder = hasPermission('sales.order.delete');
+
   const { formatCurrency, currencySymbol } = useCurrency();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -336,13 +342,15 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
           </button>
         </div>
 
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-medium text-primary-fg hover:opacity-90 shadow-xs transition-all cursor-pointer"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          New Sales Order
-        </button>
+        {canCreateOrder && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            New Order
+          </button>
+        )}
       </div>
 
       {/* Orders Table */}
@@ -415,7 +423,7 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
                     </td>
                     <td className="px-4 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">
-                        {(order.status === 'draft' || order.status === 'pending') && (
+                        {canApproveOrder && (order.status === 'draft' || order.status === 'pending') && (
                           <button
                             type="button"
                             onClick={() => approveMutation.mutate(order.id)}
@@ -448,16 +456,18 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
                             <span>View</span>
                           </button>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => setOrderToDelete(order)}
-                          disabled={deleteMutation.isPending}
-                          className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-2 py-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 disabled:opacity-50 cursor-pointer transition-colors flex items-center gap-1"
-                          title="Delete sales order"
-                        >
-                          <Trash2 className="size-3" />
-                          <span>Delete</span>
-                        </button>
+                        {canDeleteOrder && (
+                          <button
+                            type="button"
+                            onClick={() => setOrderToDelete(order)}
+                            disabled={deleteMutation.isPending}
+                            className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-2 py-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 disabled:opacity-50 cursor-pointer transition-colors flex items-center gap-1"
+                            title="Delete sales order"
+                          >
+                            <Trash2 className="size-3" />
+                            <span>Delete</span>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

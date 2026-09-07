@@ -47,16 +47,16 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 ->middleware('permission:catalog.unit.view')
                 ->name('index');
             Route::post('/', [App\Modules\Catalogue\Controllers\UnitController::class, 'store'])
-                ->middleware('permission:catalog.unit.manage')
+                ->middleware('permission:catalog.unit.create')
                 ->name('store');
             Route::get('{unit:uuid}', [App\Modules\Catalogue\Controllers\UnitController::class, 'show'])
                 ->middleware('permission:catalog.unit.view')
                 ->name('show');
             Route::patch('{unit:uuid}', [App\Modules\Catalogue\Controllers\UnitController::class, 'update'])
-                ->middleware('permission:catalog.unit.manage')
+                ->middleware('permission:catalog.unit.update')
                 ->name('update');
             Route::delete('{unit:uuid}', [App\Modules\Catalogue\Controllers\UnitController::class, 'destroy'])
-                ->middleware('permission:catalog.unit.manage')
+                ->middleware('permission:catalog.unit.delete')
                 ->name('destroy');
         });
 
@@ -66,13 +66,13 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             Route::get('/', [App\Modules\Catalogue\Controllers\BrandController::class, 'index'])
                 ->middleware('permission:catalog.brand.view')->name('index');
             Route::post('/', [App\Modules\Catalogue\Controllers\BrandController::class, 'store'])
-                ->middleware('permission:catalog.brand.manage')->name('store');
+                ->middleware('permission:catalog.brand.create')->name('store');
             Route::get('{brand:uuid}', [App\Modules\Catalogue\Controllers\BrandController::class, 'show'])
                 ->middleware('permission:catalog.brand.view')->name('show');
             Route::patch('{brand:uuid}', [App\Modules\Catalogue\Controllers\BrandController::class, 'update'])
-                ->middleware('permission:catalog.brand.manage')->name('update');
+                ->middleware('permission:catalog.brand.update')->name('update');
             Route::delete('{brand:uuid}', [App\Modules\Catalogue\Controllers\BrandController::class, 'destroy'])
-                ->middleware('permission:catalog.brand.manage')->name('destroy');
+                ->middleware('permission:catalog.brand.delete')->name('destroy');
         });
 
         Route::prefix('categories')->name('categories.')->group(static function (): void {
@@ -81,13 +81,13 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             Route::get('/', [App\Modules\Catalogue\Controllers\CategoryController::class, 'index'])
                 ->middleware('permission:catalog.category.view')->name('index');
             Route::post('/', [App\Modules\Catalogue\Controllers\CategoryController::class, 'store'])
-                ->middleware('permission:catalog.category.manage')->name('store');
+                ->middleware('permission:catalog.category.create')->name('store');
             Route::get('{category:uuid}', [App\Modules\Catalogue\Controllers\CategoryController::class, 'show'])
                 ->middleware('permission:catalog.category.view')->name('show');
             Route::patch('{category:uuid}', [App\Modules\Catalogue\Controllers\CategoryController::class, 'update'])
-                ->middleware('permission:catalog.category.manage')->name('update');
+                ->middleware('permission:catalog.category.update')->name('update');
             Route::delete('{category:uuid}', [App\Modules\Catalogue\Controllers\CategoryController::class, 'destroy'])
-                ->middleware('permission:catalog.category.manage')->name('destroy');
+                ->middleware('permission:catalog.category.delete')->name('destroy');
         });
 
         Route::prefix('reason-codes')->name('reason-codes.')->group(static function (): void {
@@ -103,39 +103,39 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             Route::get('/', [App\Modules\Catalogue\Controllers\ProductController::class, 'index'])
                 ->middleware('permission:catalog.product.view')->name('index');
             Route::post('/', [App\Modules\Catalogue\Controllers\ProductController::class, 'store'])
-                ->middleware('permission:catalog.product.manage')->name('store');
+                ->middleware('permission:catalog.product.create')->name('store');
             Route::get('{product:uuid}', [App\Modules\Catalogue\Controllers\ProductController::class, 'show'])
                 ->middleware('permission:catalog.product.view')->name('show');
             Route::patch('{product:uuid}', [App\Modules\Catalogue\Controllers\ProductController::class, 'update'])
-                ->middleware('permission:catalog.product.manage')->name('update');
+                ->middleware('permission:catalog.product.update')->name('update');
             Route::delete('{product:uuid}', [App\Modules\Catalogue\Controllers\ProductController::class, 'destroy'])
-                ->middleware('permission:catalog.product.manage')->name('destroy');
+                ->middleware('permission:catalog.product.delete')->name('destroy');
         });
 
         Route::prefix('bill-of-materials')->name('bill-of-materials.')->group(static function (): void {
             Route::get('/', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'index'])
                 ->middleware('permission:catalog.bom.view')->name('index');
             Route::post('/', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'store'])
-                ->middleware('permission:catalog.bom.manage')->name('store');
+                ->middleware('permission:catalog.bom.create')->name('store');
             Route::get('{billOfMaterial:uuid}', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'show'])
                 ->middleware('permission:catalog.bom.view')->name('show');
             Route::patch('{billOfMaterial:uuid}', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'update'])
-                ->middleware('permission:catalog.bom.manage')->name('update');
+                ->middleware('permission:catalog.bom.update')->name('update');
             Route::delete('{billOfMaterial:uuid}', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'destroy'])
-                ->middleware('permission:catalog.bom.manage')->name('destroy');
+                ->middleware('permission:catalog.bom.delete')->name('destroy');
         });
 
         Route::prefix('boms')->name('boms.')->group(static function (): void {
             Route::get('/', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'index'])
                 ->middleware('permission:catalog.bom.view')->name('index');
             Route::post('/', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'store'])
-                ->middleware('permission:catalog.bom.manage')->name('store');
+                ->middleware('permission:catalog.bom.create')->name('store');
             Route::get('{billOfMaterial:uuid}', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'show'])
                 ->middleware('permission:catalog.bom.view')->name('show');
             Route::patch('{billOfMaterial:uuid}', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'update'])
-                ->middleware('permission:catalog.bom.manage')->name('update');
+                ->middleware('permission:catalog.bom.update')->name('update');
             Route::delete('{billOfMaterial:uuid}', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'destroy'])
-                ->middleware('permission:catalog.bom.manage')->name('destroy');
+                ->middleware('permission:catalog.bom.delete')->name('destroy');
         });
 
         Route::prefix('warehouses')->name('warehouses.')->group(static function (): void {
@@ -144,25 +144,25 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             Route::get('/', [App\Modules\Catalogue\Controllers\WarehouseController::class, 'index'])
                 ->middleware('permission:inventory.warehouse.view')->name('index');
             Route::post('/', [App\Modules\Catalogue\Controllers\WarehouseController::class, 'store'])
-                ->middleware('permission:inventory.warehouse.manage')->name('store');
+                ->middleware('permission:inventory.warehouse.create')->name('store');
             Route::get('{warehouse:uuid}', [App\Modules\Catalogue\Controllers\WarehouseController::class, 'show'])
                 ->middleware('permission:inventory.warehouse.view')->name('show');
             Route::patch('{warehouse:uuid}', [App\Modules\Catalogue\Controllers\WarehouseController::class, 'update'])
-                ->middleware('permission:inventory.warehouse.manage')->name('update');
+                ->middleware('permission:inventory.warehouse.update')->name('update');
             Route::delete('{warehouse:uuid}', [App\Modules\Catalogue\Controllers\WarehouseController::class, 'destroy'])
-                ->middleware('permission:inventory.warehouse.manage')->name('destroy');
+                ->middleware('permission:inventory.warehouse.delete')->name('destroy');
 
             Route::prefix('{warehouse:uuid}/locations')->name('locations.')->group(static function (): void {
                 Route::get('/', [App\Modules\Catalogue\Controllers\WarehouseLocationController::class, 'index'])
                     ->middleware('permission:inventory.warehouse.view')->name('index');
                 Route::post('/', [App\Modules\Catalogue\Controllers\WarehouseLocationController::class, 'store'])
-                    ->middleware('permission:inventory.warehouse.manage')->name('store');
+                    ->middleware('permission:inventory.warehouse.create')->name('store');
                 Route::get('{location:uuid}', [App\Modules\Catalogue\Controllers\WarehouseLocationController::class, 'show'])
                     ->middleware('permission:inventory.warehouse.view')->name('show');
                 Route::patch('{location:uuid}', [App\Modules\Catalogue\Controllers\WarehouseLocationController::class, 'update'])
-                    ->middleware('permission:inventory.warehouse.manage')->name('update');
+                    ->middleware('permission:inventory.warehouse.update')->name('update');
                 Route::delete('{location:uuid}', [App\Modules\Catalogue\Controllers\WarehouseLocationController::class, 'destroy'])
-                    ->middleware('permission:inventory.warehouse.manage')->name('destroy');
+                    ->middleware('permission:inventory.warehouse.delete')->name('destroy');
             });
         });
 
@@ -173,13 +173,13 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             Route::get('/', [App\Modules\Catalogue\Controllers\PartyController::class, 'index'])
                 ->middleware('permission:catalog.party.view')->name('index');
             Route::post('/', [App\Modules\Catalogue\Controllers\PartyController::class, 'store'])
-                ->middleware('permission:catalog.party.manage')->name('store');
+                ->middleware('permission:catalog.party.create')->name('store');
             Route::get('{party:uuid}', [App\Modules\Catalogue\Controllers\PartyController::class, 'show'])
                 ->middleware('permission:catalog.party.view')->name('show');
             Route::patch('{party:uuid}', [App\Modules\Catalogue\Controllers\PartyController::class, 'update'])
-                ->middleware('permission:catalog.party.manage')->name('update');
+                ->middleware('permission:catalog.party.update')->name('update');
             Route::delete('{party:uuid}', [App\Modules\Catalogue\Controllers\PartyController::class, 'destroy'])
-                ->middleware('permission:catalog.party.manage')->name('destroy');
+                ->middleware('permission:catalog.party.delete')->name('destroy');
         });
 
         // ── Pricing ───────────────────────────────────────────────────
@@ -190,26 +190,26 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::get('/', [App\Modules\Pricing\Controllers\PriceListController::class, 'index'])
                     ->middleware('permission:pricing.price_list.view')->name('index');
                 Route::post('/', [App\Modules\Pricing\Controllers\PriceListController::class, 'store'])
-                    ->middleware('permission:pricing.price_list.manage')->name('store');
+                    ->middleware('permission:pricing.price_list.create')->name('store');
                 Route::get('{priceList:uuid}', [App\Modules\Pricing\Controllers\PriceListController::class, 'show'])
                     ->middleware('permission:pricing.price_list.view')->name('show');
                 Route::patch('{priceList:uuid}', [App\Modules\Pricing\Controllers\PriceListController::class, 'update'])
-                    ->middleware('permission:pricing.price_list.manage')->name('update');
+                    ->middleware('permission:pricing.price_list.update')->name('update');
                 Route::delete('{priceList:uuid}', [App\Modules\Pricing\Controllers\PriceListController::class, 'destroy'])
-                    ->middleware('permission:pricing.price_list.manage')->name('destroy');
+                    ->middleware('permission:pricing.price_list.delete')->name('destroy');
             });
 
             Route::prefix('discount-rules')->name('discount-rules.')->group(static function (): void {
                 Route::get('/', [App\Modules\Pricing\Controllers\DiscountRuleController::class, 'index'])
                     ->middleware('permission:pricing.discount_rule.view')->name('index');
                 Route::post('/', [App\Modules\Pricing\Controllers\DiscountRuleController::class, 'store'])
-                    ->middleware('permission:pricing.discount_rule.manage')->name('store');
+                    ->middleware('permission:pricing.discount_rule.create')->name('store');
                 Route::get('{discountRule:uuid}', [App\Modules\Pricing\Controllers\DiscountRuleController::class, 'show'])
                     ->middleware('permission:pricing.discount_rule.view')->name('show');
                 Route::patch('{discountRule:uuid}', [App\Modules\Pricing\Controllers\DiscountRuleController::class, 'update'])
-                    ->middleware('permission:pricing.discount_rule.manage')->name('update');
+                    ->middleware('permission:pricing.discount_rule.update')->name('update');
                 Route::delete('{discountRule:uuid}', [App\Modules\Pricing\Controllers\DiscountRuleController::class, 'destroy'])
-                    ->middleware('permission:pricing.discount_rule.manage')->name('destroy');
+                    ->middleware('permission:pricing.discount_rule.delete')->name('destroy');
             });
 
             Route::prefix('tax-profiles')->name('tax-profiles.')->group(static function (): void {
@@ -218,13 +218,13 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::get('/', [App\Modules\Pricing\Controllers\TaxProfileController::class, 'index'])
                     ->middleware('permission:pricing.tax_profile.view')->name('index');
                 Route::post('/', [App\Modules\Pricing\Controllers\TaxProfileController::class, 'store'])
-                    ->middleware('permission:pricing.tax_profile.manage')->name('store');
+                    ->middleware('permission:pricing.tax_profile.create')->name('store');
                 Route::get('{taxProfile:uuid}', [App\Modules\Pricing\Controllers\TaxProfileController::class, 'show'])
                     ->middleware('permission:pricing.tax_profile.view')->name('show');
                 Route::patch('{taxProfile:uuid}', [App\Modules\Pricing\Controllers\TaxProfileController::class, 'update'])
-                    ->middleware('permission:pricing.tax_profile.manage')->name('update');
+                    ->middleware('permission:pricing.tax_profile.update')->name('update');
                 Route::delete('{taxProfile:uuid}', [App\Modules\Pricing\Controllers\TaxProfileController::class, 'destroy'])
-                    ->middleware('permission:pricing.tax_profile.manage')->name('destroy');
+                    ->middleware('permission:pricing.tax_profile.delete')->name('destroy');
             });
         });
 
@@ -238,7 +238,7 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::get('{productionPlan:uuid}', [App\Modules\Production\Controllers\ProductionPlanController::class, 'show'])
                     ->middleware('permission:production.plan.view')->name('show');
                 Route::patch('{productionPlan:uuid}', [App\Modules\Production\Controllers\ProductionPlanController::class, 'update'])
-                    ->middleware('permission:production.plan.create')->name('update');
+                    ->middleware('permission:production.plan.update')->name('update');
                 Route::post('{productionPlan:uuid}/approve', [App\Modules\Production\Controllers\ProductionPlanController::class, 'approve'])
                     ->middleware('permission:production.plan.approve')->name('approve');
                 Route::delete('{productionPlan:uuid}', [App\Modules\Production\Controllers\ProductionPlanController::class, 'destroy'])
@@ -294,13 +294,13 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::get('/', [App\Modules\QC\Controllers\QcParameterController::class, 'index'])
                     ->middleware('permission:qc.parameter.view')->name('index');
                 Route::post('/', [App\Modules\QC\Controllers\QcParameterController::class, 'store'])
-                    ->middleware('permission:qc.parameter.manage')->name('store');
+                    ->middleware('permission:qc.parameter.create')->name('store');
                 Route::get('{qcParameter:uuid}', [App\Modules\QC\Controllers\QcParameterController::class, 'show'])
                     ->middleware('permission:qc.parameter.view')->name('show');
                 Route::patch('{qcParameter:uuid}', [App\Modules\QC\Controllers\QcParameterController::class, 'update'])
-                    ->middleware('permission:qc.parameter.manage')->name('update');
+                    ->middleware('permission:qc.parameter.update')->name('update');
                 Route::delete('{qcParameter:uuid}', [App\Modules\QC\Controllers\QcParameterController::class, 'destroy'])
-                    ->middleware('permission:qc.parameter.manage')->name('destroy');
+                    ->middleware('permission:qc.parameter.delete')->name('destroy');
             });
 
             Route::prefix('inspections')->name('inspections.')->group(static function (): void {
@@ -332,13 +332,20 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             });
 
             Route::prefix('rework-orders')->name('rework-orders.')->group(static function (): void {
-                Route::get('/', [App\Modules\QC\Controllers\ReworkOrderController::class, 'index'])->name('index');
-                Route::post('/', [App\Modules\QC\Controllers\ReworkOrderController::class, 'store'])->name('store');
-                Route::get('{id}', [App\Modules\QC\Controllers\ReworkOrderController::class, 'show'])->name('show');
-                Route::patch('{id}', [App\Modules\QC\Controllers\ReworkOrderController::class, 'update'])->name('update');
-                Route::post('{id}/start', [App\Modules\QC\Controllers\ReworkOrderController::class, 'start'])->name('start');
-                Route::post('{id}/complete', [App\Modules\QC\Controllers\ReworkOrderController::class, 'complete'])->name('complete');
-                Route::delete('{id}', [App\Modules\QC\Controllers\ReworkOrderController::class, 'destroy'])->name('destroy');
+                Route::get('/', [App\Modules\QC\Controllers\ReworkOrderController::class, 'index'])
+                    ->middleware('permission:qc.inspection.view')->name('index');
+                Route::post('/', [App\Modules\QC\Controllers\ReworkOrderController::class, 'store'])
+                    ->middleware('permission:qc.inspection.create')->name('store');
+                Route::get('{id}', [App\Modules\QC\Controllers\ReworkOrderController::class, 'show'])
+                    ->middleware('permission:qc.inspection.view')->name('show');
+                Route::patch('{id}', [App\Modules\QC\Controllers\ReworkOrderController::class, 'update'])
+                    ->middleware('permission:qc.inspection.update')->name('update');
+                Route::post('{id}/start', [App\Modules\QC\Controllers\ReworkOrderController::class, 'start'])
+                    ->middleware('permission:qc.inspection.update')->name('start');
+                Route::post('{id}/complete', [App\Modules\QC\Controllers\ReworkOrderController::class, 'complete'])
+                    ->middleware('permission:qc.inspection.approve')->name('complete');
+                Route::delete('{id}', [App\Modules\QC\Controllers\ReworkOrderController::class, 'destroy'])
+                    ->middleware('permission:qc.inspection.delete')->name('destroy');
             });
         });
 
@@ -359,13 +366,13 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::get('{id}', [App\Modules\Inventory\Controllers\StockTransferController::class, 'show'])
                     ->middleware('permission:inventory.transfer.view')->name('show');
                 Route::patch('{id}', [App\Modules\Inventory\Controllers\StockTransferController::class, 'update'])
-                    ->middleware('permission:inventory.transfer.create')->name('update');
+                    ->middleware('permission:inventory.transfer.update')->name('update');
                 Route::post('{id}/dispatch', [App\Modules\Inventory\Controllers\StockTransferController::class, 'dispatch'])
                     ->middleware('permission:inventory.transfer.approve')->name('dispatch');
                 Route::post('{id}/receive', [App\Modules\Inventory\Controllers\StockTransferController::class, 'receive'])
                     ->middleware('permission:inventory.transfer.approve')->name('receive');
                 Route::delete('{id}', [App\Modules\Inventory\Controllers\StockTransferController::class, 'destroy'])
-                    ->middleware('permission:inventory.transfer.create')->name('destroy');
+                    ->middleware('permission:inventory.transfer.delete')->name('destroy');
             });
 
             Route::prefix('adjustments')->name('adjustments.')->group(static function (): void {
@@ -376,11 +383,11 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::get('{id}', [App\Modules\Inventory\Controllers\StockAdjustmentController::class, 'show'])
                     ->middleware('permission:inventory.adjustment.view')->name('show');
                 Route::patch('{id}', [App\Modules\Inventory\Controllers\StockAdjustmentController::class, 'update'])
-                    ->middleware('permission:inventory.adjustment.create')->name('update');
+                    ->middleware('permission:inventory.adjustment.update')->name('update');
                 Route::post('{id}/approve', [App\Modules\Inventory\Controllers\StockAdjustmentController::class, 'approve'])
                     ->middleware('permission:inventory.adjustment.approve')->name('approve');
                 Route::delete('{id}', [App\Modules\Inventory\Controllers\StockAdjustmentController::class, 'destroy'])
-                    ->middleware('permission:inventory.adjustment.create')->name('destroy');
+                    ->middleware('permission:inventory.adjustment.delete')->name('destroy');
             });
 
             Route::prefix('counts')->name('counts.')->group(static function (): void {
@@ -391,11 +398,11 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::get('{id}', [App\Modules\Inventory\Controllers\StockCountController::class, 'show'])
                     ->middleware('permission:inventory.count.view')->name('show');
                 Route::patch('{id}', [App\Modules\Inventory\Controllers\StockCountController::class, 'update'])
-                    ->middleware('permission:inventory.count.create')->name('update');
+                    ->middleware('permission:inventory.count.update')->name('update');
                 Route::post('{id}/reconcile', [App\Modules\Inventory\Controllers\StockCountController::class, 'reconcile'])
                     ->middleware('permission:inventory.count.approve')->name('reconcile');
                 Route::delete('{id}', [App\Modules\Inventory\Controllers\StockCountController::class, 'destroy'])
-                    ->middleware('permission:inventory.count.create')->name('destroy');
+                    ->middleware('permission:inventory.count.delete')->name('destroy');
             });
 
             Route::prefix('thresholds')->name('thresholds.')->group(static function (): void {
@@ -417,7 +424,7 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::post('{id}/approve', [App\Modules\Purchasing\Controllers\PurchaseRequisitionController::class, 'approve'])
                     ->middleware('permission:purchasing.requisition.approve')->name('approve');
                 Route::delete('{id}', [App\Modules\Purchasing\Controllers\PurchaseRequisitionController::class, 'destroy'])
-                    ->middleware('permission:purchasing.requisition.create')->name('destroy');
+                    ->middleware('permission:purchasing.requisition.delete')->name('destroy');
             });
 
             Route::prefix('orders')->name('orders.')->group(static function (): void {
@@ -430,7 +437,7 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::post('{id}/approve', [App\Modules\Purchasing\Controllers\PurchaseOrderController::class, 'approve'])
                     ->middleware('permission:purchasing.order.approve')->name('approve');
                 Route::delete('{id}', [App\Modules\Purchasing\Controllers\PurchaseOrderController::class, 'destroy'])
-                    ->middleware('permission:purchasing.order.create')->name('destroy');
+                    ->middleware('permission:purchasing.order.delete')->name('destroy');
             });
 
             Route::prefix('receipts')->name('receipts.')->group(static function (): void {
@@ -488,7 +495,7 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::post('{id}/invoice', [App\Modules\Sales\Controllers\SalesOrderController::class, 'generateInvoice'])
                     ->middleware('permission:sales.order.approve')->name('invoice');
                 Route::delete('{id}', [App\Modules\Sales\Controllers\SalesOrderController::class, 'destroy'])
-                    ->middleware('permission:sales.order.void|sales.order.create')->name('destroy');
+                    ->middleware('permission:sales.order.delete')->name('destroy');
             });
 
             Route::prefix('invoices')->name('invoices.')->group(static function (): void {
@@ -538,21 +545,21 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             // ── CRM Leads ────────────────────────────────────────────────
             Route::prefix('leads')->name('leads.')->group(static function (): void {
                 Route::get('/', [App\Modules\Sales\Controllers\CrmLeadController::class, 'index'])
-                    ->name('index');
+                    ->middleware('permission:sales.lead.view')->name('index');
                 Route::post('/', [App\Modules\Sales\Controllers\CrmLeadController::class, 'store'])
-                    ->name('store');
+                    ->middleware('permission:sales.lead.create')->name('store');
                 Route::get('{id}', [App\Modules\Sales\Controllers\CrmLeadController::class, 'show'])
-                    ->name('show');
+                    ->middleware('permission:sales.lead.view')->name('show');
                 Route::put('{id}', [App\Modules\Sales\Controllers\CrmLeadController::class, 'update'])
-                    ->name('update');
+                    ->middleware('permission:sales.lead.update')->name('update');
                 Route::patch('{id}/stage', [App\Modules\Sales\Controllers\CrmLeadController::class, 'updateStage'])
-                    ->name('stage');
+                    ->middleware('permission:sales.lead.update')->name('stage');
                 Route::post('{id}/validate-fake', [App\Modules\Sales\Controllers\CrmLeadController::class, 'validateFake'])
-                    ->name('validate-fake');
+                    ->middleware('permission:sales.lead.update')->name('validate-fake');
                 Route::post('{id}/convert', [App\Modules\Sales\Controllers\CrmLeadController::class, 'convert'])
-                    ->name('convert');
+                    ->middleware('permission:sales.lead.update')->name('convert');
                 Route::post('{id}/activities', [App\Modules\Sales\Controllers\CrmLeadController::class, 'addActivity'])
-                    ->name('activities');
+                    ->middleware('permission:sales.lead.update')->name('activities');
             });
 
             // ── Salesmen & Targets ─────────────────────────────────────────
@@ -627,117 +634,175 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
         // ── Logistics & Courier Dispatch ───────────────────────────────
         Route::prefix('logistics')->name('logistics.')->group(static function (): void {
             Route::prefix('couriers')->name('couriers.')->group(static function (): void {
-                Route::get('/', [App\Modules\Delivery\Controllers\CourierProviderController::class, 'index'])->name('index');
-                Route::post('/', [App\Modules\Delivery\Controllers\CourierProviderController::class, 'store'])->name('store');
-                Route::get('{courier}', [App\Modules\Delivery\Controllers\CourierProviderController::class, 'show'])->name('show');
-                Route::patch('{courier}', [App\Modules\Delivery\Controllers\CourierProviderController::class, 'update'])->name('update');
+                Route::get('/', [App\Modules\Delivery\Controllers\CourierProviderController::class, 'index'])
+                    ->middleware('permission:logistics.delivery_order.view')->name('index');
+                Route::post('/', [App\Modules\Delivery\Controllers\CourierProviderController::class, 'store'])
+                    ->middleware('permission:logistics.delivery_order.create')->name('store');
+                Route::get('{courier}', [App\Modules\Delivery\Controllers\CourierProviderController::class, 'show'])
+                    ->middleware('permission:logistics.delivery_order.view')->name('show');
+                Route::patch('{courier}', [App\Modules\Delivery\Controllers\CourierProviderController::class, 'update'])
+                    ->middleware('permission:logistics.delivery_order.update')->name('update');
             });
 
             Route::prefix('shipments')->name('shipments.')->group(static function (): void {
-                Route::get('/', [App\Modules\Delivery\Controllers\CourierShipmentController::class, 'index'])->name('index');
-                Route::post('/', [App\Modules\Delivery\Controllers\CourierShipmentController::class, 'store'])->name('store');
-                Route::get('{shipment}', [App\Modules\Delivery\Controllers\CourierShipmentController::class, 'show'])->name('show');
-                Route::post('{shipment}/track', [App\Modules\Delivery\Controllers\CourierShipmentController::class, 'track'])->name('track');
-                Route::post('{shipment}/cancel', [App\Modules\Delivery\Controllers\CourierShipmentController::class, 'cancel'])->name('cancel');
-                Route::get('{shipment}/label', [App\Modules\Delivery\Controllers\CourierShipmentController::class, 'label'])->name('label');
+                Route::get('/', [App\Modules\Delivery\Controllers\CourierShipmentController::class, 'index'])
+                    ->middleware('permission:logistics.shipment.view')->name('index');
+                Route::post('/', [App\Modules\Delivery\Controllers\CourierShipmentController::class, 'store'])
+                    ->middleware('permission:logistics.shipment.create')->name('store');
+                Route::get('{shipment}', [App\Modules\Delivery\Controllers\CourierShipmentController::class, 'show'])
+                    ->middleware('permission:logistics.shipment.view')->name('show');
+                Route::post('{shipment}/track', [App\Modules\Delivery\Controllers\CourierShipmentController::class, 'track'])
+                    ->middleware('permission:logistics.shipment.view')->name('track');
+                Route::post('{shipment}/cancel', [App\Modules\Delivery\Controllers\CourierShipmentController::class, 'cancel'])
+                    ->middleware('permission:logistics.shipment.update')->name('cancel');
+                Route::get('{shipment}/label', [App\Modules\Delivery\Controllers\CourierShipmentController::class, 'label'])
+                    ->middleware('permission:logistics.shipment.view')->name('label');
             });
 
             Route::prefix('run-sheets')->name('run-sheets.')->group(static function (): void {
-                Route::get('/', [App\Modules\Delivery\Controllers\RunSheetController::class, 'index'])->name('index');
-                Route::post('/', [App\Modules\Delivery\Controllers\RunSheetController::class, 'store'])->name('store');
-                Route::get('{runSheet}', [App\Modules\Delivery\Controllers\RunSheetController::class, 'show'])->name('show');
-                Route::post('{runSheet}/complete', [App\Modules\Delivery\Controllers\RunSheetController::class, 'complete'])->name('complete');
+                Route::get('/', [App\Modules\Delivery\Controllers\RunSheetController::class, 'index'])
+                    ->middleware('permission:logistics.run_sheet.view')->name('index');
+                Route::post('/', [App\Modules\Delivery\Controllers\RunSheetController::class, 'store'])
+                    ->middleware('permission:logistics.run_sheet.create')->name('store');
+                Route::get('{runSheet}', [App\Modules\Delivery\Controllers\RunSheetController::class, 'show'])
+                    ->middleware('permission:logistics.run_sheet.view')->name('show');
+                Route::post('{runSheet}/complete', [App\Modules\Delivery\Controllers\RunSheetController::class, 'complete'])
+                    ->middleware('permission:logistics.run_sheet.approve')->name('complete');
             });
 
             Route::prefix('cod-reconciliations')->name('cod-reconciliations.')->group(static function (): void {
-                Route::get('/', [App\Modules\Delivery\Controllers\CodReconciliationController::class, 'index'])->name('index');
-                Route::post('/', [App\Modules\Delivery\Controllers\CodReconciliationController::class, 'store'])->name('store');
-                Route::get('{reconciliation}', [App\Modules\Delivery\Controllers\CodReconciliationController::class, 'show'])->name('show');
+                Route::get('/', [App\Modules\Delivery\Controllers\CodReconciliationController::class, 'index'])
+                    ->middleware('permission:logistics.cod.view')->name('index');
+                Route::post('/', [App\Modules\Delivery\Controllers\CodReconciliationController::class, 'store'])
+                    ->middleware('permission:logistics.cod.create')->name('store');
+                Route::get('{reconciliation}', [App\Modules\Delivery\Controllers\CodReconciliationController::class, 'show'])
+                    ->middleware('permission:logistics.cod.view')->name('show');
             });
         });
 
         // ── Finance & Accounting ──────────────────────────────────────
         Route::prefix('finance')->name('finance.')->group(static function (): void {
             Route::prefix('accounts')->name('accounts.')->group(static function (): void {
-                Route::get('/', [App\Modules\Finance\Controllers\ChartOfAccountController::class, 'index'])->name('index');
-                Route::post('/', [App\Modules\Finance\Controllers\ChartOfAccountController::class, 'store'])->name('store');
-                Route::get('{id}', [App\Modules\Finance\Controllers\ChartOfAccountController::class, 'show'])->name('show');
+                Route::get('/', [App\Modules\Finance\Controllers\ChartOfAccountController::class, 'index'])
+                    ->middleware('permission:finance.account.view')->name('index');
+                Route::post('/', [App\Modules\Finance\Controllers\ChartOfAccountController::class, 'store'])
+                    ->middleware('permission:finance.account.create')->name('store');
+                Route::get('{id}', [App\Modules\Finance\Controllers\ChartOfAccountController::class, 'show'])
+                    ->middleware('permission:finance.account.view')->name('show');
             });
 
             Route::prefix('journal-entries')->name('journal-entries.')->group(static function (): void {
-                Route::get('/', [App\Modules\Finance\Controllers\JournalEntryController::class, 'index'])->name('index');
-                Route::post('/', [App\Modules\Finance\Controllers\JournalEntryController::class, 'store'])->name('store');
-                Route::get('{id}', [App\Modules\Finance\Controllers\JournalEntryController::class, 'show'])->name('show');
+                Route::get('/', [App\Modules\Finance\Controllers\JournalEntryController::class, 'index'])
+                    ->middleware('permission:finance.journal.view')->name('index');
+                Route::post('/', [App\Modules\Finance\Controllers\JournalEntryController::class, 'store'])
+                    ->middleware('permission:finance.journal.create')->name('store');
+                Route::get('{id}', [App\Modules\Finance\Controllers\JournalEntryController::class, 'show'])
+                    ->middleware('permission:finance.journal.view')->name('show');
             });
 
             Route::prefix('bank-accounts')->name('bank-accounts.')->group(static function (): void {
-                Route::get('/', [App\Modules\Finance\Controllers\BankAccountController::class, 'index'])->name('index');
-                Route::post('/', [App\Modules\Finance\Controllers\BankAccountController::class, 'store'])->name('store');
+                Route::get('/', [App\Modules\Finance\Controllers\BankAccountController::class, 'index'])
+                    ->middleware('permission:finance.bank.view')->name('index');
+                Route::post('/', [App\Modules\Finance\Controllers\BankAccountController::class, 'store'])
+                    ->middleware('permission:finance.bank.create')->name('store');
             });
 
             Route::prefix('expenses')->name('expenses.')->group(static function (): void {
-                Route::get('categories', [App\Modules\Finance\Controllers\ExpenseController::class, 'categories'])->name('categories');
-                Route::post('categories', [App\Modules\Finance\Controllers\ExpenseController::class, 'storeCategory'])->name('categories.store');
-                Route::get('/', [App\Modules\Finance\Controllers\ExpenseController::class, 'index'])->name('index');
-                Route::post('/', [App\Modules\Finance\Controllers\ExpenseController::class, 'store'])->name('store');
-                Route::get('{id}', [App\Modules\Finance\Controllers\ExpenseController::class, 'show'])->name('show');
+                Route::get('categories', [App\Modules\Finance\Controllers\ExpenseController::class, 'categories'])
+                    ->middleware('permission:finance.expense.view')->name('categories');
+                Route::post('categories', [App\Modules\Finance\Controllers\ExpenseController::class, 'storeCategory'])
+                    ->middleware('permission:finance.expense.create')->name('categories.store');
+                Route::get('/', [App\Modules\Finance\Controllers\ExpenseController::class, 'index'])
+                    ->middleware('permission:finance.expense.view')->name('index');
+                Route::post('/', [App\Modules\Finance\Controllers\ExpenseController::class, 'store'])
+                    ->middleware('permission:finance.expense.create')->name('store');
+                Route::get('{id}', [App\Modules\Finance\Controllers\ExpenseController::class, 'show'])
+                    ->middleware('permission:finance.expense.view')->name('show');
             });
 
             Route::prefix('costing')->name('costing.')->group(static function (): void {
-                Route::get('/', [App\Modules\Finance\Controllers\CostingController::class, 'index'])->name('index');
-                Route::post('rollup', [App\Modules\Finance\Controllers\CostingController::class, 'rollup'])->name('rollup');
+                Route::get('/', [App\Modules\Finance\Controllers\CostingController::class, 'index'])
+                    ->middleware('permission:finance.costing.view')->name('index');
+                Route::post('rollup', [App\Modules\Finance\Controllers\CostingController::class, 'rollup'])
+                    ->middleware('permission:finance.costing.create')->name('rollup');
             });
         });
 
         // ── Fixed Assets & Maintenance ────────────────────────────────
         Route::prefix('assets')->name('assets.')->group(static function (): void {
-            Route::get('categories', [App\Modules\Assets\Controllers\AssetController::class, 'categories'])->name('categories');
-            Route::post('categories', [App\Modules\Assets\Controllers\AssetController::class, 'storeCategory'])->name('categories.store');
-            Route::get('/', [App\Modules\Assets\Controllers\AssetController::class, 'index'])->name('index');
-            Route::post('/', [App\Modules\Assets\Controllers\AssetController::class, 'store'])->name('store');
-            Route::get('{id}', [App\Modules\Assets\Controllers\AssetController::class, 'show'])->name('show');
+            Route::get('categories', [App\Modules\Assets\Controllers\AssetController::class, 'categories'])
+                ->middleware('permission:assets.asset.view')->name('categories');
+            Route::post('categories', [App\Modules\Assets\Controllers\AssetController::class, 'storeCategory'])
+                ->middleware('permission:assets.asset.create')->name('categories.store');
+            Route::get('/', [App\Modules\Assets\Controllers\AssetController::class, 'index'])
+                ->middleware('permission:assets.asset.view')->name('index');
+            Route::post('/', [App\Modules\Assets\Controllers\AssetController::class, 'store'])
+                ->middleware('permission:assets.asset.create')->name('store');
+            Route::get('{id}', [App\Modules\Assets\Controllers\AssetController::class, 'show'])
+                ->middleware('permission:assets.asset.view')->name('show');
 
             Route::prefix('depreciation')->name('depreciation.')->group(static function (): void {
-                Route::get('/', [App\Modules\Assets\Controllers\AssetDepreciationController::class, 'index'])->name('index');
-                Route::post('/', [App\Modules\Assets\Controllers\AssetDepreciationController::class, 'store'])->name('store');
+                Route::get('/', [App\Modules\Assets\Controllers\AssetDepreciationController::class, 'index'])
+                    ->middleware('permission:assets.asset.view')->name('index');
+                Route::post('/', [App\Modules\Assets\Controllers\AssetDepreciationController::class, 'store'])
+                    ->middleware('permission:assets.asset.depreciate')->name('store');
             });
 
             Route::prefix('maintenance-orders')->name('maintenance-orders.')->group(static function (): void {
-                Route::get('/', [App\Modules\Assets\Controllers\MaintenanceOrderController::class, 'index'])->name('index');
-                Route::post('/', [App\Modules\Assets\Controllers\MaintenanceOrderController::class, 'store'])->name('store');
-                Route::get('{id}', [App\Modules\Assets\Controllers\MaintenanceOrderController::class, 'show'])->name('show');
+                Route::get('/', [App\Modules\Assets\Controllers\MaintenanceOrderController::class, 'index'])
+                    ->middleware('permission:assets.maintenance.view')->name('index');
+                Route::post('/', [App\Modules\Assets\Controllers\MaintenanceOrderController::class, 'store'])
+                    ->middleware('permission:assets.maintenance.create')->name('store');
+                Route::get('{id}', [App\Modules\Assets\Controllers\MaintenanceOrderController::class, 'show'])
+                    ->middleware('permission:assets.maintenance.view')->name('show');
             });
         });
 
         // ── Human Resources & Payroll ─────────────────────────────────
         Route::prefix('hr')->name('hr.')->group(static function (): void {
-            Route::get('departments', [App\Modules\HR\Controllers\EmployeeController::class, 'departments'])->name('departments');
-            Route::get('designations', [App\Modules\HR\Controllers\EmployeeController::class, 'designations'])->name('designations');
-            Route::get('shifts', [App\Modules\HR\Controllers\EmployeeController::class, 'shifts'])->name('shifts');
+            Route::get('departments', [App\Modules\HR\Controllers\EmployeeController::class, 'departments'])
+                ->middleware('permission:hr.employee.view')->name('departments');
+            Route::get('designations', [App\Modules\HR\Controllers\EmployeeController::class, 'designations'])
+                ->middleware('permission:hr.employee.view')->name('designations');
+            Route::get('shifts', [App\Modules\HR\Controllers\EmployeeController::class, 'shifts'])
+                ->middleware('permission:hr.employee.view')->name('shifts');
 
             Route::prefix('employees')->name('employees.')->group(static function (): void {
-                Route::get('/', [App\Modules\HR\Controllers\EmployeeController::class, 'index'])->name('index');
-                Route::post('/', [App\Modules\HR\Controllers\EmployeeController::class, 'store'])->name('store');
-                Route::get('{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'show'])->name('show');
+                Route::get('/', [App\Modules\HR\Controllers\EmployeeController::class, 'index'])
+                    ->middleware('permission:hr.employee.view')->name('index');
+                Route::post('/', [App\Modules\HR\Controllers\EmployeeController::class, 'store'])
+                    ->middleware('permission:hr.employee.create')->name('store');
+                Route::get('{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'show'])
+                    ->middleware('permission:hr.employee.view')->name('show');
             });
 
             Route::prefix('attendances')->name('attendances.')->group(static function (): void {
-                Route::get('/', [App\Modules\HR\Controllers\AttendanceController::class, 'index'])->name('index');
-                Route::post('/', [App\Modules\HR\Controllers\AttendanceController::class, 'store'])->name('store');
+                Route::get('/', [App\Modules\HR\Controllers\AttendanceController::class, 'index'])
+                    ->middleware('permission:hr.attendance.view')->name('index');
+                Route::post('/', [App\Modules\HR\Controllers\AttendanceController::class, 'store'])
+                    ->middleware('permission:hr.attendance.create')->name('store');
             });
 
             Route::prefix('leaves')->name('leaves.')->group(static function (): void {
-                Route::get('types', [App\Modules\HR\Controllers\LeaveRequestController::class, 'leaveTypes'])->name('types');
-                Route::get('/', [App\Modules\HR\Controllers\LeaveRequestController::class, 'index'])->name('index');
-                Route::post('/', [App\Modules\HR\Controllers\LeaveRequestController::class, 'store'])->name('store');
+                Route::get('types', [App\Modules\HR\Controllers\LeaveRequestController::class, 'leaveTypes'])
+                    ->middleware('permission:hr.leave.view')->name('types');
+                Route::get('/', [App\Modules\HR\Controllers\LeaveRequestController::class, 'index'])
+                    ->middleware('permission:hr.leave.view')->name('index');
+                Route::post('/', [App\Modules\HR\Controllers\LeaveRequestController::class, 'store'])
+                    ->middleware('permission:hr.leave.create')->name('store');
             });
 
             Route::prefix('payroll')->name('payroll.')->group(static function (): void {
-                Route::get('periods', [App\Modules\HR\Controllers\PayrollController::class, 'periods'])->name('periods');
-                Route::post('periods', [App\Modules\HR\Controllers\PayrollController::class, 'storePeriod'])->name('periods.store');
-                Route::post('periods/{id}/process', [App\Modules\HR\Controllers\PayrollController::class, 'process'])->name('periods.process');
-                Route::get('payslips', [App\Modules\HR\Controllers\PayrollController::class, 'payslips'])->name('payslips');
-                Route::get('payslips/{id}', [App\Modules\HR\Controllers\PayrollController::class, 'showPayslip'])->name('payslips.show');
+                Route::get('periods', [App\Modules\HR\Controllers\PayrollController::class, 'periods'])
+                    ->middleware('permission:hr.payroll.view')->name('periods');
+                Route::post('periods', [App\Modules\HR\Controllers\PayrollController::class, 'storePeriod'])
+                    ->middleware('permission:hr.payroll.create')->name('periods.store');
+                Route::post('periods/{id}/process', [App\Modules\HR\Controllers\PayrollController::class, 'process'])
+                    ->middleware('permission:hr.payroll.approve')->name('periods.process');
+                Route::get('payslips', [App\Modules\HR\Controllers\PayrollController::class, 'payslips'])
+                    ->middleware('permission:hr.payslip.view')->name('payslips');
+                Route::get('payslips/{id}', [App\Modules\HR\Controllers\PayrollController::class, 'showPayslip'])
+                    ->middleware('permission:hr.payslip.view')->name('payslips.show');
             });
         });
 
@@ -853,14 +918,20 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
 
         // ── RBAC & Role Management ──────────────────────────────────
         Route::prefix('roles')->name('roles.')->group(static function (): void {
-            Route::get('/', [\App\Modules\Auth\Controllers\RoleController::class, 'index'])->name('index');
-            Route::post('/', [\App\Modules\Auth\Controllers\RoleController::class, 'store'])->name('store');
-            Route::get('{id}', [\App\Modules\Auth\Controllers\RoleController::class, 'show'])->name('show');
-            Route::put('{id}', [\App\Modules\Auth\Controllers\RoleController::class, 'update'])->name('update');
-            Route::delete('{id}', [\App\Modules\Auth\Controllers\RoleController::class, 'destroy'])->name('destroy');
+            Route::get('/', [\App\Modules\Auth\Controllers\RoleController::class, 'index'])
+                ->middleware('permission:core.role.view')->name('index');
+            Route::post('/', [\App\Modules\Auth\Controllers\RoleController::class, 'store'])
+                ->middleware('permission:core.role.create')->name('store');
+            Route::get('{id}', [\App\Modules\Auth\Controllers\RoleController::class, 'show'])
+                ->middleware('permission:core.role.view')->name('show');
+            Route::put('{id}', [\App\Modules\Auth\Controllers\RoleController::class, 'update'])
+                ->middleware('permission:core.role.update')->name('update');
+            Route::delete('{id}', [\App\Modules\Auth\Controllers\RoleController::class, 'destroy'])
+                ->middleware('permission:core.role.delete')->name('destroy');
         });
 
-        Route::get('permissions', [\App\Modules\Auth\Controllers\RoleController::class, 'permissions'])->name('permissions.index');
+        Route::get('permissions', [\App\Modules\Auth\Controllers\RoleController::class, 'permissions'])
+            ->middleware('permission:core.permission.view')->name('permissions.index');
 
         // ── System Audit Logging & Entity History ───────────────────
         Route::prefix('audit-logs')->name('audit-logs.')->group(static function (): void {
@@ -909,42 +980,45 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             // Centralized Paper Sizes Registry
             Route::prefix('paper-sizes')->name('paper-sizes.')->group(static function (): void {
                 Route::get('/', [\App\Modules\Documents\Controllers\PaperSizeController::class, 'index'])
+                    ->middleware('permission:documents.paper_size.view')
                     ->name('index');
                 Route::post('/', [\App\Modules\Documents\Controllers\PaperSizeController::class, 'store'])
-                    ->middleware('permission:documents.paper_size.manage')
+                    ->middleware('permission:documents.paper_size.create')
                     ->name('store');
                 Route::put('{id}', [\App\Modules\Documents\Controllers\PaperSizeController::class, 'update'])
-                    ->middleware('permission:documents.paper_size.manage')
+                    ->middleware('permission:documents.paper_size.update')
                     ->name('update');
                 Route::delete('{id}', [\App\Modules\Documents\Controllers\PaperSizeController::class, 'destroy'])
-                    ->middleware('permission:documents.paper_size.manage')
+                    ->middleware('permission:documents.paper_size.delete')
                     ->name('destroy');
             });
 
             // Reusable Print Profiles
             Route::prefix('print-profiles')->name('print-profiles.')->group(static function (): void {
                 Route::get('/', [\App\Modules\Documents\Controllers\PrintProfileController::class, 'index'])
+                    ->middleware('permission:documents.print_profile.view')
                     ->name('index');
                 Route::post('/', [\App\Modules\Documents\Controllers\PrintProfileController::class, 'store'])
-                    ->middleware('permission:documents.print_profile.manage')
+                    ->middleware('permission:documents.print_profile.create')
                     ->name('store');
                 Route::put('{id}', [\App\Modules\Documents\Controllers\PrintProfileController::class, 'update'])
-                    ->middleware('permission:documents.print_profile.manage')
+                    ->middleware('permission:documents.print_profile.update')
                     ->name('update');
                 Route::delete('{id}', [\App\Modules\Documents\Controllers\PrintProfileController::class, 'destroy'])
-                    ->middleware('permission:documents.print_profile.manage')
+                    ->middleware('permission:documents.print_profile.delete')
                     ->name('destroy');
             });
 
             // Centralized Document Number Sequences
             Route::prefix('numbering')->name('numbering.')->group(static function (): void {
                 Route::get('/', [\App\Modules\Documents\Controllers\DocumentNumberingController::class, 'index'])
+                    ->middleware('permission:documents.numbering.view')
                     ->name('index');
                 Route::post('/', [\App\Modules\Documents\Controllers\DocumentNumberingController::class, 'store'])
-                    ->middleware('permission:documents.numbering.manage')
+                    ->middleware('permission:documents.numbering.create')
                     ->name('store');
                 Route::put('{id}', [\App\Modules\Documents\Controllers\DocumentNumberingController::class, 'update'])
-                    ->middleware('permission:documents.numbering.manage')
+                    ->middleware('permission:documents.numbering.update')
                     ->name('update');
             });
 

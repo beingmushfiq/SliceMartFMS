@@ -169,7 +169,26 @@ class User extends Authenticatable
 
         $effective = $this->getEffectivePermissions();
 
-        return in_array('*', $effective, true) || in_array($permission, $effective, true);
+        if (in_array('*', $effective, true) || in_array($permission, $effective, true)) {
+            return true;
+        }
+
+        // Support module.* wildcard
+        $parts = explode('.', $permission);
+        if (count($parts) >= 2) {
+            $moduleWildcard = $parts[0] . '.*';
+            if (in_array($moduleWildcard, $effective, true)) {
+                return true;
+            }
+
+            // Support {module}.{resource}.manage as power-user shortcut for create/update/delete/view
+            $manageToken = $parts[0] . '.' . $parts[1] . '.manage';
+            if (in_array($manageToken, $effective, true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

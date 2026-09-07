@@ -80,6 +80,15 @@ class PayrollPieceRateTest extends TestCase
             'email_verified_at' => now(),
         ]);
 
+        $role = \App\Models\Role::create([
+            'uuid' => (string) Str::uuid(),
+            'tenant_id' => $this->tenant->id,
+            'name' => 'Super Administrator',
+            'slug' => 'super-administrator',
+            'is_system' => true,
+        ]);
+        $this->user->roles()->attach($role);
+
         $this->workerUser = User::create([
             'id' => 2,
             'tenant_id' => $this->tenant->id,

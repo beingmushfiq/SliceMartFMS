@@ -20,6 +20,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
+import { useAuthStore } from '../../lib/auth/authStore';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { notify } from '../../components/ui/Toast';
@@ -57,6 +58,11 @@ export interface RoleData {
 }
 
 export const RolesManagementWorkspace: React.FC = () => {
+  const { hasPermission } = useAuthStore();
+  const canCreateRole = hasPermission('core.role.create') || hasPermission('core.role.manage');
+  const canEditRole = hasPermission('core.role.update') || hasPermission('core.role.manage');
+  const canDeleteRole = hasPermission('core.role.delete') || hasPermission('core.role.manage');
+
   const [roles, setRoles] = useState<RoleData[]>([]);
   const [modulesList, setModulesList] = useState<ModuleGroup[]>([]);
   const [allPermissions, setAllPermissions] = useState<PermissionItem[]>([]);
@@ -363,12 +369,14 @@ export const RolesManagementWorkspace: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <Button variant="primary" size="md" onClick={handleOpenCreate} className="text-xs shadow-md shadow-emerald-600/20">
-              <Plus className="size-3.5 mr-1.5" />
-              <span>Create Custom Role</span>
-            </Button>
-          </div>
+          {canCreateRole && (
+            <div className="flex items-center gap-2.5">
+              <Button variant="primary" size="md" onClick={handleOpenCreate} className="text-xs shadow-md shadow-emerald-600/20">
+                <Plus className="size-3.5 mr-1.5" />
+                <span>Create Custom Role</span>
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -430,23 +438,27 @@ export const RolesManagementWorkspace: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleCloneRole(role)}
-                        title="Clone Role Matrix"
-                        className="rounded-lg p-1.5 text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
-                      >
-                        <Copy className="size-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEdit(role)}
-                        title="Configure Role Permissions"
-                        className="rounded-lg p-1.5 text-primary hover:bg-primary-subtle transition-colors cursor-pointer"
-                      >
-                        <Edit2 className="size-3.5" />
-                      </button>
-                      {!role.is_system && (
+                      {canCreateRole && (
+                        <button
+                          type="button"
+                          onClick={() => handleCloneRole(role)}
+                          title="Clone Role Matrix"
+                          className="rounded-lg p-1.5 text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                        >
+                          <Copy className="size-3.5" />
+                        </button>
+                      )}
+                      {canEditRole && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEdit(role)}
+                          title="Configure Role Permissions"
+                          className="rounded-lg p-1.5 text-primary hover:bg-primary-subtle transition-colors cursor-pointer"
+                        >
+                          <Edit2 className="size-3.5" />
+                        </button>
+                      )}
+                      {!role.is_system && canDeleteRole && (
                         <button
                           type="button"
                           onClick={() => setRoleToDelete(role)}
@@ -810,7 +822,7 @@ export const RolesManagementWorkspace: React.FC = () => {
               <Button
                 variant="primary"
                 onClick={handleSaveRole}
-                disabled={saving || !roleName.trim()}
+                disabled={saving || !roleName.trim() || (editingRole ? !canEditRole : !canCreateRole)}
                 className="shadow-md shadow-emerald-600/20"
               >
                 {saving ? 'Saving Permissions Matrix...' : 'Save Role Permissions'}

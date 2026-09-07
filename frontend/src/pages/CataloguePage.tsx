@@ -16,6 +16,7 @@ import { Button } from '../components/ui/Button';
 import { FormGroup, Input, Select } from '../components/ui/FormElements';
 import { Modal } from '../components/ui/Modal';
 import { isApiError } from '../lib/api/errors';
+import { useAuthStore } from '../lib/auth/authStore';
 import type { Brand, Category, Product, Warehouse } from '../types/api/catalog';
 
 type Section = 'products' | 'categories' | 'brands' | 'warehouses';
@@ -71,6 +72,9 @@ function mutationErrorMessage(error: unknown): string {
 }
 
 export default function CataloguePage() {
+  const { hasPermission } = useAuthStore();
+  const canCreateWarehouse = hasPermission('inventory.warehouse.create');
+
   const [section, setSection] = useState<Section>('products');
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -87,7 +91,7 @@ export default function CataloguePage() {
     },
   });
 
-  const canCreateWarehouse = draft.code.trim().length > 0 && draft.name.trim().length > 0;
+  const isFormValid = draft.code.trim().length > 0 && draft.name.trim().length > 0;
 
   return (
     <main className="bg-base text-default min-h-dvh">
@@ -132,7 +136,7 @@ export default function CataloguePage() {
                 leftElement={<Search size={16} />}
                 className="max-w-sm"
               />
-              {section === 'warehouses' && (
+              {section === 'warehouses' && canCreateWarehouse && (
                 <Button
                   type="button"
                   size="sm"
@@ -193,7 +197,7 @@ export default function CataloguePage() {
               onClick={async () => {
                 await createWarehouse.mutateAsync();
               }}
-              disabled={!canCreateWarehouse}
+              disabled={!isFormValid || !canCreateWarehouse}
               errorMessage={mutationErrorMessage(createWarehouse.error)}
             >
               Create warehouse
