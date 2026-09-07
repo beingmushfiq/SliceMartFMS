@@ -22,7 +22,7 @@ export const StorefrontFooter: React.FC<StorefrontFooterProps> = ({ config }) =>
               </div>
               <div>
                 <h4 className="text-xs font-bold text-white">Direct Factory Delivery</h4>
-                <p className="text-[11px] text-zinc-400">Dispatched straight from central baking hub</p>
+                <p className="text-[11px] text-zinc-400">Dispatched straight from central assembly hub</p>
               </div>
             </div>
 
@@ -69,7 +69,7 @@ export const StorefrontFooter: React.FC<StorefrontFooterProps> = ({ config }) =>
             </div>
             <p className="text-xs text-zinc-400 leading-relaxed max-w-sm">
               {config?.meta_description ||
-                'Industrial-scale baking & food manufacturing delivered direct-to-consumer and corporate wholesale.'}
+                'Precision infrared cookers and high-efficiency gas stoves delivered direct-to-consumer and wholesale distribution.'}
             </p>
             <div className="flex items-center gap-3 pt-1">
               <a
@@ -165,7 +165,7 @@ export const StorefrontFooter: React.FC<StorefrontFooterProps> = ({ config }) =>
           </div>
 
           <div className="text-zinc-500 text-[11px]">
-            © {new Date().getFullYear()} {config?.name ?? 'SliceMart'}. Powered by DevCenterPoint Factory SaaS.
+            © {new Date().getFullYear()} {config?.name ?? 'SliceMart'}. Powered by DevCenterPoint Factory Platform.
           </div>
         </div>
       </div>

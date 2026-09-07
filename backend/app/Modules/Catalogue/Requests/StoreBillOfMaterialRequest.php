@@ -22,8 +22,8 @@ final class StoreBillOfMaterialRequest extends FormRequest
             'output_quantity' => ['required', 'numeric', 'gt:0', 'decimal:0,4'], 'output_unit_id' => ['required', 'uuid'],
             'expected_yield_percentage' => ['sometimes', 'numeric', 'gte:0', 'lte:100', 'decimal:0,4'], 'status' => ['sometimes', Rule::in(['draft', 'active', 'archived'])],
             'effective_from' => ['sometimes', 'nullable', 'date_format:Y-m-d'], 'effective_to' => ['sometimes', 'nullable', 'date_format:Y-m-d', 'after_or_equal:effective_from'],
-            'items' => ['required', 'array', 'min:1'], 'items.*.product_id' => ['required', 'uuid'], 'items.*.quantity' => ['required', 'numeric', 'gt:0', 'decimal:0,4'],
-            'items.*.unit_id' => ['required', 'uuid'], 'items.*.wastage_allowance_percentage' => ['sometimes', 'numeric', 'gte:0', 'lte:100', 'decimal:0,4'],
+            'items' => ['sometimes', 'array'], 'items.*.product_id' => ['required_with:items', 'uuid'], 'items.*.quantity' => ['required_with:items', 'numeric', 'gt:0', 'decimal:0,4'],
+            'items.*.unit_id' => ['required_with:items', 'uuid'], 'items.*.wastage_allowance_percentage' => ['sometimes', 'numeric', 'gte:0', 'lte:100', 'decimal:0,4'],
             'items.*.is_optional' => ['sometimes', 'boolean'], 'items.*.sort_order' => ['sometimes', 'integer', 'min:0'],
         ];
     }

@@ -17,7 +17,6 @@ import HrWorkspace from '../modules/hr/HrWorkspace';
 import { ReportsWorkspace } from '../modules/reports/ReportsWorkspace';
 import { ActivityLogWorkspace } from '../pages/settings/ActivityLogWorkspace';
 import { RolesManagementWorkspace } from '../pages/settings/RolesManagementWorkspace';
-import { OrderFraudVerificationWorkspace } from '../modules/ecommerce/OrderFraudVerificationWorkspace';
 import { SettingsCenterWorkspace } from '../modules/settings/SettingsCenterWorkspace';
 import { TenantRoleDashboard } from '../pages/dashboard/TenantRoleDashboard';
 import { ProfileSettingsWorkspace } from '../pages/settings/ProfileSettingsWorkspace';
@@ -232,8 +231,20 @@ export const router = createBrowserRouter([
             element: <HrWorkspace />,
           },
           {
+            path: 'workforce',
+            element: <HrWorkspace />,
+          },
+          {
             path: 'payroll',
-            element: <Navigate to="/hr" replace />,
+            element: <Navigate to="/hr?tab=payroll" replace />,
+          },
+          {
+            path: 'employees',
+            element: <Navigate to="/workforce?tab=employees" replace />,
+          },
+          {
+            path: 'attendance',
+            element: <Navigate to="/workforce?tab=attendance" replace />,
           },
           {
             path: 'reports',
@@ -250,14 +261,6 @@ export const router = createBrowserRouter([
           {
             path: 'storefront/builder',
             element: <StorefrontPageBuilderWorkspace />,
-          },
-          {
-            path: 'fraud-verification',
-            element: <OrderFraudVerificationWorkspace />,
-          },
-          {
-            path: 'sales/fraud-verification',
-            element: <Navigate to="/fraud-verification" replace />,
           },
           {
             path: 'audit-logs',

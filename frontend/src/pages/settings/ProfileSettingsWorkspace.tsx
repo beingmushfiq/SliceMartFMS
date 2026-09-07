@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../lib/auth/authStore';
 import { Button } from '../../components/ui/Button';
+import { SelectDropdown } from '../../components/ui/Dropdown';
 
 export const ProfileSettingsWorkspace: React.FC = () => {
   const { user, tenant, activeBranch, branches, permissions } = useAuthStore();
@@ -136,33 +137,35 @@ export const ProfileSettingsWorkspace: React.FC = () => {
         </div>
 
         {/* Tab Navigation */}
-        <div className="mt-8 flex gap-2 border-b border-default overflow-x-auto pb-px">
-          {[
-            { id: 'general', label: 'Personal & Role Profile', icon: UserIcon },
-            { id: 'security', label: 'Security & Credentials', icon: KeyRound },
-            { id: 'permissions', label: 'Assigned Privileges', icon: Shield },
-            { id: 'preferences', label: 'Workstation Preferences', icon: Globe },
-          ].map((t) => {
-            const Icon = t.icon;
-            const isActive = activeTab === t.id;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() =>
-                  setActiveTab(t.id as 'general' | 'security' | 'permissions' | 'preferences')
-                }
-                className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                  isActive
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted hover:text-default hover:border-default'
-                }`}
-              >
-                <Icon className="size-3.5" />
-                <span>{t.label}</span>
-              </button>
-            );
-          })}
+        <div className="mt-8 flex overflow-x-auto p-1.5 bg-surface-sunken rounded-2xl border border-default shadow-2xs">
+          <div className="flex gap-1.5 min-w-full sm:min-w-0">
+            {[
+              { id: 'general', label: 'Personal & Role Profile', icon: UserIcon },
+              { id: 'security', label: 'Security & Credentials', icon: KeyRound },
+              { id: 'permissions', label: 'Assigned Privileges', icon: Shield },
+              { id: 'preferences', label: 'Workstation Preferences', icon: Globe },
+            ].map((t) => {
+              const Icon = t.icon;
+              const isActive = activeTab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() =>
+                    setActiveTab(t.id as 'general' | 'security' | 'permissions' | 'preferences')
+                  }
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer ${
+                    isActive
+                      ? 'bg-primary text-primary-fg font-semibold shadow-xs border border-primary'
+                      : 'text-muted hover:text-default hover:bg-surface/50 border border-transparent'
+                  }`}
+                >
+                  <Icon className={`size-3.5 ${isActive ? 'text-primary-fg' : 'text-muted'}`} />
+                  <span>{t.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -486,32 +489,38 @@ export const ProfileSettingsWorkspace: React.FC = () => {
                   <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1.5">
                     Timezone Standard
                   </label>
-                  <select
+                  <SelectDropdown
+                    options={[
+                      { value: 'Asia/Dhaka', label: 'Asia/Dhaka (GMT+06:00 - Bangladesh Standard Time)' },
+                      { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
+                      { value: 'Asia/Singapore', label: 'Asia/Singapore (GMT+08:00)' },
+                      { value: 'Europe/London', label: 'Europe/London (GMT+00:00)' },
+                      { value: 'America/New_York', label: 'America/New_York (EST)' },
+                    ]}
                     value={timezone}
-                    onChange={(e) => setTimezone(e.target.value)}
-                    className="w-full rounded-xl border border-default bg-surface-sunken p-2.5 text-xs text-default focus:border-primary focus:outline-none"
-                  >
-                    <option value="Asia/Dhaka">Asia/Dhaka (GMT+06:00 - Bangladesh Standard Time)</option>
-                    <option value="UTC">UTC (Coordinated Universal Time)</option>
-                    <option value="Asia/Singapore">Asia/Singapore (GMT+08:00)</option>
-                    <option value="Europe/London">Europe/London (GMT+00:00)</option>
-                    <option value="America/New_York">America/New_York (EST)</option>
-                  </select>
+                    onChange={(val) => setTimezone(val)}
+                    size="md"
+                    buttonClassName="w-full"
+                    aria-label="Timezone standard"
+                  />
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1.5">
                     Locale & Currency Presentation
                   </label>
-                  <select
+                  <SelectDropdown
+                    options={[
+                      { value: 'en-BD', label: 'English (Bangladesh) — ৳ Bangladeshi Taka' },
+                      { value: 'en-US', label: 'English (United States) — $ USD' },
+                      { value: 'bn-BD', label: 'বাংলা (বাংলাদেশ) — ৳ টাকা' },
+                    ]}
                     value={locale}
-                    onChange={(e) => setLocale(e.target.value)}
-                    className="w-full rounded-xl border border-default bg-surface-sunken p-2.5 text-xs text-default focus:border-primary focus:outline-none"
-                  >
-                    <option value="en-BD">English (Bangladesh) — ৳ Bangladeshi Taka</option>
-                    <option value="en-US">English (United States) — $ USD</option>
-                    <option value="bn-BD">বাংলা (বাংলাদেশ) — ৳ টাকা</option>
-                  </select>
+                    onChange={(val) => setLocale(val)}
+                    size="md"
+                    buttonClassName="w-full"
+                    aria-label="Locale and currency"
+                  />
                 </div>
 
                 <div className="pt-2 flex justify-end">

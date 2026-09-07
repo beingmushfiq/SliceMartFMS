@@ -49,15 +49,15 @@ export function BarcodeGeneratorModal({
           {
             product: {
               id: '1',
-              name: 'Artisan Sourdough Loaf (800g)',
-              sku: 'FG-BREAD-01',
+              name: 'Infrared Cooker 2200W (SM-IC220)',
+              sku: 'FG-IC-2200',
               barcode: '8901234567890',
-              sale_price: '280.00',
+              sale_price: '3200.00',
               currency: currencySymbol,
               unit_code: 'PCS',
               batch_code: 'BAT-2026-0830',
               mfg_date: '2026-08-30',
-              exp_date: '2026-09-02',
+              exp_date: '2029-08-30',
             },
             count: 4,
           },
@@ -123,8 +123,8 @@ export function BarcodeGeneratorModal({
                 onClick={() => setActiveTab('setup')}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   activeTab === 'setup'
-                    ? 'bg-surface text-primary shadow-xs border border-default'
-                    : 'text-muted hover:text-default'
+                    ? 'bg-primary text-primary-fg shadow-xs border border-primary'
+                    : 'text-muted hover:text-default border border-transparent'
                 }`}
               >
                 <Settings className="size-3.5" />
@@ -137,8 +137,8 @@ export function BarcodeGeneratorModal({
                 disabled={totalLabels === 0}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   activeTab === 'sheet_preview'
-                    ? 'bg-surface text-primary shadow-xs border border-default'
-                    : 'text-muted hover:text-default'
+                    ? 'bg-primary text-primary-fg shadow-xs border border-primary'
+                    : 'text-muted hover:text-default border border-transparent'
                 }`}
               >
                 <Eye className="size-3.5" />

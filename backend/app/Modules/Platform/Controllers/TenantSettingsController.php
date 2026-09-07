@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Modules\Platform\Controllers;
 
 use App\Core\Settings\SettingService;
+use App\Core\Tenancy\TenantContext;
 use App\Http\Controllers\Controller;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class TenantSettingsController extends Controller
 {
@@ -125,6 +128,36 @@ class TenantSettingsController extends Controller
             'data' => [
                 'group' => $group,
                 'settings' => $fresh,
+            ],
+        ]);
+    }
+
+    /**
+     * Upload a brand asset (logo, favicon, or icon).
+     */
+    public function uploadAsset(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:png,jpg,jpeg,svg,ico,webp,gif|max:5120',
+            'type' => 'nullable|string|in:logo,favicon,general',
+        ]);
+
+        $file = $request->file('file');
+        $tenantId = TenantContext::current()->tenantId() ?? 'default';
+        $ext = $file->getClientOriginalExtension() ?: 'png';
+        $filename = ($request->input('type') ?? 'asset') . '_' . time() . '_' . substr(md5(uniqid()), 0, 8) . '.' . $ext;
+
+        $path = $file->storeAs("branding/{$tenantId}", $filename, 'public');
+        /** @var FilesystemAdapter $disk */
+        $disk = Storage::disk('public');
+        $url = $disk->url($path);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Asset uploaded successfully.',
+            'data' => [
+                'url' => $url,
+                'path' => $path,
             ],
         ]);
     }

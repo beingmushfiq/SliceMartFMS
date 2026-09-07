@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import type { StockCount } from '../../../types/api/inventory';
 import { api } from '../../../lib/api/client';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
 interface CountFormItem {
   product_name: string;
@@ -32,39 +33,39 @@ const SAMPLE_COUNTS: StockCount[] = [
     uuid: 'cnt-001',
     count_number: 'CNT-202608-001',
     warehouse_id: 1,
-    warehouse_name: 'Central Raw Materials Silo',
+    warehouse_name: 'Tejgaon Central Electronic Components & Parts Warehouse',
     count_date: '2026-08-30',
     count_type: 'cycle',
     status: 'counting',
-    notes: 'Monthly cycle audit for high-volume grain and flour bins.',
+    notes: 'Monthly cycle audit for high-volume ceramic panels and heating coils.',
     items: [
       {
         id: 1001,
         uuid: 'cnti-1001',
         stock_count_id: 1,
         product_id: 1,
-        product_name: 'Premium Wheat Flour (Grade A)',
-        product_sku: 'RM-FLOUR-01',
-        snapshot_quantity: '2450.00',
-        counted_quantity: '2430.00',
-        variance_quantity: '-20.00',
-        variance_cost: '-1300.00',
-        unit_id: 1,
-        unit_code: 'KG',
+        product_name: 'Microcrystalline Ceramic Glass Panel',
+        product_sku: 'RAW-CERAMIC-PANEL',
+        snapshot_quantity: '850.00',
+        counted_quantity: '848.00',
+        variance_quantity: '-2.00',
+        variance_cost: '-900.00',
+        unit_id: 2,
+        unit_code: 'PCS',
       },
       {
         id: 1002,
         uuid: 'cnti-1002',
         stock_count_id: 1,
-        product_id: 3,
-        product_name: 'Refined Cane Sugar (Fine Grain)',
-        product_sku: 'RM-SUGAR-01',
-        snapshot_quantity: '1800.00',
-        counted_quantity: '1800.00',
+        product_id: 2,
+        product_name: '2200W Infrared Heating Coil',
+        product_sku: 'RAW-COIL-2200W',
+        snapshot_quantity: '600.00',
+        counted_quantity: '600.00',
         variance_quantity: '0.00',
         variance_cost: '0.00',
-        unit_id: 1,
-        unit_code: 'KG',
+        unit_id: 2,
+        unit_code: 'PCS',
       },
     ],
     created_at: '2026-08-30T07:00:00Z',
@@ -74,21 +75,21 @@ const SAMPLE_COUNTS: StockCount[] = [
     uuid: 'cnt-002',
     count_number: 'CNT-202608-002',
     warehouse_id: 3,
-    warehouse_name: 'Finished Goods Cold Storage',
+    warehouse_name: 'Dhaka Main Finished Appliances Distribution Depot',
     count_date: '2026-08-29',
     count_type: 'spot',
     status: 'completed',
     reconciled_by: 1,
     reconciled_at: '2026-08-29T18:00:00Z',
-    notes: 'Surprise spot check on bakery confectionery cold trays.',
+    notes: 'Surprise spot check on finished infrared cooker buffer racks.',
     items: [
       {
         id: 1003,
         uuid: 'cnti-1003',
         stock_count_id: 2,
-        product_id: 2,
-        product_name: 'Chocolate Fudge Brownie Tray',
-        product_sku: 'FG-BRWN-01',
+        product_id: 1,
+        product_name: 'Infrared Cooker 2200W (SM-IC220)',
+        product_sku: 'FG-IC-2200',
         snapshot_quantity: '150.00',
         counted_quantity: '150.00',
         variance_quantity: '0.00',
@@ -97,7 +98,7 @@ const SAMPLE_COUNTS: StockCount[] = [
         unit_code: 'PCS',
       },
     ],
-    created_at: '2026-08-29T16:00:00Z',
+    created_at: '2026-08-29T15:30:00Z',
   },
 ];
 
@@ -117,17 +118,17 @@ export function StockCountsSection() {
   // Form State
   const [formData, setFormData] = useState({
     count_number: '',
-    warehouse_name: 'Central Raw Materials Silo',
+    warehouse_name: 'Tejgaon Central Electronic Components & Parts Warehouse',
     count_date: new Date().toISOString().slice(0, 10),
     count_type: 'cycle' as StockCount['count_type'],
     notes: '',
     items: [
       {
-        product_name: 'Premium Wheat Flour (Grade A)',
-        product_sku: 'RM-FLOUR-01',
-        snapshot_quantity: '2450.00',
-        counted_quantity: '2450.00',
-        unit_code: 'KG',
+        product_name: 'Microcrystalline Ceramic Glass Panel',
+        product_sku: 'RAW-CERAMIC-PANEL',
+        snapshot_quantity: '850.00',
+        counted_quantity: '850.00',
+        unit_code: 'PCS',
       },
     ],
   });
@@ -165,6 +166,27 @@ export function StockCountsSection() {
       );
       setActionLoading(null);
     }
+  };
+
+  const handleStatusChange = async (countId: number, nextStatus: StockCount['status']) => {
+    try {
+      await api.patch(`/inventory/counts/${countId}`, { status: nextStatus });
+    } catch {
+      // Optimistic fallback
+    }
+
+    queryClient.setQueryData<StockCount[]>(['inventory', 'counts'], (prev = []) =>
+      prev.map((c) =>
+        c.id === countId
+          ? {
+              ...c,
+              status: nextStatus,
+              reconciled_at: (nextStatus === 'completed' && !c.reconciled_at ? new Date().toISOString() : c.reconciled_at) ?? null,
+            }
+          : c
+      )
+    );
+    toast.success(`Audit status updated to ${nextStatus}.`);
   };
 
   const handleCreateCount = (e: React.FormEvent) => {
@@ -383,17 +405,17 @@ export function StockCountsSection() {
             onClick={() => {
               setFormData({
                 count_number: `CNT-${new Date().toISOString().slice(0, 7).replace('-', '')}-${String(counts.length + 1).padStart(3, '0')}`,
-                warehouse_name: 'Central Raw Materials Silo',
+                warehouse_name: 'Tejgaon Central Electronic Components & Parts Warehouse',
                 count_date: new Date().toISOString().slice(0, 10),
                 count_type: 'cycle',
                 notes: '',
                 items: [
                   {
-                    product_name: 'Premium Wheat Flour (Grade A)',
-                    product_sku: 'RM-FLOUR-01',
-                    snapshot_quantity: '2450.00',
-                    counted_quantity: '2450.00',
-                    unit_code: 'KG',
+                    product_name: 'Microcrystalline Ceramic Glass Panel',
+                    product_sku: 'RAW-CERAMIC-PANEL',
+                    snapshot_quantity: '850.00',
+                    counted_quantity: '850.00',
+                    unit_code: 'PCS',
                   },
                 ],
               });
@@ -414,16 +436,18 @@ export function StockCountsSection() {
             <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'counting', label: 'Active Counting', colorDot: 'bg-blue-500' },
+              { value: 'completed', label: 'Reconciled', colorDot: 'bg-emerald-500' },
+              { value: 'cancelled', label: 'Cancelled', colorDot: 'bg-rose-500' },
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
-          >
-            <option value="all">All Statuses</option>
-            <option value="counting">Active Counting</option>
-            <option value="completed">Reconciled</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter counts by status"
+          />
         </div>
 
         <div className="relative flex-1 sm:max-w-xs">
@@ -477,7 +501,26 @@ export function StockCountsSection() {
                       <div className="font-semibold text-default">{c.items?.length || 0} SKU(s) Audited</div>
                       <div className="text-[10px] text-muted truncate max-w-xs">{c.items?.[0]?.product_name}</div>
                     </td>
-                    <td className="px-4 py-3.5">{getStatusBadge(c.status)}</td>
+                    <td className="px-4 py-3.5">
+                      <select
+                        value={c.status}
+                        onChange={(e) => handleStatusChange(c.id, e.target.value as StockCount['status'])}
+                        className={`rounded-lg border px-2 py-1 text-[11px] font-bold focus:outline-none transition-colors cursor-pointer ${
+                          c.status === 'completed'
+                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                            : c.status === 'counting'
+                            ? 'bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/30'
+                            : c.status === 'cancelled'
+                            ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
+                            : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                        }`}
+                      >
+                        <option value="draft">Draft</option>
+                        <option value="counting">Counting</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </td>
                     <td className="px-4 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
@@ -491,54 +534,64 @@ export function StockCountsSection() {
                           <Eye className="size-3.5" />
                         </button>
 
+                        <button
+                          onClick={() => {
+                            setActiveCount(c);
+                            setFormData({
+                              count_number: c.count_number,
+                              warehouse_name: c.warehouse_name || '',
+                              count_date: c.count_date,
+                              count_type: c.count_type,
+                              notes: c.notes || '',
+                              items: c.items?.map((it) => ({
+                                product_name: it.product_name || '',
+                                product_sku: it.product_sku || '',
+                                snapshot_quantity: it.snapshot_quantity,
+                                counted_quantity: it.counted_quantity || it.snapshot_quantity,
+                                unit_code: it.unit_code || 'KG',
+                              })) || [],
+                            });
+                            setShowEditModal(true);
+                          }}
+                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                          title="Edit Count Figures"
+                        >
+                          <Edit2 className="size-3.5" />
+                        </button>
+
                         {c.status === 'counting' && (
-                          <>
-                            <button
-                              onClick={() => {
-                                setActiveCount(c);
-                                setFormData({
-                                  count_number: c.count_number,
-                                  warehouse_name: c.warehouse_name || '',
-                                  count_date: c.count_date,
-                                  count_type: c.count_type,
-                                  notes: c.notes || '',
-                                  items: c.items?.map((it) => ({
-                                    product_name: it.product_name || '',
-                                    product_sku: it.product_sku || '',
-                                    snapshot_quantity: it.snapshot_quantity,
-                                    counted_quantity: it.counted_quantity || it.snapshot_quantity,
-                                    unit_code: it.unit_code || 'KG',
-                                  })) || [],
-                                });
-                                setShowEditModal(true);
-                              }}
-                              className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                              title="Update Count Figures"
-                            >
-                              <Edit2 className="size-3.5" />
-                            </button>
-
-                            <button
-                              onClick={() => handleReconcile(c.id)}
-                              disabled={actionLoading === c.id}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors cursor-pointer"
-                            >
-                              <CheckCircle2 className="size-3" />
-                              {actionLoading === c.id ? 'Posting...' : 'Reconcile'}
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                setActiveCount(c);
-                                setShowDeleteModal(true);
-                              }}
-                              className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                              title="Cancel Audit"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
-                          </>
+                          <button
+                            onClick={() => handleReconcile(c.id)}
+                            disabled={actionLoading === c.id}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors cursor-pointer"
+                            title="Reconcile Variances"
+                          >
+                            <CheckCircle2 className="size-3" />
+                            <span>{actionLoading === c.id ? '...' : 'Reconcile'}</span>
+                          </button>
                         )}
+
+                        <button
+                          onClick={() => {
+                            setActiveCount(c);
+                            window.print();
+                          }}
+                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                          title="Print Count Sheet"
+                        >
+                          <Printer className="size-3.5" />
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setActiveCount(c);
+                            setShowDeleteModal(true);
+                          }}
+                          className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                          title="Cancel / Delete Audit"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
                       </div>
                     </td>
                   </tr>

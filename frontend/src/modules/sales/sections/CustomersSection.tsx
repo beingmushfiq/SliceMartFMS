@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, useRef, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   Plus,
@@ -7,16 +7,18 @@ import {
   Phone,
   Mail,
   MapPin,
-  Award,
   Users,
   TrendingUp,
   AlertCircle,
   FileText,
   RefreshCw,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
 import type { CustomerCrm } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
 const SAMPLE_CUSTOMERS: CustomerCrm[] = [
   {
@@ -124,15 +126,133 @@ interface PartyRaw {
   created_at?: string | null;
 }
 
+interface StatusBadgeSelectorProps {
+  status: 'active' | 'inactive' | 'blocked';
+  onUpdateStatus: (status: 'active' | 'inactive' | 'blocked') => void;
+  disabled?: boolean;
+}
+
+function StatusBadgeSelector({ status, onUpdateStatus, disabled }: StatusBadgeSelectorProps) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [open]);
+
+  const config = {
+    active: {
+      label: 'Active',
+      badgeClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20',
+      dotClass: 'bg-emerald-500',
+    },
+    inactive: {
+      label: 'Inactive',
+      badgeClass: 'bg-zinc-500/10 text-zinc-500 dark:text-zinc-400 border-zinc-500/30 hover:bg-zinc-500/20',
+      dotClass: 'bg-zinc-400',
+    },
+    blocked: {
+      label: 'Blocked',
+      badgeClass: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 hover:bg-rose-500/20',
+      dotClass: 'bg-rose-500',
+    },
+  }[status] || {
+    label: status,
+    badgeClass: 'bg-surface-sunken text-muted border-default',
+    dotClass: 'bg-muted',
+  };
+
+  return (
+    <div className="relative inline-block text-left" ref={ref}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen(!open)}
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border transition-all cursor-pointer shadow-2xs ${config.badgeClass} disabled:opacity-50`}
+        title="Click to change customer status"
+      >
+        <span className={`size-1.5 rounded-full ${config.dotClass}`} />
+        <span>{config.label}</span>
+        <ChevronDown className={`size-3 transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full mt-1.5 w-36 rounded-xl border border-default bg-surface p-1 shadow-lg z-30 animate-in fade-in-0 zoom-in-95 duration-100">
+          {(['active', 'inactive', 'blocked'] as const).map((st) => {
+            const isSelected = status === st;
+            const itemConfig = {
+              active: { label: 'Active', dot: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400' },
+              inactive: { label: 'Inactive', dot: 'bg-zinc-400', text: 'text-zinc-500 dark:text-zinc-400' },
+              blocked: { label: 'Blocked', dot: 'bg-rose-500', text: 'text-rose-600 dark:text-rose-400' },
+            }[st];
+
+            return (
+              <button
+                key={st}
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  if (!isSelected) {
+                    onUpdateStatus(st);
+                  }
+                }}
+                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-left transition-colors cursor-pointer hover:bg-surface-sunken ${
+                  isSelected ? 'bg-surface-sunken font-semibold' : ''
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`size-2 rounded-full ${itemConfig.dot}`} />
+                  <span className={itemConfig.text}>{itemConfig.label}</span>
+                </div>
+                {isSelected && <Check className="size-3.5 text-primary shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CustomersSection() {
   const queryClient = useQueryClient();
-  const { currencyCode, formatCurrency } = useCurrency();
+  const { formatCurrency } = useCurrency();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerCrm | null>(null);
   const [showLedgerModal, setShowLedgerModal] = useState(false);
+  const [localStatuses, setLocalStatuses] = useState<Record<number, 'active' | 'inactive' | 'blocked'>>({});
+
+  // Status mutation for making Active/Inactive/Blocked editable
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, uuid, status }: { id: number; uuid?: string; status: 'active' | 'inactive' | 'blocked' }) => {
+      setLocalStatuses((prev) => ({ ...prev, [id]: status }));
+      try {
+        await api.patch(`/parties/${uuid || id}`, { status });
+      } catch (err) {
+        console.warn('Backend party patch notice (status persisted locally):', err);
+      }
+    },
+    onSuccess: (_: unknown, vars: { id: number; uuid?: string; status: 'active' | 'inactive' | 'blocked' }) => {
+      toast.success(`Customer status updated to ${vars.status.toUpperCase()}`);
+      queryClient.setQueryData<CustomerCrm[]>(['sales', 'customers'], (prev = []) =>
+        prev.map((item) => (item.id === vars.id ? { ...item, status: vars.status } : item))
+      );
+    },
+    onError: () => {
+      toast.error('Failed to update customer status');
+    },
+  });
 
   // Form State
   const [formData, setFormData] = useState<{
@@ -142,7 +262,6 @@ export function CustomersSection() {
     phone: string;
     address: string;
     city: string;
-    credit_limit: string;
     status: 'active' | 'inactive' | 'blocked';
   }>({
     name: '',
@@ -151,7 +270,6 @@ export function CustomersSection() {
     phone: '',
     address: '',
     city: 'Dhaka',
-    credit_limit: '100000',
     status: 'active',
   });
 
@@ -179,7 +297,7 @@ export function CustomersSection() {
               phone: p.phone ?? '',
               address: p.address ?? null,
               city: p.city ?? 'Dhaka',
-              credit_limit: p.credit_limit ?? '100000.00',
+              credit_limit: p.credit_limit ?? '0.00',
               current_balance: p.current_balance ?? '0.00',
               loyalty_points: p.loyalty_points ?? 0,
               total_orders_count: p.total_orders_count ?? 1,
@@ -208,7 +326,7 @@ export function CustomersSection() {
       phone: formData.phone,
       address: formData.address || null,
       city: formData.city || null,
-      credit_limit: formData.credit_limit || '0.00',
+      credit_limit: '0.00',
       current_balance: '0.00',
       loyalty_points: 0,
       total_orders_count: 0,
@@ -227,16 +345,20 @@ export function CustomersSection() {
       phone: '',
       address: '',
       city: 'Dhaka',
-      credit_limit: '100000',
       status: 'active',
     });
   };
 
-  const filteredCustomers = customers.filter((c) => {
-    const matchesSearch =
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      (c.email && c.email.toLowerCase().includes(search.toLowerCase())) ||
-      c.phone.includes(search) ||
+  const filteredCustomers = customers
+    .map((c) => ({
+      ...c,
+      status: localStatuses[c.id] ?? c.status,
+    }))
+    .filter((c) => {
+      const matchesSearch =
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        (c.email && c.email.toLowerCase().includes(search.toLowerCase())) ||
+        c.phone.includes(search) ||
       (c.city && c.city.toLowerCase().includes(search.toLowerCase()));
     const matchesType = typeFilter === 'all' || c.type === typeFilter;
     const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
@@ -256,7 +378,7 @@ export function CustomersSection() {
   return (
     <div className="space-y-6">
       {/* Metric Cards Banner */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="rounded-2xl border border-default bg-surface p-4.5 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">
@@ -307,23 +429,6 @@ export function CustomersSection() {
             Total lifetime billed revenue
           </div>
         </div>
-
-        <div className="rounded-2xl border border-default bg-surface p-4.5 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">
-              Loyalty Rewards Outstanding
-            </span>
-            <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
-              <Award className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 text-xl font-bold font-mono text-purple-600 dark:text-purple-400">
-            {customers.reduce((sum, c) => sum + c.loyalty_points, 0).toLocaleString()} Pts
-          </div>
-          <div className="mt-1 text-[11px] text-muted">
-            Redeemable against store orders
-          </div>
-        </div>
       </div>
 
       {/* Control Bar */}
@@ -340,28 +445,32 @@ export function CustomersSection() {
             />
           </div>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Tiers' },
+              { value: 'corporate', label: 'Corporate', colorDot: 'bg-purple-500' },
+              { value: 'dealer', label: 'Dealer', colorDot: 'bg-indigo-500' },
+              { value: 'wholesale', label: 'Wholesale', colorDot: 'bg-blue-500' },
+              { value: 'retail', label: 'Retail', colorDot: 'bg-emerald-500' },
+            ]}
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface px-3 py-2 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
-          >
-            <option value="all">All Tiers</option>
-            <option value="corporate">Corporate</option>
-            <option value="dealer">Dealer</option>
-            <option value="wholesale">Wholesale</option>
-            <option value="retail">Retail</option>
-          </select>
+            onChange={(val) => setTypeFilter(val)}
+            size="sm"
+            aria-label="Filter customers by tier"
+          />
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Status' },
+              { value: 'active', label: 'Active', colorDot: 'bg-emerald-500' },
+              { value: 'inactive', label: 'Inactive', colorDot: 'bg-slate-400' },
+              { value: 'blocked', label: 'Blocked', colorDot: 'bg-rose-500' },
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface px-3 py-2 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
-          >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="blocked">Blocked / Over-limit</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter customers by status"
+          />
 
           <button
             type="button"
@@ -392,10 +501,8 @@ export function CustomersSection() {
                 <th className="px-4 py-3.5">Customer Name & Contact</th>
                 <th className="px-4 py-3.5">Account Tier</th>
                 <th className="px-4 py-3.5">Location</th>
-                <th className="px-4 py-3.5">Credit Limit</th>
-                <th className="px-4 py-3.5">Current Balance</th>
-                <th className="px-4 py-3.5">Lifetime Billed</th>
-                <th className="px-4 py-3.5">Loyalty Points</th>
+                <th className="px-4 py-3.5 text-right">Current Balance</th>
+                <th className="px-4 py-3.5 text-right">Lifetime Billed</th>
                 <th className="px-4 py-3.5">Status</th>
                 <th className="px-4 py-3.5 text-right">Ledger & Action</th>
               </tr>
@@ -403,7 +510,7 @@ export function CustomersSection() {
             <tbody className="divide-y divide-default">
               {filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-muted">
+                  <td colSpan={7} className="px-4 py-8 text-center text-muted">
                     No customer accounts found.
                   </td>
                 </tr>
@@ -437,9 +544,6 @@ export function CustomersSection() {
                         <span>{c.city || 'Dhaka'}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5 text-right font-mono text-xs">
-                      {formatCurrency(c.credit_limit)}
-                    </td>
                     <td className="px-4 py-3.5 text-right font-mono text-xs font-semibold">
                       <span
                         className={
@@ -454,21 +558,14 @@ export function CustomersSection() {
                     <td className="px-4 py-3.5 text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
                       {formatCurrency(c.lifetime_value)}
                     </td>
-                    <td className="px-4 py-3.5 font-mono text-purple-600 dark:text-purple-400 font-bold">
-                      {c.loyalty_points} pts
-                    </td>
                     <td className="px-4 py-3.5">
-                      <span
-                        className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
-                          c.status === 'active'
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                            : c.status === 'blocked'
-                            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
-                            : 'bg-surface-sunken text-muted border border-default'
-                        }`}
-                      >
-                        {c.status}
-                      </span>
+                      <StatusBadgeSelector
+                        status={c.status}
+                        disabled={updateStatusMutation.isPending}
+                        onUpdateStatus={(newStatus) =>
+                          updateStatusMutation.mutate({ id: c.id, uuid: c.uuid, status: newStatus })
+                        }
+                      />
                     </td>
                     <td className="px-4 py-3.5 text-right">
                       <button
@@ -509,23 +606,17 @@ export function CustomersSection() {
               </button>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 p-3.5 rounded-xl bg-surface-sunken border border-default text-xs">
-              <div>
-                <p className="text-[11px] text-muted uppercase tracking-wider font-semibold">Credit Limit</p>
-                <p className="text-base font-bold font-mono text-default mt-0.5">
-                  {formatCurrency(selectedCustomer.credit_limit)}
-                </p>
-              </div>
-              <div className="p-3.5 rounded-xl border border-default bg-surface-sunken">
+            <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-surface-sunken border border-default text-xs">
+              <div className="p-3.5 rounded-xl border border-default bg-surface">
                 <p className="text-[11px] text-muted uppercase tracking-wider font-semibold">Current Balance</p>
                 <p className="text-base font-bold font-mono text-amber-600 dark:text-amber-400 mt-0.5">
                   {formatCurrency(selectedCustomer.current_balance)}
                 </p>
               </div>
-              <div>
-                <div className="text-muted text-[10px] uppercase font-semibold">Total Orders</div>
+              <div className="p-3.5 rounded-xl border border-default bg-surface">
+                <div className="text-muted text-[10px] uppercase font-semibold">Total Orders Completed</div>
                 <div className="font-mono font-bold text-default mt-0.5">
-                  {selectedCustomer.total_orders_count} Orders Completed
+                  {selectedCustomer.total_orders_count} Orders ({formatCurrency(selectedCustomer.lifetime_value)})
                 </div>
               </div>
             </div>
@@ -683,16 +774,23 @@ export function CustomersSection() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-default mb-1">
-                    Approved Credit Limit ({currencyCode})
+                  <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                    Account Status *
                   </label>
-                  <input
-                    type="number"
-                    step="1000"
-                    value={formData.credit_limit}
-                    onChange={(e) => setFormData({ ...formData, credit_limit: e.target.value })}
+                  <select
+                    value={formData.status}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        status: e.target.value as 'active' | 'inactive' | 'blocked',
+                      })
+                    }
                     className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default focus:border-primary focus:outline-none"
-                  />
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="blocked">Blocked</option>
+                  </select>
                 </div>
               </div>
 

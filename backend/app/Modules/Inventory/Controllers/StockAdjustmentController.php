@@ -70,6 +70,7 @@ final class StockAdjustmentController extends Controller
     {
         $tenantId = TenantContext::current()->tenantId();
 
+        /** @var StockAdjustment $adjustment */
         $adjustment = StockAdjustment::with(['warehouse', 'reasonCode', 'items.product', 'items.unit'])
             ->where('tenant_id', $tenantId)
             ->where('id', $id)
@@ -82,6 +83,7 @@ final class StockAdjustmentController extends Controller
     {
         $tenantId = TenantContext::current()->tenantId();
 
+        /** @var StockAdjustment $adjustment */
         $adjustment = StockAdjustment::where('tenant_id', $tenantId)
             ->where('id', $id)
             ->firstOrFail();
@@ -92,5 +94,34 @@ final class StockAdjustmentController extends Controller
         );
 
         return new StockAdjustmentResource($approved);
+    }
+
+    public function update(int $id, Request $request): StockAdjustmentResource
+    {
+        $tenantId = TenantContext::current()->tenantId();
+
+        /** @var StockAdjustment $adjustment */
+        $adjustment = StockAdjustment::where('tenant_id', $tenantId)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $fillable = ['status', 'notes', 'adjustment_date', 'warehouse_id', 'reason_code_id', 'total_value_impact'];
+        $adjustment->update($request->only($fillable));
+
+        return new StockAdjustmentResource($adjustment->load(['warehouse', 'reasonCode', 'items.product', 'items.unit']));
+    }
+
+    public function destroy(int $id): JsonResponse
+    {
+        $tenantId = TenantContext::current()->tenantId();
+
+        /** @var StockAdjustment $adjustment */
+        $adjustment = StockAdjustment::where('tenant_id', $tenantId)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $adjustment->delete();
+
+        return response()->json(['message' => 'Stock adjustment deleted successfully.']);
     }
 }

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Check,
   Eye,
   Globe,
   Layout,
@@ -19,6 +18,7 @@ import type { StorefrontConfig } from '../../types/api/storefront';
 import { DomainSettingsTab } from './DomainSettingsTab';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { useCurrency } from '../../hooks/useCurrency';
+import { notify } from '../../components/ui/Toast';
 
 interface PublishedProductItem {
   id: number;
@@ -44,7 +44,6 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
   const [products, setProducts] = useState<PublishedProductItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Form State
   const [form, setForm] = useState({
@@ -65,11 +64,6 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
     min_order_amount: '',
     status: 'live' as 'draft' | 'live' | 'maintenance' | 'suspended',
   });
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 4000);
-  };
 
   useEffect(() => {
     let ignore = false;
@@ -145,10 +139,10 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
         min_order_amount: form.min_order_amount ? parseFloat(form.min_order_amount) : null,
         status: form.status,
       });
-      showToast('Storefront configuration saved successfully!');
+      notify.success('Storefront configuration saved successfully');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to save settings';
-      alert(msg);
+      notify.error('Failed to save settings', { description: msg });
     } finally {
       setSaving(false);
     }
@@ -166,14 +160,14 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
       setProducts((prev) =>
         prev.map((p) => (p.id === product.id ? { ...p, is_published: newStatus } : p))
       );
-      showToast(
+      notify.success(
         newStatus
           ? `Published "${product.name}" to storefront.`
           : `Unpublished "${product.name}".`
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to update publication status';
-      alert(msg);
+      notify.error('Failed to update publication status', { description: msg });
     }
   };
 
@@ -187,13 +181,6 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-950/90 px-4 py-3 text-xs font-semibold text-emerald-300 shadow-2xl backdrop-blur-xl">
-          <Check className="h-4 w-4" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
 
       {/* Header & Quick Links */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-default pb-5">
@@ -241,58 +228,33 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
       </div>
 
       {/* Workspace Tabs */}
-      <div className="flex border-b border-default">
-        <button
-          type="button"
-          onClick={() => setActiveTab('branding')}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-            activeTab === 'branding'
-              ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-              : 'border-transparent text-muted hover:text-default'
-          }`}
-        >
-          <Palette className="h-4 w-4" />
-          <span>Branding & Hero Theme</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('products')}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-            activeTab === 'products'
-              ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-              : 'border-transparent text-muted hover:text-default'
-          }`}
-        >
-          <Tag className="h-4 w-4" />
-          <span>Product Catalogue Visibility ({products.filter((p) => p.is_published).length}/{products.length})</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('checkout')}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-            activeTab === 'checkout'
-              ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-              : 'border-transparent text-muted hover:text-default'
-          }`}
-        >
-          <Truck className="h-4 w-4" />
-          <span>Checkout & Payment Rules</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('domains')}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-            activeTab === 'domains'
-              ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-              : 'border-transparent text-muted hover:text-default'
-          }`}
-        >
-          <Globe className="h-4 w-4" />
-          <span>Custom Domains & DNS</span>
-        </button>
+      <div className="flex overflow-x-auto p-1.5 bg-surface-sunken rounded-2xl border border-default shadow-2xs">
+        <div className="flex gap-1.5 min-w-full sm:min-w-0">
+          {[
+            { id: 'branding', label: 'Branding & Hero Theme', icon: Palette },
+            { id: 'products', label: `Product Catalogue Visibility (${products.filter((p) => p.is_published).length}/${products.length})`, icon: Tag },
+            { id: 'checkout', label: 'Checkout & Payment Rules', icon: Truck },
+            { id: 'domains', label: 'Custom Domains & DNS', icon: Globe },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer ${
+                  isActive
+                    ? 'bg-primary text-primary-fg font-semibold shadow-xs border border-primary'
+                    : 'text-muted hover:text-default hover:bg-surface/50 border border-transparent'
+                }`}
+              >
+                <Icon className={`h-4 w-4 ${isActive ? 'text-primary-fg' : 'text-muted'}`} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Tab Content */}

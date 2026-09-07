@@ -108,7 +108,11 @@ final class CreateProductionBatchAction extends Action
 
     private function resolveId(string $table, mixed $uuid, int $tenantId, string $field): int
     {
-        $row = DB::table($table)->where('tenant_id', $tenantId)->where('uuid', $uuid)->first();
+        $query = DB::table($table)->where('tenant_id', $tenantId);
+        $row = (clone $query)->where('uuid', $uuid)->first();
+        if ($row === null && is_numeric($uuid)) {
+            $row = (clone $query)->where('id', (int) $uuid)->first();
+        }
         if ($row === null) {
             throw ValidationException::withMessages([$field => 'The selected reference is invalid.']);
         }

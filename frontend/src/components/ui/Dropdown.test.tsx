@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { SearchableSelect, MultiSelect } from './Dropdown';
+import { SearchableSelect, MultiSelect, SelectDropdown } from './Dropdown';
 
 describe('SearchableSelect component', () => {
   const options = [
@@ -75,5 +75,35 @@ describe('MultiSelect component', () => {
     const handleChange = vi.fn();
     render(<MultiSelect options={options} values={[1]} onChange={handleChange} />);
     expect(screen.getByText('Tag 1')).toBeInTheDocument();
+  });
+});
+
+describe('SelectDropdown component', () => {
+  const options = [
+    { value: 'all', label: 'All Types' },
+    { value: 'finished', label: 'Finished Goods', colorDot: 'bg-emerald-500' },
+    { value: 'raw_material', label: 'Raw Materials', colorDot: 'bg-blue-500' },
+  ];
+
+  it('renders selected option and opens menu on click', () => {
+    const handleChange = vi.fn();
+    render(<SelectDropdown options={options} value="all" onChange={handleChange} />);
+
+    const button = screen.getByRole('combobox');
+    expect(button).toHaveTextContent('All Types');
+
+    fireEvent.click(button);
+    expect(screen.getByText('Finished Goods')).toBeInTheDocument();
+    expect(screen.getByText('Raw Materials')).toBeInTheDocument();
+  });
+
+  it('selects option and triggers onChange', () => {
+    const handleChange = vi.fn();
+    render(<SelectDropdown options={options} value="all" onChange={handleChange} />);
+
+    fireEvent.click(screen.getByRole('combobox'));
+    fireEvent.click(screen.getByText('Finished Goods'));
+
+    expect(handleChange).toHaveBeenCalledWith('finished');
   });
 });

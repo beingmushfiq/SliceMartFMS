@@ -403,8 +403,9 @@ async function execute<T>(
     headers['If-Match'] = options.ifMatch;
   }
 
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const hasBody = method !== 'GET' && options.body !== undefined;
-  if (hasBody) {
+  if (hasBody && !isFormData) {
     headers['Content-Type'] = 'application/json';
   }
 
@@ -415,7 +416,9 @@ async function execute<T>(
       headers,
       credentials: 'include',
       signal: deadline.signal,
-      ...(hasBody && { body: JSON.stringify(options.body) }),
+      ...(hasBody && {
+        body: isFormData ? (options.body as FormData) : JSON.stringify(options.body),
+      }),
     });
   } catch (cause) {
     /* Order matters. An abort raised by our own timer is row 15 and must be

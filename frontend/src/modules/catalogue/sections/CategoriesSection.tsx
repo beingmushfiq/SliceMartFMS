@@ -243,7 +243,7 @@ export function CategoriesSection() {
               <input
                 required
                 type="text"
-                placeholder="e.g. RAW-FLOUR, PKG-BOX"
+                placeholder="e.g. RAW-GLS, RAW-COIL"
                 value={draft.code}
                 onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase() })}
                 className="w-full rounded-xl border border-default bg-surface px-3 py-2 text-xs text-default focus:border-primary focus:outline-none uppercase"
@@ -275,7 +275,7 @@ export function CategoriesSection() {
             <input
               required
               type="text"
-              placeholder="e.g. Wheat Flours & Starches"
+              placeholder="e.g. Ceramic Glass Panels & Coils"
               value={draft.name}
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
               className="w-full rounded-xl border border-default bg-surface px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"

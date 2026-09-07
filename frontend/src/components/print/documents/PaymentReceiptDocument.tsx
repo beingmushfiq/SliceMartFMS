@@ -73,7 +73,7 @@ export function PaymentReceiptDocument({ payment, businessConfig }: PaymentRecei
         <div className="flex items-center justify-between border-b border-slate-200 pb-2">
           <span className="text-slate-600">The sum of amount:</span>
           <span className="font-mono font-black text-[11pt] text-emerald-800">
-            {formatCurrency(payment.amount, payment.currency_code || businessConfig.currencySymbol || '$')}
+            {formatCurrency(payment.amount, payment.currency_code || businessConfig.currencySymbol || '৳')}
           </span>
         </div>
 

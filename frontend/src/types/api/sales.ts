@@ -7,6 +7,7 @@ export type SalesOrderChannel = 'counter' | 'dealer' | 'phone' | 'field' | 'onli
 
 export type SalesOrderStatus =
   | 'draft'
+  | 'pending'
   | 'confirmed'
   | 'allocated'
   | 'picking'
@@ -15,7 +16,7 @@ export type SalesOrderStatus =
   | 'delivered'
   | 'cancelled';
 
-export type SalesOrderPaymentStatus = 'unpaid' | 'partially_paid' | 'paid';
+export type SalesOrderPaymentStatus = 'unpaid' | 'partially_paid' | 'paid' | 'pending' | 'failed';
 
 export type InvoiceStatus = 'draft' | 'posted' | 'paid' | 'partially_paid' | 'void';
 
@@ -70,6 +71,7 @@ export interface SalesOrder {
   status: SalesOrderStatus;
   payment_status: SalesOrderPaymentStatus;
   notes?: string | null;
+  shipping_address?: string | null;
   confirmed_at?: string | null;
   cancelled_at?: string | null;
   created_at?: string;
@@ -232,25 +234,168 @@ export interface SalesReturn {
   items?: SalesReturnItem[];
 }
 
-export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'proposal' | 'negotiation' | 'won' | 'lost';
-export type LeadSource = 'website' | 'storefront' | 'referral' | 'cold_outreach' | 'event' | 'social_media';
+export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'proposal' | 'negotiation' | 'won' | 'lost' | 'fake';
+export type LeadSource = 'website' | 'storefront' | 'referral' | 'cold_outreach' | 'event' | 'social_media' | 'walk_in' | 'phone' | 'field_visit' | 'other';
 
 export interface Lead {
   id: number;
   uuid: string;
+  lead_number?: string;
   name: string;
   company_name?: string | null;
-  email: string;
-  phone: string;
+  email?: string | null;
+  phone?: string | null;
   status: LeadStatus;
+  stage?: LeadStatus;
   source: LeadSource;
-  deal_value: string;
-  currency_code: string;
-  assigned_to?: string | null;
+  deal_value?: string;
+  expected_value?: string;
+  currency_code?: string;
+  assigned_to?: string | number | null;
+  assigned_user_name?: string | null;
   notes?: string | null;
   expected_close_date?: string | null;
+  is_fake?: boolean;
+  validation_notes?: string | null;
+  validated_by?: number | null;
+  validator_name?: string | null;
+  validated_at?: string | null;
+  converted_party_id?: number | null;
+  converted_party_name?: string | null;
+  converted_at?: string | null;
   converted_to_customer_id?: number | null;
   created_at: string;
+  updated_at?: string;
+}
+
+export interface SalesmanTarget {
+  id: number;
+  uuid: string;
+  employee_id: number;
+  employee_name?: string | null;
+  employee_code?: string;
+  period_month: string;
+  target_name?: string;
+  target_amount: string | number;
+  achieved_amount: string | number;
+  achievement_percentage: string | number;
+  total_leads: number;
+  valid_leads: number;
+  fake_leads: number;
+  converted_leads: number;
+  conversion_rate: number;
+  profit_generated: string | number;
+  status: 'active' | 'completed' | 'cancelled';
+  notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SalesmanSummary {
+  id: number;
+  uuid: string;
+  employee_code: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  target_id?: number;
+  period_month: string;
+  target_amount: number;
+  achieved_amount: number;
+  achievement_pct: number;
+  pending_target: number;
+  total_leads: number;
+  valid_leads: number;
+  fake_leads: number;
+  converted_leads: number;
+  conversion_rate: number;
+  profit_generated: number;
+  estimated_incentive: number;
+}
+
+export interface IncentivePolicyRule {
+  id?: number;
+  min_pct: string | number;
+  max_pct: string | number;
+  incentive_type: 'percentage' | 'fixed';
+  incentive_value: string | number;
+}
+
+export interface IncentivePolicy {
+  id: number;
+  uuid: string;
+  name: string;
+  code: string;
+  description?: string | null;
+  basis: 'total_revenue' | 'profit' | 'collection';
+  min_achievement_pct: string | number;
+  is_active: boolean;
+  rules: IncentivePolicyRule[];
+  created_at?: string;
+}
+
+export interface IncentiveCalculation {
+  id: number;
+  uuid: string;
+  employee_id: number;
+  employee_name?: string | null;
+  employee_code?: string;
+  salesman_target_id?: number | null;
+  incentive_policy_id?: number | null;
+  policy_name?: string | null;
+  period_month: string;
+  target_amount: string | number;
+  achieved_amount: string | number;
+  achievement_pct: string | number;
+  calculated_amount: string | number;
+  approved_amount: string | number;
+  status: 'draft' | 'approved' | 'paid' | 'rejected';
+  approved_by?: number | null;
+  approver_name?: string | null;
+  approved_at?: string | null;
+  notes?: string | null;
+  created_at?: string;
+}
+
+export interface SalesmanDashboardData {
+  salesman: {
+    id: number;
+    name: string;
+    employee_code: string;
+    email?: string;
+    phone?: string;
+  };
+  period_month: string;
+  kpis: {
+    target_amount: number;
+    achieved_amount: number;
+    achievement_pct: number;
+    remaining_target: number;
+    total_leads: number;
+    valid_leads: number;
+    fake_leads: number;
+    converted_leads: number;
+    conversion_rate: number;
+    profit_generated: number;
+    estimated_incentive: number;
+  };
+  recent_orders: Array<{
+    id: number;
+    order_number: string;
+    order_date: string;
+    total_amount: string;
+    status: string;
+    payment_status: string;
+  }>;
+  recent_leads: Array<{
+    id: number;
+    lead_number: string;
+    name: string;
+    company_name?: string;
+    stage: string;
+    expected_value: string;
+    is_fake: boolean;
+  }>;
 }
 
 export interface CustomerCrm {

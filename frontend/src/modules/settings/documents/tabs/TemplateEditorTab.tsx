@@ -78,12 +78,21 @@ export function TemplateEditorTab({ template, onBack, onSaved }: TemplateEditorT
   const [activeTab, setActiveTab] = useState<'general' | 'visibility' | 'signatures' | 'terms'>('general');
 
   useEffect(() => {
-    api.get<{ data: PaperSize[] }>('/documents/paper-sizes').then((res) => {
-      if (res.data?.data) setPaperSizes(res.data.data);
-    });
-    api.get<{ data: PrintProfile[] }>('/documents/print-profiles').then((res) => {
-      if (res.data?.data) setProfiles(res.data.data);
-    });
+    api.get<PaperSize[] | { data: PaperSize[] }>('/documents/paper-sizes').then((res) => {
+      if (Array.isArray(res.data)) {
+        setPaperSizes(res.data);
+      } else if (res.data && 'data' in res.data && Array.isArray(res.data.data)) {
+        setPaperSizes(res.data.data);
+      }
+    }).catch((err) => console.warn('Failed to load paper sizes:', err));
+
+    api.get<PrintProfile[] | { data: PrintProfile[] }>('/documents/print-profiles').then((res) => {
+      if (Array.isArray(res.data)) {
+        setProfiles(res.data);
+      } else if (res.data && 'data' in res.data && Array.isArray(res.data.data)) {
+        setProfiles(res.data.data);
+      }
+    }).catch((err) => console.warn('Failed to load print profiles:', err));
   }, []);
 
   const handleToggle = (key: keyof DocumentTemplateLayoutConfig) => {
@@ -132,25 +141,25 @@ export function TemplateEditorTab({ template, onBack, onSaved }: TemplateEditorT
   return (
     <div className="space-y-4">
       {/* Top Bar Navigation */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-default">
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
-            className="p-2 rounded-xl border border-slate-700 bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors cursor-pointer"
+            className="p-2 rounded-xl border border-default bg-surface text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
             title="Back to Templates"
           >
             <ArrowLeft className="size-4" />
           </button>
           <div>
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+            <h3 className="text-sm font-bold text-default tracking-tight flex items-center gap-2">
               {isEditing && template ? `Edit Template: ${template.name}` : 'Create New Document Template'}
               {isEditing && template && (
-                <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-sky-950 text-sky-400 border border-sky-800">
+                <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
                   Current v{template.current_version}
                 </span>
               )}
             </h3>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-muted">
               Configure layout parameters and inspect proportional real-time preview.
             </p>
           </div>
@@ -161,7 +170,7 @@ export function TemplateEditorTab({ template, onBack, onSaved }: TemplateEditorT
             type="button"
             onClick={() => handleSave(false)}
             disabled={isSaving}
-            className="px-3.5 py-1.5 rounded-xl border border-slate-700 bg-slate-800 text-xs font-semibold text-slate-200 hover:bg-slate-700 hover:text-white transition-colors cursor-pointer"
+            className="px-3.5 py-1.5 rounded-xl border border-default bg-surface text-xs font-semibold text-default hover:bg-surface-sunken transition-colors cursor-pointer"
           >
             Save as Draft
           </button>
@@ -183,7 +192,7 @@ export function TemplateEditorTab({ template, onBack, onSaved }: TemplateEditorT
         {/* Left Column: Config Accordions */}
         <div className="lg:col-span-5 space-y-4">
           {/* Sub-nav tabs */}
-          <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-900/80 border border-slate-800 text-xs">
+          <div className="flex items-center gap-1 p-1 rounded-2xl bg-surface-sunken border border-default text-xs">
             {([
               { id: 'general', label: 'Setup', icon: Sliders },
               { id: 'visibility', label: 'Fields & Layout', icon: Eye },
@@ -195,10 +204,10 @@ export function TemplateEditorTab({ template, onBack, onSaved }: TemplateEditorT
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg font-medium transition-all ${
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl font-medium transition-all ${
                     activeTab === tab.id
                       ? 'bg-primary text-primary-fg font-semibold shadow-xs'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                      : 'text-muted hover:text-default hover:bg-surface/70'
                   }`}
                 >
                   <Icon className="size-3.5" />
@@ -208,11 +217,11 @@ export function TemplateEditorTab({ template, onBack, onSaved }: TemplateEditorT
             })}
           </div>
 
-          <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/50 space-y-4 text-xs">
+          <div className="p-4 rounded-2xl border border-default bg-surface space-y-4 text-xs">
             {activeTab === 'general' && (
               <div className="space-y-3.5">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                  <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                     Template Name
                   </label>
                   <input
@@ -220,19 +229,19 @@ export function TemplateEditorTab({ template, onBack, onSaved }: TemplateEditorT
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Standard Commercial VAT Invoice"
-                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 focus:outline-hidden focus:border-primary text-xs"
+                    className="w-full px-3 py-2 rounded-xl bg-surface-sunken border border-default text-default focus:outline-hidden focus:border-primary text-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                  <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                     Document Type
                   </label>
                   <select
                     value={documentType}
                     disabled={isEditing}
                     onChange={(e) => setDocumentType(e.target.value as DocumentType)}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 focus:outline-hidden focus:border-primary text-xs capitalize cursor-pointer disabled:opacity-60"
+                    className="w-full px-3 py-2 rounded-xl bg-surface-sunken border border-default text-default focus:outline-hidden focus:border-primary text-xs capitalize cursor-pointer disabled:opacity-60"
                   >
                     <option value="sales_invoice">Sales Invoice</option>
                     <option value="delivery_challan">Delivery Challan</option>
@@ -250,13 +259,13 @@ export function TemplateEditorTab({ template, onBack, onSaved }: TemplateEditorT
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                    <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                       Paper Format
                     </label>
                     <select
                       value={paperSizeId || ''}
                       onChange={(e) => setPaperSizeId(e.target.value ? Number(e.target.value) : undefined)}
-                      className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 focus:outline-hidden focus:border-primary text-xs cursor-pointer"
+                      className="w-full px-3 py-2 rounded-xl bg-surface-sunken border border-default text-default focus:outline-hidden focus:border-primary text-xs cursor-pointer"
                     >
                       <option value="">Auto Detect</option>
                       {paperSizes.map((ps) => (
@@ -268,13 +277,13 @@ export function TemplateEditorTab({ template, onBack, onSaved }: TemplateEditorT
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                    <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                       Print Profile
                     </label>
                     <select
                       value={printProfileId || ''}
                       onChange={(e) => setPrintProfileId(e.target.value ? Number(e.target.value) : undefined)}
-                      className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 focus:outline-hidden focus:border-primary text-xs cursor-pointer"
+                      className="w-full px-3 py-2 rounded-xl bg-surface-sunken border border-default text-default focus:outline-hidden focus:border-primary text-xs cursor-pointer"
                     >
                       <option value="">Default Profile</option>
                       {profiles.map((p) => (
@@ -286,17 +295,17 @@ export function TemplateEditorTab({ template, onBack, onSaved }: TemplateEditorT
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-slate-800">
+                <div className="pt-2 border-t border-default">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={isDefault}
                       onChange={(e) => setIsDefault(e.target.checked)}
-                      className="rounded border-slate-700 bg-slate-800 text-primary focus:ring-primary size-4"
+                      className="rounded border-default bg-surface-sunken text-primary focus:ring-primary size-4"
                     />
                     <div>
-                      <span className="text-xs font-semibold text-slate-200 block">Set as Default Template</span>
-                      <span className="text-[11px] text-slate-400">
+                      <span className="text-xs font-semibold text-default block">Set as Default Template</span>
+                      <span className="text-[11px] text-muted">
                         Automatically use this template when generating {documentType.replace(/_/g, ' ')}s.
                       </span>
                     </div>
@@ -307,7 +316,7 @@ export function TemplateEditorTab({ template, onBack, onSaved }: TemplateEditorT
 
             {activeTab === 'visibility' && (
               <div className="space-y-3">
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-muted">
                   Control which visual sections and columns appear on the printed document.
                 </p>
 
@@ -330,14 +339,14 @@ export function TemplateEditorTab({ template, onBack, onSaved }: TemplateEditorT
                     return (
                       <label
                         key={field.key}
-                        className="flex items-center justify-between p-2 rounded-lg bg-slate-800/60 border border-slate-700/60 hover:bg-slate-800 cursor-pointer transition-colors"
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-surface-sunken border border-default hover:bg-surface cursor-pointer transition-colors"
                       >
-                        <span className="text-xs font-medium text-slate-200">{field.label}</span>
+                        <span className="text-xs font-medium text-default">{field.label}</span>
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => handleToggle(k)}
-                          className="rounded border-slate-700 bg-slate-800 text-primary focus:ring-primary size-4"
+                          className="rounded border-default bg-surface text-primary focus:ring-primary size-4"
                         />
                       </label>
                     );
@@ -348,60 +357,60 @@ export function TemplateEditorTab({ template, onBack, onSaved }: TemplateEditorT
 
             {activeTab === 'signatures' && (
               <div className="space-y-3">
-                <label className="flex items-center gap-2 cursor-pointer pb-2 border-b border-slate-800">
+                <label className="flex items-center gap-2 cursor-pointer pb-2 border-b border-default">
                   <input
                     type="checkbox"
                     checked={config.showSignatures !== false}
                     onChange={() => handleToggle('showSignatures')}
-                    className="rounded border-slate-700 bg-slate-800 text-primary focus:ring-primary size-4"
+                    className="rounded border-default bg-surface-sunken text-primary focus:ring-primary size-4"
                   />
-                  <span className="text-xs font-semibold text-slate-200">Include Signature Area</span>
+                  <span className="text-xs font-semibold text-default">Include Signature Area</span>
                 </label>
 
                 {config.showSignatures !== false && (
                   <div className="space-y-2.5">
                     <div>
-                      <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1">
+                      <label className="block text-[10px] uppercase tracking-wider text-muted mb-1 font-semibold">
                         Prepared By Label
                       </label>
                       <input
                         type="text"
                         value={config.signaturePreparedBy || ''}
                         onChange={(e) => setConfig((p) => ({ ...p, signaturePreparedBy: e.target.value }))}
-                        className="w-full px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs"
+                        className="w-full px-3 py-2 rounded-xl bg-surface-sunken border border-default text-default text-xs focus:outline-hidden focus:border-primary"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1">
+                      <label className="block text-[10px] uppercase tracking-wider text-muted mb-1 font-semibold">
                         Checked / Verified Label
                       </label>
                       <input
                         type="text"
                         value={config.signatureCheckedBy || ''}
                         onChange={(e) => setConfig((p) => ({ ...p, signatureCheckedBy: e.target.value }))}
-                        className="w-full px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs"
+                        className="w-full px-3 py-2 rounded-xl bg-surface-sunken border border-default text-default text-xs focus:outline-hidden focus:border-primary"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1">
+                      <label className="block text-[10px] uppercase tracking-wider text-muted mb-1 font-semibold">
                         Authorized Signatory Label
                       </label>
                       <input
                         type="text"
                         value={config.signatureAuthorizedBy || ''}
                         onChange={(e) => setConfig((p) => ({ ...p, signatureAuthorizedBy: e.target.value }))}
-                        className="w-full px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs"
+                        className="w-full px-3 py-2 rounded-xl bg-surface-sunken border border-default text-default text-xs focus:outline-hidden focus:border-primary"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1">
+                      <label className="block text-[10px] uppercase tracking-wider text-muted mb-1 font-semibold">
                         Receiver Acknowledgement Label
                       </label>
                       <input
                         type="text"
                         value={config.signatureReceiver || ''}
                         onChange={(e) => setConfig((p) => ({ ...p, signatureReceiver: e.target.value }))}
-                        className="w-full px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs"
+                        className="w-full px-3 py-2 rounded-xl bg-surface-sunken border border-default text-default text-xs focus:outline-hidden focus:border-primary"
                       />
                     </div>
                   </div>
@@ -412,7 +421,7 @@ export function TemplateEditorTab({ template, onBack, onSaved }: TemplateEditorT
             {activeTab === 'terms' && (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                  <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                     Custom Terms & Conditions
                   </label>
                   <textarea
@@ -420,12 +429,12 @@ export function TemplateEditorTab({ template, onBack, onSaved }: TemplateEditorT
                     value={config.customTerms || ''}
                     onChange={(e) => setConfig((p) => ({ ...p, customTerms: e.target.value }))}
                     placeholder="Leave empty to use tenant global terms, or enter custom terms for this template..."
-                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs focus:outline-hidden focus:border-primary font-mono"
+                    className="w-full px-3 py-2 rounded-xl bg-surface-sunken border border-default text-default text-xs focus:outline-hidden focus:border-primary font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                  <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                     Footer Note / Greeting
                   </label>
                   <input
@@ -433,7 +442,7 @@ export function TemplateEditorTab({ template, onBack, onSaved }: TemplateEditorT
                     value={config.footerGreeting || ''}
                     onChange={(e) => setConfig((p) => ({ ...p, footerGreeting: e.target.value }))}
                     placeholder="e.g. This is a computer generated document. Thank you for your business."
-                    className="w-full px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs focus:outline-hidden focus:border-primary"
+                    className="w-full px-3 py-2 rounded-xl bg-surface-sunken border border-default text-default text-xs focus:outline-hidden focus:border-primary"
                   />
                 </div>
               </div>
@@ -442,13 +451,13 @@ export function TemplateEditorTab({ template, onBack, onSaved }: TemplateEditorT
         </div>
 
         {/* Right Column: Live Proportional Preview */}
-        <div className="lg:col-span-7 rounded-xl border border-slate-800 bg-slate-900/40 flex flex-col h-170 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-800 bg-slate-900/80 text-xs">
+        <div className="lg:col-span-7 rounded-2xl border border-default bg-surface flex flex-col h-170 overflow-hidden shadow-xs">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-default bg-surface-sunken text-xs">
             <div className="flex items-center gap-2">
               <Sparkles className="size-3.5 text-primary" />
-              <span className="font-semibold text-slate-200">Live Proportional Preview</span>
+              <span className="font-semibold text-default">Live Proportional Preview</span>
             </div>
-            <span className="font-mono text-[11px] text-slate-400">
+            <span className="font-mono text-[11px] text-muted">
               {selectedPaperSize?.name || 'A4 Portrait (210 × 297 mm)'}
             </span>
           </div>

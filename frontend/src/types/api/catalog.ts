@@ -24,6 +24,8 @@ export interface Brand extends CatalogTimestamped {
 
 export interface Product extends CatalogTimestamped {
   id: string;
+  product_id?: number;
+  unit_id?: number;
   sku: string;
   barcode: string | null;
   name: string;

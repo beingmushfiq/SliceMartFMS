@@ -269,7 +269,6 @@ export function PartiesSection() {
                 <th className="py-3.5 pl-4 pr-3">Party Name & Code</th>
                 <th className="py-3.5 px-3">Roles</th>
                 <th className="py-3.5 px-3">Contact</th>
-                <th className="py-3.5 px-3">Credit Limit</th>
                 <th className="py-3.5 px-3">Current Balance</th>
                 <th className="py-3.5 px-3">Status</th>
                 <th className="py-3.5 pr-4 pl-3 text-right">Actions</th>
@@ -278,7 +277,7 @@ export function PartiesSection() {
             <tbody className="divide-y divide-default">
               {parties.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center text-muted">
+                  <td colSpan={6} className="py-10 text-center text-muted">
                     No parties found matching the criteria.
                   </td>
                 </tr>
@@ -326,10 +325,6 @@ export function PartiesSection() {
                           <span>{p.email}</span>
                         </div>
                       )}
-                    </td>
-                    <td className="py-3.5 px-3 font-mono text-default">
-                      {formatCurrency(p.credit_limit)}
-                      <div className="text-[10px] text-muted font-sans">{p.credit_days} days term</div>
                     </td>
                     <td className="py-3.5 px-3 font-mono">
                       <span
@@ -647,10 +642,6 @@ export function PartiesSection() {
               <div>
                 <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">Email</span>
                 <span className="text-default">{viewingParty.email || 'N/A'}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">Credit Limit</span>
-                <span className="font-mono text-default">{formatCurrency(viewingParty.credit_limit)}</span>
               </div>
               <div>
                 <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">Current Ledger Balance</span>

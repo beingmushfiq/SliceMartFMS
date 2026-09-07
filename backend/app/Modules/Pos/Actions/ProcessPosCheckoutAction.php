@@ -60,6 +60,7 @@ final class ProcessPosCheckoutAction
     public function execute(array $data): array
     {
         return DB::transaction(function () use ($data): array {
+            /** @var PosSession $session */
             $session = PosSession::where('tenant_id', $data['tenant_id'])
                 ->where('id', $data['pos_session_id'])
                 ->lockForUpdate()
@@ -77,11 +78,11 @@ final class ProcessPosCheckoutAction
             $subtotal = '0.0000';
             /** @var numeric-string $totalTax */
             $totalTax = '0.0000';
-            /** @var numeric-string $totalDiscount */
-            $totalDiscount = isset($data['discount_amount']) && is_numeric($data['discount_amount'])
-                ? (string) $data['discount_amount']
-                : '0.0000';
+            /** @var numeric-string $totalLineDiscounts */
+            $totalLineDiscounts = '0.0000';
 
+            // First pass: compute line discounts and line gross/subtotals
+            $computedItems = [];
             foreach ($data['items'] as $item) {
                 /** @var numeric-string $qty */
                 $qty = is_numeric($item['quantity']) ? (string) $item['quantity'] : '0.0000';
@@ -90,17 +91,73 @@ final class ProcessPosCheckoutAction
                 /** @var numeric-string $itemTax */
                 $itemTax = isset($item['tax_amount']) && is_numeric($item['tax_amount']) ? (string) $item['tax_amount'] : '0.0000';
 
-                /** @var numeric-string $lineSub */
-                $lineSub = bcmul($qty, $price, 4);
-                $subtotal = bcadd($subtotal, $lineSub, 4);
+                /** @var numeric-string $lineGross */
+                $lineGross = bcmul($qty, $price, 4);
+                $subtotal = bcadd($subtotal, $lineGross, 4);
                 $totalTax = bcadd($totalTax, $itemTax, 4);
 
-                if (isset($item['discount_amount']) && is_numeric($item['discount_amount'])) {
-                    /** @var numeric-string $itemDisc */
+                // Compute flat vs percentage line discount
+                $itemDisc = '0.0000';
+                $itemDiscPct = '0.00';
+                if (isset($item['discount_type']) && $item['discount_type'] === 'percentage') {
+                    $pct = isset($item['discount_value']) && is_numeric($item['discount_value']) ? (string) $item['discount_value'] : '0.00';
+                    $itemDiscPct = $pct;
+                    $itemDisc = bcdiv(bcmul($lineGross, $pct, 4), '100', 4);
+                } elseif (isset($item['discount_percentage']) && is_numeric($item['discount_percentage']) && (float)$item['discount_percentage'] > 0) {
+                    $pct = (string) $item['discount_percentage'];
+                    $itemDiscPct = $pct;
+                    $itemDisc = bcdiv(bcmul($lineGross, $pct, 4), '100', 4);
+                } elseif (isset($item['discount_amount']) && is_numeric($item['discount_amount'])) {
                     $itemDisc = (string) $item['discount_amount'];
-                    $totalDiscount = bcadd($totalDiscount, $itemDisc, 4);
+                } elseif (isset($item['discount_value']) && is_numeric($item['discount_value'])) {
+                    $itemDisc = (string) $item['discount_value'];
+                }
+
+                if (bccomp($itemDisc, $lineGross, 4) > 0) {
+                    $itemDisc = $lineGross;
+                }
+
+                $totalLineDiscounts = bcadd($totalLineDiscounts, $itemDisc, 4);
+                $lineNet = bcsub($lineGross, $itemDisc, 4);
+
+                $computedItems[] = [
+                    'raw'         => $item,
+                    'qty'         => $qty,
+                    'price'       => $price,
+                    'tax'         => $itemTax,
+                    'lineGross'   => $lineGross,
+                    'lineDisc'    => $itemDisc,
+                    'lineDiscPct' => $itemDiscPct,
+                    'lineNet'     => $lineNet,
+                ];
+            }
+
+            // Order-level discount calculation (Flat or Percentage)
+            $orderNetSubtotal = bcsub($subtotal, $totalLineDiscounts, 4);
+            if (bccomp($orderNetSubtotal, '0.0000', 4) < 0) {
+                $orderNetSubtotal = '0.0000';
+            }
+
+            $orderDiscountAmount = '0.0000';
+            if (isset($data['order_discount_type']) && $data['order_discount_type'] === 'percentage') {
+                $orderPct = isset($data['order_discount_value']) && is_numeric($data['order_discount_value']) ? (string) $data['order_discount_value'] : '0.00';
+                $orderDiscountAmount = bcdiv(bcmul($orderNetSubtotal, $orderPct, 4), '100', 4);
+            } elseif (isset($data['order_discount_value']) && is_numeric($data['order_discount_value'])) {
+                $orderDiscountAmount = (string) $data['order_discount_value'];
+            } elseif (isset($data['discount_amount']) && is_numeric($data['discount_amount'])) {
+                // If only total discount_amount was provided without separate order_discount_value:
+                // Subtract totalLineDiscounts so line discounts are never double-counted
+                $orderDiscountAmount = bcsub((string) $data['discount_amount'], $totalLineDiscounts, 4);
+                if (bccomp($orderDiscountAmount, '0.0000', 4) < 0) {
+                    $orderDiscountAmount = '0.0000';
                 }
             }
+
+            if (bccomp($orderDiscountAmount, $orderNetSubtotal, 4) > 0) {
+                $orderDiscountAmount = $orderNetSubtotal;
+            }
+
+            $totalDiscount = bcadd($totalLineDiscounts, $orderDiscountAmount, 4);
 
             /** @var numeric-string $roundOff */
             $roundOff = isset($data['round_off']) && is_numeric($data['round_off']) ? (string) $data['round_off'] : '0.0000';
@@ -134,18 +191,26 @@ final class ProcessPosCheckoutAction
                 'created_by'      => $data['user_id'],
             ]);
 
-            // 2. Line Items & Stock Deduction
-            foreach ($data['items'] as $item) {
-                /** @var numeric-string $qty */
-                $qty = (string) $item['quantity'];
-                /** @var numeric-string $price */
-                $price = (string) $item['unit_price'];
-                /** @var numeric-string $disc */
-                $disc = isset($item['discount_amount']) && is_numeric($item['discount_amount']) ? (string) $item['discount_amount'] : '0.0000';
-                /** @var numeric-string $tax */
-                $tax = isset($item['tax_amount']) && is_numeric($item['tax_amount']) ? (string) $item['tax_amount'] : '0.0000';
-                /** @var numeric-string $lineTotal */
-                $lineTotal = bcadd(bcsub(bcmul($qty, $price, 4), $disc, 4), $tax, 4);
+            // 2. Line Items & Stock Deduction with proportional order discount allocation
+            foreach ($computedItems as $cIdx => $computed) {
+                $item = $computed['raw'];
+                $qty = $computed['qty'];
+                $price = $computed['price'];
+                $tax = $computed['tax'];
+                $lineDisc = $computed['lineDisc'];
+                $lineNet = $computed['lineNet'];
+
+                // Allocate order discount proportionally across line items
+                $allocatedOrderDisc = '0.0000';
+                if (bccomp($orderNetSubtotal, '0.0000', 4) > 0 && bccomp($orderDiscountAmount, '0.0000', 4) > 0) {
+                    $allocatedOrderDisc = bcdiv(bcmul($orderDiscountAmount, $lineNet, 6), $orderNetSubtotal, 4);
+                }
+
+                $effectiveLineDisc = bcadd($lineDisc, $allocatedOrderDisc, 4);
+                $effectiveLineTotal = bcadd(bcsub($computed['lineGross'], $effectiveLineDisc, 4), $tax, 4);
+
+                $computedItems[$cIdx]['effectiveLineDisc'] = $effectiveLineDisc;
+                $computedItems[$cIdx]['effectiveLineTotal'] = $effectiveLineTotal;
 
                 SalesOrderItem::create([
                     'tenant_id'          => $data['tenant_id'],
@@ -155,10 +220,11 @@ final class ProcessPosCheckoutAction
                     'quantity'           => $qty,
                     'unit_id'            => $item['unit_id'],
                     'unit_price'         => $price,
-                    'discount_amount'    => $disc,
+                    'discount_percentage'=> $computed['lineDiscPct'],
+                    'discount_amount'    => $effectiveLineDisc,
                     'tax_profile_id'     => $item['tax_profile_id'] ?? null,
                     'tax_amount'         => $tax,
-                    'line_total'         => $lineTotal,
+                    'line_total'         => $effectiveLineTotal,
                     'delivered_quantity' => $qty,
                     'returned_quantity'  => '0.0000',
                 ]);
@@ -202,28 +268,18 @@ final class ProcessPosCheckoutAction
                 'created_by'      => $data['user_id'],
             ]);
 
-            foreach ($data['items'] as $item) {
-                /** @var numeric-string $qty */
-                $qty = (string) $item['quantity'];
-                /** @var numeric-string $price */
-                $price = (string) $item['unit_price'];
-                /** @var numeric-string $disc */
-                $disc = isset($item['discount_amount']) && is_numeric($item['discount_amount']) ? (string) $item['discount_amount'] : '0.0000';
-                /** @var numeric-string $tax */
-                $tax = isset($item['tax_amount']) && is_numeric($item['tax_amount']) ? (string) $item['tax_amount'] : '0.0000';
-                /** @var numeric-string $lineTotal */
-                $lineTotal = bcadd(bcsub(bcmul($qty, $price, 4), $disc, 4), $tax, 4);
-
+            foreach ($computedItems as $computed) {
+                $item = $computed['raw'];
                 InvoiceItem::create([
                     'tenant_id'       => $data['tenant_id'],
                     'invoice_id'      => $invoice->id,
                     'product_id'      => $item['product_id'],
-                    'quantity'        => $qty,
+                    'quantity'        => $computed['qty'],
                     'unit_id'         => $item['unit_id'],
-                    'unit_price'      => $price,
-                    'discount_amount' => $disc,
-                    'tax_amount'      => $tax,
-                    'line_total'      => $lineTotal,
+                    'unit_price'      => $computed['price'],
+                    'discount_amount' => $computed['effectiveLineDisc'],
+                    'tax_amount'      => $computed['tax'],
+                    'line_total'      => $computed['effectiveLineTotal'],
                 ]);
             }
 
@@ -243,29 +299,34 @@ final class ProcessPosCheckoutAction
                     'change_given'   => $change,
                 ]);
 
-                // Payment entry
-                $payment = Payment::create([
-                    'tenant_id'          => $data['tenant_id'],
-                    'payment_number'     => 'PAY-' . date('Ymd') . '-' . strtoupper(Str::random(6)),
-                    'direction'          => 'in',
-                    'party_id'           => $data['party_id'] ?? null,
-                    'branch_id'          => $session->branch_id,
-                    'payment_date'       => $orderDate,
-                    'method'             => $paymentItem['method'],
-                    'amount'             => $amt,
-                    'allocated_amount'   => $amt,
-                    'unallocated_amount' => '0.0000',
-                    'status'             => 'posted',
-                    'created_by'         => $data['user_id'],
-                ]);
+                // Payment entry (allocated net settled amount to the invoice)
+                /** @var numeric-string $netAmt */
+                $netAmt = ($paymentItem['method'] === 'cash') ? bcsub($amt, $change, 4) : $amt;
 
-                PaymentAllocation::create([
-                    'tenant_id'        => $data['tenant_id'],
-                    'payment_id'       => $payment->id,
-                    'allocatable_type' => 'invoice',
-                    'allocatable_id'   => $invoice->id,
-                    'amount'           => $amt,
-                ]);
+                if (bccomp($netAmt, '0.0000', 4) > 0) {
+                    $payment = Payment::create([
+                        'tenant_id'          => $data['tenant_id'],
+                        'payment_number'     => 'PAY-' . date('Ymd') . '-' . strtoupper(Str::random(6)),
+                        'direction'          => 'in',
+                        'party_id'           => $data['party_id'] ?? null,
+                        'branch_id'          => $session->branch_id,
+                        'payment_date'       => $orderDate,
+                        'method'             => $paymentItem['method'],
+                        'amount'             => $netAmt,
+                        'allocated_amount'   => $netAmt,
+                        'unallocated_amount' => '0.0000',
+                        'status'             => 'posted',
+                        'created_by'         => $data['user_id'],
+                    ]);
+
+                    PaymentAllocation::create([
+                        'tenant_id'        => $data['tenant_id'],
+                        'payment_id'       => $payment->id,
+                        'allocatable_type' => 'invoice',
+                        'allocatable_id'   => $invoice->id,
+                        'amount'           => $netAmt,
+                    ]);
+                }
 
                 // Update Session totals
                 if ($paymentItem['method'] === 'cash') {

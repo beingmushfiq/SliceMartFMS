@@ -23,7 +23,7 @@ export function LabelSheet({
   format = 'code128',
   fields = {},
   gridConfig = {},
-  businessName = 'SliceMart Bakery & Foods',
+  businessName = 'SliceMart',
 }: LabelSheetProps) {
   const isSmall = preset === 'small_35x25';
   const labelDim = isSmall ? PRESET_LABEL_DIMENSIONS.small_35x25 : PRESET_LABEL_DIMENSIONS.standard_50x35;

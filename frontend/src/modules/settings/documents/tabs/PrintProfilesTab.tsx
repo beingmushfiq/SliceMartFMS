@@ -37,18 +37,27 @@ export function PrintProfilesTab() {
   const [isDefault, setIsDefault] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const { data: profiles = [], isLoading, isFetching, refetch } = useQuery<PrintProfile[]>({
+  const DEFAULT_FALLBACK_PROFILES: PrintProfile[] = [
+    { id: 1, uuid: 'pp-std-laser', name: 'Standard A4 Laser/Inkjet', paper_size_id: 1, orientation: 'portrait', margin_top_mm: 12, margin_bottom_mm: 12, margin_left_mm: 15, margin_right_mm: 15, scale: 1.0, copies: 1, is_printer_friendly: true, is_default: true, is_active: true, created_at: '', updated_at: '' },
+    { id: 2, uuid: 'pp-pos-counter', name: 'POS 80mm Counter Thermal', paper_size_id: 6, orientation: 'portrait', margin_top_mm: 2, margin_bottom_mm: 2, margin_left_mm: 3, margin_right_mm: 3, scale: 1.0, copies: 1, is_printer_friendly: true, is_default: false, is_active: true, created_at: '', updated_at: '' },
+    { id: 3, uuid: 'pp-barcode-lbl', name: 'Thermal Barcode & Shipping Label', paper_size_id: 9, orientation: 'portrait', margin_top_mm: 1, margin_bottom_mm: 1, margin_left_mm: 1.5, margin_right_mm: 1.5, scale: 1.0, copies: 1, is_printer_friendly: true, is_default: false, is_active: true, created_at: '', updated_at: '' },
+  ];
+
+  const { data: profiles = DEFAULT_FALLBACK_PROFILES, isLoading, isFetching, refetch } = useQuery<PrintProfile[]>({
     queryKey: ['documents', 'print-profiles'],
     queryFn: async () => {
       try {
-        const res = await api.get<{ data: PrintProfile[] }>('/documents/print-profiles');
-        if (res.data?.data) {
+        const res = await api.get<PrintProfile[] | { data: PrintProfile[] }>('/documents/print-profiles');
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          return res.data;
+        }
+        if (res.data && 'data' in res.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
           return res.data.data;
         }
-      } catch {
-        // Fallback
+      } catch (err) {
+        console.warn('Failed to fetch print profiles:', err);
       }
-      return [];
+      return DEFAULT_FALLBACK_PROFILES;
     },
   });
 
@@ -56,12 +65,15 @@ export function PrintProfilesTab() {
     queryKey: ['documents', 'paper-sizes'],
     queryFn: async () => {
       try {
-        const res = await api.get<{ data: PaperSize[] }>('/documents/paper-sizes');
-        if (res.data?.data) {
+        const res = await api.get<PaperSize[] | { data: PaperSize[] }>('/documents/paper-sizes');
+        if (Array.isArray(res.data)) {
+          return res.data;
+        }
+        if (res.data && 'data' in res.data && Array.isArray(res.data.data)) {
           return res.data.data;
         }
-      } catch {
-        // Fallback
+      } catch (err) {
+        console.warn('Failed to fetch paper sizes:', err);
       }
       return [];
     },
@@ -155,24 +167,26 @@ export function PrintProfilesTab() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-base font-bold text-white tracking-wide">Print Profiles</h3>
-          <p className="text-xs text-slate-400">
+          <h3 className="text-base font-bold text-default tracking-tight">Print Profiles</h3>
+          <p className="text-xs text-muted">
             Define reusable printer device settings, custom margins, scale factors, and copies.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={() => refetch()}
             disabled={isFetching}
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl border border-slate-700 transition-colors cursor-pointer"
+            className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors cursor-pointer"
             title="Refresh Print Profiles"
           >
             <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
           <button
+            type="button"
             onClick={handleOpenCreate}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-fg hover:opacity-90 shadow-sm transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-fg hover:opacity-90 shadow-2xs transition-all cursor-pointer"
           >
             <Plus className="size-4" />
             <span>New Profile</span>
@@ -184,14 +198,14 @@ export function PrintProfilesTab() {
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((n) => (
-            <div key={n} className="h-44 rounded-xl bg-slate-800/40 animate-pulse border border-slate-700/40" />
+            <div key={n} className="h-44 rounded-2xl bg-surface-sunken animate-pulse border border-default" />
           ))}
         </div>
       ) : profiles.length === 0 ? (
-        <div className="text-center py-12 rounded-xl border border-dashed border-slate-800 bg-slate-900/30">
-          <Printer className="size-8 text-slate-600 mx-auto mb-2" />
-          <h4 className="text-sm font-semibold text-slate-300">No Print Profiles Configured</h4>
-          <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+        <div className="text-center py-12 rounded-2xl border border-dashed border-default bg-surface/50">
+          <Printer className="size-8 text-muted mx-auto mb-2" />
+          <h4 className="text-sm font-semibold text-default">No Print Profiles Configured</h4>
+          <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
             Create profiles to customize orientation, margins, and paper sizes for printers.
           </p>
         </div>
@@ -200,58 +214,60 @@ export function PrintProfilesTab() {
         {profiles.map((p) => (
           <div
             key={p.id}
-            className="flex flex-col justify-between p-4 rounded-xl border border-slate-700/60 bg-slate-800/60 hover:border-slate-600 transition-all shadow-sm"
+            className="flex flex-col justify-between p-4.5 rounded-2xl border border-default bg-surface hover:border-primary/50 hover:shadow-md transition-all shadow-xs"
           >
             <div>
               <div className="flex items-start justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex size-8 items-center justify-center rounded-lg bg-primary/20 text-primary border border-primary/30">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-2xs">
                     <Printer className="size-4" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-white tracking-wide">{p.name}</h4>
-                    <span className="text-[11px] text-slate-400 font-medium">
+                    <h4 className="text-sm font-bold text-default tracking-tight">{p.name}</h4>
+                    <span className="text-[11px] text-muted font-medium">
                       {p.paper_size?.name || 'A4 Standard'}
                     </span>
                   </div>
                 </div>
 
                 {p.is_default && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-950/80 text-amber-300 border border-amber-800/60">
-                    <Star className="size-3 fill-amber-400 text-amber-400" /> Default
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                    <Star className="size-3 fill-amber-500 text-amber-500" /> Default
                   </span>
                 )}
               </div>
 
-              <div className="grid grid-cols-3 gap-2 my-3 p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-xs text-center">
+              <div className="grid grid-cols-3 gap-2 my-3.5 p-2.5 rounded-xl bg-surface-sunken border border-default text-xs text-center">
                 <div>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Orientation</span>
-                  <span className="font-medium text-slate-200 capitalize">{p.orientation}</span>
+                  <span className="text-[10px] text-muted uppercase font-bold tracking-wider block">Orientation</span>
+                  <span className="font-medium text-default capitalize block mt-0.5">{p.orientation}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Scale</span>
-                  <span className="font-mono font-medium text-slate-200">{Math.round(p.scale * 100)}%</span>
+                  <span className="text-[10px] text-muted uppercase font-bold tracking-wider block">Scale</span>
+                  <span className="font-mono font-medium text-default block mt-0.5">{Math.round(p.scale * 100)}%</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Copies</span>
-                  <span className="font-mono font-medium text-slate-200">{p.copies}</span>
+                  <span className="text-[10px] text-muted uppercase font-bold tracking-wider block">Copies</span>
+                  <span className="font-mono font-medium text-default block mt-0.5">{p.copies}</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-slate-700/40 text-[11px] text-slate-400">
+            <div className="flex items-center justify-between pt-3 border-t border-default text-[11px] text-muted">
               <span>Margins: {p.margin_top_mm}mm T/B, {p.margin_left_mm}mm L/R</span>
               <div className="flex items-center gap-1">
                 <button
+                  type="button"
                   onClick={() => handleOpenEdit(p)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                  className="p-1.5 rounded-lg text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
                   title="Edit Profile"
                 >
                   <Edit2 className="size-3.5" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => setDeleteTarget(p)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-700 transition-colors"
+                  className="p-1.5 rounded-lg text-muted hover:text-rose-600 hover:bg-rose-500/10 transition-colors cursor-pointer"
                   title="Delete Profile"
                 >
                   <Trash2 className="size-3.5" />
@@ -272,7 +288,7 @@ export function PrintProfilesTab() {
       >
         <form onSubmit={handleSave} className="space-y-4 text-xs">
           <div>
-            <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
+            <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
               Profile Name *
             </label>
             <input
@@ -281,19 +297,19 @@ export function PrintProfilesTab() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Dispatch Thermal Roll 80mm"
-              className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs"
+              className="w-full px-3 py-2 rounded-xl bg-surface-sunken border border-default text-default text-xs focus:outline-hidden focus:border-primary"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Paper Size
               </label>
               <select
                 value={paperSizeId || ''}
                 onChange={(e) => setPaperSizeId(e.target.value ? Number(e.target.value) : undefined)}
-                className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs cursor-pointer"
+                className="w-full px-3 py-2 rounded-xl bg-surface-sunken border border-default text-default text-xs cursor-pointer focus:outline-hidden focus:border-primary"
               >
                 {paperSizes.map((ps) => (
                   <option key={ps.id} value={ps.id}>
@@ -303,13 +319,13 @@ export function PrintProfilesTab() {
               </select>
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Orientation
               </label>
               <select
                 value={orientation}
                 onChange={(e) => setOrientation(e.target.value as 'portrait' | 'landscape')}
-                className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs cursor-pointer"
+                className="w-full px-3 py-2 rounded-xl bg-surface-sunken border border-default text-default text-xs cursor-pointer focus:outline-hidden focus:border-primary"
               >
                 <option value="portrait">Portrait</option>
                 <option value="landscape">Landscape</option>
@@ -319,7 +335,7 @@ export function PrintProfilesTab() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Scale (1.0 = 100%)
               </label>
               <input
@@ -329,11 +345,11 @@ export function PrintProfilesTab() {
                 max="3.0"
                 value={scale}
                 onChange={(e) => setScale(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs"
+                className="w-full px-3 py-2 rounded-xl bg-surface-sunken border border-default text-default text-xs focus:outline-hidden focus:border-primary"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                 Default Copies
               </label>
               <input
@@ -342,44 +358,44 @@ export function PrintProfilesTab() {
                 max="50"
                 value={copies}
                 onChange={(e) => setCopies(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs"
+                className="w-full px-3 py-2 rounded-xl bg-surface-sunken border border-default text-default text-xs focus:outline-hidden focus:border-primary"
               />
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-800 space-y-2">
+          <div className="pt-2 border-t border-default space-y-2">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={isPrinterFriendly}
                 onChange={(e) => setIsPrinterFriendly(e.target.checked)}
-                className="rounded border-slate-700 bg-slate-800 text-primary size-4"
+                className="rounded border-default bg-surface-sunken text-primary size-4"
               />
-              <span className="text-xs text-slate-300">Optimize for high-contrast B&W print</span>
+              <span className="text-xs text-default">Optimize for high-contrast B&W print</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={isDefault}
                 onChange={(e) => setIsDefault(e.target.checked)}
-                className="rounded border-slate-700 bg-slate-800 text-primary size-4"
+                className="rounded border-default bg-surface-sunken text-primary size-4"
               />
-              <span className="text-xs text-slate-300">Set as Tenant Default Print Profile</span>
+              <span className="text-xs text-default">Set as Tenant Default Print Profile</span>
             </label>
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+          <div className="flex justify-end gap-2 pt-3 border-t border-default">
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800"
+              className="px-3.5 py-2 rounded-xl border border-default text-muted hover:text-default hover:bg-surface-sunken cursor-pointer transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSaving}
-              className="px-4 py-1.5 rounded-lg bg-primary text-primary-fg font-semibold hover:opacity-90"
+              className="px-4 py-2 rounded-xl bg-primary text-primary-fg font-semibold hover:opacity-90 shadow-2xs cursor-pointer transition-all"
             >
               {isSaving ? 'Saving...' : editProfile ? 'Save Changes' : 'Create Profile'}
             </button>

@@ -22,6 +22,7 @@ import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { GoodsReceiptDocument } from '../../../components/print/documents/GoodsReceiptDocument';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
 import { useCurrency } from '../../../hooks/useCurrency';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
 interface GrnFormItem {
   product_name: string;
@@ -78,31 +79,31 @@ const SAMPLE_RECEIPTS: GoodsReceipt[] = [
     purchase_order_id: 1,
     po_number: 'PO-202608-001',
     party_id: 1,
-    supplier_name: 'Bengal Agro & Flour Mills Ltd.',
+    supplier_name: 'Bengal Glass & Ceramic Ltd.',
     warehouse_id: 1,
-    warehouse_name: 'Central Raw Materials Silo',
+    warehouse_name: 'Tejgaon Central Electronic Components & Parts Warehouse',
     receipt_date: '2026-08-28',
-    supplier_document_number: 'INV-BA-9021',
+    supplier_document_number: 'INV-BGC-9021',
     status: 'draft',
     received_by: 1,
-    notes: 'Wheat flour batch unloading. Moisture testing underway.',
+    notes: 'Ceramic glass batch unloading. Flatness & surface inspection underway.',
     items: [
       {
         id: 302,
         uuid: 'gri-302',
         goods_receipt_id: 2,
         product_id: 1,
-        product_name: 'Premium Wheat Flour (Grade A)',
-        product_sku: 'RM-FLOUR-01',
-        batch_code: 'BAT-FLR-2608-01',
-        expiry_date: '2027-02-28',
-        received_quantity: '1000.00',
-        rejected_quantity: '20.00',
-        accepted_quantity: '980.00',
-        unit_id: 1,
-        unit_code: 'KG',
-        unit_cost: '65.00',
-        total_cost: '63700.00',
+        product_name: 'Microcrystalline Ceramic Glass Panel',
+        product_sku: 'RAW-CERAMIC-PANEL',
+        batch_code: 'BAT-GLS-2608-01',
+        expiry_date: null,
+        received_quantity: '500.00',
+        rejected_quantity: '5.00',
+        accepted_quantity: '495.00',
+        unit_id: 2,
+        unit_code: 'PCS',
+        unit_cost: '450.00',
+        total_cost: '222750.00',
       },
     ],
     created_at: '2026-08-28T14:30:00Z',
@@ -129,21 +130,21 @@ export function GoodsReceiptsSection() {
   const [formData, setFormData] = useState({
     grn_number: '',
     po_number: 'PO-202608-001',
-    supplier_name: 'Bengal Agro & Flour Mills Ltd.',
-    warehouse_name: 'Central Raw Materials Silo',
+    supplier_name: 'Bengal Glass & Ceramic Ltd.',
+    warehouse_name: 'Tejgaon Central Electronic Components & Parts Warehouse',
     receipt_date: new Date().toISOString().slice(0, 10),
     supplier_document_number: '',
     notes: '',
     items: [
       {
-        product_name: 'Premium Wheat Flour (Grade A)',
-        product_sku: 'RM-FLOUR-01',
-        batch_code: 'BAT-LOT-01',
+        product_name: 'Microcrystalline Ceramic Glass Panel',
+        product_sku: 'RAW-CERAMIC-PANEL',
+        batch_code: 'BAT-GLS-01',
         received_quantity: '500',
         rejected_quantity: '0',
         accepted_quantity: '500',
-        unit_code: 'KG',
-        unit_cost: '65.00',
+        unit_code: 'PCS',
+        unit_cost: '450.00',
       },
     ],
   });
@@ -383,21 +384,21 @@ export function GoodsReceiptsSection() {
               setFormData({
                 grn_number: `GRN-${new Date().toISOString().slice(0, 7).replace('-', '')}-${String(receipts.length + 1).padStart(3, '0')}`,
                 po_number: 'PO-202608-001',
-                supplier_name: 'Bengal Agro & Flour Mills Ltd.',
-                warehouse_name: 'Central Raw Materials Silo',
+                supplier_name: 'Bengal Glass & Ceramic Ltd.',
+                warehouse_name: 'Tejgaon Central Electronic Components & Parts Warehouse',
                 receipt_date: new Date().toISOString().slice(0, 10),
                 supplier_document_number: 'CH-2026-091',
                 notes: '',
                 items: [
                   {
-                    product_name: 'Premium Wheat Flour (Grade A)',
-                    product_sku: 'RM-FLOUR-01',
-                    batch_code: 'BAT-LOT-01',
+                    product_name: 'Microcrystalline Ceramic Glass Panel',
+                    product_sku: 'RAW-CERAMIC-PANEL',
+                    batch_code: 'BAT-GLS-01',
                     received_quantity: '500',
                     rejected_quantity: '0',
                     accepted_quantity: '500',
-                    unit_code: 'KG',
-                    unit_cost: '65.00',
+                    unit_code: 'PCS',
+                    unit_cost: '450.00',
                   },
                 ],
               });
@@ -418,16 +419,18 @@ export function GoodsReceiptsSection() {
             <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'draft', label: 'Pending QA', colorDot: 'bg-amber-500' },
+              { value: 'completed', label: 'Stock Ingested', colorDot: 'bg-emerald-500' },
+              { value: 'cancelled', label: 'Cancelled', colorDot: 'bg-rose-500' },
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
-          >
-            <option value="all">All Statuses</option>
-            <option value="draft">Pending QA</option>
-            <option value="completed">Stock Ingested</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter GRNs by status"
+          />
         </div>
 
         <div className="relative flex-1 sm:max-w-xs">

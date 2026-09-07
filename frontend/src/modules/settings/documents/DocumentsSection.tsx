@@ -41,7 +41,8 @@ export function DocumentsSection() {
       'numbering',
       'business_identity',
       'history',
-    ] as const
+    ] as const,
+    'doc_tab'
   );
   const [editingTemplate, setEditingTemplate] = useState<DocumentTemplate | null>(null);
 
@@ -77,20 +78,20 @@ export function DocumentsSection() {
   return (
     <div className="space-y-6">
       {/* Workspace Header banner */}
-      <div className="rounded-2xl border border-slate-800 bg-linear-to-r from-slate-900 via-slate-900/90 to-primary/10 p-5">
+      <div className="rounded-2xl border border-default bg-surface p-5 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="flex size-11 items-center justify-center rounded-xl bg-primary/20 text-primary border border-primary/30 shadow-inner">
+            <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-2xs">
               <FileText className="size-6" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2">
+              <h2 className="text-lg font-bold text-default tracking-tight flex items-center gap-2">
                 <span>Documents & Printing Infrastructure</span>
-                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
+                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                   Platform Service
                 </span>
               </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-muted mt-0.5">
                 Centralized document rendering, paper specifications, device print profiles, and authoritative sequence numbering.
               </p>
             </div>
@@ -98,27 +99,30 @@ export function DocumentsSection() {
         </div>
       </div>
 
-      {/* Main Tab Navigation */}
+      {/* Main Tab Navigation Tray */}
       {activeTab !== 'editor' && (
-        <div className="flex items-center gap-1.5 border-b border-slate-800 pb-2 overflow-x-auto text-xs">
-          {TABS.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as DocumentsTabId)}
-                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                  isActive
-                    ? 'bg-primary text-primary-fg shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
-                }`}
-              >
-                <Icon className="size-4" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
+        <div className="flex overflow-x-auto p-1.5 bg-surface-sunken rounded-2xl border border-default shadow-2xs">
+          <nav className="flex gap-1.5 min-w-full sm:min-w-0" aria-label="Documents infrastructure tabs">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id as DocumentsTabId)}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer ${
+                    isActive
+                      ? 'bg-primary text-primary-fg font-semibold shadow-xs border border-primary'
+                      : 'text-muted hover:text-default hover:bg-surface/70 border border-transparent'
+                  }`}
+                >
+                  <Icon className={`size-4 ${isActive ? 'text-primary-fg' : 'text-muted'}`} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
         </div>
       )}
 

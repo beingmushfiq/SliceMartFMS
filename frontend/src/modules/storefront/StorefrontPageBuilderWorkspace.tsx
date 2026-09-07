@@ -12,10 +12,10 @@ import {
   Plus,
   Save,
   Trash2,
-  Check,
   Sparkles,
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
+import { notify } from '../../components/ui/Toast';
 
 export interface PageBlock {
   id: string;
@@ -47,12 +47,6 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [previewMode, setPreviewMode] = useState<'edit' | 'preview'>('edit');
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
-  };
 
   const loadPages = useCallback(async () => {
     setLoading(true);
@@ -93,17 +87,17 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
         {
           id: 'b1',
           type: 'hero_banner',
-          title: 'Decades of Manufacturing Excellence',
-          subtitle: 'Pure ingredients, certified hygiene, and industrial-scale baking.',
+          title: 'Precision Engineering & Thermal Innovation',
+          subtitle: 'High-efficiency infrared cookers, induction surfaces, and precision gas stoves.',
           cta_text: 'Explore Catalog',
           cta_url: '/store',
         },
         {
           id: 'b2',
           type: 'rich_text',
-          title: 'Our Production Heritage',
+          title: 'Our Manufacturing Heritage',
           content:
-            'Founded with a mission to deliver wholesome bread and confectionery daily across the nation.',
+            'Engineered for maximum thermal transfer, energy savings, and durable microcrystalline ceramic glass technology.',
         },
       ];
     } else if (templateType === 'faq') {
@@ -116,12 +110,12 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
           title: 'Frequently Asked Questions',
           faqs: [
             {
-              q: 'When are daily bakery items dispatched?',
-              a: 'All items are baked fresh at 4:00 AM and dispatched for morning courier delivery.',
+              q: 'What cookware is compatible with SliceMart Infrared Cookers?',
+              a: 'All cookware materials work seamlessly on infrared cookers, including ceramic, stainless steel, cast iron, glass, and aluminum.',
             },
             {
-              q: 'What payment methods do you accept?',
-              a: 'We accept Cash on Delivery (COD) and all major mobile wallets.',
+              q: 'What warranty is provided with appliances?',
+              a: 'All SliceMart infrared cookers and gas stoves include a 1-year comprehensive replacement and service warranty.',
             },
           ],
         },
@@ -152,9 +146,10 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
       const newPage = res.data.data ?? (res.data as unknown as CmsPage);
       setPages([...pages, newPage]);
       setSelectedPage(newPage);
-      showToast(`Created page "${title}"`);
+      notify.success(`Created page "${title}"`);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to create page');
+      const msg = err instanceof Error ? err.message : 'Failed to create page';
+      notify.error('Failed to create page', { description: msg });
     }
   };
 
@@ -175,9 +170,12 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
       const updated = res.data.data ?? (res.data as unknown as CmsPage);
       setSelectedPage(updated);
       setPages(pages.map((p) => (p.id === updated.id ? updated : p)));
-      showToast(`Page "${updated.title}" saved as ${statusToSave}!`);
+      notify.success(`Page "${updated.title}" saved`, {
+        description: `Status updated to ${statusToSave}.`,
+      });
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to save page');
+      const msg = err instanceof Error ? err.message : 'Failed to save page';
+      notify.error('Failed to save page', { description: msg });
     } finally {
       setSaving(false);
     }
@@ -238,14 +236,6 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 p-4 sm:p-6 lg:p-8">
-      {/* Toast Alert */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-950/90 px-4 py-3 text-xs font-semibold text-emerald-300 shadow-2xl backdrop-blur-xl">
-          <Check className="h-4 w-4" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-zinc-800 pb-5">
         <div>
@@ -405,7 +395,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Premium Bread & Confectionery — Slice Mart"
+                    placeholder="e.g. Next-Gen Infrared Cookers & Stoves — SliceMart"
                     value={selectedPage.meta_title || ''}
                     onChange={(e) => setSelectedPage({ ...selectedPage, meta_title: e.target.value })}
                     className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
@@ -436,11 +426,11 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                   https://slicemart.com › pages › <span className="font-mono">{selectedPage.slug || 'untitled'}</span>
                 </div>
                 <div className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
-                  {selectedPage.meta_title || selectedPage.title || 'Page Title — Slice Mart FMS'}
+                  {selectedPage.meta_title || selectedPage.title || 'Page Title — SliceMart Appliances'}
                 </div>
                 <div className="text-xs text-muted line-clamp-2">
                   {selectedPage.meta_description ||
-                    'Discover industrial manufacturing quality, certified baking ingredients, and fresh wholesale confectionery delivered daily across Bangladesh.'}
+                    'Discover industrial-grade infrared cookers, touch-sensor double burner stoves, and energy-saving kitchen appliances engineered for modern homes.'}
                 </div>
               </div>
             </div>

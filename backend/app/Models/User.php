@@ -163,13 +163,22 @@ class User extends Authenticatable
      */
     public function hasPermission(string $permission): bool
     {
-        if ($this->is_platform_admin) {
+        if ($this->is_platform_admin || $this->hasRole('Super Administrator')) {
             return true;
         }
 
         $effective = $this->getEffectivePermissions();
 
         return in_array('*', $effective, true) || in_array($permission, $effective, true);
+    }
+
+    /**
+     * Check if user has an assigned role by name or slug.
+     */
+    public function hasRole(string $roleName): bool
+    {
+        $this->loadMissing('roles');
+        return $this->roles->contains(fn (Role $role) => strcasecmp($role->name, $roleName) === 0 || strcasecmp($role->slug ?? '', $roleName) === 0);
     }
 
     /**

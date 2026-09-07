@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   Plus,
@@ -9,114 +9,148 @@ import {
   Building2,
   DollarSign,
   CheckCircle2,
-  Clock,
   TrendingUp,
   RefreshCw,
+  AlertTriangle,
+  UserCheck,
+  MoreHorizontal,
+  Eye,
+  ShieldAlert,
+  Check,
+  Phone,
+  Mail,
+  X,
 } from 'lucide-react';
 import type { Lead, LeadStatus, LeadSource } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
+import { Badge } from '../../../components/ui/Badge';
+import { KPICard } from '../../../components/ui/KPICard';
+import { cn } from '../../../lib/utils';
 
 const SAMPLE_LEADS: Lead[] = [
   {
     id: 1,
     uuid: 'lead-001',
+    lead_number: 'LD-260820-0001',
     name: 'Rahim Chowdhury',
     company_name: 'Bengal Textile Mills Ltd',
     email: 'rahim@bengaltextile.com',
     phone: '+8801711223344',
     status: 'proposal',
+    stage: 'proposal',
     deal_value: '450000.00',
-    currency_code: 'USD',
+    currency_code: 'BDT',
     source: 'storefront',
     assigned_to: 'Kazi Farhan (Sales Exec)',
     notes: 'Inquiring for bulk customized poly packaging and industrial rolls (10,000 units/mo).',
     expected_close_date: '2026-09-15',
+    is_fake: false,
     created_at: '2026-08-20',
   },
   {
     id: 2,
     uuid: 'lead-002',
+    lead_number: 'LD-260822-0002',
     name: 'Anika Tabassum',
     company_name: 'Urban Retailers Hub',
     email: 'anika@urbanretail.bd',
     phone: '+8801822334455',
     status: 'qualified',
+    stage: 'qualified',
     deal_value: '185000.00',
-    currency_code: 'USD',
+    currency_code: 'BDT',
     source: 'referral',
     assigned_to: 'Nusrat Jahan',
     notes: 'Looking to switch suppliers for corrugated master cartons.',
     expected_close_date: '2026-09-08',
+    is_fake: false,
     created_at: '2026-08-22',
   },
   {
     id: 3,
     uuid: 'lead-003',
+    lead_number: 'LD-260815-0003',
     name: 'Mahmudul Hasan',
     company_name: 'Apex Footwear Supply Chain',
     email: 'm.hasan@apexsupplies.com',
     phone: '+8801933445566',
-    status: 'negotiation',
+    status: 'won',
+    stage: 'won',
     deal_value: '820000.00',
-    currency_code: 'USD',
+    currency_code: 'BDT',
     source: 'website',
     assigned_to: 'Kazi Farhan (Sales Exec)',
-    notes: 'Price negotiation on 5-ply export grade boxes. Requested 3% volume discount.',
+    notes: 'Price negotiation on 5-ply export grade boxes completed. Contract signed.',
     expected_close_date: '2026-09-02',
+    converted_at: '2026-09-02T10:00:00Z',
+    is_fake: false,
     created_at: '2026-08-15',
   },
   {
     id: 4,
     uuid: 'lead-004',
+    lead_number: 'LD-260829-0004',
     name: 'Zubair Al-Mamun',
     company_name: 'Dhaka Superstore Mart',
     email: 'zubair@dhakasuper.com',
     phone: '+8801644556677',
-    status: 'new',
+    status: 'fake',
+    stage: 'fake',
     deal_value: '95000.00',
-    currency_code: 'USD',
+    currency_code: 'BDT',
     source: 'cold_outreach',
     assigned_to: 'Unassigned',
-    notes: 'Initial contact made. Requested product catalog & standard price list.',
+    notes: 'Phone number unreachable, invalid company registered address.',
+    validation_notes: 'Phone switched off on 3 attempts; no trade license match.',
+    is_fake: true,
     expected_close_date: '2026-09-20',
     created_at: '2026-08-29',
   },
-  {
-    id: 5,
-    uuid: 'lead-005',
-    name: 'Farida Yasmin',
-    company_name: 'Prime Garments Exporters',
-    email: 'farida@primegarments.com',
-    phone: '+8801755667788',
-    status: 'won',
-    deal_value: '1200000.00',
-    currency_code: 'USD',
-    source: 'event',
-    assigned_to: 'Tanvir Ahmed',
-    notes: 'Deal closed! Contract signed for annual delivery contract.',
-    expected_close_date: '2026-08-28',
-    created_at: '2026-08-01',
-  },
 ];
 
-const STAGES: { id: LeadStatus; label: string; tone: string; badgeBg: string }[] = [
-  { id: 'new', label: 'New Inquiries', tone: 'text-sky-600 dark:text-sky-400', badgeBg: 'bg-sky-500/10 border-sky-500/20' },
-  { id: 'contacted', label: 'Contacted', tone: 'text-blue-600 dark:text-blue-400', badgeBg: 'bg-blue-500/10 border-blue-500/20' },
-  { id: 'qualified', label: 'Qualified', tone: 'text-indigo-600 dark:text-indigo-400', badgeBg: 'bg-indigo-500/10 border-indigo-500/20' },
-  { id: 'proposal', label: 'Proposal Sent', tone: 'text-purple-600 dark:text-purple-400', badgeBg: 'bg-purple-500/10 border-purple-500/20' },
-  { id: 'negotiation', label: 'Negotiation', tone: 'text-amber-600 dark:text-amber-400', badgeBg: 'bg-amber-500/10 border-amber-500/20' },
-  { id: 'won', label: 'Closed Won', tone: 'text-emerald-600 dark:text-emerald-400', badgeBg: 'bg-emerald-500/10 border-emerald-500/20' },
-  { id: 'lost', label: 'Closed Lost', tone: 'text-rose-600 dark:text-rose-400', badgeBg: 'bg-rose-500/10 border-rose-500/20' },
+const STAGES: { id: LeadStatus; label: string; tone: string; dotBg: string; badgeBg: string }[] = [
+  { id: 'new', label: 'New Inquiries', tone: 'text-sky-600 dark:text-sky-400', dotBg: 'bg-sky-500', badgeBg: 'bg-sky-500/10 border-sky-500/20' },
+  { id: 'contacted', label: 'Contacted', tone: 'text-blue-600 dark:text-blue-400', dotBg: 'bg-blue-500', badgeBg: 'bg-blue-500/10 border-blue-500/20' },
+  { id: 'qualified', label: 'Qualified', tone: 'text-indigo-600 dark:text-indigo-400', dotBg: 'bg-indigo-500', badgeBg: 'bg-indigo-500/10 border-indigo-500/20' },
+  { id: 'proposal', label: 'Proposal Sent', tone: 'text-purple-600 dark:text-purple-400', dotBg: 'bg-purple-500', badgeBg: 'bg-purple-500/10 border-purple-500/20' },
+  { id: 'won', label: 'Closed Won', tone: 'text-emerald-600 dark:text-emerald-400', dotBg: 'bg-emerald-500', badgeBg: 'bg-emerald-500/10 border-emerald-500/20' },
+  { id: 'lost', label: 'Closed Lost', tone: 'text-rose-600 dark:text-rose-400', dotBg: 'bg-rose-500', badgeBg: 'bg-rose-500/10 border-rose-500/20' },
+  { id: 'fake', label: 'Fake / Invalid', tone: 'text-danger', dotBg: 'bg-danger', badgeBg: 'bg-danger-subtle border-danger' },
 ];
 
 export function LeadsSection() {
-  const { formatCurrency, currencyCode, currencySymbol } = useCurrency();
+  const { formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
   const [search, setSearch] = useState('');
   const [stageFilter, setStageFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // Fake Audit Modal State
+  const [auditModalOpen, setAuditModalOpen] = useState(false);
+  const [activeLeadForAudit, setActiveLeadForAudit] = useState<Lead | null>(null);
+  const [isFakeCheck, setIsFakeCheck] = useState<boolean>(true);
+  const [auditReason, setAuditReason] = useState<string>('');
+
+  // Actions Menu & Details View State
+  const [activeMenuLeadId, setActiveMenuLeadId] = useState<number | null>(null);
+  const [selectedLeadForView, setSelectedLeadForView] = useState<Lead | null>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (!(event.target as HTMLElement)?.closest('.lead-actions-menu-container')) {
+        setActiveMenuLeadId(null);
+      }
+    }
+    if (activeMenuLeadId !== null) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [activeMenuLeadId]);
 
   // Form State
   const [formData, setFormData] = useState<{
@@ -127,7 +161,6 @@ export function LeadsSection() {
     status: LeadStatus;
     source: LeadSource;
     deal_value: string;
-    assigned_to: string;
     expected_close_date: string;
     notes: string;
   }>({
@@ -138,197 +171,213 @@ export function LeadsSection() {
     status: 'new',
     source: 'storefront',
     deal_value: '',
-    assigned_to: '',
     expected_close_date: '',
     notes: '',
   });
 
+interface RawLeadResponse {
+  id: number;
+  uuid: string;
+  lead_number?: string;
+  name: string;
+  company_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  stage?: LeadStatus;
+  status?: LeadStatus;
+  source: LeadSource;
+  expected_value?: string;
+  deal_value?: string;
+  currency_code?: string;
+  assigned_to?: string | number | null;
+  assigned_user_name?: string | null;
+  notes?: string | null;
+  expected_close_date?: string | null;
+  is_fake?: boolean;
+  validation_notes?: string | null;
+  validated_by?: number | null;
+  validator_name?: string | null;
+  validated_at?: string | null;
+  converted_party_id?: number | null;
+  converted_party_name?: string | null;
+  converted_at?: string | null;
+  created_at: string;
+  updated_at?: string;
+}
+
+type ApiError = { response?: { data?: { message?: string } } };
+
+  // Query Leads from Real API with fallback
   const { data: leads = SAMPLE_LEADS, isFetching, refetch } = useQuery<Lead[]>({
     queryKey: ['crm', 'leads'],
     queryFn: async () => {
       try {
-        const res = await api.get<Lead[]>('/crm/leads');
-        if (res.data && res.data.length > 0) {
-          return res.data;
-        }
+        const res = await api.get<{ data?: RawLeadResponse[] } | RawLeadResponse[]>('/sales/leads?per_page=100');
+        const rawData = res.data;
+        const list = Array.isArray(rawData) ? rawData : (rawData?.data ?? []);
+        return list.map((item: RawLeadResponse): Lead => ({
+          ...item,
+          status: item.stage ?? item.status ?? 'new',
+          stage: item.stage ?? item.status ?? 'new',
+          deal_value: item.expected_value ?? item.deal_value ?? '0.00',
+          assigned_to: item.assigned_user_name ?? item.assigned_to ?? 'Unassigned',
+        }));
       } catch {
-        // Fallback to sample data
+        // Fallback to sample data if endpoint unreachable
+        return SAMPLE_LEADS;
       }
-      return SAMPLE_LEADS;
     },
     initialData: SAMPLE_LEADS,
   });
 
+  // Create Lead Mutation
+  const createLeadMutation = useMutation({
+    mutationFn: async (payload: typeof formData) => {
+      return api.post('/sales/leads', {
+        name: payload.name,
+        company_name: payload.company_name || null,
+        email: payload.email || null,
+        phone: payload.phone || null,
+        stage: payload.status,
+        source: payload.source,
+        expected_value: payload.deal_value ? parseFloat(payload.deal_value) : 0,
+        expected_close_date: payload.expected_close_date || null,
+        notes: payload.notes || null,
+      });
+    },
+    onSuccess: () => {
+      toast.success('Commercial lead captured successfully.');
+      queryClient.invalidateQueries({ queryKey: ['crm', 'leads'] });
+      setShowCreateModal(false);
+      setFormData({
+        name: '',
+        company_name: '',
+        email: '',
+        phone: '',
+        status: 'new',
+        source: 'storefront',
+        deal_value: '',
+        expected_close_date: '',
+        notes: '',
+      });
+    },
+    onError: (err: ApiError) => {
+      toast.error(err?.response?.data?.message || 'Failed to capture lead');
+    },
+  });
+
+  // Update Stage Mutation
+  const updateStageMutation = useMutation({
+    mutationFn: async ({ id, stage }: { id: number; stage: LeadStatus }) => {
+      return api.patch(`/sales/leads/${id}/stage`, { stage });
+    },
+    onSuccess: (_, variables) => {
+      toast.success(`Lead moved to ${variables.stage}.`);
+      queryClient.invalidateQueries({ queryKey: ['crm', 'leads'] });
+    },
+    onError: (err: ApiError) => {
+      toast.error(err?.response?.data?.message || 'Failed to update stage');
+    },
+  });
+
+  // Validate Fake Lead Mutation
+  const validateFakeMutation = useMutation({
+    mutationFn: async ({
+      id,
+      is_fake,
+      validation_notes,
+    }: {
+      id: number;
+      is_fake: boolean;
+      validation_notes: string;
+    }) => {
+      return api.post(`/sales/leads/${id}/validate-fake`, {
+        is_fake,
+        validation_notes,
+      });
+    },
+    onSuccess: (_, variables) => {
+      toast.success(variables.is_fake ? 'Lead flagged as fake/invalid.' : 'Lead verified as genuine.');
+      queryClient.invalidateQueries({ queryKey: ['crm', 'leads'] });
+      queryClient.invalidateQueries({ queryKey: ['sales', 'salesmen'] });
+      queryClient.invalidateQueries({ queryKey: ['sales', 'targets'] });
+      setAuditModalOpen(false);
+    },
+    onError: (err: ApiError) => {
+      toast.error(err?.response?.data?.message || 'Validation failed');
+    },
+  });
+
+  // Convert Lead to Customer Mutation
+  const convertMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return api.post(`/sales/leads/${id}/convert`);
+    },
+    onSuccess: () => {
+      toast.success('Lead converted to Customer Account (Closed Won)!');
+      queryClient.invalidateQueries({ queryKey: ['crm', 'leads'] });
+      queryClient.invalidateQueries({ queryKey: ['sales', 'customers'] });
+      queryClient.invalidateQueries({ queryKey: ['sales', 'salesmen'] });
+    },
+    onError: (err: ApiError) => {
+      toast.error(err?.response?.data?.message || 'Conversion failed');
+    },
+  });
+
   const handleCreateLead = (e: React.FormEvent) => {
     e.preventDefault();
-    const newLead: Lead = {
-      id: Date.now(),
-      uuid: `lead-${Date.now()}`,
-      name: formData.name,
-      company_name: formData.company_name || null,
-      email: formData.email,
-      phone: formData.phone,
-      status: formData.status,
-      source: formData.source,
-      deal_value: formData.deal_value || '0.00',
-      currency_code: currencyCode,
-      assigned_to: formData.assigned_to || 'Unassigned',
-      expected_close_date: formData.expected_close_date || null,
-      notes: formData.notes || null,
-      created_at: new Date().toISOString().slice(0, 10),
-    };
+    createLeadMutation.mutate(formData);
+  };
 
-    queryClient.setQueryData<Lead[]>(['crm', 'leads'], (prev = []) => [newLead, ...prev]);
-    toast.success('Lead captured successfully.');
-    setShowCreateModal(false);
-    setFormData({
-      name: '',
-      company_name: '',
-      email: '',
-      phone: '',
-      status: 'new',
-      source: 'storefront',
-      deal_value: '',
-      assigned_to: '',
-      expected_close_date: '',
-      notes: '',
+  const handleOpenAuditModal = (lead: Lead) => {
+    setActiveLeadForAudit(lead);
+    setIsFakeCheck(Boolean(lead.is_fake));
+    setAuditReason(lead.validation_notes || '');
+    setAuditModalOpen(true);
+  };
+
+  const handleConfirmAudit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeLeadForAudit) return;
+    validateFakeMutation.mutate({
+      id: activeLeadForAudit.id,
+      is_fake: isFakeCheck,
+      validation_notes: auditReason,
     });
   };
 
-  const handleUpdateStage = (id: number, newStage: LeadStatus) => {
-    queryClient.setQueryData<Lead[]>(['crm', 'leads'], (prev = []) =>
-      prev.map((l) => (l.id === id ? { ...l, status: newStage } : l))
-    );
-    toast.success(`Lead moved to ${newStage}.`);
-  };
-
   const filteredLeads = leads.filter((l) => {
+    const q = search.toLowerCase();
     const matchesSearch =
-      l.name.toLowerCase().includes(search.toLowerCase()) ||
-      (l.company_name && l.company_name.toLowerCase().includes(search.toLowerCase())) ||
-      l.email.toLowerCase().includes(search.toLowerCase()) ||
-      l.phone.includes(search);
+      l.name.toLowerCase().includes(q) ||
+      (l.company_name && l.company_name.toLowerCase().includes(q)) ||
+      (l.email && l.email.toLowerCase().includes(q)) ||
+      (l.phone && l.phone.includes(q)) ||
+      (l.lead_number && l.lead_number.toLowerCase().includes(q));
     const matchesStage = stageFilter === 'all' || l.status === stageFilter;
     return matchesSearch && matchesStage;
   });
 
   const totalPipelineValue = leads
-    .filter((l) => l.status !== 'lost')
+    .filter((l) => l.status !== 'lost' && !l.is_fake)
     .reduce((sum, l) => sum + parseFloat(l.deal_value || '0'), 0);
 
   const wonDealsValue = leads
     .filter((l) => l.status === 'won')
     .reduce((sum, l) => sum + parseFloat(l.deal_value || '0'), 0);
 
+  const fakeCount = leads.filter((l) => l.is_fake || l.status === 'fake').length;
+  const validCount = leads.length - fakeCount;
+
   return (
     <div className="space-y-6">
-      {/* Metric Cards Banner */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-default bg-surface p-4.5 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">
-              Active Pipeline Value
-            </span>
-            <div className="p-2 rounded-xl bg-primary-subtle text-primary border border-primary/20">
-              <TrendingUp className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 text-xl font-bold font-mono text-default">
-            {formatCurrency(totalPipelineValue)}
-          </div>
-          <div className="mt-1 text-[11px] text-muted">
-            {leads.filter((l) => l.status !== 'won' && l.status !== 'lost').length} active deals in progress
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-default bg-surface p-4.5 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">
-              Closed Won Value
-            </span>
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-              <DollarSign className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
-            {formatCurrency(wonDealsValue)}
-          </div>
-          <div className="mt-1 text-[11px] text-muted">
-            {leads.filter((l) => l.status === 'won').length} successfully won contracts
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-default bg-surface p-4.5 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">
-              Win Rate %
-            </span>
-            <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
-              <CheckCircle2 className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 text-xl font-bold font-mono text-default">
-            {(leads.length > 0 ? (leads.filter((l) => l.status === 'won').length / leads.length) * 100 : 0).toFixed(1)}%
-          </div>
-          <div className="mt-1 text-[11px] text-muted">
-            Conversion rate across all channels
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-default bg-surface p-4.5 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">
-              New Inquiries (This Month)
-            </span>
-            <div className="p-2 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
-              <Clock className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 text-xl font-bold font-mono text-default">
-            {leads.filter((l) => l.status === 'new').length}
-          </div>
-          <div className="mt-1 text-[11px] text-muted">
-            Awaiting sales rep assignment
-          </div>
-        </div>
-      </div>
-
-      {/* Control Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5 flex-1 max-w-md">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted" />
-            <input
-              type="text"
-              placeholder="Search leads by name, company, email or phone..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-default bg-surface pl-9 pr-3.5 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
-            />
-          </div>
-
-          <select
-            value={stageFilter}
-            onChange={(e) => setStageFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface px-3 py-2 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
-          >
-            <option value="all">All Stages</option>
-            {STAGES.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-
-          <button
-            type="button"
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface px-3 text-xs font-medium text-muted hover:text-default disabled:opacity-50 transition-colors cursor-pointer"
-            title="Refresh Leads"
-          >
-            <RefreshCw className={`size-3.5 ${isFetching ? 'animate-spin' : ''}`} />
-          </button>
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-bold text-default">Commercial Leads Pipeline & CRM</h2>
+          <p className="text-xs text-muted">
+            Omnichannel lead generation, stage qualification, fake lead audit gate, and account conversion.
+          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -368,96 +417,214 @@ export function LeadsSection() {
         </div>
       </div>
 
+      {/* KPI Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard
+          label="Total Pipeline Value"
+          value={formatCurrency(totalPipelineValue)}
+          subValue={`${validCount} active qualified leads`}
+          icon={<DollarSign className="w-4 h-4 text-primary" />}
+        />
+        <KPICard
+          label="Closed Won Revenue"
+          value={formatCurrency(wonDealsValue)}
+          subValue={`${leads.filter((l) => l.status === 'won').length} converted customers`}
+          alert="success"
+          icon={<TrendingUp className="w-4 h-4 text-emerald-500" />}
+        />
+        <KPICard
+          label="Conversion Ratio"
+          value={`${leads.length > 0 ? ((leads.filter((l) => l.status === 'won').length / leads.length) * 100).toFixed(1) : 0}%`}
+          subValue="Won deals / total leads captured"
+          icon={<CheckCircle2 className="w-4 h-4 text-info" />}
+        />
+        <KPICard
+          label="Fake / Invalid Leads"
+          value={fakeCount}
+          subValue="Filtered by audit team"
+          {...(fakeCount > 0 ? { alert: 'danger' as const } : {})}
+          icon={<AlertTriangle className="w-4 h-4 text-danger" />}
+        />
+      </div>
+
+      {/* Search & Filter Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 flex-1 max-w-md">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted" />
+            <input
+              type="text"
+              placeholder="Search leads by name, company, phone, lead ID..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-xl border border-default bg-surface pl-9 pr-3.5 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
+            />
+          </div>
+
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Stages' },
+              ...STAGES.map((s) => ({ value: s.id, label: s.label, colorDot: s.dotBg })),
+            ]}
+            value={stageFilter}
+            onChange={(val) => setStageFilter(val)}
+            size="sm"
+            aria-label="Filter leads by stage"
+          />
+
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface px-3 text-xs font-medium text-muted hover:text-default disabled:opacity-50 transition-colors cursor-pointer"
+            title="Refresh Leads"
+          >
+            <RefreshCw className={`size-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+      </div>
+
       {/* Kanban Board View */}
       {viewMode === 'kanban' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3.5 overflow-x-auto pb-4">
-          {STAGES.map((stage) => {
-            const stageLeads = filteredLeads.filter((l) => l.status === stage.id);
-            const stageValue = stageLeads.reduce((sum, l) => sum + parseFloat(l.deal_value || '0'), 0);
+        <div className="w-full overflow-x-auto pb-6 pt-1">
+          <div className="flex gap-4 items-start min-w-max">
+            {STAGES.map((stage) => {
+              const stageLeads = filteredLeads.filter((l) => l.status === stage.id);
+              const stageValue = stageLeads.reduce((sum, l) => sum + parseFloat(l.deal_value || '0'), 0);
 
-            return (
-              <div
-                key={stage.id}
-                className="flex flex-col rounded-2xl border border-default bg-surface-sunken/60 p-3 min-w-[240px]"
-              >
-                {/* Column Header */}
-                <div className="flex items-center justify-between pb-2.5 border-b border-default mb-3">
-                  <div>
-                    <h3 className={`text-xs font-bold ${stage.tone}`}>{stage.label}</h3>
-                    <div className="text-[10px] font-mono text-muted">
-                      {formatCurrency(stageValue)}
+              return (
+                <div
+                  key={stage.id}
+                  className="flex flex-col rounded-2xl border border-default bg-surface-sunken/50 p-3.5 w-72.5 shrink-0 shadow-2xs transition-all"
+                >
+                  {/* Column Header */}
+                  <div className="flex items-center justify-between pb-3 border-b border-default mb-3">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`size-2 rounded-full ${stage.dotBg}`} />
+                        <h3 className={`text-xs font-bold ${stage.tone}`}>{stage.label}</h3>
+                      </div>
+                      <div className="text-[11px] font-mono font-semibold text-muted mt-0.5">
+                        {formatCurrency(stageValue)}
+                      </div>
                     </div>
+                    <span className="flex h-5 min-w-5 px-1.5 items-center justify-center rounded-full bg-surface text-[10px] font-bold text-default border border-default shadow-2xs">
+                      {stageLeads.length}
+                    </span>
                   </div>
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-surface text-[10px] font-bold text-default border border-default">
-                    {stageLeads.length}
-                  </span>
-                </div>
 
-                {/* Cards Container */}
-                <div className="space-y-2.5 flex-1 overflow-y-auto max-h-[600px] pr-1">
-                  {stageLeads.length === 0 ? (
-                    <div className="py-8 text-center text-[11px] text-muted border border-dashed border-default rounded-xl">
-                      No leads
-                    </div>
-                  ) : (
-                    stageLeads.map((lead) => (
-                      <div
-                        key={lead.id}
-                        className="rounded-xl border border-default bg-surface p-3.5 shadow-2xs hover:shadow-sm transition-all hover:border-primary/40 space-y-2.5"
-                      >
-                        <div className="flex items-start justify-between gap-1.5">
-                          <div>
-                            <div className="text-xs font-bold text-default leading-tight">{lead.name}</div>
-                            {lead.company_name && (
-                              <div className="text-[11px] text-muted flex items-center gap-1 mt-0.5">
-                                <Building2 className="h-3 w-3" />
-                                <span className="truncate">{lead.company_name}</span>
+                  {/* Cards Container */}
+                  <div className="space-y-3 flex-1 overflow-y-auto max-h-155 pr-0.5">
+                    {stageLeads.length === 0 ? (
+                      <div className="py-10 text-center text-xs text-muted border-2 border-dashed border-default/70 rounded-xl bg-surface/30">
+                        <p className="font-semibold">No leads</p>
+                        <p className="text-[10px] text-muted/70 mt-0.5">Stage is empty</p>
+                      </div>
+                    ) : (
+                      stageLeads.map((lead) => (
+                        <div
+                          key={lead.id}
+                          className={`group rounded-xl border p-3.5 shadow-2xs transition-all space-y-2.5 ${
+                            lead.is_fake
+                              ? 'border-danger/40 bg-danger-subtle/20'
+                              : 'border-default bg-surface hover:border-primary/40'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-1.5">
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-bold text-default leading-tight truncate group-hover:text-primary transition-colors">
+                                {lead.name}
                               </div>
+                              <div className="text-[10px] font-mono text-muted mt-0.5">
+                                {lead.lead_number || `LD-${lead.id}`}
+                              </div>
+                              {lead.company_name && (
+                                <div className="text-[11px] text-muted flex items-center gap-1 mt-0.5 truncate">
+                                  <Building2 className="h-3 w-3 shrink-0 text-muted" />
+                                  <span className="truncate">{lead.company_name}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {lead.is_fake ? (
+                              <Badge tone="danger-subtle" className="text-[9px]">
+                                Fake Lead
+                              </Badge>
+                            ) : (
+                              <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-surface-sunken text-muted border border-default font-medium capitalize">
+                                {lead.source.replace('_', ' ')}
+                              </span>
                             )}
                           </div>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-sunken text-muted border border-default capitalize">
-                            {lead.source.replace('_', ' ')}
-                          </span>
-                        </div>
 
-                        <div className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                          {formatCurrency(lead.deal_value || '0')}
-                        </div>
+                          <div className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                            {formatCurrency(lead.deal_value || '0')}
+                          </div>
 
-                        {lead.notes && (
-                          <p className="text-[11px] text-muted line-clamp-2 leading-relaxed">
-                            {lead.notes}
-                          </p>
-                        )}
-
-                        <div className="pt-2 border-t border-default/70 flex items-center justify-between text-[10px] text-muted">
-                          <span className="truncate max-w-[110px]">{lead.assigned_to || 'Unassigned'}</span>
-                          {lead.expected_close_date && (
-                            <span className="font-mono">{lead.expected_close_date}</span>
+                          {lead.notes && (
+                            <p className="text-[11px] text-muted line-clamp-2 leading-relaxed bg-surface-sunken/50 p-2 rounded-lg border border-default/40">
+                              {lead.notes}
+                            </p>
                           )}
-                        </div>
 
-                        {/* Quick Stage Mover */}
-                        <div className="flex items-center gap-1 pt-1">
-                          <select
-                            value={lead.status}
-                            onChange={(e) => handleUpdateStage(lead.id, e.target.value as LeadStatus)}
-                            className="w-full text-[10px] rounded-lg border border-default bg-surface-sunken px-2 py-1 text-default focus:outline-none cursor-pointer"
-                          >
-                            {STAGES.map((s) => (
-                              <option key={s.id} value={s.id}>
-                                Move to {s.label}
-                              </option>
-                            ))}
-                          </select>
+                          {lead.is_fake && lead.validation_notes && (
+                            <div className="text-[10px] text-danger p-1.5 rounded-lg bg-danger-subtle/40 border border-danger/30">
+                              <span className="font-bold">Audit Reason: </span>
+                              {lead.validation_notes}
+                            </div>
+                          )}
+
+                          <div className="pt-2 border-t border-default/70 flex items-center justify-between text-[10px] text-muted">
+                            <span className="truncate max-w-30 font-medium">{String(lead.assigned_to || 'Unassigned')}</span>
+                            {lead.expected_close_date && (
+                              <span className="font-mono">{lead.expected_close_date}</span>
+                            )}
+                          </div>
+
+                          {/* Quick Action Buttons */}
+                          <div className="pt-1 flex items-center gap-1.5">
+                            <select
+                              value={lead.status}
+                              onChange={(e) =>
+                                updateStageMutation.mutate({ id: lead.id, stage: e.target.value as LeadStatus })
+                              }
+                              className="flex-1 text-[11px] rounded-lg border border-default bg-surface-sunken px-2 py-1 text-default focus:border-primary focus:outline-none cursor-pointer"
+                            >
+                              {STAGES.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                  Move to {s.label}
+                                </option>
+                              ))}
+                            </select>
+
+                            <button
+                              type="button"
+                              onClick={() => handleOpenAuditModal(lead)}
+                              className="p-1 rounded-lg text-muted hover:text-danger hover:bg-danger-subtle border border-default/50 transition-colors"
+                              title="Audit Lead (Mark Fake/Genuine)"
+                            >
+                              <AlertTriangle className="size-3.5" />
+                            </button>
+
+                            {lead.status !== 'won' && !lead.is_fake && (
+                              <button
+                                type="button"
+                                onClick={() => convertMutation.mutate(lead.id)}
+                                className="p-1 rounded-lg text-muted hover:text-primary hover:bg-primary-subtle border border-default/50 transition-colors"
+                                title="Convert Lead to Customer Account"
+                              >
+                                <UserCheck className="size-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))
-                  )}
+                      ))
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       ) : (
         /* Table View */
@@ -468,11 +635,11 @@ export function LeadsSection() {
                 <tr>
                   <th className="px-4 py-3.5">Lead Contact</th>
                   <th className="px-4 py-3.5">Company</th>
-                  <th className="px-4 py-3.5">Channel / Source</th>
+                  <th className="px-4 py-3.5">Source</th>
                   <th className="px-4 py-3.5">Est. Deal Value</th>
                   <th className="px-4 py-3.5">Stage</th>
                   <th className="px-4 py-3.5">Assigned Rep</th>
-                  <th className="px-4 py-3.5">Target Close</th>
+                  <th className="px-4 py-3.5">Audit Status</th>
                   <th className="px-4 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
@@ -484,16 +651,25 @@ export function LeadsSection() {
                     </td>
                   </tr>
                 ) : (
-                  filteredLeads.map((l) => {
+                  filteredLeads.map((l, idx) => {
                     const currentStage = STAGES.find((s) => s.id === l.status);
+                    const isWon = l.status === 'won';
+                    const isFake = Boolean(l.is_fake || l.status === 'fake');
+                    const canConvert = !isWon && !isFake;
+
                     return (
                       <tr key={l.id} className="hover:bg-surface-sunken/60 transition-colors">
                         <td className="px-4 py-3.5">
                           <div className="font-bold text-default">{l.name}</div>
+                          <div className="text-[10px] font-mono text-muted">{l.lead_number || `LD-${l.id}`}</div>
                           <div className="text-[11px] text-muted flex items-center gap-2 mt-0.5">
                             <span>{l.phone}</span>
-                            <span>•</span>
-                            <span>{l.email}</span>
+                            {l.email && (
+                              <>
+                                <span>•</span>
+                                <span>{l.email}</span>
+                              </>
+                            )}
                           </div>
                         </td>
                         <td className="px-4 py-3.5 text-muted font-medium">
@@ -513,23 +689,132 @@ export function LeadsSection() {
                           </span>
                         </td>
                         <td className="px-4 py-3.5 text-muted">
-                          {l.assigned_to || 'Unassigned'}
+                          {String(l.assigned_to || 'Unassigned')}
                         </td>
-                        <td className="px-4 py-3.5 text-muted font-mono text-[11px]">
-                          {l.expected_close_date || '-'}
+                        <td className="px-4 py-3.5">
+                          {l.is_fake ? (
+                            <Badge tone="danger-subtle" className="text-[9px]">
+                              Fake Lead
+                            </Badge>
+                          ) : (
+                            <Badge tone="success-subtle" className="text-[9px]">
+                              Valid
+                            </Badge>
+                          )}
                         </td>
                         <td className="px-4 py-3.5 text-right">
-                          <select
-                            value={l.status}
-                            onChange={(e) => handleUpdateStage(l.id, e.target.value as LeadStatus)}
-                            className="text-[10px] rounded-lg border border-default bg-surface-sunken px-2 py-1 text-default focus:outline-none cursor-pointer"
-                          >
-                            {STAGES.map((s) => (
-                              <option key={s.id} value={s.id}>
-                                {s.label}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="lead-actions-menu-container flex items-center justify-end gap-1.5 relative">
+                            {/* Primary Quick Convert Action */}
+                            {canConvert && (
+                              <button
+                                type="button"
+                                onClick={() => convertMutation.mutate(l.id)}
+                                disabled={convertMutation.isPending}
+                                className="inline-flex items-center gap-1 rounded-xl bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-all cursor-pointer disabled:opacity-50 shadow-2xs"
+                                title="Convert lead to Customer Account"
+                              >
+                                <UserCheck className="size-3" />
+                                <span>Convert</span>
+                              </button>
+                            )}
+
+                            {isWon && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                <CheckCircle2 className="size-3" />
+                                <span>Won</span>
+                              </span>
+                            )}
+
+                            {/* Dropdown Menu Trigger (•••) */}
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveMenuLeadId(activeMenuLeadId === l.id ? null : l.id);
+                                }}
+                                className={cn(
+                                  "flex size-7 items-center justify-center rounded-xl border transition-all cursor-pointer shadow-2xs",
+                                  activeMenuLeadId === l.id
+                                    ? "border-primary bg-primary/10 text-primary"
+                                    : "border-default bg-surface hover:bg-surface-sunken hover:border-default/80 text-muted hover:text-default"
+                                )}
+                                title="Lead actions & stage menu"
+                              >
+                                <MoreHorizontal className="size-3.5" />
+                              </button>
+
+                              {/* Floating Dropdown Menu */}
+                              {activeMenuLeadId === l.id && (
+                                <div
+                                  className={cn(
+                                    "absolute right-0 z-50 w-52 rounded-2xl border border-default bg-surface p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-100 text-left",
+                                    idx >= filteredLeads.length - 2 ? "bottom-full mb-1.5" : "top-full mt-1.5"
+                                  )}
+                                >
+                                  {/* View Details */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedLeadForView(l);
+                                      setActiveMenuLeadId(null);
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-medium text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                                  >
+                                    <Eye className="size-3.5 text-muted shrink-0" />
+                                    <span>View Lead Details</span>
+                                  </button>
+
+                                  {/* Audit Gate */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleOpenAuditModal(l);
+                                      setActiveMenuLeadId(null);
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-medium text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                                  >
+                                    <ShieldAlert className="size-3.5 text-amber-500 shrink-0" />
+                                    <span>Audit Quality Gate</span>
+                                  </button>
+
+                                  <div className="my-1 border-t border-default/70" />
+
+                                  {/* Change Stage Section */}
+                                  <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted">
+                                    Change Stage
+                                  </div>
+                                  <div className="space-y-0.5 max-h-48 overflow-y-auto pr-0.5">
+                                    {STAGES.map((s) => {
+                                      const isCurrent = l.status === s.id;
+                                      return (
+                                        <button
+                                          key={s.id}
+                                          type="button"
+                                          onClick={() => {
+                                            updateStageMutation.mutate({ id: l.id, stage: s.id });
+                                            setActiveMenuLeadId(null);
+                                          }}
+                                          className={cn(
+                                            "flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs font-medium transition-colors cursor-pointer",
+                                            isCurrent
+                                              ? "bg-primary/10 text-primary font-bold"
+                                              : "text-default hover:bg-surface-sunken"
+                                          )}
+                                        >
+                                          <div className="flex items-center gap-2 truncate">
+                                            <span className={cn("size-2 rounded-full shrink-0", s.dotBg)} />
+                                            <span className="truncate">{s.label}</span>
+                                          </div>
+                                          {isCurrent && <Check className="size-3 text-primary shrink-0" />}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -537,6 +822,225 @@ export function LeadsSection() {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Fake Lead Audit Modal */}
+      {auditModalOpen && activeLeadForAudit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-default bg-surface p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-default pb-3">
+              <div>
+                <h3 className="text-base font-bold text-default">Commercial Lead Verification Audit</h3>
+                <p className="text-xs text-muted mt-0.5">
+                  {activeLeadForAudit.name} ({activeLeadForAudit.phone || 'No phone'})
+                </p>
+              </div>
+              <button
+                onClick={() => setAuditModalOpen(false)}
+                className="text-muted hover:text-default cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmAudit} className="space-y-4 text-xs">
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-sunken border border-default/60">
+                <input
+                  type="checkbox"
+                  id="isFakeCheckbox"
+                  checked={isFakeCheck}
+                  onChange={(e) => setIsFakeCheck(e.target.checked)}
+                  className="rounded border-default text-danger focus:ring-danger size-4 cursor-pointer"
+                />
+                <label htmlFor="isFakeCheckbox" className="font-semibold text-default cursor-pointer">
+                  Mark this entry as Fake / Fraudulent Lead
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                  Audit Findings / Reason *
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="e.g. Number not in service; candidate made inquiry with non-existent company info."
+                  value={auditReason}
+                  onChange={(e) => setAuditReason(e.target.value)}
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-default">
+                <button
+                  type="button"
+                  onClick={() => setAuditModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-default text-xs font-medium text-muted hover:text-default"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={validateFakeMutation.isPending}
+                  className="px-4 py-2 rounded-xl bg-primary text-xs font-medium text-white shadow-xs hover:bg-primary-hover disabled:opacity-50"
+                >
+                  {validateFakeMutation.isPending ? 'Saving...' : 'Save Audit Status'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Lead Details Modal */}
+      {selectedLeadForView && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-lg rounded-2xl border border-default bg-surface p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-default pb-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold text-default">{selectedLeadForView.name}</h3>
+                  <Badge
+                    tone={selectedLeadForView.is_fake ? 'danger-subtle' : 'success-subtle'}
+                    className="text-[10px]"
+                  >
+                    {selectedLeadForView.is_fake ? 'Fake / Invalid' : 'Verified Lead'}
+                  </Badge>
+                </div>
+                <p className="text-xs font-mono text-muted mt-0.5">
+                  {selectedLeadForView.lead_number || `LD-${selectedLeadForView.id}`}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedLeadForView(null)}
+                className="text-muted hover:text-default cursor-pointer p-1 rounded-lg hover:bg-surface-sunken"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              {/* Core Details Grid */}
+              <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-surface-sunken border border-default/60">
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">Company</span>
+                  <div className="font-semibold text-default mt-0.5 flex items-center gap-1.5">
+                    <Building2 className="size-3.5 text-muted shrink-0" />
+                    <span>{selectedLeadForView.company_name || 'Individual / Walk-in'}</span>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">Est. Deal Value</span>
+                  <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                    {formatCurrency(selectedLeadForView.deal_value || '0')}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">Phone Contact</span>
+                  <div className="font-mono text-default mt-0.5 flex items-center gap-1.5">
+                    <Phone className="size-3.5 text-muted shrink-0" />
+                    {selectedLeadForView.phone ? (
+                      <a href={`tel:${selectedLeadForView.phone}`} className="hover:underline text-primary">
+                        {selectedLeadForView.phone}
+                      </a>
+                    ) : (
+                      <span className="text-muted">No phone</span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">Email Address</span>
+                  <div className="text-default mt-0.5 flex items-center gap-1.5 truncate">
+                    <Mail className="size-3.5 text-muted shrink-0" />
+                    {selectedLeadForView.email ? (
+                      <a href={`mailto:${selectedLeadForView.email}`} className="hover:underline text-primary truncate">
+                        {selectedLeadForView.email}
+                      </a>
+                    ) : (
+                      <span className="text-muted">No email</span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">Source</span>
+                  <span className="capitalize font-medium text-default mt-0.5 block">
+                    {selectedLeadForView.source.replace('_', ' ')}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">Assigned Rep</span>
+                  <span className="font-medium text-default mt-0.5 block">
+                    {String(selectedLeadForView.assigned_to || 'Unassigned')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Requirement Notes */}
+              {selectedLeadForView.notes && (
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">
+                    Inquiry Notes & Requirements
+                  </span>
+                  <div className="p-3 rounded-xl bg-surface-sunken/60 border border-default text-default/90 leading-relaxed whitespace-pre-wrap">
+                    {selectedLeadForView.notes}
+                  </div>
+                </div>
+              )}
+
+              {/* Validation Notes */}
+              {selectedLeadForView.validation_notes && (
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase text-danger tracking-wider block">
+                    Audit Notes & Validation History
+                  </span>
+                  <div className="p-3 rounded-xl bg-danger-subtle/30 border border-danger/30 text-danger leading-relaxed">
+                    {selectedLeadForView.validation_notes}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="flex items-center justify-between pt-3 border-t border-default">
+              <button
+                type="button"
+                onClick={() => {
+                  handleOpenAuditModal(selectedLeadForView);
+                  setSelectedLeadForView(null);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-default px-3 py-2 text-xs font-semibold text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+              >
+                <ShieldAlert className="size-3.5 text-amber-500" />
+                <span>Audit Gate</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedLeadForView(null)}
+                  className="rounded-xl border border-default px-4 py-2 text-xs font-medium text-muted hover:text-default transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+                {selectedLeadForView.status !== 'won' && !selectedLeadForView.is_fake && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      convertMutation.mutate(selectedLeadForView.id);
+                      setSelectedLeadForView(null);
+                    }}
+                    disabled={convertMutation.isPending}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <UserCheck className="size-3.5" />
+                    <span>Convert to Customer</span>
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -588,26 +1092,24 @@ export function LeadsSection() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
-                    Phone Number *
+                    Phone Number
                   </label>
                   <input
                     type="tel"
-                    required
-                    placeholder="+8801700000000"
+                    placeholder="+8801..."
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default focus:border-primary focus:outline-none"
+                    className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 font-mono text-default focus:border-primary focus:outline-none"
                   />
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
-                    Email Address *
+                    Email Address
                   </label>
                   <input
                     type="email"
-                    required
-                    placeholder="tariqul@company.com"
+                    placeholder="name@company.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default focus:border-primary focus:outline-none"
@@ -615,67 +1117,48 @@ export function LeadsSection() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
-                    Estimated Deal Value ({currencySymbol} {currencyCode})
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="50000"
-                    value={formData.deal_value}
-                    onChange={(e) => setFormData({ ...formData, deal_value: e.target.value })}
-                    className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default focus:border-primary focus:outline-none"
-                  />
-                </div>
-
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
                     Lead Source
                   </label>
                   <select
                     value={formData.source}
-                    onChange={(e) => setFormData({ ...formData, source: e.target.value as LeadSource })}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, source: e.target.value as LeadSource })}
                     className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-default focus:border-primary focus:outline-none"
                   >
-                    <option value="storefront">Storefront E-Commerce</option>
-                    <option value="website">Corporate Website</option>
-                    <option value="referral">Referral / Word of Mouth</option>
-                    <option value="cold_outreach">Direct Sales Call / Field</option>
-                    <option value="event">Trade Fair / Expo</option>
-                    <option value="social_media">Social Media Channel</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
-                    Initial Stage
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as LeadStatus })}
-                    className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-default focus:border-primary focus:outline-none"
-                  >
-                    {STAGES.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.label}
-                      </option>
-                    ))}
+                    <option value="storefront">Storefront / Web</option>
+                    <option value="walk_in">Walk-in Customer</option>
+                    <option value="phone">Inbound Phone Call</option>
+                    <option value="field_visit">Field Visit / Rep</option>
+                    <option value="referral">Referral</option>
+                    <option value="cold_outreach">Cold Outreach</option>
+                    <option value="event">Trade Event</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
-                    Assigned Sales Representative
+                    Est. Deal Value (৳)
                   </label>
                   <input
-                    type="text"
-                    placeholder="e.g. Kazi Farhan"
-                    value={formData.assigned_to}
-                    onChange={(e) => setFormData({ ...formData, assigned_to: e.target.value })}
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={formData.deal_value}
+                    onChange={(e) => setFormData({ ...formData, deal_value: e.target.value })}
+                    className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 font-mono text-default focus:border-primary focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                    Target Close Date
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.expected_close_date}
+                    onChange={(e) => setFormData({ ...formData, expected_close_date: e.target.value })}
                     className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default focus:border-primary focus:outline-none"
                   />
                 </div>
@@ -683,42 +1166,31 @@ export function LeadsSection() {
 
               <div>
                 <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
-                  Expected Close Date
-                </label>
-                <input
-                  type="date"
-                  value={formData.expected_close_date}
-                  onChange={(e) => setFormData({ ...formData, expected_close_date: e.target.value })}
-                  className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default focus:border-primary focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
-                  Inquiry Notes & Requirements
+                  Inquiry Notes & Commercial Requirements
                 </label>
                 <textarea
                   rows={3}
-                  placeholder="Detail the products, quantities, specifications or special packaging requirements..."
+                  placeholder="Requirement details, quantity specifications, custom branding..."
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default focus:border-primary focus:outline-none"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-default">
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-default">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="rounded-xl border border-default px-4 py-2 text-muted hover:bg-surface-sunken hover:text-default transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl border border-default text-xs font-medium text-muted hover:text-default"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-primary px-5 py-2 font-medium text-white shadow-xs hover:bg-primary-hover transition-colors cursor-pointer"
+                  disabled={createLeadMutation.isPending}
+                  className="px-4 py-2 rounded-xl bg-primary text-xs font-medium text-white shadow-xs hover:bg-primary-hover disabled:opacity-50"
                 >
-                  Save Lead
+                  {createLeadMutation.isPending ? 'Capturing...' : 'Capture Lead'}
                 </button>
               </div>
             </form>

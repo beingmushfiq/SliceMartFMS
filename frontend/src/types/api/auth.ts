@@ -13,6 +13,8 @@ export interface User {
   default_branch_id: number | null;
   default_factory_id: number | null;
   default_warehouse_id: number | null;
+  role?: string;
+  roles?: string[];
 }
 
 export interface TenantInfo {

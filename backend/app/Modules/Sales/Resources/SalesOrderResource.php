@@ -42,6 +42,7 @@ final class SalesOrderResource extends JsonResource
             'delivery_type'  => $this->delivery_type,
             'status'         => $this->status,
             'payment_status' => $this->payment_status,
+            'shipping_address' => $this->shipping_address,
             'notes'          => $this->notes,
             'confirmed_at'   => $this->confirmed_at?->toIso8601String(),
             'cancelled_at'   => $this->cancelled_at?->toIso8601String(),

@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\DB;
 
 final class ApproveInvoiceAction
 {
+    public function __construct(
+        private readonly SyncSalesmanAchievementAction $syncAchievement = new SyncSalesmanAchievementAction()
+    ) {}
+
     public function execute(Invoice $invoice, int $userId): Invoice
     {
         return DB::transaction(function () use ($invoice, $userId): Invoice {
@@ -20,6 +24,14 @@ final class ApproveInvoiceAction
             $invoice->posted_by = $userId;
             $invoice->posted_at = now();
             $invoice->save();
+
+            $month = $invoice->invoice_date ? \Carbon\Carbon::parse((string) $invoice->invoice_date)->format('Y-m') : now()->format('Y-m');
+            $this->syncAchievement->execute(
+                (int) $invoice->tenant_id,
+                $invoice->salesman_id ? (int) $invoice->salesman_id : null,
+                $invoice->created_by ? (int) $invoice->created_by : $userId,
+                $month
+            );
 
             return $invoice->refresh();
         });

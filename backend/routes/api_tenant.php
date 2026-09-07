@@ -34,6 +34,10 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             Route::patch('change-password', [App\Modules\Auth\Controllers\AuthController::class, 'changePassword'])->name('change-password');
         });
 
+        // ── Tenant Operational Dashboard ──────────────────────────────
+        Route::get('dashboard/metrics', [App\Modules\Platform\Controllers\TenantDashboardController::class, 'metrics'])
+            ->name('dashboard.metrics');
+
         // ── Catalogue: Units ──────────────────────────────────────────
         Route::prefix('units')->name('units.')->group(static function (): void {
             Route::get('options', [App\Modules\Catalogue\Controllers\UnitController::class, 'options'])
@@ -109,6 +113,19 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
         });
 
         Route::prefix('bill-of-materials')->name('bill-of-materials.')->group(static function (): void {
+            Route::get('/', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'index'])
+                ->middleware('permission:catalog.bom.view')->name('index');
+            Route::post('/', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'store'])
+                ->middleware('permission:catalog.bom.manage')->name('store');
+            Route::get('{billOfMaterial:uuid}', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'show'])
+                ->middleware('permission:catalog.bom.view')->name('show');
+            Route::patch('{billOfMaterial:uuid}', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'update'])
+                ->middleware('permission:catalog.bom.manage')->name('update');
+            Route::delete('{billOfMaterial:uuid}', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'destroy'])
+                ->middleware('permission:catalog.bom.manage')->name('destroy');
+        });
+
+        Route::prefix('boms')->name('boms.')->group(static function (): void {
             Route::get('/', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'index'])
                 ->middleware('permission:catalog.bom.view')->name('index');
             Route::post('/', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'store'])
@@ -313,6 +330,16 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::delete('{wastageRecord:uuid}', [App\Modules\QC\Controllers\WastageRecordController::class, 'destroy'])
                     ->middleware('permission:qc.wastage.delete')->name('destroy');
             });
+
+            Route::prefix('rework-orders')->name('rework-orders.')->group(static function (): void {
+                Route::get('/', [App\Modules\QC\Controllers\ReworkOrderController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\QC\Controllers\ReworkOrderController::class, 'store'])->name('store');
+                Route::get('{id}', [App\Modules\QC\Controllers\ReworkOrderController::class, 'show'])->name('show');
+                Route::patch('{id}', [App\Modules\QC\Controllers\ReworkOrderController::class, 'update'])->name('update');
+                Route::post('{id}/start', [App\Modules\QC\Controllers\ReworkOrderController::class, 'start'])->name('start');
+                Route::post('{id}/complete', [App\Modules\QC\Controllers\ReworkOrderController::class, 'complete'])->name('complete');
+                Route::delete('{id}', [App\Modules\QC\Controllers\ReworkOrderController::class, 'destroy'])->name('destroy');
+            });
         });
 
         // ── Inventory & Stock Operations ──────────────────────────────
@@ -331,6 +358,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                     ->middleware('permission:inventory.transfer.create')->name('store');
                 Route::get('{id}', [App\Modules\Inventory\Controllers\StockTransferController::class, 'show'])
                     ->middleware('permission:inventory.transfer.view')->name('show');
+                Route::patch('{id}', [App\Modules\Inventory\Controllers\StockTransferController::class, 'update'])
+                    ->middleware('permission:inventory.transfer.create')->name('update');
                 Route::post('{id}/dispatch', [App\Modules\Inventory\Controllers\StockTransferController::class, 'dispatch'])
                     ->middleware('permission:inventory.transfer.approve')->name('dispatch');
                 Route::post('{id}/receive', [App\Modules\Inventory\Controllers\StockTransferController::class, 'receive'])
@@ -346,6 +375,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                     ->middleware('permission:inventory.adjustment.create')->name('store');
                 Route::get('{id}', [App\Modules\Inventory\Controllers\StockAdjustmentController::class, 'show'])
                     ->middleware('permission:inventory.adjustment.view')->name('show');
+                Route::patch('{id}', [App\Modules\Inventory\Controllers\StockAdjustmentController::class, 'update'])
+                    ->middleware('permission:inventory.adjustment.create')->name('update');
                 Route::post('{id}/approve', [App\Modules\Inventory\Controllers\StockAdjustmentController::class, 'approve'])
                     ->middleware('permission:inventory.adjustment.approve')->name('approve');
                 Route::delete('{id}', [App\Modules\Inventory\Controllers\StockAdjustmentController::class, 'destroy'])
@@ -359,10 +390,18 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                     ->middleware('permission:inventory.count.create')->name('store');
                 Route::get('{id}', [App\Modules\Inventory\Controllers\StockCountController::class, 'show'])
                     ->middleware('permission:inventory.count.view')->name('show');
+                Route::patch('{id}', [App\Modules\Inventory\Controllers\StockCountController::class, 'update'])
+                    ->middleware('permission:inventory.count.create')->name('update');
                 Route::post('{id}/reconcile', [App\Modules\Inventory\Controllers\StockCountController::class, 'reconcile'])
                     ->middleware('permission:inventory.count.approve')->name('reconcile');
                 Route::delete('{id}', [App\Modules\Inventory\Controllers\StockCountController::class, 'destroy'])
                     ->middleware('permission:inventory.count.create')->name('destroy');
+            });
+
+            Route::prefix('thresholds')->name('thresholds.')->group(static function (): void {
+                Route::get('/', [App\Modules\Inventory\Controllers\StockThresholdController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\Inventory\Controllers\StockThresholdController::class, 'store'])->name('store');
+                Route::get('alerts', [App\Modules\Inventory\Controllers\StockThresholdController::class, 'alerts'])->name('alerts');
             });
         });
 
@@ -442,6 +481,12 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                     ->middleware('permission:sales.order.view')->name('show');
                 Route::post('{id}/approve', [App\Modules\Sales\Controllers\SalesOrderController::class, 'approve'])
                     ->middleware('permission:sales.order.approve')->name('approve');
+                Route::patch('{id}/status', [App\Modules\Sales\Controllers\SalesOrderController::class, 'updateStatus'])
+                    ->middleware('permission:sales.order.approve')->name('status');
+                Route::post('{id}/payment', [App\Modules\Sales\Controllers\SalesOrderController::class, 'recordPayment'])
+                    ->middleware('permission:sales.order.approve')->name('payment');
+                Route::post('{id}/invoice', [App\Modules\Sales\Controllers\SalesOrderController::class, 'generateInvoice'])
+                    ->middleware('permission:sales.order.approve')->name('invoice');
             });
 
             Route::prefix('invoices')->name('invoices.')->group(static function (): void {
@@ -487,6 +532,61 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::post('{id}/approve', [App\Modules\Sales\Controllers\SalesReturnController::class, 'approve'])
                     ->middleware('permission:sales.return.approve')->name('approve');
             });
+
+            // ── CRM Leads ────────────────────────────────────────────────
+            Route::prefix('leads')->name('leads.')->group(static function (): void {
+                Route::get('/', [App\Modules\Sales\Controllers\CrmLeadController::class, 'index'])
+                    ->name('index');
+                Route::post('/', [App\Modules\Sales\Controllers\CrmLeadController::class, 'store'])
+                    ->name('store');
+                Route::get('{id}', [App\Modules\Sales\Controllers\CrmLeadController::class, 'show'])
+                    ->name('show');
+                Route::put('{id}', [App\Modules\Sales\Controllers\CrmLeadController::class, 'update'])
+                    ->name('update');
+                Route::patch('{id}/stage', [App\Modules\Sales\Controllers\CrmLeadController::class, 'updateStage'])
+                    ->name('stage');
+                Route::post('{id}/validate-fake', [App\Modules\Sales\Controllers\CrmLeadController::class, 'validateFake'])
+                    ->name('validate-fake');
+                Route::post('{id}/convert', [App\Modules\Sales\Controllers\CrmLeadController::class, 'convert'])
+                    ->name('convert');
+                Route::post('{id}/activities', [App\Modules\Sales\Controllers\CrmLeadController::class, 'addActivity'])
+                    ->name('activities');
+            });
+
+            // ── Salesmen & Targets ─────────────────────────────────────────
+            Route::get('salesmen', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'salesmen'])
+                ->name('salesmen');
+            Route::get('salesmen/{employeeId}/dashboard', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'dashboard'])
+                ->name('salesmen.dashboard');
+
+            Route::prefix('targets')->name('targets.')->group(static function (): void {
+                Route::get('/', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'index'])
+                    ->name('index');
+                Route::post('/', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'store'])
+                    ->name('store');
+                Route::get('{id}', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'show'])
+                    ->name('show');
+                Route::put('{id}', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'update'])
+                    ->name('update');
+                Route::delete('{id}', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'destroy'])
+                    ->name('destroy');
+                Route::post('{id}/recalculate', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'recalculate'])
+                    ->name('recalculate');
+            });
+
+            // ── Incentives ────────────────────────────────────────────────
+            Route::prefix('incentives')->name('incentives.')->group(static function (): void {
+                Route::get('policies', [App\Modules\Sales\Controllers\IncentivePolicyController::class, 'policies'])
+                    ->name('policies');
+                Route::post('policies', [App\Modules\Sales\Controllers\IncentivePolicyController::class, 'storePolicy'])
+                    ->name('policies.store');
+                Route::get('calculations', [App\Modules\Sales\Controllers\IncentivePolicyController::class, 'calculations'])
+                    ->name('calculations');
+                Route::post('calculate', [App\Modules\Sales\Controllers\IncentivePolicyController::class, 'calculate'])
+                    ->name('calculate');
+                Route::post('calculations/{id}/approve', [App\Modules\Sales\Controllers\IncentivePolicyController::class, 'approve'])
+                    ->name('calculations.approve');
+            });
         });
 
         // ── POS ───────────────────────────────────────────────────────
@@ -513,6 +613,13 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
 
             Route::post('checkout', [App\Modules\Pos\Controllers\PosCheckoutController::class, 'checkout'])
                 ->middleware('permission:pos.checkout')->name('checkout');
+
+            Route::prefix('held-sales')->name('held-sales.')->group(static function (): void {
+                Route::get('/', [App\Modules\Pos\Controllers\PosHeldSaleController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\Pos\Controllers\PosHeldSaleController::class, 'store'])->name('store');
+                Route::get('{id}', [App\Modules\Pos\Controllers\PosHeldSaleController::class, 'show'])->name('show');
+                Route::delete('{id}', [App\Modules\Pos\Controllers\PosHeldSaleController::class, 'destroy'])->name('destroy');
+            });
         });
 
         // ── Logistics & Courier Dispatch ───────────────────────────────
@@ -632,9 +739,20 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             });
         });
 
+        // Workforce Route Alias for Frontend Compatibility
+        Route::prefix('workforce')->name('workforce.')->group(static function (): void {
+            Route::prefix('employees')->name('employees.')->group(static function (): void {
+                Route::get('/', [App\Modules\HR\Controllers\EmployeeController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\HR\Controllers\EmployeeController::class, 'store'])->name('store');
+                Route::get('{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'show'])->name('show');
+            });
+            Route::get('shifts', [App\Modules\HR\Controllers\EmployeeController::class, 'shifts'])->name('shifts');
+        });
+
         // ── Reports & RMS Engine ──────────────────────────────────────
         Route::prefix('reports')->name('reports.')->group(static function (): void {
             Route::get('/', [App\Modules\Reports\Controllers\ReportRegistryController::class, 'index'])->name('index');
+            Route::get('definitions', [App\Modules\Reports\Controllers\ReportRegistryController::class, 'index'])->name('definitions');
             Route::get('{code}/schema', [App\Modules\Reports\Controllers\ReportDataController::class, 'schema'])->name('schema');
             Route::get('{code}/data', [App\Modules\Reports\Controllers\ReportDataController::class, 'data'])->name('data');
             Route::post('{code}/export', [App\Modules\Reports\Controllers\ReportExportController::class, 'export'])->name('export');
@@ -711,23 +829,25 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
 
 
 
+        // ── Dynamic Tenant Modules ──────────────────────────────────
+        Route::prefix('tenant/modules')->name('tenant.modules.')->group(static function (): void {
+            Route::get('/', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'index'])->name('index');
+            Route::get('nav-order', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'getNavOrder'])->name('nav-order.get');
+            Route::put('nav-order', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'updateNavOrder'])->name('nav-order.update');
+            Route::put('{moduleKey}', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'update'])->name('update');
+            Route::post('batch', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'batchUpdate'])->name('batch');
+        });
+
         // ── Settings & Configuration System ─────────────────────────
         Route::prefix('settings')->name('settings.')->group(static function (): void {
             Route::get('schema', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'schema'])->name('schema');
+            Route::post('upload-asset', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'uploadAsset'])->name('upload-asset');
             Route::get('{group}', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'getGroup'])->name('get');
             Route::put('{group}', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'updateGroup'])->name('update');
             Route::post('{group}/test-connection', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'testConnection'])->name('test-connection');
             Route::post('{group}/reset', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'resetGroup'])->name('reset');
         });
 
-        // ── E-Commerce Fraud Check & Order Verification ─────────────
-        Route::prefix('fraud-check')->name('fraud-check.')->group(static function (): void {
-            Route::get('queue', [\App\Modules\Ecommerce\Controllers\OrderFraudVerificationController::class, 'index'])->name('queue');
-            Route::get('orders/{orderId}', [\App\Modules\Ecommerce\Controllers\OrderFraudVerificationController::class, 'show'])->name('show');
-            Route::post('orders/{orderId}/verify', [\App\Modules\Ecommerce\Controllers\OrderFraudVerificationController::class, 'verify'])->name('verify');
-            Route::post('orders/{orderId}/hold', [\App\Modules\Ecommerce\Controllers\OrderFraudVerificationController::class, 'hold'])->name('hold');
-            Route::post('orders/{orderId}/reject', [\App\Modules\Ecommerce\Controllers\OrderFraudVerificationController::class, 'reject'])->name('reject');
-        });
 
         // ── RBAC & Role Management ──────────────────────────────────
         Route::prefix('roles')->name('roles.')->group(static function (): void {

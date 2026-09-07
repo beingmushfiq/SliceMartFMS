@@ -1,11 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { AlertCircle, Eye, EyeOff, Lock, Mail, Package, Sparkles } from 'lucide-react';
+import { AlertCircle, Boxes, ClipboardCheck, Eye, EyeOff, Factory, Lock, Mail, Moon, Package, ShieldCheck, ShoppingCart, Sun } from 'lucide-react';
 import { useAuthStore } from '../../lib/auth/authStore';
 import { isApiError } from '../../lib/api/errors';
+import { toggleThemeWithTransition } from '../../lib/theme/themeTransition';
+import { useTenantBranding } from '../../lib/theme/useTenantBranding';
+
+const QUICK_ROLES = [
+  { label: 'Admin', role: 'Full Access', email: 'admin@slicemart.test', icon: ShieldCheck },
+  { label: 'Production', role: 'Factory Floor', email: 'production@slicemart.test', icon: Factory },
+  { label: 'QC Inspector', role: 'Quality QA', email: 'qc@slicemart.test', icon: ClipboardCheck },
+  { label: 'Storekeeper', role: 'Inventory', email: 'store@slicemart.test', icon: Boxes },
+  { label: 'Sales Officer', role: 'Commercial / POS', email: 'sales@slicemart.test', icon: ShoppingCart },
+] as const;
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -14,18 +24,55 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-const DEMO_PERSONAS = [
-  { label: 'Admin', email: 'admin@slicemart.test', role: 'Full Access' },
-  { label: 'Production', email: 'production@slicemart.test', role: 'Factory Floor' },
-  { label: 'QC Inspector', email: 'qc@slicemart.test', role: 'Quality QA' },
-  { label: 'Storekeeper', email: 'store@slicemart.test', role: 'Inventory' },
-  { label: 'Sales Officer', email: 'sales@slicemart.test', role: 'Commercial / POS' },
-];
-
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [failedLogoUrl, setFailedLogoUrl] = useState<string | null>(null);
+  const logoRef = useRef<HTMLImageElement>(null);
+
+  // Dynamic branding from Settings
+  const { companyName, logoUrl } = useTenantBranding();
+  const logoLoadFailed = Boolean(logoUrl && failedLogoUrl === logoUrl);
+
+  useEffect(() => {
+    const el = logoRef.current;
+    if (!el || !logoUrl) return;
+    const handleError = () => {
+      setFailedLogoUrl(logoUrl);
+    };
+    el.addEventListener('error', handleError);
+    return () => {
+      el.removeEventListener('error', handleError);
+    };
+  }, [logoUrl]);
+
+  // Theme support: default to light mode unless explicitly set to dark
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('ui.theme') || localStorage.getItem('theme');
+      if (stored === 'dark' || stored === 'light') return stored;
+      return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    }
+    return 'light';
+  });
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  }, [theme]);
+
+  // Handle circular ripple theme transition starting from the button click
+  const handleToggleTheme = (e: React.MouseEvent) => {
+    toggleThemeWithTransition(theme, e, (next) => {
+      setTheme(next);
+    });
+  };
 
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
@@ -48,12 +95,12 @@ export default function LoginPage() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: 'admin@slicemart.test',
-      password: 'Password123!',
+      email: '',
+      password: '',
     },
   });
 
-  const setDemoPersona = (email: string) => {
+  const handleQuickRole = (email: string) => {
     setValue('email', email, { shouldValidate: true });
     setValue('password', 'Password123!', { shouldValidate: true });
     setServerError(null);
@@ -89,51 +136,64 @@ export default function LoginPage() {
     }
   };
 
-  return (
-    <div className="flex min-h-dvh w-full items-center justify-center bg-zinc-950 px-4 py-12 text-zinc-100 sm:px-6 lg:px-8">
-      {/* Background glow effects */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 h-96 w-96 rounded-full bg-blue-500/10 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/3 h-80 w-80 rounded-full bg-indigo-500/10 blur-[140px] pointer-events-none" />
+  const displayName = companyName || 'SliceMart ERP';
 
-      <div className="relative w-full max-w-md space-y-6 rounded-2xl border border-zinc-800/80 bg-zinc-900/80 p-8 shadow-2xl backdrop-blur-xl">
+  return (
+    <div className="relative flex min-h-dvh w-full items-center justify-center bg-base px-4 py-12 text-default transition-colors duration-200 sm:px-6 lg:px-8">
+      {/* Top-Right Theme Toggle */}
+      <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
+        <button
+          type="button"
+          onClick={handleToggleTheme}
+          className="flex items-center gap-2 rounded-xl border border-default bg-surface/90 px-3 py-2 text-xs font-medium text-muted shadow-xs backdrop-blur-md transition-all hover:bg-surface-sunken hover:text-default cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        >
+          {theme === 'dark' ? (
+            <>
+              <Sun className="h-4 w-4 text-amber-400" />
+              <span className="hidden sm:inline">Light Mode</span>
+            </>
+          ) : (
+            <>
+              <Moon className="h-4 w-4 text-slate-600" />
+              <span className="hidden sm:inline">Dark Mode</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Background glow effects */}
+      <div className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 h-96 w-96 rounded-full bg-blue-500/10 dark:bg-blue-500/15 blur-[120px]" />
+      <div className="pointer-events-none absolute bottom-1/4 right-1/3 h-80 w-80 rounded-full bg-indigo-500/10 dark:bg-indigo-500/15 blur-[140px]" />
+
+      <div className="relative w-full max-w-md space-y-6 rounded-2xl border border-default bg-surface/95 p-8 shadow-xl dark:shadow-2xl backdrop-blur-xl transition-colors">
         {/* Brand Header */}
         <div className="text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-blue-500 via-indigo-500 to-indigo-700 shadow-lg shadow-blue-500/25">
-            <Package className="h-6 w-6 text-white font-bold" />
-          </div>
-          <h2 className="mt-4 text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">
-            SliceMart FMS
-          </h2>
-          <p className="mt-1 text-xs text-zinc-400">Enterprise Factory & Commerce Workspace</p>
-        </div>
+          {logoUrl && !logoLoadFailed ? (
+            <div className="mx-auto flex h-14 w-auto max-w-55 items-center justify-center">
+              <img
+                ref={logoRef}
+                src={logoUrl}
+                alt={displayName}
+                className="max-h-14 max-w-full object-contain drop-shadow-xs"
+              />
+            </div>
+          ) : (
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-blue-600 via-indigo-600 to-indigo-700 shadow-lg shadow-blue-500/25">
+              <Package className="h-6 w-6 text-white font-bold" />
+            </div>
+          )}
 
-        {/* Quick-Fill Persona Chips */}
-        <div className="space-y-2 rounded-xl bg-zinc-950/60 p-3 border border-zinc-800/60">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1">
-              <Sparkles className="size-3 text-blue-400" />
-              Quick Demo Personas
-            </span>
-            <span className="text-[10px] text-zinc-500 font-mono">Password123!</span>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {DEMO_PERSONAS.map((persona) => (
-              <button
-                key={persona.email}
-                type="button"
-                onClick={() => setDemoPersona(persona.email)}
-                className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-zinc-800/80 hover:bg-blue-600/20 hover:text-blue-300 border border-zinc-700/60 hover:border-blue-500/40 transition-all cursor-pointer"
-              >
-                {persona.label}
-              </button>
-            ))}
-          </div>
+          <h1 className="mt-4 text-2xl font-bold tracking-tight text-default sm:text-3xl">
+            {displayName}
+          </h1>
+          <p className="mt-1 text-xs text-muted">Business Operations Platform</p>
         </div>
 
         {/* Server error alert banner */}
         {serverError && (
-          <div className="flex items-center gap-2.5 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3.5 text-xs text-rose-300 animate-in fade-in duration-200">
-            <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+          <div className="flex items-center gap-2.5 rounded-xl border border-danger/30 bg-danger-subtle p-3.5 text-xs text-danger animate-in fade-in duration-200">
+            <AlertCircle className="h-4 w-4 shrink-0 text-danger" />
             <p className="leading-snug">{serverError}</p>
           </div>
         )}
@@ -142,57 +202,64 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Email field */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-zinc-300">Email Address</label>
-            <div className="relative rounded-xl shadow-sm">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-zinc-500">
+            <label htmlFor="email" className="block text-xs font-semibold text-default">
+              Email Address
+            </label>
+            <div className="relative rounded-xl shadow-2xs">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted">
                 <Mail className="h-4 w-4" />
               </div>
               <input
+                id="email"
                 type="email"
                 autoComplete="email"
-                placeholder="admin@slicemart.test"
+                placeholder="name@slicemart.test"
                 {...register('email')}
-                className={`block w-full rounded-xl border bg-zinc-950/80 py-2.5 pr-3.5 pl-10 text-xs text-zinc-100 placeholder-zinc-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${
+                className={`block w-full rounded-xl border bg-surface-sunken py-2.5 pr-3.5 pl-10 text-xs text-default placeholder:text-muted transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 ${
                   errors.email
-                    ? 'border-rose-500/80 focus:border-rose-500'
-                    : 'border-zinc-800 focus:border-blue-500'
+                    ? 'border-danger focus:border-danger'
+                    : 'border-default focus:border-primary'
                 }`}
               />
             </div>
-            {errors.email && <p className="text-[11px] text-rose-400">{errors.email.message}</p>}
+            {errors.email && <p className="text-[11px] text-danger">{errors.email.message}</p>}
           </div>
 
           {/* Password field */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-semibold text-zinc-300">Password</label>
+              <label htmlFor="password" className="block text-xs font-semibold text-default">
+                Password
+              </label>
             </div>
-            <div className="relative rounded-xl shadow-sm">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-zinc-500">
+            <div className="relative rounded-xl shadow-2xs">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted">
                 <Lock className="h-4 w-4" />
               </div>
               <input
+                id="password"
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
                 placeholder="••••••••"
                 {...register('password')}
-                className={`block w-full rounded-xl border bg-zinc-950/80 py-2.5 pr-10 pl-10 text-xs text-zinc-100 placeholder-zinc-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${
+                className={`block w-full rounded-xl border bg-surface-sunken py-2.5 pr-10 pl-10 text-xs text-default placeholder:text-muted transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 ${
                   errors.password
-                    ? 'border-rose-500/80 focus:border-rose-500'
-                    : 'border-zinc-800 focus:border-blue-500'
+                    ? 'border-danger focus:border-danger'
+                    : 'border-default focus:border-primary'
                 }`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-zinc-500 hover:text-zinc-300 cursor-pointer"
+                className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-muted hover:text-default cursor-pointer transition-colors"
                 tabIndex={-1}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
             {errors.password && (
-              <p className="text-[11px] text-rose-400">{errors.password.message}</p>
+              <p className="text-[11px] text-danger">{errors.password.message}</p>
             )}
           </div>
 
@@ -200,7 +267,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 py-3 px-4 text-xs font-semibold text-white shadow-md shadow-blue-500/20 transition-all hover:from-blue-500 hover:to-indigo-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-zinc-950 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 py-3 px-4 text-xs font-semibold text-white shadow-md shadow-blue-500/20 transition-all hover:from-blue-500 hover:to-indigo-500 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {isLoading ? (
               <>
@@ -213,13 +280,46 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="border-t border-zinc-800/80 pt-4 text-center">
-          <p className="text-[11px] text-zinc-500">
-            SliceMart FMS &bull; Multi-tenant Enterprise ERP
+        {/* Quick Role Sign-in */}
+        <div className="space-y-2.5 pt-4 border-t border-default">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+              Quick Role Login
+            </span>
+            <span className="text-[10px] text-muted">Click to auto-fill</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {QUICK_ROLES.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.email}
+                  type="button"
+                  onClick={() => handleQuickRole(item.email)}
+                  className="group flex flex-1 min-w-26.25 flex-col items-start rounded-xl border border-default bg-surface-sunken/60 p-2 text-left transition-all hover:border-primary/40 hover:bg-primary-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer shadow-2xs"
+                >
+                  <div className="flex items-center gap-1.5 w-full">
+                    <Icon className="h-3.5 w-3.5 text-muted group-hover:text-primary transition-colors shrink-0" />
+                    <span className="text-xs font-semibold text-default group-hover:text-primary transition-colors truncate">
+                      {item.label}
+                    </span>
+                  </div>
+                  <span className="mt-0.5 text-[10px] text-muted group-hover:text-default/80 transition-colors truncate w-full">
+                    {item.role}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-default pt-4 text-center">
+          <p className="text-[11px] text-muted">
+            {displayName} &bull; Business Operations Platform
           </p>
         </div>
       </div>
     </div>
   );
 }
-

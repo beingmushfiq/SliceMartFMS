@@ -35,7 +35,7 @@ final class CreateBillOfMaterialAction extends Action
             $outputUnitId = $this->id(Unit::class, $input['output_unit_id'], (int) $actor->tenant_id, 'output_unit_id');
             $bom = BillOfMaterial::create(['uuid' => (string) Str::uuid(), 'product_id' => $productId, 'version' => $input['version'], 'name' => $input['name'], 'output_quantity' => $input['output_quantity'], 'output_unit_id' => $outputUnitId, 'expected_yield_percentage' => $input['expected_yield_percentage'] ?? '100.0000', 'status' => $input['status'] ?? 'draft', 'effective_from' => $input['effective_from'] ?? null, 'effective_to' => $input['effective_to'] ?? null, 'created_by' => $actor->getKey()]);
             /** @var array<int, mixed> $items */
-            $items = $input['items'];
+            $items = $input['items'] ?? [];
             $this->replaceItems($bom, $items, (int) $actor->tenant_id, $actor->id);
             $this->auditLogger->record(action: AuditAction::Created, auditable: $bom, after: $bom->load('items')->toArray(), actor: $actor, context: ['module' => 'catalogue', 'resource' => 'bill_of_material']);
 

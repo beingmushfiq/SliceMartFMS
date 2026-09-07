@@ -35,7 +35,11 @@ export const StorefrontProductDetailPage: React.FC = () => {
             headers: { 'X-Storefront-Subdomain': subdomain },
           }
         );
-        const prod = response.data.data;
+        const rawProd = response.data as unknown;
+        const prod =
+          (rawProd as StorefrontProduct)?.sku !== undefined || (rawProd as StorefrontProduct)?.id !== undefined
+            ? (rawProd as StorefrontProduct)
+            : (((rawProd as Record<string, unknown>)?.data as StorefrontProduct) ?? null);
         setProduct(prod ?? null);
         if (prod?.variants && prod.variants.length > 0) {
           setSelectedVariant(prod.variants[0] ?? null);
@@ -249,8 +253,12 @@ export const StorefrontProductDetailPage: React.FC = () => {
                       },
                     }
                   );
-                  if (res.data?.data?.whatsapp_url) {
-                    window.open(res.data.data.whatsapp_url, '_blank');
+                  const whatsappPayload = res.data as unknown;
+                  const whatsappUrl =
+                    (whatsappPayload as { whatsapp_url?: string })?.whatsapp_url ??
+                    (whatsappPayload as { data?: { whatsapp_url?: string } })?.data?.whatsapp_url;
+                  if (whatsappUrl) {
+                    window.open(whatsappUrl, '_blank');
                   }
                 } catch {
                   // Fallback

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ShieldAlert, Search, Filter, Eye, User, CheckCircle2, FileCode } from 'lucide-react';
 import type { AuditLogItem } from '../../types/api/audit';
+import { SelectDropdown } from '../../components/ui/Dropdown';
 
 const MOCK_AUDIT_LOGS: AuditLogItem[] = [
   {
@@ -162,21 +163,21 @@ export const AuditLogWorkspace: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-400" />
-            <select
-              value={selectedAction}
-              onChange={(e) => setSelectedAction(e.target.value)}
-              className="text-xs border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500"
-            >
-              <option value="all">All Actions</option>
-              <option value="created">Created</option>
-              <option value="updated">Updated</option>
-              <option value="deleted">Deleted</option>
-              <option value="posted">Posted</option>
-              <option value="voided">Voided</option>
-            </select>
-          </div>
+          <SelectDropdown
+            icon={Filter}
+            options={[
+              { value: 'all', label: 'All Actions' },
+              { value: 'created', label: 'Created', colorDot: 'bg-emerald-500' },
+              { value: 'updated', label: 'Updated', colorDot: 'bg-blue-500' },
+              { value: 'deleted', label: 'Deleted', colorDot: 'bg-rose-500' },
+              { value: 'posted', label: 'Posted', colorDot: 'bg-purple-500' },
+              { value: 'voided', label: 'Voided', colorDot: 'bg-amber-500' },
+            ]}
+            value={selectedAction}
+            onChange={(val) => setSelectedAction(val)}
+            size="sm"
+            aria-label="Filter audit logs by action"
+          />
         </div>
 
         <span className="text-xs text-slate-500">{filteredLogs.length} audit entries captured</span>

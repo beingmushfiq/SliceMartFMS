@@ -363,4 +363,51 @@ class AuthController extends Controller
             ],
         ]);
     }
+
+    public function branding(Request $request): JsonResponse
+    {
+        $tenant = \App\Models\Tenant::where('status', 'active')->first();
+        $logoUrl = null;
+        $faviconUrl = null;
+        $companyName = 'SliceMart ERP';
+
+        if ($tenant) {
+            $logoSetting = \App\Models\Setting::withoutTenantScope()
+                ->where('tenant_id', $tenant->id)
+                ->where('group', 'general')
+                ->where('key', 'brand_logo_url')
+                ->first();
+            $faviconSetting = \App\Models\Setting::withoutTenantScope()
+                ->where('tenant_id', $tenant->id)
+                ->where('group', 'general')
+                ->where('key', 'brand_favicon_url')
+                ->first();
+            $nameSetting = \App\Models\Setting::withoutTenantScope()
+                ->where('tenant_id', $tenant->id)
+                ->where('group', 'general')
+                ->where('key', 'company_legal_name')
+                ->first();
+
+            $logoUrl = $logoSetting?->getTypedValue() ?: null;
+            $faviconUrl = $faviconSetting?->getTypedValue() ?: null;
+            $configuredName = $nameSetting?->getTypedValue();
+            if ($configuredName) {
+                $companyName = (string) $configuredName;
+            } elseif ($tenant->name) {
+                $companyName = $tenant->name;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'name' => $companyName,
+                'logo_url' => $logoUrl,
+                'favicon_url' => $faviconUrl,
+            ],
+            'meta' => [
+                'correlation_id' => (string) $request->header('X-Correlation-Id', ''),
+            ],
+        ]);
+    }
 }

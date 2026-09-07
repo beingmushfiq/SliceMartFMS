@@ -1,8 +1,12 @@
 import { useState, useMemo } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   Search,
   Layers,
+  ChevronDown,
+  ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { useAuthStore } from '../../lib/auth/authStore';
 import { useTenantCapabilityStore } from '../../lib/capabilities/tenantCapabilityStore';
@@ -12,18 +16,74 @@ import { cn } from '../../lib/utils';
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export function Sidebar({ isOpen, onClose }: SidebarProps) {
+export function Sidebar({ isOpen, onClose, isCollapsed = false, onToggleCollapse }: SidebarProps) {
+  const user = useAuthStore((state) => state.user);
   const hasPermission = useAuthStore((state) => state.hasPermission);
   const tenant = useAuthStore((state) => state.tenant);
   const isModuleEnabled = useTenantCapabilityStore((state) => state.isModuleEnabled);
   const getTerm = useTenantCapabilityStore((state) => state.getTerm);
+  const navOrder = useTenantCapabilityStore((state) => state.manifest?.nav_order);
   const [searchQuery, setSearchQuery] = useState('');
+  const location = useLocation();
+
+  // Collapsed sections accordion memory (persisted in localStorage)
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('erp_sidebar_collapsed_sections');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const toggleSection = (sectionTitle: string) => {
+    setCollapsedSections((prev) => {
+      const next = { ...prev, [sectionTitle]: !prev[sectionTitle] };
+      try {
+        localStorage.setItem('erp_sidebar_collapsed_sections', JSON.stringify(next));
+      } catch (err) {
+        void err;
+      }
+      return next;
+    });
+  };
+
+  const workspaceSubtitle = useMemo(() => {
+    if (!user?.role) return 'Operations Workspace';
+    if (user.role.includes('Super Administrator') || user.is_platform_admin) return 'Executive Command';
+    if (user.role.includes('Production')) return 'Production Workspace';
+    if (user.role.includes('QC') || user.role.includes('Quality')) return 'Quality & Assurance';
+    if (user.role.includes('Store') || user.role.includes('Warehouse')) return 'Warehouse & Logistics';
+    if (user.role.includes('Sales') || user.role.includes('Commercial')) return 'Commercial & Retail';
+    return `${user.role} Workspace`;
+  }, [user]);
+
+  const isItemActive = (to: string, isActive: boolean) => {
+    if (to.includes('?')) {
+      const [toPath, toQuery] = to.split('?');
+      const currentFull = location.pathname + location.search;
+      if (toQuery && (currentFull === to || (location.pathname === toPath && location.search.includes(toQuery)))) {
+        return true;
+      }
+      return false;
+    }
+    if (location.search && (to === '/sales' || to === '/hr' || to === '/finance' || to === '/assets')) {
+      return false;
+    }
+    if (isActive) return true;
+    if (to === '/hr' && (location.pathname.startsWith('/workforce') || location.pathname.startsWith('/employees') || location.pathname.startsWith('/attendance'))) {
+      return true;
+    }
+    return false;
+  };
 
   const navSections = useMemo(
-    () => buildDynamicNavSections(isModuleEnabled, hasPermission, getTerm),
-    [isModuleEnabled, hasPermission, getTerm]
+    () => buildDynamicNavSections(isModuleEnabled, hasPermission, getTerm, navOrder),
+    [isModuleEnabled, hasPermission, getTerm, navOrder]
   );
 
   const tenantName = tenant?.name;
@@ -53,8 +113,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Adaptive Luxury Sidebar container */}
       <aside
         className={cn(
-          'fixed top-0 bottom-0 left-0 z-50 flex w-64 flex-col border-r border-(--nav-border) bg-(--nav-bg) text-default transition-all duration-300 ease-in-out lg:translate-x-0 select-none shadow-xl dark:shadow-black/80',
-          isOpen ? 'translate-x-0' : '-translate-x-full'
+          'fixed top-0 bottom-0 left-0 z-50 flex flex-col border-r border-(--nav-border) bg-(--nav-bg) text-default transition-all duration-300 ease-in-out lg:translate-x-0 select-none shadow-xl dark:shadow-black/80',
+          isOpen ? 'translate-x-0' : '-translate-x-full',
+          isCollapsed ? 'lg:w-20 w-64' : 'w-64'
         )}
       >
         {/* Subtle Ambient Radial Lighting for Dark Mode */}
@@ -64,7 +125,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         />
 
         {/* Brand Monogram & Identity Header */}
-        <div className="relative flex h-16 items-center justify-between border-b border-(--nav-border) px-4 shrink-0 bg-(--nav-bg)/95 backdrop-blur-md">
+        <div
+          className={cn(
+            'relative flex h-16 items-center border-b border-(--nav-border) px-3.5 shrink-0 bg-(--nav-bg)/95 backdrop-blur-md transition-all',
+            isCollapsed ? 'lg:justify-center justify-between' : 'justify-between'
+          )}
+        >
           <div className="flex items-center gap-3 min-w-0">
             {/* Custom Multi-Stop Geometric Emblem */}
             <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-indigo-500 via-indigo-600 to-indigo-800 p-0.5 shadow-md shadow-indigo-500/20 ring-1 ring-black/5 dark:ring-white/20 shrink-0">
@@ -77,7 +143,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               </span>
             </div>
 
-            <div className="min-w-0">
+            {/* Tenant details (hidden when collapsed on desktop) */}
+            <div className={cn('min-w-0', isCollapsed && 'lg:hidden')}>
               <div className="flex items-center gap-1.5">
                 <span className="font-bold tracking-tight text-default text-sm truncate font-sans">
                   {tenantDisplayName}
@@ -89,33 +156,75 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="text-[10px] font-medium text-muted truncate flex items-center gap-1">
                   <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
-                  Production Workspace
+                  {workspaceSubtitle}
                 </span>
               </div>
             </div>
           </div>
+
+          {/* Desktop Quick Collapse Button in Header */}
+          {onToggleCollapse && (
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              className={cn(
+                'hidden lg:flex items-center justify-center p-1.5 rounded-lg text-muted hover:text-default hover:bg-surface-sunken/80 transition-colors cursor-pointer',
+                isCollapsed && 'hidden'
+              )}
+              title="Collapse sidebar"
+            >
+              <PanelLeftClose className="size-4" />
+            </button>
+          )}
         </div>
 
         {/* Quick Command & Workspace Search */}
-        <div className="px-3 pt-3 pb-1 shrink-0">
-          <div className="relative flex items-center w-full rounded-lg bg-(--nav-bg-deep) border border-(--nav-border) px-2.5 py-1.5 text-xs text-muted hover:border-primary/40 transition-colors group">
-            <Search className="size-3.5 text-muted group-hover:text-primary transition-colors mr-2 shrink-0" />
-            <input
-              type="text"
-              placeholder="Search module..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-transparent text-xs text-default placeholder:text-muted outline-none"
-            />
-            <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[9px] font-mono text-muted bg-surface rounded border border-(--nav-border) ml-auto shrink-0">
-              ⌘K
-            </kbd>
+        {!isCollapsed ? (
+          <div className="px-3 pt-3 pb-1 shrink-0">
+            <div className="relative flex items-center w-full rounded-lg bg-(--nav-bg-deep) border border-(--nav-border) px-2.5 py-1.5 text-xs text-muted hover:border-primary/40 transition-colors group">
+              <Search className="size-3.5 text-muted group-hover:text-primary transition-colors mr-2 shrink-0" />
+              <input
+                type="text"
+                placeholder="Search module..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-transparent text-xs text-default placeholder:text-muted outline-none"
+              />
+              <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[9px] font-mono text-muted bg-surface rounded border border-(--nav-border) ml-auto shrink-0">
+                ⌘K
+              </kbd>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="hidden lg:flex flex-col items-center gap-1.5 pt-2.5 pb-1 shrink-0 px-2">
+            {onToggleCollapse && (
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                className="p-2 rounded-lg text-muted hover:text-primary hover:bg-surface-sunken/80 transition-colors cursor-pointer border border-default hover:border-primary/30"
+                title="Expand sidebar"
+                aria-label="Expand sidebar"
+              >
+                <PanelLeftOpen className="size-4" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              className="p-2 rounded-lg text-muted hover:text-primary hover:bg-(--nav-hover-bg) transition-colors cursor-pointer"
+              title="Search navigation (click to expand)"
+            >
+              <Search className="size-4" />
+            </button>
+          </div>
+        )}
 
         {/* Navigation Sections */}
         <nav
-          className="flex-1 overflow-y-auto px-3 py-2 space-y-4 scrollbar-thin scrollbar-thumb-default scrollbar-track-transparent"
+          className={cn(
+            'flex-1 overflow-y-auto py-2 scrollbar-thin scrollbar-thumb-default scrollbar-track-transparent',
+            isCollapsed ? 'lg:px-2 px-3 space-y-4' : 'px-3 space-y-4'
+          )}
           aria-label="Main Navigation"
         >
           {navSections.map((section) => {
@@ -129,67 +238,152 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
             if (visibleItems.length === 0) return null;
 
+            const isSectionCollapsed = !!collapsedSections[section.title] && !searchQuery;
+            const hasActiveChild = section.items.some((item) =>
+              isItemActive(item.to, location.pathname === item.to.split('?')[0])
+            );
+
             return (
               <div key={section.title} className="space-y-0.5">
-                <div className="px-3 py-1.5 text-[10px] font-bold tracking-[0.14em] text-(--nav-section-fg) uppercase flex items-center gap-1.5">
-                  <span className="size-1 rounded-full bg-primary/60" />
-                  <span>{section.title}</span>
-                </div>
-
-                {visibleItems.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      onClick={onClose}
-                      className={({ isActive }) =>
-                        cn(
-                          'group relative flex items-center justify-between px-3 rounded-lg text-xs font-medium transition-all duration-150 focus-visible:ring-2 focus-visible:ring-primary outline-none h-9.5',
-                          isActive
-                            ? 'font-semibold text-primary dark:text-white bg-(--nav-active-bg) border-l-2 border-(--nav-active-marker) shadow-xs'
-                            : 'text-muted hover:text-default hover:bg-(--nav-hover-bg) border-l-2 border-transparent'
-                        )
-                      }
-                    >
-                      {({ isActive }) => (
-                        <>
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <Icon
-                              className={cn(
-                                'size-4 shrink-0 transition-transform duration-150 group-hover:scale-110',
-                                isActive
-                                  ? 'text-primary dark:text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.4)]'
-                                  : 'text-muted group-hover:text-default'
-                              )}
-                              aria-hidden="true"
-                            />
-                            <span className="truncate tracking-normal">{item.label}</span>
-                          </div>
-
-                          {item.badge && (
-                            <span
-                              className={cn(
-                                'rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider shrink-0 shadow-xs',
-                                item.badgeTone === 'success'
-                                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                                  : 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30'
-                              )}
-                            >
-                              {item.badge}
-                            </span>
-                          )}
-                        </>
+                {/* Section Header */}
+                {!isCollapsed ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(section.title)}
+                    className="w-full px-2.5 py-1.5 text-[10px] font-bold tracking-[0.14em] text-(--nav-section-fg) uppercase flex items-center justify-between group hover:text-default rounded-md transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-1.5 truncate">
+                      <span className="size-1 rounded-full bg-primary/60" />
+                      <span className="truncate">{section.title}</span>
+                      {hasActiveChild && isSectionCollapsed && (
+                        <span className="size-1.5 rounded-full bg-primary animate-pulse" title="Active module inside" />
                       )}
-                    </NavLink>
-                  );
-                })}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] font-mono text-muted/60 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {visibleItems.length}
+                      </span>
+                      {isSectionCollapsed ? (
+                        <ChevronRight className="size-3 text-muted/60" />
+                      ) : (
+                        <ChevronDown className="size-3 text-muted/60" />
+                      )}
+                    </div>
+                  </button>
+                ) : (
+                  <div className="hidden lg:block my-2 border-t border-(--nav-border)/50" />
+                )}
+
+                {/* Section Items (hidden if accordion is collapsed and not in icon-rail mode) */}
+                {(!isSectionCollapsed || isCollapsed) && (
+                  <div className="space-y-0.5">
+                    {visibleItems.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <NavLink
+                          key={item.id}
+                          to={item.to}
+                          onClick={onClose}
+                          title={isCollapsed ? item.label : undefined}
+                          className={({ isActive }) => {
+                            const active = isItemActive(item.to, isActive);
+                            return cn(
+                              'group relative flex items-center rounded-lg text-xs font-medium transition-all duration-150 focus-visible:ring-2 focus-visible:ring-primary outline-none h-9.5',
+                              isCollapsed
+                                ? 'lg:justify-center justify-between px-3'
+                                : 'justify-between px-3',
+                              active
+                                ? 'font-semibold text-primary dark:text-white bg-(--nav-active-bg) border-l-2 border-(--nav-active-marker) shadow-xs'
+                                : 'text-muted hover:text-default hover:bg-(--nav-hover-bg) border-l-2 border-transparent'
+                            );
+                          }}
+                        >
+                          {({ isActive }) => {
+                            const active = isItemActive(item.to, isActive);
+                            return (
+                              <>
+                                <div
+                                  className={cn(
+                                    'flex items-center gap-2.5 min-w-0',
+                                    isCollapsed && 'lg:justify-center'
+                                  )}
+                                >
+                                  <Icon
+                                    className={cn(
+                                      'size-4 shrink-0 transition-transform duration-150 group-hover:scale-110',
+                                      active
+                                        ? 'text-primary dark:text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.4)]'
+                                        : 'text-muted group-hover:text-default'
+                                    )}
+                                    aria-hidden="true"
+                                  />
+                                  <span
+                                    className={cn(
+                                      'truncate tracking-normal',
+                                      isCollapsed && 'lg:hidden'
+                                    )}
+                                  >
+                                    {item.label}
+                                  </span>
+                                </div>
+
+                                {item.badge && (
+                                  <span
+                                    className={cn(
+                                      'rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider shrink-0 shadow-xs',
+                                      isCollapsed && 'lg:hidden',
+                                      item.badgeTone === 'success'
+                                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                                        : 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30'
+                                    )}
+                                  >
+                                    {item.badge}
+                                  </span>
+                                )}
+                              </>
+                            );
+                          }}
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}
         </nav>
+
+        {/* Desktop Sidebar Bottom Footer with Expand/Collapse Rail Toggle */}
+        {onToggleCollapse && (
+          <div className="hidden lg:flex items-center justify-between border-t border-(--nav-border) p-3 bg-(--nav-bg-deep)/50 shrink-0">
+            {!isCollapsed ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onToggleCollapse}
+                  className="flex items-center gap-2 text-xs text-muted hover:text-default p-1.5 rounded-lg hover:bg-surface-sunken/60 transition-colors cursor-pointer"
+                  title="Collapse sidebar to icon rail"
+                >
+                  <PanelLeftClose className="size-4" />
+                  <span className="font-medium">Collapse Sidebar</span>
+                </button>
+                <span className="text-[9px] font-mono text-muted/60 uppercase">v2.4</span>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                className="w-full flex items-center justify-center p-2 rounded-lg text-muted hover:text-primary hover:bg-surface-sunken/80 transition-colors cursor-pointer"
+                title="Expand sidebar"
+              >
+                <PanelLeftOpen className="size-4.5" />
+              </button>
+            )}
+          </div>
+        )}
       </aside>
     </>
   );
 }
+
 

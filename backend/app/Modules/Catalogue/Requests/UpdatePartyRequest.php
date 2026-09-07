@@ -35,7 +35,7 @@ final class UpdatePartyRequest extends FormRequest
             'tax_profile_id' => ['sometimes', 'nullable', 'uuid'],
             'opening_balance' => ['sometimes', 'numeric'],
             'assigned_to' => ['sometimes', 'nullable', 'uuid'],
-            'status' => ['sometimes', Rule::in(['active', 'inactive', 'blacklisted'])],
+            'status' => ['sometimes', Rule::in(['active', 'inactive', 'blacklisted', 'blocked'])],
 
             // Optional nested addresses
             'addresses' => ['sometimes', 'array'],

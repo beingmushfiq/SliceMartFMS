@@ -12,7 +12,7 @@ final class ApproveSalesOrderAction
     public function execute(SalesOrder $order, int $userId): SalesOrder
     {
         return DB::transaction(function () use ($order, $userId): SalesOrder {
-            if ($order->status !== 'draft') {
+            if (!in_array($order->status, ['draft', 'pending'], true)) {
                 throw new \DomainException("Sales order [{$order->order_number}] cannot be confirmed from status [{$order->status}].");
             }
 

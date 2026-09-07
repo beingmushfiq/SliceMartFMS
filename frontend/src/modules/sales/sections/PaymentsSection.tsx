@@ -8,6 +8,7 @@ import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { PaymentReceiptDocument } from '../../../components/print/documents/PaymentReceiptDocument';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
 import { useCurrency } from '../../../hooks/useCurrency';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
 export function PaymentsSection() {
   const queryClient = useQueryClient();
@@ -20,9 +21,8 @@ export function PaymentsSection() {
 
   // Payment form state
   const [direction, setDirection] = useState<'in' | 'out'>('in');
-  const [method, setMethod] = useState<
-    'cash' | 'bank_transfer' | 'cheque' | 'card' | 'mobile_banking' | 'credit_adjustment'
-  >('cash');
+  type PaymentMethod = 'cash' | 'bank_transfer' | 'cheque' | 'card' | 'mobile_banking' | 'credit_adjustment';
+  const [method, setMethod] = useState<PaymentMethod>('cash');
   const [amount, setAmount] = useState('');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
   const [referenceNumber, setReferenceNumber] = useState('');
@@ -92,15 +92,17 @@ export function PaymentsSection() {
             />
           </div>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Directions' },
+              { value: 'in', label: 'Inflow (Customer Receipts)', colorDot: 'bg-emerald-500' },
+              { value: 'out', label: 'Outflow (Vendor/Refunds)', colorDot: 'bg-rose-500' },
+            ]}
             value={directionFilter}
-            onChange={(e) => setDirectionFilter(e.target.value)}
-            className="h-9 rounded-xl border border-default bg-surface-sunken px-3 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
-          >
-            <option value="all">All Directions</option>
-            <option value="in">Inflow (Customer Receipts)</option>
-            <option value="out">Outflow (Vendor/Refunds)</option>
-          </select>
+            onChange={(val) => setDirectionFilter(val)}
+            size="sm"
+            aria-label="Filter payments by direction"
+          />
 
           <button
             onClick={() => refetch()}
@@ -245,7 +247,7 @@ export function PaymentsSection() {
                   <label className="block text-xs font-medium text-default mb-1">Method</label>
                   <select
                     value={method}
-                    onChange={(e) => setMethod(e.target.value as any)}
+                    onChange={(e) => setMethod(e.target.value as PaymentMethod)}
                     className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
                   >
                     <option value="cash">Cash</option>

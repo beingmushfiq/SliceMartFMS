@@ -23,6 +23,7 @@ import { api } from '../../../lib/api/client';
 import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { DeliveryChallanDocument } from '../../../components/print/documents/DeliveryChallanDocument';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 import { useCurrency } from '../../../hooks/useCurrency';
 
 interface DeliveryFormItem {
@@ -49,15 +50,15 @@ const SAMPLE_DELIVERIES: DeliveryOrder[] = [
     cod_status: 'pending',
     delivery_charge: '250.00',
     package_count: 5,
-    special_instructions: 'Handle with care. Fragile baked goods & confectionery containers.',
+    special_instructions: 'Handle with care. Fragile electronic appliances & ceramic glass.',
     items: [
       {
         id: 601,
         uuid: 'doi-601',
         delivery_order_id: 1,
         product_id: 1,
-        product_name: 'Artisan Sourdough Loaf 500g',
-        quantity: '50.00',
+        product_name: 'Infrared Cooker 2200W (SM-IC220)',
+        quantity: '10.00',
         delivered_quantity: '0.00',
         returned_quantity: '0.00',
         unit_id: 2,
@@ -67,49 +68,49 @@ const SAMPLE_DELIVERIES: DeliveryOrder[] = [
         uuid: 'doi-602',
         delivery_order_id: 1,
         product_id: 2,
-        product_name: 'Butter Croissant Pack (6 pcs)',
-        quantity: '30.00',
+        product_name: 'Infrared Cooker 3500W Double Burner (SM-IC350)',
+        quantity: '5.00',
         delivered_quantity: '0.00',
         returned_quantity: '0.00',
         unit_id: 2,
       },
     ],
-    created_at: '2026-08-30T10:00:00Z',
+    created_at: '2026-08-30T09:00:00Z',
   },
   {
     id: 2,
-    uuid: 'del-002',
+    uuid: 'do-002',
     delivery_number: 'DO-202608-002',
     sales_order_id: 2,
     sales_order_number: 'SO-202608-002',
     warehouse_id: 1,
     warehouse_name: 'Main Distribution Hub (Dhaka)',
-    recipient_name: 'Shwapno Superstore Gulshan',
-    recipient_phone: '+880 1819-332211',
-    delivery_type: 'own_fleet',
+    recipient_name: 'Pran-RFL Group (Catering Div)',
+    recipient_phone: '+880 1819-332918',
+    delivery_type: 'express_courier',
     scheduled_date: '2026-08-30',
     status: 'delivered',
-    delivered_at: '2026-08-30T15:30:00Z',
+    delivered_at: '2026-08-30T14:30:00Z',
     cod_amount: '0.00',
     cod_collected_amount: '0.00',
     cod_status: 'none',
-    delivery_charge: '0.00',
-    package_count: 12,
-    special_instructions: 'Deliver to loading bay 3.',
+    delivery_charge: '180.00',
+    package_count: 3,
+    special_instructions: 'Deliver to 2nd Floor Receiving Gate. Call prior to arrival.',
     items: [
       {
         id: 603,
         uuid: 'doi-603',
         delivery_order_id: 2,
         product_id: 3,
-        product_name: 'Chocolate Chip Cookies (Tin 400g)',
-        quantity: '100.00',
-        delivered_quantity: '100.00',
+        product_name: 'Double Burner Gas Stove (Toughened Glass)',
+        quantity: '8.00',
+        delivered_quantity: '8.00',
         returned_quantity: '0.00',
         unit_id: 2,
       },
     ],
-    created_at: '2026-08-30T11:30:00Z',
+    created_at: '2026-08-29T14:00:00Z',
   },
   {
     id: 3,
@@ -175,11 +176,11 @@ export function DeliveriesSection() {
     cod_amount: '0.00',
     delivery_charge: '150.00',
     package_count: 1,
-    special_instructions: 'Handle with care.',
+    special_instructions: 'Handle with care. Shock-sensitive appliances.',
     items: [
       {
-        product_name: 'Artisan Sourdough Loaf 500g',
-        quantity: '50',
+        product_name: 'Infrared Cooker 2200W (SM-IC220)',
+        quantity: '10',
       },
     ],
   });
@@ -457,11 +458,11 @@ export function DeliveriesSection() {
                 cod_amount: '0.00',
                 delivery_charge: '150.00',
                 package_count: 1,
-                special_instructions: 'Handle with care.',
+                special_instructions: 'Handle with care. Shock-sensitive appliances.',
                 items: [
                   {
-                    product_name: 'Artisan Sourdough Loaf 500g',
-                    quantity: '50',
+                    product_name: 'Infrared Cooker 2200W (SM-IC220)',
+                    quantity: '10',
                   },
                 ],
               });
@@ -482,17 +483,19 @@ export function DeliveriesSection() {
             <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'pending', label: 'Pending Dispatch', colorDot: 'bg-amber-500' },
+              { value: 'in_transit', label: 'Out for Delivery', colorDot: 'bg-blue-500' },
+              { value: 'delivered', label: 'Delivered', colorDot: 'bg-emerald-500' },
+              { value: 'cancelled', label: 'Cancelled', colorDot: 'bg-rose-500' },
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
-          >
-            <option value="all">All Statuses</option>
-            <option value="pending">Pending Dispatch</option>
-            <option value="in_transit">Out for Delivery</option>
-            <option value="delivered">Delivered</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter deliveries by status"
+          />
         </div>
 
         <div className="relative flex-1 sm:max-w-xs">

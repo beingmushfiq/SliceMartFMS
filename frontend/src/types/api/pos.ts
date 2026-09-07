@@ -55,6 +55,9 @@ export interface PosCheckoutItemPayload {
   unit_id: number;
   unit_price: string;
   variant_id?: number | null;
+  discount_type?: 'flat' | 'percentage';
+  discount_value?: string;
+  discount_percentage?: string;
   discount_amount?: string;
   tax_profile_id?: number | null;
   tax_amount?: string;
@@ -72,6 +75,8 @@ export interface PosCheckoutPayload {
   customer_name?: string | null;
   customer_phone?: string | null;
   order_date?: string;
+  order_discount_type?: 'flat' | 'percentage';
+  order_discount_value?: string;
   discount_amount?: string;
   round_off?: string;
   notes?: string | null;
@@ -85,3 +90,37 @@ export interface PosCheckoutResult {
   invoice: Invoice;
   session: PosSession;
 }
+
+export interface PosHeldSale {
+  id: number;
+  uuid: string;
+  pos_session_id: number;
+  pos_terminal_id?: number | null;
+  customer_party_id?: number | null;
+  reference_note?: string | null;
+  cart_payload: {
+    items: Array<{
+      product: {
+        id: number | string;
+        name: string;
+        sku: string;
+        base_unit_id?: number;
+      };
+      quantity: number;
+      unit_price: number;
+      discount: number;
+    }>;
+    customerName?: string;
+    customerPhone?: string;
+    tenderMethod?: 'cash' | 'card' | 'mobile_banking';
+    cashTendered?: string;
+  };
+  subtotal: string;
+  tax_amount: string;
+  discount_amount: string;
+  total_amount: string;
+  customer?: { id: number; party_name: string; phone_number: string } | null;
+  creator?: { id: number; name: string } | null;
+  created_at: string;
+}
+

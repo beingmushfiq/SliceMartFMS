@@ -158,6 +158,47 @@ final class PurchaseOrderTest extends TestCase
         ]);
     }
 
+    public function test_purchase_order_does_not_double_count_line_item_discount(): void
+    {
+        // 1 item of qty 100 @ 45 = 4500 subtotal.
+        // Line discount: flat 500 (or 500 discount_amount).
+        // Order discount: 0 (or absent order_discount_value with discount_amount: 500).
+        // Grand total MUST be 4000.0000 and total discount MUST be exactly 500.0000.
+        $res = $this->postJson('/api/v1/purchasing/orders', [
+            'party_id'             => $this->supplier->id,
+            'warehouse_id'         => $this->warehouse->id,
+            'order_date'           => '2026-08-25',
+            'order_discount_type'  => 'flat',
+            'order_discount_value' => '0.0000',
+            'discount_amount'      => '500.0000',
+            'currency_code'        => 'BDT',
+            'items'                => [
+                [
+                    'product_id'          => $this->product->id,
+                    'quantity'            => '100.0000',
+                    'unit_id'             => $this->unit->id,
+                    'unit_price'          => '45.0000',
+                    'discount_type'       => 'flat',
+                    'discount_value'      => '500.0000',
+                    'discount_amount'     => '500.0000',
+                    'tax_rate'            => '0.0000',
+                ],
+            ],
+        ], $this->headers());
+
+        $res->assertStatus(201)
+            ->assertJsonPath('data.subtotal_amount', '4500.0000')
+            ->assertJsonPath('data.discount_amount', '500.0000')
+            ->assertJsonPath('data.grand_total', '4000.0000');
+
+        $this->assertDatabaseHas('purchase_orders', [
+            'id'              => $res->json('data.id'),
+            'subtotal'        => '4500.0000',
+            'discount_amount' => '500.0000',
+            'total_amount'    => '4000.0000',
+        ]);
+    }
+
     /**
      * @return array<string, string>
      */

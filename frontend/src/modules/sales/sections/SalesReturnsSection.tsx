@@ -23,6 +23,7 @@ import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { CreditNoteDocument } from '../../../components/print/documents/CreditNoteDocument';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
 import { useCurrency } from '../../../hooks/useCurrency';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
 interface SalesReturnFormItem {
   product_name: string;
@@ -46,9 +47,9 @@ const SAMPLE_RETURNS: SalesReturn[] = [
     reason_code_id: 1,
     reason_code_name: 'Damaged in transit packaging',
     restock: false,
-    subtotal: '2400.00',
-    tax_amount: '120.00',
-    total_amount: '2520.00',
+    subtotal: '2850.00',
+    tax_amount: '142.50',
+    total_amount: '2992.50',
     refund_method: 'credit_note',
     credit_note_number: 'CN-202608-001',
     status: 'completed',
@@ -58,11 +59,11 @@ const SAMPLE_RETURNS: SalesReturn[] = [
         id: 701,
         uuid: 'sri-701',
         product_id: 1,
-        product_name: 'Artisan Sourdough Loaf 500g',
-        quantity: '8.00',
+        product_name: 'Infrared Cooker 2200W (SM-IC220)',
+        quantity: '1.00',
         unit_id: 2,
-        unit_price: '300.00',
-        line_total: '2400.00',
+        unit_price: '2850.00',
+        line_total: '2850.00',
         condition: 'damaged',
       },
     ],
@@ -75,30 +76,31 @@ const SAMPLE_RETURNS: SalesReturn[] = [
     invoice_id: 2,
     sales_order_id: 2,
     party_id: 2,
-    customer_name: 'Shwapno Superstore Gulshan',
+    customer_name: 'Pran-RFL Group (Catering Div)',
     warehouse_id: 1,
     warehouse_name: 'Main Distribution Hub (Dhaka)',
     return_date: '2026-08-30',
     reason_code_id: 2,
-    reason_code_name: 'Wrong SKU dispatched by warehouse',
+    reason_code_name: 'Wrong item shipped by dispatch',
     restock: true,
-    subtotal: '4500.00',
-    tax_amount: '225.00',
-    total_amount: '4725.00',
-    refund_method: 'customer_balance_adjustment',
-    credit_note_number: 'CN-202608-002',
+    subtotal: '7000.00',
+    tax_amount: '350.00',
+    total_amount: '7350.00',
+    refund_method: 'bank_transfer',
+    credit_note_number: null,
     status: 'draft',
+    approved_at: null,
     items: [
       {
         id: 702,
         uuid: 'sri-702',
-        product_id: 2,
-        product_name: 'Butter Croissant Pack (6 pcs)',
-        quantity: '15.00',
+        product_id: 3,
+        product_name: 'Double Burner Gas Stove (Toughened Glass)',
+        quantity: '2.00',
         unit_id: 2,
-        unit_price: '300.00',
-        line_total: '4500.00',
-        condition: 'restockable_good',
+        unit_price: '3500.00',
+        line_total: '7000.00',
+        condition: 'good',
       },
     ],
     created_at: '2026-08-30T14:30:00Z',
@@ -124,7 +126,7 @@ export function SalesReturnsSection() {
   // Form State
   const [formData, setFormData] = useState({
     return_number: '',
-    customer_name: 'Apex Footwear Central Kitchen',
+    customer_name: 'Apex Retail Showroom',
     warehouse_name: 'Main Distribution Hub (Dhaka)',
     return_date: new Date().toISOString().slice(0, 10),
     reason_code_name: 'Customer reported transit damage',
@@ -132,9 +134,9 @@ export function SalesReturnsSection() {
     refund_method: 'credit_note',
     items: [
       {
-        product_name: 'Artisan Sourdough Loaf 500g',
-        quantity: '5',
-        unit_price: '300.00',
+        product_name: 'Infrared Cooker 2200W (SM-IC220)',
+        quantity: '1',
+        unit_price: '2850.00',
         condition: 'damaged',
       },
     ],
@@ -377,7 +379,7 @@ export function SalesReturnsSection() {
             onClick={() => {
               setFormData({
                 return_number: `SRT-${new Date().toISOString().slice(0, 7).replace('-', '')}-${String(returns.length + 1).padStart(3, '0')}`,
-                customer_name: 'Apex Footwear Central Kitchen',
+                customer_name: 'Apex Retail Showroom',
                 warehouse_name: 'Main Distribution Hub (Dhaka)',
                 return_date: new Date().toISOString().slice(0, 10),
                 reason_code_name: 'Customer reported transit damage',
@@ -385,9 +387,9 @@ export function SalesReturnsSection() {
                 refund_method: 'credit_note',
                 items: [
                   {
-                    product_name: 'Artisan Sourdough Loaf 500g',
-                    quantity: '5',
-                    unit_price: '300.00',
+                    product_name: 'Infrared Cooker 2200W (SM-IC220)',
+                    quantity: '1',
+                    unit_price: '2850.00',
                     condition: 'damaged',
                   },
                 ],
@@ -409,16 +411,18 @@ export function SalesReturnsSection() {
             <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'draft', label: 'Pending Inspection', colorDot: 'bg-amber-500' },
+              { value: 'completed', label: 'Credit Issued', colorDot: 'bg-emerald-500' },
+              { value: 'cancelled', label: 'Cancelled', colorDot: 'bg-rose-500' },
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none"
-          >
-            <option value="all">All Statuses</option>
-            <option value="draft">Pending Inspection</option>
-            <option value="completed">Credit Issued</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter returns by status"
+          />
         </div>
 
         <div className="relative flex-1 sm:max-w-xs">
@@ -634,7 +638,10 @@ export function SalesReturnsSection() {
               {/* Items Line Builder */}
               <div className="border border-default rounded-xl p-3 bg-surface-sunken/40 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-default">Returned Items & Condition</span>
+                  <div>
+                    <span className="font-semibold text-default">Returned Items & Net Refund Pricing</span>
+                    <p className="text-[10px] text-muted">Net rate reflects unit price paid after deducting line and full-order discounts.</p>
+                  </div>
                   <button
                     type="button"
                     onClick={addItemToForm}
@@ -642,6 +649,14 @@ export function SalesReturnsSection() {
                   >
                     <Plus className="size-3" /> Add Item Line
                   </button>
+                </div>
+
+                <div className="grid grid-cols-12 gap-2 text-[10px] font-semibold text-muted px-1">
+                  <div className="col-span-5">Product Description</div>
+                  <div className="col-span-2">Return Qty</div>
+                  <div className="col-span-2">Net Rate (৳)</div>
+                  <div className="col-span-2">Disposition</div>
+                  <div className="col-span-1 text-center">Del</div>
                 </div>
 
                 {formData.items.map((item, idx) => (

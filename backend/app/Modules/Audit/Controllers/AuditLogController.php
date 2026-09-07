@@ -21,7 +21,11 @@ class AuditLogController extends Controller
             ->orderBy('created_at', 'desc');
 
         if ($request->filled('action')) {
-            $query->where('action', $request->query('action'));
+            $action = (string) $request->query('action');
+            $query->where(function ($q) use ($action) {
+                $q->where('action', $action)
+                    ->orWhere('action', 'like', "{$action}%");
+            });
         }
 
         if ($request->filled('auditable_type')) {

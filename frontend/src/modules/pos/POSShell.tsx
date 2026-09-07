@@ -2,28 +2,50 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   CheckCircle2,
+  Clock,
   CreditCard,
   DollarSign,
+  FileText,
   Minus,
+  PauseCircle,
+  PlayCircle,
   Plus,
   Printer,
   RefreshCw,
   Search,
   ShoppingBag,
   Smartphone,
+  Split,
   Trash2,
   X,
 } from 'lucide-react';
-import type { PosSession, PosCheckoutPayload, PosCheckoutResult } from '../../types/api/pos';
+import type { PosSession, PosCheckoutPayload, PosCheckoutPaymentPayload, PosCheckoutResult, PosHeldSale } from '../../types/api/pos';
 import type { Product } from '../../types/api/catalog';
+import type { Invoice } from '../../types/api/sales';
 import { api } from '../../lib/api/client';
 import { useCurrency } from '../../hooks/useCurrency';
+import { notify } from '../../components/ui/Toast';
+import { useDocumentPrint } from '../../components/print/useDocumentPrint';
+import { ThermalReceipt } from '../../components/print/receipts/ThermalReceipt';
+import { SalesInvoiceDocument } from '../../components/print/documents/SalesInvoiceDocument';
+import { useBusinessConfig } from '../../lib/document/useBusinessConfig';
+
+export type PosPaymentMethod = 'cash' | 'card' | 'mobile_banking' | 'credit_adjustment';
+
+export interface PosPaymentLine {
+  id: string;
+  method: PosPaymentMethod;
+  amount: number;
+  cashReceived?: number;
+  changeGiven?: number;
+}
 
 interface CartItem {
   product: Product;
   quantity: number;
   unit_price: number;
   discount: number;
+  discount_type: 'flat' | 'percentage';
 }
 
 interface POSShellProps {
@@ -37,20 +59,24 @@ interface CartSlot {
   cart: CartItem[];
   customerName: string;
   customerPhone: string;
-  tenderMethod: 'cash' | 'card' | 'mobile_banking';
+  tenderMethod: PosPaymentMethod;
   cashTendered: string;
+  isSplitPayment?: boolean;
+  splitPayments?: PosPaymentLine[];
+  order_discount_type?: 'flat' | 'percentage';
+  order_discount_value?: string;
 }
 
 export function POSShell({ session, onExit }: POSShellProps) {
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, currencySymbol, currencyCode } = useCurrency();
   const [search, setSearch] = useState('');
   
   // Multi-cart slots (up to 5 concurrent held transactions)
   const [activeSlotIndex, setActiveSlotIndex] = useState<number>(0);
   const [slots, setSlots] = useState<CartSlot[]>([
-    { id: 1, label: 'Cart 1', cart: [], customerName: '', customerPhone: '', tenderMethod: 'cash', cashTendered: '' },
-    { id: 2, label: 'Cart 2 (Hold)', cart: [], customerName: '', customerPhone: '', tenderMethod: 'cash', cashTendered: '' },
-    { id: 3, label: 'Cart 3 (Hold)', cart: [], customerName: '', customerPhone: '', tenderMethod: 'cash', cashTendered: '' },
+    { id: 1, label: 'Cart 1', cart: [], customerName: '', customerPhone: '', tenderMethod: 'cash', cashTendered: '', isSplitPayment: false, splitPayments: [], order_discount_type: 'flat', order_discount_value: '' },
+    { id: 2, label: 'Cart 2 (Hold)', cart: [], customerName: '', customerPhone: '', tenderMethod: 'cash', cashTendered: '', isSplitPayment: false, splitPayments: [], order_discount_type: 'flat', order_discount_value: '' },
+    { id: 3, label: 'Cart 3 (Hold)', cart: [], customerName: '', customerPhone: '', tenderMethod: 'cash', cashTendered: '', isSplitPayment: false, splitPayments: [], order_discount_type: 'flat', order_discount_value: '' },
   ]);
 
   const currentSlot = slots[activeSlotIndex] ?? slots[0]!;
@@ -59,9 +85,18 @@ export function POSShell({ session, onExit }: POSShellProps) {
   const customerPhone = currentSlot.customerPhone;
   const tenderMethod = currentSlot.tenderMethod;
   const cashTendered = currentSlot.cashTendered;
+  const isSplitPayment = currentSlot.isSplitPayment ?? false;
+  const splitPayments = currentSlot.splitPayments ?? [];
 
+  const { printDocument } = useDocumentPrint();
+  const { config: businessConfig } = useBusinessConfig();
   const [checkingOut, setCheckingOut] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<PosCheckoutResult | null>(null);
+  const [lastCompletedPayments, setLastCompletedPayments] = useState<PosCheckoutPaymentPayload[]>([]);
+  const [isParkModalOpen, setIsParkModalOpen] = useState(false);
+  const [parkNote, setParkNote] = useState('');
+  const [isParkedDrawerOpen, setIsParkedDrawerOpen] = useState(false);
+  const [holdingSale, setHoldingSale] = useState(false);
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const customerNameInputRef = useRef<HTMLInputElement>(null);
   const cashTenderedInputRef = useRef<HTMLInputElement>(null);
@@ -80,8 +115,29 @@ export function POSShell({ session, onExit }: POSShellProps) {
   const { data: products = [], isLoading: loadingProducts, isFetching: fetchingProducts, refetch: refetchProducts } = useQuery<Product[]>({
     queryKey: ['catalog', 'products', 'pos'],
     queryFn: async () => {
-      const res = await api.get<Product[]>('/catalog/products');
-      return res.data ?? [];
+      try {
+        const res = await api.get<{ data?: Product[] } | Product[]>('/products?per_page=100');
+        const raw = res.data;
+        const list = Array.isArray(raw) ? raw : (raw?.data ?? []);
+        return list;
+      } catch (err) {
+        console.error('Failed to load products for POS', err);
+        return [];
+      }
+    },
+  });
+
+  const { data: heldSales = [], refetch: refetchHeldSales } = useQuery<PosHeldSale[]>({
+    queryKey: ['pos', 'held-sales', session.id],
+    queryFn: async () => {
+      try {
+        const res = await api.get<PosHeldSale[] | { data: PosHeldSale[] }>(`/pos/held-sales?pos_session_id=${session.id}`);
+        const raw = res.data;
+        const list = Array.isArray(raw) ? raw : (raw as { data?: PosHeldSale[] })?.data ?? [];
+        return list;
+      } catch {
+        return [];
+      }
     },
   });
 
@@ -97,7 +153,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
         customerNameInputRef.current?.focus();
       } else if (e.key === 'F9') {
         e.preventDefault();
-        const methods = ['cash', 'card', 'mobile_banking'] as const;
+        const methods: readonly PosPaymentMethod[] = ['cash', 'card', 'mobile_banking', 'credit_adjustment'];
         const currentIdx = methods.indexOf(tenderMethod);
         const nextIdx = (currentIdx + 1) % methods.length;
         const nextMethod = methods[nextIdx] ?? 'cash';
@@ -115,6 +171,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
   const addToCart = (product: Product) => {
     updateCurrentSlot((prev) => {
       const existing = prev.cart.find((item) => String(item.product.id) === String(product.id));
+      const price = parseFloat(product.default_sale_price || product.standard_cost || '100') || 100;
       const updatedCart = existing
         ? prev.cart.map((item) =>
             String(item.product.id) === String(product.id)
@@ -126,8 +183,9 @@ export function POSShell({ session, onExit }: POSShellProps) {
             {
               product,
               quantity: 1,
-              unit_price: 100,
+              unit_price: price,
               discount: 0,
+              discount_type: 'flat' as const,
             },
           ];
       return { ...prev, cart: updatedCart };
@@ -149,6 +207,44 @@ export function POSShell({ session, onExit }: POSShellProps) {
     });
   };
 
+  const updateItemQuantity = (productId: string | number, qty: number) => {
+    updateCurrentSlot((prev) => ({
+      ...prev,
+      cart: prev.cart.map((item) =>
+        String(item.product.id) === String(productId) ? { ...item, quantity: Math.max(0.001, qty) } : item
+      ),
+    }));
+  };
+
+  const updateItemPrice = (productId: string | number, price: number) => {
+    updateCurrentSlot((prev) => ({
+      ...prev,
+      cart: prev.cart.map((item) =>
+        String(item.product.id) === String(productId) ? { ...item, unit_price: Math.max(0, price) } : item
+      ),
+    }));
+  };
+
+  const updateItemDiscount = (productId: string | number, discount: number) => {
+    updateCurrentSlot((prev) => ({
+      ...prev,
+      cart: prev.cart.map((item) =>
+        String(item.product.id) === String(productId) ? { ...item, discount: Math.max(0, discount) } : item
+      ),
+    }));
+  };
+
+  const toggleItemDiscountType = (productId: string | number) => {
+    updateCurrentSlot((prev) => ({
+      ...prev,
+      cart: prev.cart.map((item) =>
+        String(item.product.id) === String(productId)
+          ? { ...item, discount_type: item.discount_type === 'percentage' ? 'flat' : 'percentage' }
+          : item
+      ),
+    }));
+  };
+
   const removeFromCart = (productId: string | number) => {
     updateCurrentSlot((prev) => ({
       ...prev,
@@ -162,20 +258,85 @@ export function POSShell({ session, onExit }: POSShellProps) {
       customerName: '',
       customerPhone: '',
       cashTendered: '',
+      isSplitPayment: false,
+      splitPayments: [],
+      order_discount_type: 'flat',
+      order_discount_value: '',
     });
   };
 
-  // Calculations
+  // Calculations with dual-mode item discounts & order discount
   const subtotal = cart.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
-  const discountTotal = cart.reduce((sum, item) => sum + item.discount, 0);
-  const grandTotal = Math.max(0, subtotal - discountTotal);
-  const changeGiven =
+
+  const itemDiscounts = cart.map((item) => {
+    const lineGross = item.quantity * item.unit_price;
+    const isPct = item.discount_type === 'percentage';
+    const discAmt = isPct ? lineGross * (item.discount / 100) : Math.min(lineGross, item.discount || 0);
+    const lineNet = Math.max(0, lineGross - discAmt);
+    return {
+      productId: item.product.id,
+      lineGross,
+      discAmt,
+      lineNet,
+    };
+  });
+
+  const totalLineDiscounts = itemDiscounts.reduce((sum, i) => sum + i.discAmt, 0);
+  const netSubtotalBeforeOrderDisc = Math.max(0, subtotal - totalLineDiscounts);
+
+  const orderDiscType = currentSlot.order_discount_type || 'flat';
+  const orderDiscVal = Math.max(0, parseFloat(currentSlot.order_discount_value || '0') || 0);
+  const orderDiscountAmount =
+    orderDiscType === 'percentage'
+      ? netSubtotalBeforeOrderDisc * (orderDiscVal / 100)
+      : Math.min(netSubtotalBeforeOrderDisc, orderDiscVal);
+
+  const discountTotal = totalLineDiscounts + orderDiscountAmount;
+  const grandTotal = Math.max(0, netSubtotalBeforeOrderDisc - orderDiscountAmount);
+
+  const singleChangeGiven =
     tenderMethod === 'cash' && parseFloat(cashTendered || '0') > grandTotal
       ? parseFloat(cashTendered) - grandTotal
       : 0;
 
+  const splitTotalTendered = splitPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  const splitTotalChange = splitPayments.reduce((sum, p) => sum + (Number(p.changeGiven) || 0), 0);
+  const splitRemainingDue = Math.max(0, grandTotal - splitTotalTendered);
+  const changeGiven = isSplitPayment ? splitTotalChange : singleChangeGiven;
+
   const handleCheckout = async () => {
     if (cart.length === 0) return;
+
+    let paymentsPayload: PosCheckoutPaymentPayload[];
+
+    if (isSplitPayment) {
+      const activePayments = splitPayments.filter((p) => p.amount > 0);
+      const totalPaid = activePayments.reduce((s, p) => s + p.amount, 0);
+      if (totalPaid < grandTotal - 0.01) {
+        notify.warning('Payment incomplete', {
+          description: `Please allocate remaining ${formatCurrency(grandTotal - totalPaid)} across payment methods.`,
+        });
+        return;
+      }
+      paymentsPayload = activePayments.map((p) => {
+        const tenderAmt = p.method === 'cash' && (p.cashReceived ?? 0) > p.amount ? (p.cashReceived ?? 0) : p.amount;
+        return {
+          method: p.method,
+          amount: tenderAmt.toFixed(4),
+          change_given: (p.changeGiven ?? 0).toFixed(4),
+        };
+      });
+    } else {
+      const cashTenderNum = tenderMethod === 'cash' ? (parseFloat(cashTendered || '0') || grandTotal) : grandTotal;
+      paymentsPayload = [
+        {
+          method: tenderMethod,
+          amount: (tenderMethod === 'cash' && cashTenderNum >= grandTotal ? cashTenderNum : grandTotal).toFixed(4),
+          change_given: singleChangeGiven.toFixed(4),
+        },
+      ];
+    }
+
     setCheckingOut(true);
 
     const payload: PosCheckoutPayload = {
@@ -183,38 +344,210 @@ export function POSShell({ session, onExit }: POSShellProps) {
       customer_name: customerName || 'Walk-in Customer',
       customer_phone: customerPhone || null,
       order_date: new Date().toISOString().slice(0, 10),
+      order_discount_type: orderDiscType,
+      order_discount_value: orderDiscVal.toFixed(4),
       discount_amount: discountTotal.toFixed(4),
-      items: cart.map((item) => ({
-        product_id: parseInt(String(item.product.id), 10) || 1,
-        quantity: item.quantity.toFixed(4),
-        unit_id: parseInt(String(item.product.base_unit_id), 10) || 1,
-        unit_price: item.unit_price.toFixed(4),
-      })),
-      payments: [
-        {
-          method: tenderMethod,
-          amount: grandTotal.toFixed(4),
-          change_given: changeGiven.toFixed(4),
-        },
-      ],
+      items: cart.map((item) => {
+        const lineGross = item.quantity * item.unit_price;
+        const isPct = item.discount_type === 'percentage';
+        const discAmt = isPct ? lineGross * (item.discount / 100) : Math.min(lineGross, item.discount || 0);
+        return {
+          product_id: Number(item.product.product_id ?? item.product.id) || 1,
+          quantity: item.quantity.toFixed(4),
+          unit_id: Number(item.product.unit_id ?? item.product.base_unit_id) || 1,
+          unit_price: item.unit_price.toFixed(4),
+          discount_type: item.discount_type,
+          ...(item.discount > 0 ? { discount_value: item.discount.toFixed(4) } : {}),
+          ...(discAmt > 0 ? { discount_amount: discAmt.toFixed(4) } : {}),
+          discount_percentage: isPct
+            ? item.discount.toFixed(4)
+            : lineGross > 0
+            ? ((discAmt / lineGross) * 100).toFixed(4)
+            : '0.0000',
+        };
+      }),
+      payments: paymentsPayload,
     };
 
     try {
-      const res = await api.post<{ data: PosCheckoutResult }>('/pos/checkout', payload);
-      setLastReceipt(res.data.data);
+      const res = await api.post<PosCheckoutResult | { data: PosCheckoutResult }>('/pos/checkout', payload);
+      const checkoutResult: PosCheckoutResult | undefined =
+        res.data && 'order' in res.data
+          ? (res.data as PosCheckoutResult)
+          : (res.data as unknown as { data?: PosCheckoutResult })?.data;
+
+      if (!checkoutResult || !checkoutResult.order) {
+        throw new Error('Invalid checkout response received from server');
+      }
+
+      setLastCompletedPayments(paymentsPayload);
+      setLastReceipt(checkoutResult);
       clearCart();
-    } catch (err) {
+      notify.success('Checkout completed', {
+        description: `Order #${checkoutResult.order.order_number} confirmed.`,
+      });
+    } catch (err: unknown) {
       console.error('POS Checkout Failed', err);
-      alert('Checkout failed. Please ensure terminal session is active and stock is valid.');
+      const apiErr = err as { message?: string; response?: { data?: { message?: string } } };
+      notify.error('Checkout failed', {
+        description:
+          apiErr.message ||
+          apiErr.response?.data?.message ||
+          'Please ensure terminal session is active and stock is valid.',
+      });
     } finally {
       setCheckingOut(false);
+    }
+  };
+
+  const handlePrintReceipt = (format: 'thermal' | 'a4' = 'thermal') => {
+    if (!lastReceipt) return;
+
+    const printableInvoice: Invoice = {
+      ...lastReceipt.invoice,
+      customer_name: lastReceipt.order.customer_name || lastReceipt.invoice.customer_name || 'Walk-in Customer',
+      sales_order_number: lastReceipt.order.order_number || lastReceipt.invoice.sales_order_number || 'DIRECT-POS',
+      items: (lastReceipt.invoice.items && lastReceipt.invoice.items.length > 0)
+        ? lastReceipt.invoice.items
+        : (lastReceipt.order.items ?? []).map((it) => ({
+            id: it.id,
+            uuid: it.uuid || `item-${it.id}`,
+            invoice_id: lastReceipt.invoice.id,
+            product_id: it.product_id,
+            product_name: it.product_name || 'Item',
+            quantity: String(it.quantity),
+            unit_price: String(it.unit_price),
+            line_total: String(it.line_total),
+            discount_amount: String(it.discount_amount ?? '0'),
+            tax_amount: String(it.tax_amount ?? '0'),
+            sort_order: 0,
+          })),
+    };
+
+    const effectiveBusinessConfig = {
+      ...businessConfig,
+      currencySymbol: currencySymbol || businessConfig.currencySymbol || '৳',
+      currencyCode: currencyCode || businessConfig.currencyCode || 'BDT',
+    };
+
+    if (format === 'a4') {
+      printDocument(
+        <SalesInvoiceDocument
+          invoice={printableInvoice}
+          businessConfig={effectiveBusinessConfig}
+          copyType="CUSTOMER COPY"
+        />,
+        {
+          pageClass: 'print-page-a4',
+          documentTitle: `Tax-Invoice-${lastReceipt.invoice.invoice_number}`,
+        }
+      );
+      return;
+    }
+
+    const cashTender = lastCompletedPayments.find((p) => p.method === 'cash');
+
+    printDocument(
+      <ThermalReceipt
+        invoice={printableInvoice}
+        businessConfig={effectiveBusinessConfig}
+        paperWidth="80mm"
+        cashierName={session.operator_name || 'Tanvir Hossain (Cashier A)'}
+        terminalName={session.terminal_name || 'Gulshan Flagship - Counter 1'}
+        {...(cashTender?.amount ? { tenderedCash: cashTender.amount } : {})}
+        {...(cashTender?.change_given ? { changeAmount: cashTender.change_given } : {})}
+      />,
+      {
+        pageClass: 'print-page-thermal-80',
+        documentTitle: `Receipt-${lastReceipt.invoice.invoice_number}`,
+      }
+    );
+  };
+
+  const handleParkSale = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (cart.length === 0) return;
+    setHoldingSale(true);
+    try {
+      await api.post('/pos/held-sales', {
+        pos_session_id: session.id,
+        pos_terminal_id: session.terminal_id,
+        reference_note: parkNote.trim() || `${customerName || 'Walk-in'} (${cart.length} items)`,
+        subtotal: subtotal.toFixed(4),
+        tax_amount: '0.0000',
+        discount_amount: discountTotal.toFixed(4),
+        total_amount: grandTotal.toFixed(4),
+        cart_payload: {
+          items: cart,
+          customerName,
+          customerPhone,
+          tenderMethod,
+          cashTendered,
+          isSplitPayment,
+          splitPayments,
+        },
+      });
+      clearCart();
+      setParkNote('');
+      setIsParkModalOpen(false);
+      refetchHeldSales();
+      notify.success('Sale parked to drawer', {
+        description: 'You can resume this transaction anytime from the parked sales drawer.',
+      });
+    } catch (err) {
+      console.error('Failed to park sale', err);
+      notify.error('Could not hold sale', {
+        description: 'Failed to hold sale in cloud drawer. Please try again.',
+      });
+    } finally {
+      setHoldingSale(false);
+    }
+  };
+
+  const handleResumeSale = async (heldSale: PosHeldSale) => {
+    if (cart.length > 0) {
+      const confirmReplace = window.confirm(
+        'The active cart already contains items. Overwrite active cart with this parked sale?'
+      );
+      if (!confirmReplace) return;
+    }
+    const payload = heldSale.cart_payload;
+    const payloadExtra = payload as { isSplitPayment?: boolean; splitPayments?: PosPaymentLine[] };
+    updateCurrentSlot({
+      cart: (payload.items as unknown as CartItem[]) || [],
+      customerName: payload.customerName || '',
+      customerPhone: payload.customerPhone || '',
+      tenderMethod: payload.tenderMethod || 'cash',
+      cashTendered: payload.cashTendered || '',
+      isSplitPayment: Boolean(payloadExtra.isSplitPayment),
+      splitPayments: payloadExtra.splitPayments || [],
+    });
+    try {
+      await api.delete(`/pos/held-sales/${heldSale.id}`);
+      refetchHeldSales();
+      setIsParkedDrawerOpen(false);
+    } catch (err) {
+      console.error('Error clearing resumed held sale', err);
+    }
+  };
+
+  const handleDiscardHeldSale = async (id: number) => {
+    if (!window.confirm('Are you sure you want to permanently discard this parked sale?')) return;
+    try {
+      await api.delete(`/pos/held-sales/${id}`);
+      refetchHeldSales();
+      notify.info('Parked sale discarded');
+    } catch (err) {
+      console.error('Error discarding held sale', err);
+      notify.error('Failed to discard held sale');
     }
   };
 
   const filteredProducts = products.filter(
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.sku.toLowerCase().includes(search.toLowerCase())
+      p.sku.toLowerCase().includes(search.toLowerCase()) ||
+      (p.barcode && p.barcode.toLowerCase().includes(search.toLowerCase()))
   );
 
   return (
@@ -255,6 +588,18 @@ export function POSShell({ session, onExit }: POSShellProps) {
           </div>
 
           <button
+            onClick={() => setIsParkedDrawerOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl border border-default bg-surface px-3 py-1.5 text-xs font-semibold text-default hover:bg-surface-sunken cursor-pointer transition-colors shadow-2xs"
+            title="View Parked / Held Sales"
+          >
+            <Clock className="h-4 w-4 text-amber-500" />
+            <span className="hidden sm:inline">Parked Sales</span>
+            <span className="rounded-full bg-amber-500/10 text-amber-600 px-1.5 py-0.2 text-[10px] font-bold border border-amber-500/20">
+              {heldSales.length}
+            </span>
+          </button>
+
+          <button
             onClick={onExit}
             className="flex items-center gap-1 rounded-xl border border-default bg-surface px-3 py-1.5 text-xs font-medium text-default hover:bg-surface-sunken cursor-pointer transition-colors"
           >
@@ -278,6 +623,23 @@ export function POSShell({ session, onExit }: POSShellProps) {
                 placeholder="Scan barcode or search products (SKU, Name)..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const trimmed = search.trim().toLowerCase();
+                    if (!trimmed) return;
+                    const match =
+                      products.find(
+                        (p) =>
+                          (p.barcode && p.barcode.toLowerCase() === trimmed) ||
+                          p.sku.toLowerCase() === trimmed
+                      ) || (filteredProducts.length === 1 ? filteredProducts[0] : null);
+                    if (match) {
+                      addToCart(match);
+                      setSearch('');
+                    }
+                  }
+                }}
                 className="h-11 w-full rounded-xl border border-default bg-surface-sunken pl-10 pr-4 text-sm text-default placeholder:text-muted focus:border-primary focus:outline-none"
               />
             </div>
@@ -317,7 +679,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
                     </div>
                     <div className="font-mono text-[10px] text-muted">{p.sku}</div>
                     <div className="mt-2 font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
-                      {formatCurrency(100)}
+                      {formatCurrency(parseFloat(p.default_sale_price || p.standard_cost || '100') || 100)}
                     </div>
                   </button>
                 ))}
@@ -365,11 +727,22 @@ export function POSShell({ session, onExit }: POSShellProps) {
                 {cart.reduce((s, i) => s + i.quantity, 0)}
               </span>
             </div>
-            {cart.length > 0 && (
-              <button onClick={clearCart} className="text-[11px] text-rose-600 dark:text-rose-400 hover:underline cursor-pointer">
-                Clear Cart
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsParkModalOpen(true)}
+                disabled={cart.length === 0}
+                className="text-[11px] font-medium text-amber-600 dark:text-amber-400 hover:underline cursor-pointer disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1"
+                title="Park this cart to resume later"
+              >
+                <PauseCircle className="h-3.5 w-3.5" />
+                Hold Sale
               </button>
-            )}
+              {cart.length > 0 && (
+                <button onClick={clearCart} className="text-[11px] text-rose-600 dark:text-rose-400 hover:underline cursor-pointer">
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Cart Items List */}
@@ -381,42 +754,110 @@ export function POSShell({ session, onExit }: POSShellProps) {
                 <p className="text-[10px] text-muted">Scan barcode (F2) or click items to add</p>
               </div>
             ) : (
-              cart.map((item) => (
-                <div key={item.product.id} className="flex items-center justify-between py-2.5">
-                  <div className="flex-1 pr-2">
-                    <p className="font-medium text-xs text-default line-clamp-1">
-                      {item.product.name}
-                    </p>
-                    <p className="font-mono text-[10px] text-muted">
-                      {formatCurrency(item.unit_price)} / unit
-                    </p>
-                  </div>
+              cart.map((item) => {
+                const lineGross = item.quantity * item.unit_price;
+                const isPct = item.discount_type === 'percentage';
+                const discAmt = isPct ? lineGross * (item.discount / 100) : Math.min(lineGross, item.discount || 0);
+                const lineTotal = Math.max(0, lineGross - discAmt);
+                return (
+                  <div key={item.product.id} className="py-2.5 border-b border-default/60 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-xs text-default truncate" title={item.product.name}>
+                          {item.product.name}
+                        </p>
+                        <p className="font-mono text-[10px] text-muted">
+                          {item.product.sku}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
+                          {formatCurrency(lineTotal)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeFromCart(item.product.id)}
+                          className="p-1 text-muted hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 rounded cursor-pointer transition-colors"
+                          title="Remove item"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
 
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => updateQuantity(item.product.id, -1)}
-                      className="flex h-6 w-6 items-center justify-center rounded-lg border border-default bg-surface text-default hover:bg-surface-sunken cursor-pointer transition-colors"
-                    >
-                      <Minus className="h-3 w-3" />
-                    </button>
-                    <span className="w-6 text-center font-mono font-bold text-xs text-default">
-                      {item.quantity}
-                    </span>
-                    <button
-                      onClick={() => updateQuantity(item.product.id, 1)}
-                      className="flex h-6 w-6 items-center justify-center rounded-lg border border-default bg-surface text-default hover:bg-surface-sunken cursor-pointer transition-colors"
-                    >
-                      <Plus className="h-3 w-3" />
-                    </button>
-                    <button
-                      onClick={() => removeFromCart(item.product.id)}
-                      className="ml-1 text-muted hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer transition-colors"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    {/* Editable Quantity, Price, and Discount Strip */}
+                    <div className="grid grid-cols-3 gap-1.5 bg-surface-sunken/50 p-1.5 rounded-lg border border-default/50 text-[11px]">
+                      {/* Qty Input with - / + */}
+                      <div className="flex flex-col gap-0.5">
+                        <label className="text-[10px] font-semibold text-muted">Qty</label>
+                        <div className="flex items-center gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(item.product.id, -1)}
+                            className="flex h-6 w-5 shrink-0 items-center justify-center rounded border border-default bg-surface text-default hover:bg-surface-sunken cursor-pointer transition-colors"
+                          >
+                            <Minus className="h-2.5 w-2.5" />
+                          </button>
+                          <input
+                            type="number"
+                            min="0.001"
+                            step="any"
+                            value={item.quantity}
+                            onChange={(e) => updateItemQuantity(item.product.id, parseFloat(e.target.value) || 0)}
+                            className="h-6 w-full rounded border border-default bg-surface px-1 text-center font-mono font-bold text-xs text-default focus:border-primary focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(item.product.id, 1)}
+                            className="flex h-6 w-5 shrink-0 items-center justify-center rounded border border-default bg-surface text-default hover:bg-surface-sunken cursor-pointer transition-colors"
+                          >
+                            <Plus className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Unit Price (Rate) */}
+                      <div className="flex flex-col gap-0.5">
+                        <label className="text-[10px] font-semibold text-muted">Price (৳)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={item.unit_price}
+                          onChange={(e) => updateItemPrice(item.product.id, parseFloat(e.target.value) || 0)}
+                          className="h-6 w-full rounded border border-default bg-surface px-1 text-right font-mono font-bold text-xs text-default focus:border-primary focus:outline-none"
+                        />
+                      </div>
+
+                      {/* Line Discount with Dual Mode Toggle */}
+                      <div className="flex flex-col gap-0.5">
+                        <label className="text-[10px] font-semibold text-muted">
+                          Disc ({item.discount_type === 'percentage' ? '%' : '৳'})
+                        </label>
+                        <div className="flex items-center">
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            placeholder="0"
+                            value={item.discount === 0 ? '' : item.discount}
+                            onChange={(e) => updateItemDiscount(item.product.id, Math.max(0, parseFloat(e.target.value) || 0))}
+                            className="h-6 w-full rounded-l border border-default bg-surface px-1 text-right font-mono font-bold text-xs text-rose-600 dark:text-rose-400 focus:border-primary focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => toggleItemDiscountType(item.product.id)}
+                            className="flex h-6 w-5 shrink-0 items-center justify-center rounded-r border border-l-0 border-default bg-surface-sunken hover:bg-surface font-bold text-[10px] text-muted hover:text-default cursor-pointer transition-colors"
+                            title="Toggle Flat (৳) or Percentage (%)"
+                          >
+                            {item.discount_type === 'percentage' ? '%' : '৳'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
@@ -441,75 +882,290 @@ export function POSShell({ session, onExit }: POSShellProps) {
               />
             </div>
 
-            {/* Payment Method Selector */}
-            <div className="grid grid-cols-3 gap-1.5">
+            {/* Payment Section Header with Multi-Payment Toggle */}
+            <div className="flex items-center justify-between border-t border-default pt-2.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
+                Payment Method
+              </span>
               <button
                 type="button"
-                onClick={() => updateCurrentSlot({ tenderMethod: 'cash' })}
-                className={`flex flex-col items-center gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer ${
-                  tenderMethod === 'cash'
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-default bg-surface text-muted hover:bg-surface-sunken hover:text-default'
+                onClick={() => {
+                  const nextSplit = !isSplitPayment;
+                  updateCurrentSlot((prev) => ({
+                    ...prev,
+                    isSplitPayment: nextSplit,
+                    splitPayments: nextSplit && (!prev.splitPayments || prev.splitPayments.length === 0)
+                      ? [
+                          { id: '1', method: prev.tenderMethod || 'cash', amount: grandTotal },
+                        ]
+                      : (prev.splitPayments ?? []),
+                  }));
+                }}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  isSplitPayment
+                    ? 'bg-primary text-white shadow-2xs'
+                    : 'border border-default bg-surface text-muted hover:text-default hover:bg-surface-sunken'
                 }`}
               >
-                <DollarSign className="h-3.5 w-3.5" />
-                Cash (F10)
-              </button>
-              <button
-                type="button"
-                onClick={() => updateCurrentSlot({ tenderMethod: 'card' })}
-                className={`flex flex-col items-center gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer ${
-                  tenderMethod === 'card'
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-default bg-surface text-muted hover:bg-surface-sunken hover:text-default'
-                }`}
-              >
-                <CreditCard className="h-3.5 w-3.5" />
-                Card
-              </button>
-              <button
-                type="button"
-                onClick={() => updateCurrentSlot({ tenderMethod: 'mobile_banking' })}
-                className={`flex flex-col items-center gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer ${
-                  tenderMethod === 'mobile_banking'
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-default bg-surface text-muted hover:bg-surface-sunken hover:text-default'
-                }`}
-              >
-                <Smartphone className="h-3.5 w-3.5" />
-                bKash/Nagad
+                <Split className="h-3 w-3" />
+                <span>{isSplitPayment ? 'Multi-Payment Active' : 'Split / Multiple'}</span>
               </button>
             </div>
 
-            {/* Cash Tendered Input */}
-            {tenderMethod === 'cash' && (
-              <div className="flex items-center justify-between gap-2 rounded-xl bg-surface-sunken border border-default p-2">
-                <span className="text-[11px] text-muted">Cash Received:</span>
-                <input
-                  ref={cashTenderedInputRef}
-                  type="number"
-                  step="1"
-                  placeholder={grandTotal.toString()}
-                  value={cashTendered}
-                  onChange={(e) => updateCurrentSlot({ cashTendered: e.target.value })}
-                  className="h-7 w-28 rounded-lg border border-default bg-surface px-2 text-right font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400 focus:border-primary focus:outline-none"
-                />
+            {!isSplitPayment ? (
+              <>
+                {/* Quick Single Payment Selector */}
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => updateCurrentSlot({ tenderMethod: 'cash' })}
+                    className={`flex flex-col items-center gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer ${
+                      tenderMethod === 'cash'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-default bg-surface text-muted hover:bg-surface-sunken hover:text-default'
+                    }`}
+                  >
+                    <DollarSign className="h-3.5 w-3.5" />
+                    Cash (F10)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateCurrentSlot({ tenderMethod: 'card' })}
+                    className={`flex flex-col items-center gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer ${
+                      tenderMethod === 'card'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-default bg-surface text-muted hover:bg-surface-sunken hover:text-default'
+                    }`}
+                  >
+                    <CreditCard className="h-3.5 w-3.5" />
+                    Card
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateCurrentSlot({ tenderMethod: 'mobile_banking' })}
+                    className={`flex flex-col items-center gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer ${
+                      tenderMethod === 'mobile_banking'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-default bg-surface text-muted hover:bg-surface-sunken hover:text-default'
+                    }`}
+                  >
+                    <Smartphone className="h-3.5 w-3.5" />
+                    bKash/Nagad
+                  </button>
+                </div>
+
+                {/* Cash Tendered Input */}
+                {tenderMethod === 'cash' && (
+                  <div className="flex items-center justify-between gap-2 rounded-xl bg-surface-sunken border border-default p-2">
+                    <span className="text-[11px] text-muted">Cash Received:</span>
+                    <input
+                      ref={cashTenderedInputRef}
+                      type="number"
+                      step="1"
+                      placeholder={grandTotal.toString()}
+                      value={cashTendered}
+                      onChange={(e) => updateCurrentSlot({ cashTendered: e.target.value })}
+                      className="h-7 w-28 rounded-lg border border-default bg-surface px-2 text-right font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400 focus:border-primary focus:outline-none"
+                    />
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Multi-Payment / Split Tender Panel */
+              <div className="space-y-2 rounded-xl border border-default bg-surface-sunken p-2.5">
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-0.5">
+                  {splitPayments.map((payment) => (
+                    <div
+                      key={payment.id}
+                      className="flex flex-col gap-1.5 p-2 rounded-lg bg-surface border border-default shadow-2xs"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          value={payment.method}
+                          onChange={(e) => {
+                            const newMethod = e.target.value as PosPaymentMethod;
+                            updateCurrentSlot((prev) => ({
+                              ...prev,
+                              splitPayments: (prev.splitPayments ?? []).map((p) =>
+                                p.id === payment.id ? { ...p, method: newMethod } : p
+                              ),
+                            }));
+                          }}
+                          className="h-7 rounded-lg border border-default bg-surface-sunken px-2 text-xs font-semibold text-default focus:border-primary focus:outline-none cursor-pointer flex-1"
+                        >
+                          <option value="cash">Cash</option>
+                          <option value="card">Card / POS</option>
+                          <option value="mobile_banking">bKash / Nagad</option>
+                          <option value="credit_adjustment">Customer Credit / Due</option>
+                        </select>
+
+                        <div className="relative w-28">
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted font-bold">৳</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={payment.amount || ''}
+                            onChange={(e) => {
+                              const val = Math.max(0, parseFloat(e.target.value) || 0);
+                              updateCurrentSlot((prev) => ({
+                                ...prev,
+                                splitPayments: (prev.splitPayments ?? []).map((p) =>
+                                  p.id === payment.id ? { ...p, amount: val } : p
+                                ),
+                              }));
+                            }}
+                            placeholder="Amount"
+                            className="h-7 w-full rounded-lg border border-default bg-surface-sunken pl-5 pr-2 text-right font-mono font-bold text-xs text-default focus:border-primary focus:outline-none"
+                          />
+                        </div>
+
+                        {splitPayments.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateCurrentSlot((prev) => ({
+                                ...prev,
+                                splitPayments: (prev.splitPayments ?? []).filter((p) => p.id !== payment.id),
+                              }));
+                            }}
+                            className="p-1 rounded-md text-muted hover:text-rose-500 hover:bg-surface-sunken cursor-pointer transition-colors"
+                            title="Remove payment line"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Cash received calculator per cash split */}
+                      {payment.method === 'cash' && (
+                        <div className="flex items-center justify-between text-[11px] bg-surface-sunken/60 px-2 py-1 rounded border border-default/50 font-mono">
+                          <span className="text-muted">Cash Rcvd:</span>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder={payment.amount.toString()}
+                            value={payment.cashReceived ?? ''}
+                            onChange={(e) => {
+                              const rcvd = parseFloat(e.target.value) || 0;
+                              const chg = Math.max(0, rcvd - payment.amount);
+                              updateCurrentSlot((prev) => ({
+                                ...prev,
+                                splitPayments: (prev.splitPayments ?? []).map((p) =>
+                                  p.id === payment.id ? { ...p, cashReceived: rcvd, changeGiven: chg } : p
+                                ),
+                              }));
+                            }}
+                            className="h-5 w-20 rounded border border-default bg-surface px-1 text-right text-xs font-bold focus:outline-none"
+                          />
+                          {(payment.changeGiven ?? 0) > 0 && (
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
+                              Change: {formatCurrency(payment.changeGiven ?? 0)}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-default/60">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const currentSum = splitPayments.reduce((s, p) => s + p.amount, 0);
+                      const rem = Math.max(0, grandTotal - currentSum);
+                      updateCurrentSlot((prev) => ({
+                        ...prev,
+                        splitPayments: [
+                          ...(prev.splitPayments ?? []),
+                          {
+                            id: String(Date.now()),
+                            method: (prev.splitPayments ?? []).some((p) => p.method === 'cash')
+                              ? 'mobile_banking'
+                              : 'cash',
+                            amount: rem,
+                          },
+                        ],
+                      }));
+                    }}
+                    className="flex items-center gap-1 text-[11px] font-bold text-primary hover:underline cursor-pointer"
+                  >
+                    <Plus className="h-3 w-3" />
+                    Add Method
+                  </button>
+
+                  <div className="text-[11px] font-mono font-bold">
+                    {splitRemainingDue <= 0.001 ? (
+                      <span className="text-emerald-600 dark:text-emerald-400">✓ Fully Allocated</span>
+                    ) : (
+                      <span className="text-amber-600 dark:text-amber-400">
+                        {formatCurrency(splitRemainingDue)} remaining
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
             {/* Order Summary Breakdown */}
-            <div className="space-y-1 text-xs text-muted border-t border-default pt-2 font-mono">
+            <div className="space-y-1.5 text-xs text-muted border-t border-default pt-2 font-mono">
               <div className="flex justify-between">
                 <span>Subtotal:</span>
                 <span>{formatCurrency(subtotal)}</span>
               </div>
+              {totalLineDiscounts > 0 && (
+                <div className="flex justify-between text-rose-600 dark:text-rose-400 font-medium text-[11px]">
+                  <span>Item Discounts:</span>
+                  <span>-{formatCurrency(totalLineDiscounts)}</span>
+                </div>
+              )}
+              {/* Order Discount Row with Dual-Mode Toggle */}
+              <div className="flex items-center justify-between gap-2 py-0.5">
+                <span className="font-medium text-default font-sans">Order Discount:</span>
+                <div className="flex items-center">
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder="0"
+                    value={currentSlot.order_discount_value || ''}
+                    onChange={(e) => updateCurrentSlot({ order_discount_value: e.target.value })}
+                    className="h-6 w-16 rounded-l border border-default bg-surface px-1 text-right font-mono font-bold text-xs text-rose-600 dark:text-rose-400 focus:border-primary focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateCurrentSlot({
+                        order_discount_type: (currentSlot.order_discount_type || 'flat') === 'flat' ? 'percentage' : 'flat',
+                      })
+                    }
+                    className="flex h-6 w-5 items-center justify-center rounded-r border border-l-0 border-default bg-surface-sunken hover:bg-surface font-bold text-[10px] text-muted hover:text-default cursor-pointer transition-colors"
+                    title="Toggle Flat (৳) or Percentage (%)"
+                  >
+                    {(currentSlot.order_discount_type || 'flat') === 'percentage' ? '%' : '৳'}
+                  </button>
+                </div>
+              </div>
+              {orderDiscountAmount > 0 && (
+                <div className="flex justify-between text-rose-600 dark:text-rose-400 font-medium text-[11px]">
+                  <span>Order Disc Amount:</span>
+                  <span>-{formatCurrency(orderDiscountAmount)}</span>
+                </div>
+              )}
+              {discountTotal > 0 && (
+                <div className="flex justify-between text-rose-600 dark:text-rose-400 font-bold border-t border-default/40 pt-1">
+                  <span>Total Discount:</span>
+                  <span>-{formatCurrency(discountTotal)}</span>
+                </div>
+              )}
               {changeGiven > 0 && (
                 <div className="flex justify-between text-amber-600 dark:text-amber-400">
                   <span>Change Return:</span>
                   <span>{formatCurrency(changeGiven)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-sm font-bold text-default pt-1">
+              <div className="flex justify-between text-sm font-bold text-default pt-1 border-t border-default/60">
                 <span className="font-sans">Total Payable:</span>
                 <span className="text-emerald-600 dark:text-emerald-400">{formatCurrency(grandTotal)}</span>
               </div>
@@ -518,10 +1174,14 @@ export function POSShell({ session, onExit }: POSShellProps) {
             {/* Checkout Button */}
             <button
               onClick={handleCheckout}
-              disabled={cart.length === 0 || checkingOut}
+              disabled={cart.length === 0 || checkingOut || (isSplitPayment && splitRemainingDue > 0.01)}
               className="w-full rounded-xl bg-primary py-3 text-center text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary-hover disabled:opacity-50 disabled:pointer-events-none active:scale-[0.99] cursor-pointer"
             >
-              {checkingOut ? 'Processing...' : `Complete Sale (${formatCurrency(grandTotal)})`}
+              {checkingOut
+                ? 'Processing...'
+                : isSplitPayment && splitRemainingDue > 0.01
+                ? `Complete Sale (${formatCurrency(splitRemainingDue)} remaining)`
+                : `Complete Sale (${formatCurrency(grandTotal)})`}
             </button>
 
             {/* Cashier Velocity Hotkey Bar */}
@@ -535,6 +1195,154 @@ export function POSShell({ session, onExit }: POSShellProps) {
         </div>
       </div>
 
+      {/* Park Sale Modal */}
+      {isParkModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-2xl border border-default bg-surface p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-default pb-3">
+              <div className="flex items-center gap-2">
+                <PauseCircle className="h-5 w-5 text-amber-500" />
+                <h3 className="text-base font-bold text-default">Hold / Park Active Cart</h3>
+              </div>
+              <button
+                onClick={() => setIsParkModalOpen(false)}
+                className="text-muted hover:text-default cursor-pointer text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleParkSale} className="space-y-3">
+              <p className="text-xs text-muted">
+                This will save the current cart with {cart.length} item(s) totalling{' '}
+                <span className="font-bold text-default font-mono">{formatCurrency(grandTotal)}</span> to the server queue so you can serve the next customer.
+              </p>
+
+              <div>
+                <label className="block text-xs font-semibold text-muted uppercase mb-1">
+                  Reference / Customer Note
+                </label>
+                <input
+                  type="text"
+                  value={parkNote}
+                  onChange={(e) => setParkNote(e.target.value)}
+                  placeholder={`e.g. ${customerName || 'Customer'} - Waiting for cash / Table 3`}
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-sm text-default focus:border-primary focus:outline-none"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-default">
+                <button
+                  type="button"
+                  onClick={() => setIsParkModalOpen(false)}
+                  className="px-4 py-2 text-xs font-medium border border-default rounded-xl hover:bg-surface-sunken text-default cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={holdingSale}
+                  className="px-4 py-2 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  {holdingSale ? 'Holding...' : 'Confirm & Hold Sale'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Parked Sales Drawer Modal */}
+      {isParkedDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-2xl rounded-2xl border border-default bg-surface p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-default pb-3">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-amber-500" />
+                <h3 className="text-base font-bold text-default">Parked / Held Sales Queue</h3>
+                <span className="rounded-full bg-amber-500/10 text-amber-600 px-2 py-0.5 text-xs font-bold border border-amber-500/20">
+                  {heldSales.length} on hold
+                </span>
+              </div>
+              <button
+                onClick={() => setIsParkedDrawerOpen(false)}
+                className="text-muted hover:text-default cursor-pointer text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
+              {heldSales.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-muted">
+                  <PauseCircle className="h-10 w-10 stroke-1 mb-2 text-muted" />
+                  <p className="text-sm font-medium">No sales are currently held</p>
+                  <p className="text-xs text-muted">When a customer needs time to pay, click "Hold Sale" in the cart.</p>
+                </div>
+              ) : (
+                heldSales.map((sale) => (
+                  <div
+                    key={sale.id}
+                    className="p-4 rounded-xl border border-default bg-surface-sunken flex items-center justify-between gap-4 hover:border-amber-500/40 transition-colors"
+                  >
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-default truncate">
+                          {sale.reference_note || 'Held Sale'}
+                        </span>
+                        <span className="text-[10px] font-mono text-muted bg-surface px-2 py-0.5 rounded border border-default">
+                          {new Date(sale.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted">
+                        {sale.cart_payload?.items?.length ?? 0} item(s) • Total:{' '}
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                          {formatCurrency(sale.total_amount)}
+                        </span>
+                      </p>
+                      {sale.cart_payload?.customerName && (
+                        <p className="text-[11px] text-muted">
+                          Customer: <span className="text-default font-medium">{sale.cart_payload.customerName}</span>{' '}
+                          {sale.cart_payload.customerPhone && `(${sale.cart_payload.customerPhone})`}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => handleResumeSale(sale)}
+                        className="px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer transition-colors"
+                      >
+                        <PlayCircle className="h-3.5 w-3.5" />
+                        Resume Cart
+                      </button>
+                      <button
+                        onClick={() => handleDiscardHeldSale(sale.id)}
+                        className="p-1.5 rounded-xl border border-default text-muted hover:text-rose-600 hover:bg-surface cursor-pointer transition-colors"
+                        title="Discard held sale"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-default flex justify-between items-center text-xs text-muted">
+              <span>Resuming a cart will load items into your active register slot.</span>
+              <button
+                onClick={() => setIsParkedDrawerOpen(false)}
+                className="px-4 py-2 border border-default rounded-xl hover:bg-surface-sunken text-default font-medium cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Receipt Modal */}
       {lastReceipt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
@@ -547,34 +1355,95 @@ export function POSShell({ session, onExit }: POSShellProps) {
               Invoice #{lastReceipt.invoice.invoice_number}
             </p>
 
-            <div className="mt-4 rounded-xl border border-default bg-surface-sunken p-4 font-mono text-xs space-y-2">
-              <div className="flex justify-between text-muted">
-                <span>Order No:</span>
-                <span className="text-default">{lastReceipt.order.order_number}</span>
-              </div>
-              <div className="flex justify-between text-muted">
-                <span>Amount Paid:</span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                  {formatCurrency(lastReceipt.order.total_amount)}
-                </span>
-              </div>
-              <div className="flex justify-between text-muted">
-                <span>Session:</span>
-                <span className="text-default">{lastReceipt.session.session_number}</span>
-              </div>
-            </div>
+            {(() => {
+              const receiptTotalChange = lastCompletedPayments.reduce(
+                (sum, p) => sum + (parseFloat(p.change_given ?? '0') || 0),
+                0
+              );
+              return (
+                <div className="mt-4 rounded-xl border border-default bg-surface-sunken p-4 font-mono text-xs space-y-2.5">
+                  <div className="flex justify-between text-muted">
+                    <span>Order No:</span>
+                    <span className="text-default font-semibold">{lastReceipt.order.order_number}</span>
+                  </div>
+                  <div className="flex justify-between text-muted">
+                    <span>Total Bill:</span>
+                    <span className="text-default font-bold">
+                      {formatCurrency(lastReceipt.order.total_amount)}
+                    </span>
+                  </div>
 
-            <div className="mt-6 flex gap-2">
+                  {lastCompletedPayments.length > 0 && (
+                    <div className="border-t border-default/60 pt-2 space-y-1.5 text-[11px]">
+                      <div className="flex justify-between text-muted font-sans font-semibold">
+                        <span>Tender Breakdown:</span>
+                        {lastCompletedPayments.length > 1 && <span>Amount</span>}
+                      </div>
+                      {lastCompletedPayments.map((p, idx) => (
+                        <div key={idx} className="flex justify-between">
+                          <span className="capitalize text-default">
+                            {p.method === 'mobile_banking'
+                              ? 'bKash / Nagad'
+                              : p.method === 'credit_adjustment'
+                              ? 'Credit Adjustment'
+                              : p.method === 'cash'
+                              ? 'Cash Tendered'
+                              : p.method === 'card'
+                              ? 'Card / POS'
+                              : p.method}:
+                          </span>
+                          <span className="font-bold text-default">{formatCurrency(parseFloat(p.amount))}</span>
+                        </div>
+                      ))}
+                      {receiptTotalChange > 0 && (
+                        <div className="flex justify-between items-center bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded-lg font-bold text-xs mt-1">
+                          <span className="font-sans">Change Returned:</span>
+                          <span className="font-mono">{formatCurrency(receiptTotalChange)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex justify-between border-t border-default/60 pt-2 text-muted">
+                    <span className="font-semibold text-default font-sans">Net Paid:</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm">
+                      {formatCurrency(lastReceipt.order.total_amount)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between text-muted text-[10px] pt-0.5">
+                    <span>Session:</span>
+                    <span className="text-default">{lastReceipt.session.session_number}</span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="mt-6 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handlePrintReceipt('thermal')}
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-default bg-surface-sunken py-2.5 px-3 text-xs font-semibold text-default hover:bg-surface hover:border-primary/50 cursor-pointer transition-all shadow-2xs"
+                  title="Print 80mm POS Thermal Receipt"
+                >
+                  <Printer className="h-3.5 w-3.5 text-primary" />
+                  Thermal (80mm)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePrintReceipt('a4')}
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-default bg-surface-sunken py-2.5 px-3 text-xs font-semibold text-default hover:bg-surface hover:border-primary/50 cursor-pointer transition-all shadow-2xs"
+                  title="Print standard full-page A4 Tax Invoice"
+                >
+                  <FileText className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                  A4 Invoice
+                </button>
+              </div>
               <button
-                onClick={() => window.print()}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-default bg-surface-sunken py-2 text-xs font-medium text-default hover:bg-surface cursor-pointer transition-colors"
-              >
-                <Printer className="h-3.5 w-3.5" />
-                Print Receipt
-              </button>
-              <button
+                type="button"
                 onClick={() => setLastReceipt(null)}
-                className="flex-1 rounded-xl bg-primary py-2 text-xs font-bold text-white hover:bg-primary-hover cursor-pointer transition-colors"
+                className="w-full rounded-xl bg-primary py-2.5 text-xs font-bold text-white hover:bg-primary-hover cursor-pointer transition-colors shadow-sm flex items-center justify-center gap-1.5"
               >
                 Next Sale
               </button>

@@ -15,9 +15,9 @@ final class ProductResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->uuid, 'sku' => $this->sku, 'barcode' => $this->barcode, 'name' => $this->name, 'description' => $this->description,
+            'id' => $this->uuid, 'product_id' => $this->id, 'sku' => $this->sku, 'barcode' => $this->barcode, 'name' => $this->name, 'description' => $this->description,
             'type' => $this->type, 'category_id' => $this->category?->uuid, 'brand_id' => $this->brand?->uuid,
-            'base_unit_id' => $this->baseUnit->uuid, 'purchase_unit_id' => $this->purchaseUnit?->uuid, 'sales_unit_id' => $this->salesUnit?->uuid,
+            'base_unit_id' => $this->baseUnit->uuid, 'unit_id' => $this->base_unit_id, 'purchase_unit_id' => $this->purchaseUnit?->uuid, 'sales_unit_id' => $this->salesUnit?->uuid,
             'is_produced' => $this->is_produced, 'is_purchased' => $this->is_purchased, 'is_sold' => $this->is_sold, 'is_stock_tracked' => $this->is_stock_tracked, 'has_variants' => $this->has_variants,
             'tracking_mode' => $this->tracking_mode, 'shelf_life_days' => $this->shelf_life_days, 'reorder_level' => $this->reorder_level, 'reorder_quantity' => $this->reorder_quantity,
             'standard_cost' => $this->standard_cost, 'default_sale_price' => $this->default_sale_price, 'tax_profile_id' => $this->taxProfile?->uuid, 'weight' => $this->weight,

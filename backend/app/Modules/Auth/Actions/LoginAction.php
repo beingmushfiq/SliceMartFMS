@@ -147,6 +147,9 @@ class LoginAction extends Action
             ];
         }
 
+        $primaryRole = $user->roles->first()?->name ?? ($user->is_platform_admin ? 'Platform Admin' : 'User');
+        $roleNames = $user->roles->pluck('name')->all();
+
         return [
             'access_token' => $accessToken,
             'token_type' => 'Bearer',
@@ -162,8 +165,11 @@ class LoginAction extends Action
                 'reduced_motion' => false,
                 'density' => 'comfortable',
                 'landing_page' => '/dashboard',
+                'role' => $primaryRole,
+                'roles' => $roleNames,
             ],
             'tenant' => $tenantData,
+            'permissions' => $effectivePermissions,
             'cookie' => $cookie,
         ];
     }

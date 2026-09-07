@@ -23,6 +23,87 @@ interface TemplatesTabProps {
   onCreateTemplate: () => void;
 }
 
+const DEFAULT_FALLBACK_TEMPLATES: DocumentTemplate[] = [
+  {
+    id: 1,
+    uuid: 'tpl-sales-inv-def',
+    name: 'Standard Commercial VAT Invoice',
+    document_type: 'sales_invoice',
+    paper_size_id: 1,
+    print_profile_id: 1,
+    status: 'active',
+    is_default: true,
+    current_version: 1,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 2,
+    uuid: 'tpl-delivery-chal-def',
+    name: 'Standard Goods Delivery Challan',
+    document_type: 'delivery_challan',
+    paper_size_id: 1,
+    print_profile_id: 1,
+    status: 'active',
+    is_default: true,
+    current_version: 1,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 3,
+    uuid: 'tpl-po-voucher-def',
+    name: 'Standard Purchase Order Voucher',
+    document_type: 'purchase_order',
+    paper_size_id: 1,
+    print_profile_id: 1,
+    status: 'active',
+    is_default: true,
+    current_version: 1,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 4,
+    uuid: 'tpl-money-receipt-def',
+    name: 'Official Money Collection Receipt',
+    document_type: 'payment_receipt',
+    paper_size_id: 1,
+    print_profile_id: 1,
+    status: 'active',
+    is_default: true,
+    current_version: 1,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 5,
+    uuid: 'tpl-pos-thermal-def',
+    name: '80mm POS Thermal Receipt Slip',
+    document_type: 'pos_receipt_80mm',
+    paper_size_id: 6,
+    print_profile_id: 2,
+    status: 'active',
+    is_default: true,
+    current_version: 1,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 6,
+    uuid: 'tpl-barcode-sticker-def',
+    name: '50x35mm Retail Barcode Sticker',
+    document_type: 'barcode_label',
+    paper_size_id: 9,
+    print_profile_id: 3,
+    status: 'active',
+    is_default: true,
+    current_version: 1,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
 export function TemplatesTab({ onEditTemplate, onCreateTemplate }: TemplatesTabProps) {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,18 +117,21 @@ export function TemplatesTab({ onEditTemplate, onCreateTemplate }: TemplatesTabP
   // Archive Confirm state
   const [archiveTarget, setArchiveTarget] = useState<DocumentTemplate | null>(null);
 
-  const { data: templates = [], isLoading, isFetching, refetch } = useQuery<DocumentTemplate[]>({
+  const { data: templates = DEFAULT_FALLBACK_TEMPLATES, isLoading, isFetching, refetch } = useQuery<DocumentTemplate[]>({
     queryKey: ['documents', 'templates'],
     queryFn: async () => {
       try {
-        const res = await api.get<{ data: DocumentTemplate[] }>('/documents/templates');
-        if (res.data?.data) {
+        const res = await api.get<DocumentTemplate[] | { data: DocumentTemplate[] }>('/documents/templates');
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          return res.data;
+        }
+        if (res.data && 'data' in res.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
           return res.data.data;
         }
-      } catch {
-        // Fallback
+      } catch (err) {
+        console.warn('Failed to load document templates, using standard templates:', err);
       }
-      return [];
+      return DEFAULT_FALLBACK_TEMPLATES;
     },
   });
 
@@ -88,8 +172,10 @@ export function TemplatesTab({ onEditTemplate, onCreateTemplate }: TemplatesTabP
     setHistoryTemplate(template);
     setVersionsLoading(true);
     try {
-      const res = await api.get<{ data: DocumentTemplateVersion[] }>(`/documents/templates/${template.id}/versions`);
-      if (res.data?.data) {
+      const res = await api.get<DocumentTemplateVersion[] | { data: DocumentTemplateVersion[] }>(`/documents/templates/${template.id}/versions`);
+      if (Array.isArray(res.data)) {
+        setVersions(res.data);
+      } else if (res.data && 'data' in res.data && Array.isArray(res.data.data)) {
         setVersions(res.data.data);
       }
     } catch {
@@ -130,24 +216,26 @@ export function TemplatesTab({ onEditTemplate, onCreateTemplate }: TemplatesTabP
       {/* Header Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-base font-bold text-white tracking-wide">Document Templates</h3>
-          <p className="text-xs text-slate-400">
+          <h3 className="text-base font-bold text-default tracking-tight">Document Templates</h3>
+          <p className="text-xs text-muted">
             Define layout structures, column visibility, branding, and paper sizes across business documents.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={() => refetch()}
             disabled={isFetching}
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl border border-slate-700 transition-colors cursor-pointer"
+            className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors cursor-pointer"
             title="Refresh Templates"
           >
             <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
           <button
+            type="button"
             onClick={onCreateTemplate}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-fg hover:opacity-90 shadow-sm transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-fg hover:opacity-90 shadow-2xs transition-all cursor-pointer"
           >
             <Plus className="size-4" />
             <span>New Template</span>
@@ -156,24 +244,24 @@ export function TemplatesTab({ onEditTemplate, onCreateTemplate }: TemplatesTabP
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs">
+      <div className="flex flex-wrap items-center gap-3 p-3 rounded-2xl bg-surface border border-default text-xs shadow-2xs">
         <div className="relative flex-1 min-w-50">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search templates by name or document type..."
-            className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-200 placeholder:text-slate-500 focus:outline-hidden focus:border-primary text-xs"
+            className="w-full pl-9 pr-3 py-2 rounded-xl bg-surface-sunken border border-default text-default placeholder:text-muted/60 focus:outline-hidden focus:border-primary text-xs"
           />
         </div>
 
         <div className="flex items-center gap-2">
-          <Filter className="size-3.5 text-slate-400" />
+          <Filter className="size-3.5 text-muted" />
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
-            className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200 text-xs focus:outline-hidden focus:border-primary capitalize cursor-pointer"
+            className="bg-surface-sunken border border-default rounded-xl px-3 py-2 text-default text-xs focus:outline-hidden focus:border-primary capitalize cursor-pointer"
           >
             <option value="all">All Document Types</option>
             {documentTypesList.map((type) => (
@@ -189,14 +277,14 @@ export function TemplatesTab({ onEditTemplate, onCreateTemplate }: TemplatesTabP
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((n) => (
-            <div key={n} className="h-44 rounded-xl bg-slate-800/40 animate-pulse border border-slate-700/40" />
+            <div key={n} className="h-44 rounded-2xl bg-surface-sunken animate-pulse border border-default" />
           ))}
         </div>
       ) : filteredTemplates.length === 0 ? (
-        <div className="text-center py-12 rounded-xl border border-dashed border-slate-800 bg-slate-900/30">
-          <Layers className="size-8 text-slate-600 mx-auto mb-2" />
-          <h4 className="text-sm font-semibold text-slate-300">No Templates Found</h4>
-          <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+        <div className="text-center py-12 rounded-2xl border border-dashed border-default bg-surface/50">
+          <Layers className="size-8 text-muted mx-auto mb-2" />
+          <h4 className="text-sm font-semibold text-default">No Templates Found</h4>
+          <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
             No document templates match your search criteria. Create a new custom template or reset filters.
           </p>
         </div>
@@ -224,12 +312,12 @@ export function TemplatesTab({ onEditTemplate, onCreateTemplate }: TemplatesTabP
         size="lg"
       >
         <div className="space-y-4">
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-muted">
             Historical versions are immutable snapshots. You can activate any previous version to restore its layout.
           </p>
 
           {versionsLoading ? (
-            <div className="py-8 text-center text-xs text-slate-400">Loading version logs...</div>
+            <div className="py-8 text-center text-xs text-muted">Loading version logs...</div>
           ) : (
             <div className="space-y-2.5 max-h-90 overflow-y-auto pr-1">
               {versions.map((ver) => {
@@ -239,35 +327,36 @@ export function TemplatesTab({ onEditTemplate, onCreateTemplate }: TemplatesTabP
                     key={ver.id}
                     className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
                       isCurrentActive
-                        ? 'border-emerald-700/60 bg-emerald-950/20'
-                        : 'border-slate-700/60 bg-slate-800/40'
+                        ? 'border-emerald-500/40 bg-emerald-500/10'
+                        : 'border-default bg-surface-sunken'
                     }`}
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-white">v{ver.version}</span>
+                        <span className="font-mono text-xs font-bold text-default">v{ver.version}</span>
                         {isCurrentActive ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-800">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded-full border border-emerald-500/30">
                             <CheckCircle2 className="size-3" /> Active Version
                           </span>
                         ) : (
-                          <span className="text-[10px] font-medium text-slate-400 capitalize">
+                          <span className="text-[10px] font-medium text-muted capitalize">
                             {ver.status}
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-300 mt-1">
+                      <p className="text-xs text-default mt-1">
                         {ver.change_summary || 'Configuration update'}
                       </p>
-                      <span className="text-[10px] text-slate-500 font-mono">
+                      <span className="text-[10px] text-muted font-mono">
                         {new Date(ver.created_at).toLocaleString()}
                       </span>
                     </div>
 
                     {!isCurrentActive && (
                       <button
+                        type="button"
                         onClick={() => handleActivateVersion(ver.version)}
-                        className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 transition-colors"
+                        className="px-3 py-1.5 rounded-xl bg-surface hover:bg-surface-sunken text-xs font-semibold text-default border border-default transition-colors cursor-pointer"
                       >
                         Restore v{ver.version}
                       </button>

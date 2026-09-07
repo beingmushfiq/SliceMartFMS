@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../../lib/api/client';
 import type { PlatformAuditLog } from '../../types/api/platform';
+import { SelectDropdown } from '../../components/ui/Dropdown';
 import {
   Filter,
   RefreshCw,
@@ -73,30 +74,34 @@ export const PlatformAuditWorkspace: React.FC = () => {
             <Filter className="w-3.5 h-3.5" />
             <span>Target Entity:</span>
           </div>
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Entity Types' },
+              { value: 'Tenant', label: 'Tenant' },
+              { value: 'Plan', label: 'Plan' },
+              { value: 'User', label: 'User' },
+            ]}
             value={entityType}
-            onChange={(e) => setEntityType(e.target.value)}
-            className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-slate-200 focus:outline-none focus:border-amber-500"
-          >
-            <option value="all">All Entity Types</option>
-            <option value="Tenant">Tenant</option>
-            <option value="Plan">Plan</option>
-            <option value="User">User</option>
-          </select>
+            onChange={(val) => setEntityType(val)}
+            size="sm"
+            aria-label="Filter by target entity"
+          />
         </div>
 
         <div className="flex items-center gap-3">
           <span className="text-slate-400">Action:</span>
-          <select
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Actions' },
+              { value: 'created', label: 'Created', colorDot: 'bg-emerald-500' },
+              { value: 'updated', label: 'Updated', colorDot: 'bg-blue-500' },
+              { value: 'deleted', label: 'Deleted', colorDot: 'bg-rose-500' },
+            ]}
             value={actionFilter}
-            onChange={(e) => setActionFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-slate-200 focus:outline-none focus:border-amber-500"
-          >
-            <option value="all">All Actions</option>
-            <option value="created">Created</option>
-            <option value="updated">Updated</option>
-            <option value="deleted">Deleted</option>
-          </select>
+            onChange={(val) => setActionFilter(val)}
+            size="sm"
+            aria-label="Filter by action"
+          />
         </div>
       </div>
 

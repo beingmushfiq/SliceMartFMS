@@ -284,6 +284,56 @@ final class PosCheckoutTest extends TestCase
         $this->assertSame('300.0000', (string) $this->session->card_total);
     }
 
+    public function test_pos_checkout_does_not_double_count_line_item_discount(): void
+    {
+        // 1 item of 100 with 10 flat discount and 0 order discount -> total discount MUST be exactly 10, grand total MUST be 90
+        $res = $this->postJson('/api/v1/pos/checkout', [
+            'pos_session_id'       => $this->session->id,
+            'order_discount_type'  => 'flat',
+            'order_discount_value' => '0.0000',
+            'discount_amount'      => '10.0000',
+            'items'                => [
+                [
+                    'product_id'          => $this->bread->id,
+                    'quantity'            => '1.0000',
+                    'unit_id'             => $this->unit->id,
+                    'unit_price'          => '100.0000',
+                    'discount_type'       => 'flat',
+                    'discount_value'      => '10.0000',
+                    'discount_amount'     => '10.0000',
+                    'discount_percentage' => '10.0000',
+                ],
+            ],
+            'payments'             => [
+                [
+                    'method'       => 'cash',
+                    'amount'       => '90.0000',
+                    'change_given' => '0.0000',
+                ],
+            ],
+        ], $this->headers());
+
+        $res->assertStatus(201)
+            ->assertJsonPath('data.order.subtotal', '100.0000')
+            ->assertJsonPath('data.order.discount_amount', '10.0000')
+            ->assertJsonPath('data.order.total_amount', '90.0000')
+            ->assertJsonPath('data.invoice.total_amount', '90.0000')
+            ->assertJsonPath('data.invoice.discount_amount', '10.0000');
+
+        $this->assertDatabaseHas('invoices', [
+            'tenant_id'       => 1,
+            'total_amount'    => '90.0000',
+            'discount_amount' => '10.0000',
+            'paid_amount'     => '90.0000',
+        ]);
+
+        $this->assertDatabaseHas('invoice_items', [
+            'tenant_id'       => 1,
+            'discount_amount' => '10.0000',
+            'line_total'      => '90.0000',
+        ]);
+    }
+
     public function test_cannot_checkout_on_closed_session(): void
     {
         $this->session->status = 'closed';

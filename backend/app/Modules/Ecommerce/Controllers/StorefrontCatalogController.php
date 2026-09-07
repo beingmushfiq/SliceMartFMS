@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Ecommerce\Controllers;
 
+use App\Core\Tenancy\TenantContext;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
@@ -29,8 +30,8 @@ class StorefrontCatalogController extends Controller
     {
         /** @var Storefront $storefront */
         $storefront = $request->attributes->get('storefront');
-        $tenantId = $storefront?->tenant_id ?? (int) tenant('id');
-        $tenant = Tenant::find($tenantId) ?? Tenant::first();
+        $tenantId = $storefront?->tenant_id ?? (TenantContext::isBound() ? TenantContext::current()->tenantId() : null);
+        $tenant = $tenantId ? Tenant::find($tenantId) : Tenant::first();
 
         $seoSettings = $tenant ? $this->seoMetadataService->getTenantSeoSettings($tenant->id) : null;
         $orgSchema = $tenant ? $this->structuredDataBuilder->buildOrganizationSchema($tenant, $storefront) : null;
@@ -82,8 +83,33 @@ class StorefrontCatalogController extends Controller
 
         $query = Product::query()
             ->where('status', 'active')
-            ->where('type', '!=', 'raw_material')
-            ->with(['category:id,name,code', 'brand:id,name,code', 'baseUnit:id,name,code', 'variants', 'images']);
+            ->where('type', '!=', 'raw_material');
+
+        if ($storefront) {
+            $query->where(function ($q) use ($storefront): void {
+                $q->whereExists(function ($ex) use ($storefront): void {
+                    $ex->select(\Illuminate\Support\Facades\DB::raw(1))
+                        ->from('storefront_products')
+                        ->whereColumn('storefront_products.product_id', 'products.id')
+                        ->where('storefront_products.storefront_id', $storefront->id)
+                        ->where('storefront_products.is_available', true);
+                })->orWhere(function ($fallback) use ($storefront): void {
+                    $fallback->whereNotExists(function ($nex) use ($storefront): void {
+                        $nex->select(\Illuminate\Support\Facades\DB::raw(1))
+                            ->from('storefront_products')
+                            ->whereColumn('storefront_products.product_id', 'products.id')
+                            ->where('storefront_products.storefront_id', $storefront->id);
+                    })->where(function ($online): void {
+                        $online->where('is_online', true)
+                            ->orWhere(function ($f): void {
+                                $f->whereNull('is_online')->where('type', 'finished');
+                            });
+                    });
+                });
+            });
+        }
+
+        $query->with(['category:id,name,code', 'brand:id,name,code', 'baseUnit:id,name,code', 'variants', 'images']);
 
         if ($request->filled('category_id')) {
             $query->where('category_id', $request->query('category_id'));
@@ -98,12 +124,37 @@ class StorefrontCatalogController extends Controller
             });
         }
 
-        $perPage = min(50, max(1, (int) $request->query('per_page', 20)));
+        $perPage = min(50, max(1, (int) ($request->query('per_page') ?? 20)));
         $products = $query->paginate($perPage);
+
+        $sfProducts = $storefront
+            ? StorefrontProduct::where('storefront_id', $storefront->id)
+                ->whereIn('product_id', $products->pluck('id'))
+                ->get()
+                ->keyBy('product_id')
+            : collect();
+
+        $items = $products->getCollection()->map(function ($product) use ($sfProducts) {
+            $sfProd = $sfProducts->get($product->id);
+            $array = $product->toArray();
+            if ($sfProd) {
+                if (! empty($sfProd->display_name_override)) {
+                    $array['name'] = $sfProd->display_name_override;
+                }
+                if (! empty($sfProd->price_override)) {
+                    $array['default_sale_price'] = (string) $sfProd->price_override;
+                }
+                if (! empty($sfProd->compare_at_price)) {
+                    $array['compare_at_price'] = (string) $sfProd->compare_at_price;
+                }
+                $array['is_featured'] = (bool) $sfProd->is_featured;
+            }
+            return $array;
+        });
 
         return response()->json([
             'success' => true,
-            'data' => $products->items(),
+            'data' => $items->values()->all(),
             'meta' => [
                 'pagination' => [
                     'total' => $products->total(),
@@ -122,8 +173,8 @@ class StorefrontCatalogController extends Controller
     {
         /** @var Storefront $storefront */
         $storefront = $request->attributes->get('storefront');
-        $tenantId = $storefront?->tenant_id ?? (int) tenant('id');
-        $tenant = Tenant::find($tenantId) ?? Tenant::first();
+        $tenantId = $storefront?->tenant_id ?? (TenantContext::isBound() ? TenantContext::current()->tenantId() : null);
+        $tenant = $tenantId ? Tenant::find($tenantId) : Tenant::first();
 
         $product = Product::query()
             ->where('status', 'active')
@@ -162,7 +213,26 @@ class StorefrontCatalogController extends Controller
 
         $breadcrumbSchema = $tenant ? $this->structuredDataBuilder->buildBreadcrumbSchema($breadcrumbs, $tenant, $storefront) : [];
 
+        $sfProd = $storefront
+            ? StorefrontProduct::where('storefront_id', $storefront->id)
+                ->where('product_id', $product->id)
+                ->first()
+            : null;
+
         $responseData = $product->toArray();
+        if ($sfProd) {
+            if (! empty($sfProd->display_name_override)) {
+                $responseData['name'] = $sfProd->display_name_override;
+            }
+            if (! empty($sfProd->price_override)) {
+                $responseData['default_sale_price'] = (string) $sfProd->price_override;
+            }
+            if (! empty($sfProd->compare_at_price)) {
+                $responseData['compare_at_price'] = (string) $sfProd->compare_at_price;
+            }
+            $responseData['is_featured'] = (bool) $sfProd->is_featured;
+        }
+
         $responseData['seo'] = $seoMeta;
         $responseData['schema'] = [
             'product' => $productSchema,

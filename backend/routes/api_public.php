@@ -36,6 +36,7 @@ Route::prefix('v1')
             Route::post('logout', [App\Modules\Auth\Controllers\AuthController::class, 'logout'])->name('logout');
             Route::post('forgot-password', [App\Modules\Auth\Controllers\AuthController::class, 'forgotPassword'])->name('forgot-password');
             Route::post('reset-password', [App\Modules\Auth\Controllers\AuthController::class, 'resetPassword'])->name('reset-password');
+            Route::get('branding', [App\Modules\Auth\Controllers\AuthController::class, 'branding'])->name('branding');
         });
 
         Route::prefix('webhooks')->name('webhooks.')->group(static function (): void {

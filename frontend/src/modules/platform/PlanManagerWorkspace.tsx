@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { api } from '../../lib/api/client';
 import type { PlatformPlan } from '../../types/api/platform';
 import { PlatformPulseLoader } from '../../components/platform/PlatformPulseLoader';
+import { SelectDropdown } from '../../components/ui/Dropdown';
 import {
   Sparkles,
   Check,
@@ -435,14 +436,17 @@ export const PlanManagerWorkspace: React.FC = () => {
 
                 <div>
                   <label className="block text-slate-300 mb-1">Billing Frequency</label>
-                  <select
+                  <SelectDropdown
+                    options={[
+                      { value: 'monthly', label: 'Monthly' },
+                      { value: 'yearly', label: 'Yearly' },
+                    ]}
                     value={formData.billing_period}
-                    onChange={(e) => setFormData({ ...formData, billing_period: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:outline-hidden focus:border-amber-500 font-mono cursor-pointer"
-                  >
-                    <option value="monthly">Monthly</option>
-                    <option value="yearly">Yearly</option>
-                  </select>
+                    onChange={(val) => setFormData({ ...formData, billing_period: val })}
+                    size="md"
+                    buttonClassName="w-full bg-slate-950 border-slate-700 text-slate-100 font-mono"
+                    aria-label="Billing frequency"
+                  />
                 </div>
 
                 <div>

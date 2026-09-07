@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import type { RunSheet } from '../../../types/api/delivery';
 import type { DeliveryOrder } from '../../../types/api/sales';
 import { useCurrency } from '../../../hooks/useCurrency';
+import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
+import { RiderRunSheetChallanDocument } from '../../../components/print/documents/RiderRunSheetChallanDocument';
+import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
+import { SelectDropdown } from '../../../components/ui/Dropdown';
 
 interface RunSheetsSectionProps {
   runSheets: RunSheet[];
@@ -29,6 +33,8 @@ export const RunSheetsSection: React.FC<RunSheetsSectionProps> = ({
   onCompleteRunSheet,
 }) => {
   const { formatCurrency } = useCurrency();
+  const { config: businessConfig } = useBusinessConfig();
+  const [selectedRunSheetForChallan, setSelectedRunSheetForChallan] = useState<RunSheet | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedBranchId, setSelectedBranchId] = useState<number>(branches[0]?.id || 1);
   const [selectedRiderId, setSelectedRiderId] = useState<number>(0);
@@ -211,19 +217,24 @@ export const RunSheetsSection: React.FC<RunSheetsSectionProps> = ({
                   <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                       <button
-                        onClick={() => window.print()}
-                        title="Print delivery challan manifest"
+                        onClick={() => setSelectedRunSheetForChallan(rs)}
+                        title="Preview & Print Official Delivery Challan"
                         style={{
-                          padding: '4px 8px',
-                          borderRadius: 4,
+                          padding: '4px 10px',
+                          borderRadius: 6,
                           border: '1px solid #D1D5DB',
                           backgroundColor: '#FFFFFF',
-                          color: '#374151',
+                          color: '#1F2937',
                           fontSize: '0.75rem',
+                          fontWeight: 600,
                           cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4,
                         }}
                       >
-                        🖨️ Challan
+                        <span>🖨️</span>
+                        <span>Print Challan</span>
                       </button>
                       {rs.status === 'dispatched' && (
                         <button
@@ -295,23 +306,14 @@ export const RunSheetsSection: React.FC<RunSheetsSectionProps> = ({
                   >
                     Dispatch Branch
                   </label>
-                  <select
+                  <SelectDropdown
+                    options={branches.map((b) => ({ value: b.id, label: b.name }))}
                     value={selectedBranchId}
-                    onChange={(e) => setSelectedBranchId(Number(e.target.value))}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 6,
-                      border: '1px solid #D1D5DB',
-                      fontSize: '0.875rem',
-                    }}
-                  >
-                    {branches.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setSelectedBranchId(Number(val))}
+                    size="md"
+                    buttonClassName="w-full"
+                    aria-label="Select dispatch branch"
+                  />
                 </div>
                 <div>
                   <label
@@ -349,24 +351,17 @@ export const RunSheetsSection: React.FC<RunSheetsSectionProps> = ({
                   >
                     Assign Rider
                   </label>
-                  <select
+                  <SelectDropdown
+                    options={[
+                      { value: 0, label: 'Unassigned (Self-pickup / TBD)' },
+                      ...riders.map((r) => ({ value: r.id, label: r.name })),
+                    ]}
                     value={selectedRiderId}
-                    onChange={(e) => setSelectedRiderId(Number(e.target.value))}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 6,
-                      border: '1px solid #D1D5DB',
-                      fontSize: '0.875rem',
-                    }}
-                  >
-                    <option value="0">-- Select Fleet Rider --</option>
-                    {riders.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setSelectedRiderId(Number(val))}
+                    size="md"
+                    buttonClassName="w-full"
+                    aria-label="Assign rider"
+                  />
                 </div>
               </div>
 
@@ -479,6 +474,23 @@ export const RunSheetsSection: React.FC<RunSheetsSectionProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Rider Delivery Challan Print Modal */}
+      {selectedRunSheetForChallan && (
+        <PrintPreviewModal
+          isOpen={Boolean(selectedRunSheetForChallan)}
+          onClose={() => setSelectedRunSheetForChallan(null)}
+          title={`Delivery Challan - ${selectedRunSheetForChallan.run_sheet_number}`}
+          documentNumber={selectedRunSheetForChallan.run_sheet_number}
+          documentType="Rider Delivery Run Sheet Challan"
+          pageClass="print-page-a4"
+        >
+          <RiderRunSheetChallanDocument
+            runSheet={selectedRunSheetForChallan}
+            businessConfig={businessConfig}
+          />
+        </PrintPreviewModal>
       )}
     </div>
   );

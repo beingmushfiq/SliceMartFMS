@@ -62,6 +62,10 @@ export interface TenantCapabilityManifest {
   onboarding_completed: boolean;
   onboarding_step: number;
   modules: Record<string, ModuleCapability>;
+  nav_order?: {
+    sections?: string[];
+    items?: Record<string, string[]>;
+  };
   terminology: Record<string, string>;
   production_stages: ProductionStageConfig[];
   custom_fields: Record<string, CustomFieldDefinitionRecord[]>;

@@ -64,7 +64,7 @@ export function useDocumentPrint() {
           window.removeEventListener('afterprint', cleanup);
         };
 
-        window.addEventListener('afterprint', cleanup);
+        window.addEventListener('afterprint', cleanup, { once: true });
 
         try {
           window.print();
@@ -72,13 +72,6 @@ export function useDocumentPrint() {
           console.error('Browser print execution failed:', e);
           cleanup();
         }
-
-        // Fallback cleanup in case afterprint does not fire (some mobile browsers)
-        setTimeout(() => {
-          if (document.body.classList.contains('printing-active')) {
-            cleanup();
-          }
-        }, 3000);
       }, 250);
     },
     []

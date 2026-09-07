@@ -7,6 +7,7 @@ export * from './documents/SalesInvoiceDocument';
 export * from './documents/PurchaseOrderDocument';
 export * from './documents/GoodsReceiptDocument';
 export * from './documents/DeliveryChallanDocument';
+export * from './documents/RiderRunSheetChallanDocument';
 export * from './documents/PaymentReceiptDocument';
 export * from './documents/CreditNoteDocument';
 export * from './documents/StockTransferDocument';

@@ -26,6 +26,7 @@ final class UpdateWastageRecordRequest extends FormRequest
             'is_recoverable' => ['nullable', 'boolean'],
             'recovered_quantity' => ['nullable', 'numeric', 'gte:0', 'regex:/^\d+(\.\d{1,4})?$/'],
             'warehouse_id' => ['nullable', 'string', 'uuid'],
+            'stage' => ['nullable', 'string', 'in:input,in_process,output,qc'],
             'notes' => ['nullable', 'string'],
         ];
     }

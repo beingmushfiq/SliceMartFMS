@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   Sparkles,
 } from 'lucide-react';
+import { SelectDropdown } from '../../components/ui/Dropdown';
 
 export const TenantRegistrationWizard: React.FC = () => {
   const navigate = useNavigate();
@@ -229,30 +230,36 @@ export const TenantRegistrationWizard: React.FC = () => {
 
               <div>
                 <label className="block text-slate-300 font-semibold mb-1">Default Currency Code</label>
-                <select
+                <SelectDropdown
+                  options={[
+                    { value: 'BDT', label: 'BDT (৳ - Bangladeshi Taka)' },
+                    { value: 'USD', label: 'USD ($ - US Dollar)' },
+                    { value: 'EUR', label: 'EUR (€ - Euro)' },
+                    { value: 'GBP', label: 'GBP (£ - British Pound)' },
+                  ]}
                   value={formData.currency_code}
-                  onChange={(e) => setFormData({ ...formData, currency_code: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-amber-500"
-                >
-                  <option value="BDT">BDT (৳ - Bangladeshi Taka)</option>
-                  <option value="USD">USD ($ - US Dollar)</option>
-                  <option value="EUR">EUR (€ - Euro)</option>
-                  <option value="GBP">GBP (£ - British Pound)</option>
-                </select>
+                  onChange={(val) => setFormData({ ...formData, currency_code: val })}
+                  size="md"
+                  buttonClassName="w-full bg-slate-950 border-slate-700 text-slate-100"
+                  aria-label="Default currency code"
+                />
               </div>
 
               <div>
                 <label className="block text-slate-300 font-semibold mb-1">Default Timezone</label>
-                <select
+                <SelectDropdown
+                  options={[
+                    { value: 'Asia/Dhaka', label: 'Asia/Dhaka (GMT+6)' },
+                    { value: 'UTC', label: 'UTC (Universal)' },
+                    { value: 'America/New_York', label: 'America/New_York (EST)' },
+                    { value: 'Europe/London', label: 'Europe/London (GMT)' },
+                  ]}
                   value={formData.timezone}
-                  onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-amber-500"
-                >
-                  <option value="Asia/Dhaka">Asia/Dhaka (GMT+6)</option>
-                  <option value="UTC">UTC (Universal)</option>
-                  <option value="America/New_York">America/New_York (EST)</option>
-                  <option value="Europe/London">Europe/London (GMT)</option>
-                </select>
+                  onChange={(val) => setFormData({ ...formData, timezone: val })}
+                  size="md"
+                  buttonClassName="w-full bg-slate-950 border-slate-700 text-slate-100"
+                  aria-label="Default timezone"
+                />
               </div>
             </div>
 

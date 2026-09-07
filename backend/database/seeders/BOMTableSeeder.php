@@ -21,170 +21,171 @@ final class BOMTableSeeder extends Seeder
         TenantContext::bind($tenant->toArray());
 
         $pcs = Unit::where('code', 'PCS')->firstOrFail();
-        $kg = Unit::where('code', 'KG')->firstOrFail();
-        $liter = Unit::where('code', 'L')->firstOrFail();
+        $set = Unit::where('code', 'SET')->first() ?? $pcs;
 
         // Finished Products
-        $whiteBread = Product::where('sku', 'FG-WB-400G')->firstOrFail();
-        $sourdough = Product::where('sku', 'FG-SD-500G')->firstOrFail();
-        $briocheBuns = Product::where('sku', 'FG-BUN-6PK')->firstOrFail();
+        $cooker2200 = Product::where('sku', 'FG-IC-2200')->firstOrFail();
+        $stoveDouble = Product::where('sku', 'FG-GS-DOUBLE')->firstOrFail();
 
-        // Raw materials
-        $flourWheat = Product::where('sku', 'RAW-FLOUR-WHEAT')->firstOrFail();
-        $flourWhole = Product::where('sku', 'RAW-FLOUR-WHOLE')->firstOrFail();
-        $sugar = Product::where('sku', 'RAW-SUGAR-WHITE')->firstOrFail();
-        $yeast = Product::where('sku', 'RAW-YEAST-INSTANT')->firstOrFail();
-        $salt = Product::where('sku', 'RAW-SALT-IODIZED')->firstOrFail();
-        $butter = Product::where('sku', 'RAW-BUTTER-UNSALTED')->firstOrFail();
-        $water = Product::where('sku', 'RAW-WATER-RO')->firstOrFail();
+        // Raw materials & components
+        $ceramicPanel = Product::where('sku', 'RAW-CERAMIC-PANEL')->firstOrFail();
+        $coil2200 = Product::where('sku', 'RAW-COIL-2200W')->firstOrFail();
+        $pcbBoard = Product::where('sku', 'RAW-PCB-DIGITAL')->firstOrFail();
+        $coolingFan = Product::where('sku', 'RAW-FAN-DC12V')->firstOrFail();
+        $tempSensor = Product::where('sku', 'RAW-THERMOCOUPLE')->firstOrFail();
+        $chassisSs = Product::where('sku', 'RAW-CHASSIS-SS')->firstOrFail();
+        $powerCord = Product::where('sku', 'RAW-POWER-CORD')->firstOrFail();
+        $burnerCast = Product::where('sku', 'RAW-BURNER-CAST')->firstOrFail();
+        $gasValve = Product::where('sku', 'RAW-GAS-VALVE')->firstOrFail();
 
         // Packaging
-        $pouchWhiteBread = Product::where('sku', 'PKG-POUCH-WB-400')->firstOrFail();
-        $pouchSourdough = Product::where('sku', 'PKG-POUCH-SD-500')->firstOrFail();
+        $foamIrc = Product::where('sku', 'PKG-FOAM-IRC')->firstOrFail();
+        $boxGift = Product::where('sku', 'PKG-BOX-GIFT')->firstOrFail();
+        $boxMaster = Product::where('sku', 'PKG-BOX-MASTER-6')->firstOrFail();
 
-        // 1. BOM for Classic White Bread (Output: 100 Loaves)
-        $bomWhiteBread = BillOfMaterial::create([
+        // 1. BOM for SliceMart 2200W Single Burner Infrared Cooker (Output: 10 Units Batch)
+        $bomCooker = BillOfMaterial::create([
             'uuid' => (string) Str::uuid(),
-            'product_id' => $whiteBread->id,
+            'product_id' => $cooker2200->id,
             'version' => 'v1.0',
-            'name' => 'Standard Commercial Recipe (100-Loaf Batch)',
-            'output_quantity' => '100.0000',
+            'name' => '2200W Touch Single Infrared Cooker Master Assembly BOM',
+            'output_quantity' => '10.0000',
             'output_unit_id' => $pcs->id,
-            'expected_yield_percentage' => '98.5000',
+            'expected_yield_percentage' => '99.0000',
             'status' => 'active',
             'effective_from' => now()->startOfYear(),
         ]);
 
         BillOfMaterialItem::create([
-            'bill_of_material_id' => $bomWhiteBread->id,
-            'product_id' => $flourWheat->id,
-            'quantity' => '35.0000',
-            'unit_id' => $kg->id,
-            'wastage_allowance_percentage' => '1.0000',
+            'bill_of_material_id' => $bomCooker->id,
+            'product_id' => $ceramicPanel->id,
+            'quantity' => '10.0000',
+            'unit_id' => $pcs->id,
+            'wastage_allowance_percentage' => '0.5000',
             'is_optional' => false,
             'sort_order' => 1,
         ]);
         BillOfMaterialItem::create([
-            'bill_of_material_id' => $bomWhiteBread->id,
-            'product_id' => $water->id,
-            'quantity' => '20.0000',
-            'unit_id' => $liter->id,
-            'wastage_allowance_percentage' => '0.0000',
+            'bill_of_material_id' => $bomCooker->id,
+            'product_id' => $coil2200->id,
+            'quantity' => '10.0000',
+            'unit_id' => $pcs->id,
+            'wastage_allowance_percentage' => '0.5000',
             'is_optional' => false,
             'sort_order' => 2,
         ]);
         BillOfMaterialItem::create([
-            'bill_of_material_id' => $bomWhiteBread->id,
-            'product_id' => $sugar->id,
-            'quantity' => '2.5000',
-            'unit_id' => $kg->id,
+            'bill_of_material_id' => $bomCooker->id,
+            'product_id' => $pcbBoard->id,
+            'quantity' => '10.0000',
+            'unit_id' => $pcs->id,
             'wastage_allowance_percentage' => '0.5000',
             'is_optional' => false,
             'sort_order' => 3,
         ]);
         BillOfMaterialItem::create([
-            'bill_of_material_id' => $bomWhiteBread->id,
-            'product_id' => $butter->id,
-            'quantity' => '1.5000',
-            'unit_id' => $kg->id,
-            'wastage_allowance_percentage' => '0.5000',
+            'bill_of_material_id' => $bomCooker->id,
+            'product_id' => $coolingFan->id,
+            'quantity' => '10.0000',
+            'unit_id' => $pcs->id,
+            'wastage_allowance_percentage' => '0.0000',
             'is_optional' => false,
             'sort_order' => 4,
         ]);
         BillOfMaterialItem::create([
-            'bill_of_material_id' => $bomWhiteBread->id,
-            'product_id' => $yeast->id,
-            'quantity' => '0.8000',
-            'unit_id' => $kg->id,
+            'bill_of_material_id' => $bomCooker->id,
+            'product_id' => $tempSensor->id,
+            'quantity' => '10.0000',
+            'unit_id' => $pcs->id,
             'wastage_allowance_percentage' => '0.5000',
             'is_optional' => false,
             'sort_order' => 5,
         ]);
         BillOfMaterialItem::create([
-            'bill_of_material_id' => $bomWhiteBread->id,
-            'product_id' => $salt->id,
-            'quantity' => '0.6000',
-            'unit_id' => $kg->id,
+            'bill_of_material_id' => $bomCooker->id,
+            'product_id' => $chassisSs->id,
+            'quantity' => '10.0000',
+            'unit_id' => $pcs->id,
             'wastage_allowance_percentage' => '0.0000',
             'is_optional' => false,
             'sort_order' => 6,
         ]);
         BillOfMaterialItem::create([
-            'bill_of_material_id' => $bomWhiteBread->id,
-            'product_id' => $pouchWhiteBread->id,
-            'quantity' => '100.0000',
+            'bill_of_material_id' => $bomCooker->id,
+            'product_id' => $powerCord->id,
+            'quantity' => '10.0000',
             'unit_id' => $pcs->id,
-            'wastage_allowance_percentage' => '2.0000',
+            'wastage_allowance_percentage' => '0.0000',
             'is_optional' => false,
             'sort_order' => 7,
         ]);
+        BillOfMaterialItem::create([
+            'bill_of_material_id' => $bomCooker->id,
+            'product_id' => $foamIrc->id,
+            'quantity' => '10.0000',
+            'unit_id' => $set->id,
+            'wastage_allowance_percentage' => '0.0000',
+            'is_optional' => false,
+            'sort_order' => 8,
+        ]);
+        BillOfMaterialItem::create([
+            'bill_of_material_id' => $bomCooker->id,
+            'product_id' => $boxGift->id,
+            'quantity' => '10.0000',
+            'unit_id' => $pcs->id,
+            'wastage_allowance_percentage' => '1.0000',
+            'is_optional' => false,
+            'sort_order' => 9,
+        ]);
 
-        // 2. BOM for Sourdough Loaf (Output: 50 Loaves)
-        $bomSourdough = BillOfMaterial::create([
+        // 2. BOM for Glass Top Double Burner Infrared Gas Stove (Output: 5 Units Batch)
+        $bomStove = BillOfMaterial::create([
             'uuid' => (string) Str::uuid(),
-            'product_id' => $sourdough->id,
+            'product_id' => $stoveDouble->id,
             'version' => 'v1.0',
-            'name' => 'Artisan Fermented Sourdough (50-Loaf Batch)',
-            'output_quantity' => '50.0000',
+            'name' => 'Toughened Glass Double Infrared Gas Stove Master Assembly BOM',
+            'output_quantity' => '5.0000',
             'output_unit_id' => $pcs->id,
-            'expected_yield_percentage' => '97.0000',
+            'expected_yield_percentage' => '99.5000',
             'status' => 'active',
             'effective_from' => now()->startOfYear(),
         ]);
 
         BillOfMaterialItem::create([
-            'bill_of_material_id' => $bomSourdough->id,
-            'product_id' => $flourWhole->id,
-            'quantity' => '15.0000',
-            'unit_id' => $kg->id,
-            'wastage_allowance_percentage' => '1.0000',
+            'bill_of_material_id' => $bomStove->id,
+            'product_id' => $burnerCast->id,
+            'quantity' => '10.0000', // 2 per stove
+            'unit_id' => $pcs->id,
+            'wastage_allowance_percentage' => '0.0000',
             'is_optional' => false,
             'sort_order' => 1,
         ]);
         BillOfMaterialItem::create([
-            'bill_of_material_id' => $bomSourdough->id,
-            'product_id' => $flourWheat->id,
-            'quantity' => '12.0000',
-            'unit_id' => $kg->id,
-            'wastage_allowance_percentage' => '1.0000',
+            'bill_of_material_id' => $bomStove->id,
+            'product_id' => $gasValve->id,
+            'quantity' => '5.0000',
+            'unit_id' => $pcs->id,
+            'wastage_allowance_percentage' => '0.0000',
             'is_optional' => false,
             'sort_order' => 2,
         ]);
         BillOfMaterialItem::create([
-            'bill_of_material_id' => $bomSourdough->id,
-            'product_id' => $water->id,
-            'quantity' => '18.0000',
-            'unit_id' => $liter->id,
+            'bill_of_material_id' => $bomStove->id,
+            'product_id' => $chassisSs->id,
+            'quantity' => '5.0000',
+            'unit_id' => $pcs->id,
             'wastage_allowance_percentage' => '0.0000',
             'is_optional' => false,
             'sort_order' => 3,
         ]);
         BillOfMaterialItem::create([
-            'bill_of_material_id' => $bomSourdough->id,
-            'product_id' => $salt->id,
-            'quantity' => '0.5000',
-            'unit_id' => $kg->id,
-            'wastage_allowance_percentage' => '0.0000',
+            'bill_of_material_id' => $bomStove->id,
+            'product_id' => $boxMaster->id,
+            'quantity' => '5.0000',
+            'unit_id' => $pcs->id,
+            'wastage_allowance_percentage' => '1.0000',
             'is_optional' => false,
             'sort_order' => 4,
-        ]);
-        BillOfMaterialItem::create([
-            'bill_of_material_id' => $bomSourdough->id,
-            'product_id' => $yeast->id,
-            'quantity' => '0.2000',
-            'unit_id' => $kg->id,
-            'wastage_allowance_percentage' => '0.5000',
-            'is_optional' => false,
-            'sort_order' => 5,
-        ]);
-        BillOfMaterialItem::create([
-            'bill_of_material_id' => $bomSourdough->id,
-            'product_id' => $pouchSourdough->id,
-            'quantity' => '50.0000',
-            'unit_id' => $pcs->id,
-            'wastage_allowance_percentage' => '2.0000',
-            'is_optional' => false,
-            'sort_order' => 6,
         ]);
 
         TenantContext::flush();

@@ -468,3 +468,332 @@ export function MultiSelect<T extends string | number>({
     </div>
   );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 3. SELECT DROPDOWN (PREMIUM CUSTOM SELECT & FILTER CONTROLS)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface SelectDropdownOption<T = string> {
+  value: T;
+  label: string;
+  icon?: React.ElementType;
+  colorDot?: string;
+  badge?: string | number;
+  badgeTone?: 'primary' | 'success' | 'warning' | 'info' | 'danger' | 'muted';
+  description?: string;
+  disabled?: boolean;
+}
+
+export interface SelectDropdownProps<T = string> {
+  options: SelectDropdownOption<T>[];
+  value: T;
+  onChange: (value: T) => void;
+  placeholder?: string;
+  icon?: React.ElementType;
+  label?: string;
+  size?: 'sm' | 'md' | 'lg';
+  align?: 'left' | 'right';
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  className?: string;
+  buttonClassName?: string;
+  menuClassName?: string;
+  disabled?: boolean;
+  'aria-label'?: string;
+}
+
+export function SelectDropdown<T extends string | number = string>({
+  options,
+  value,
+  onChange,
+  placeholder = 'Select...',
+  icon: LeadingIcon,
+  label,
+  size = 'sm',
+  align = 'left',
+  searchable = false,
+  searchPlaceholder = 'Search...',
+  className,
+  buttonClassName,
+  menuClassName,
+  disabled = false,
+  'aria-label': ariaLabel,
+}: SelectDropdownProps<T>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const selectedOption = options.find((opt) => opt.value === value);
+
+  const filteredOptions = options.filter(
+    (opt) =>
+      !search ||
+      opt.label.toLowerCase().includes(search.toLowerCase()) ||
+      (opt.description && opt.description.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setSearch('');
+        setHighlightedIndex(-1);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && searchable) {
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 50);
+    }
+  }, [isOpen, searchable]);
+
+  const handleSelect = (opt: SelectDropdownOption<T>) => {
+    if (opt.disabled) return;
+    onChange(opt.value);
+    setIsOpen(false);
+    setSearch('');
+    setHighlightedIndex(-1);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (disabled) return;
+
+    if (!isOpen) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        setIsOpen(true);
+      }
+      return;
+    }
+
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      setIsOpen(false);
+      setSearch('');
+      setHighlightedIndex(-1);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev < filteredOptions.length - 1 ? prev + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : filteredOptions.length - 1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
+        const option = filteredOptions[highlightedIndex];
+        if (option && !option.disabled) {
+          handleSelect(option);
+        }
+      }
+    }
+  };
+
+  const SelectedIcon = selectedOption?.icon;
+
+  const sizeClasses = {
+    sm: 'py-1.5 px-3 text-xs min-h-[32px] gap-2 rounded-xl',
+    md: 'py-2 px-3.5 text-xs min-h-[36px] gap-2.5 rounded-xl',
+    lg: 'py-2.5 px-4 text-sm min-h-[42px] gap-3 rounded-xl',
+  }[size];
+
+  return (
+    <div className={cn('relative inline-flex flex-col', className)} ref={containerRef}>
+      {label && (
+        <label className="text-xs font-semibold text-default mb-1">
+          {label}
+        </label>
+      )}
+
+      {/* Trigger Button */}
+      <button
+        type="button"
+        role="combobox"
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        aria-label={ariaLabel || label || placeholder}
+        disabled={disabled}
+        onClick={() => !disabled && setIsOpen((prev) => !prev)}
+        onKeyDown={handleKeyDown}
+        className={cn(
+          'group flex items-center justify-between border transition-all duration-150 cursor-pointer select-none text-left shadow-2xs',
+          'bg-surface hover:bg-surface-sunken/40 text-default font-medium',
+          'border-default/80 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none',
+          isOpen && 'border-primary ring-2 ring-primary/20 bg-surface shadow-xs',
+          disabled && 'opacity-50 cursor-not-allowed bg-surface-sunken',
+          sizeClasses,
+          buttonClassName
+        )}
+      >
+        <span className="flex items-center gap-2 truncate">
+          {LeadingIcon && (
+            <LeadingIcon className="size-3.5 text-muted group-hover:text-primary transition-colors shrink-0" />
+          )}
+          {selectedOption?.colorDot && (
+            <span
+              className={cn('size-2 rounded-full shrink-0 ring-2 ring-white/20', selectedOption.colorDot)}
+            />
+          )}
+          {SelectedIcon && (
+            <SelectedIcon className="size-3.5 text-primary shrink-0" />
+          )}
+          <span className={cn('truncate', !selectedOption && 'text-muted')}>
+            {selectedOption ? selectedOption.label : placeholder}
+          </span>
+          {selectedOption?.badge !== undefined && (
+            <span
+              className={cn(
+                'text-[10px] font-mono px-1.5 py-0.5 rounded-md font-semibold shrink-0',
+                selectedOption.badgeTone === 'success' && 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+                selectedOption.badgeTone === 'warning' && 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+                selectedOption.badgeTone === 'danger' && 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+                selectedOption.badgeTone === 'primary' && 'bg-primary/15 text-primary',
+                (!selectedOption.badgeTone || selectedOption.badgeTone === 'muted') &&
+                  'bg-surface-sunken text-muted'
+              )}
+            >
+              {selectedOption.badge}
+            </span>
+          )}
+        </span>
+
+        <ChevronDown
+          className={cn(
+            'size-3.5 text-muted group-hover:text-default transition-transform duration-200 shrink-0 ml-2',
+            isOpen && 'rotate-180 text-primary'
+          )}
+        />
+      </button>
+
+      {/* Floating Popover Menu */}
+      {isOpen && (
+        <div
+          className={cn(
+            'absolute top-full mt-1.5 z-50 min-w-full rounded-2xl border border-default/90',
+            'bg-surface/95 backdrop-blur-md shadow-xl overflow-hidden p-1',
+            'animate-in fade-in-0 zoom-in-95 duration-150',
+            align === 'right' ? 'right-0' : 'left-0',
+            menuClassName
+          )}
+        >
+          {searchable && (
+            <div className="p-1.5 border-b border-default/50 mb-1 flex items-center gap-2">
+              <Search className="size-3.5 text-muted shrink-0 ml-1" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setHighlightedIndex(0);
+                }}
+                placeholder={searchPlaceholder}
+                className="w-full bg-transparent text-xs text-default focus:outline-none placeholder:text-muted py-0.5"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="p-0.5 text-muted hover:text-default rounded"
+                >
+                  <X className="size-3" />
+                </button>
+              )}
+            </div>
+          )}
+
+          <ul
+            role="listbox"
+            tabIndex={-1}
+            className="max-h-64 overflow-y-auto space-y-0.5 scrollbar-thin"
+          >
+            {filteredOptions.length === 0 ? (
+              <li className="px-3 py-3 text-center text-xs text-muted">
+                No matching options
+              </li>
+            ) : (
+              filteredOptions.map((opt, index) => {
+                const isSelected = opt.value === value;
+                const isHighlighted = index === highlightedIndex;
+                const OptIcon = opt.icon;
+
+                return (
+                  <li
+                    key={String(opt.value)}
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => handleSelect(opt)}
+                    onMouseEnter={() => setHighlightedIndex(index)}
+                    className={cn(
+                      'flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-medium cursor-pointer transition-all select-none',
+                      isSelected && 'bg-primary/10 text-primary font-semibold',
+                      !isSelected && isHighlighted && 'bg-surface-sunken text-default',
+                      !isSelected && !isHighlighted && 'text-default/90 hover:bg-surface-sunken',
+                      opt.disabled && 'opacity-40 cursor-not-allowed pointer-events-none'
+                    )}
+                  >
+                    <div className="flex items-center gap-2 truncate min-w-0 mr-2">
+                      {opt.colorDot && (
+                        <span
+                          className={cn('size-2 rounded-full shrink-0 ring-2 ring-white/20', opt.colorDot)}
+                        />
+                      )}
+                      {OptIcon && (
+                        <OptIcon
+                          className={cn(
+                            'size-3.5 shrink-0',
+                            isSelected ? 'text-primary' : 'text-muted'
+                          )}
+                        />
+                      )}
+                      <div className="truncate">
+                        <span className="truncate">{opt.label}</span>
+                        {opt.description && (
+                          <p className="text-[10px] text-muted truncate font-normal">
+                            {opt.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {opt.badge !== undefined && (
+                        <span
+                          className={cn(
+                            'text-[10px] font-mono px-1.5 py-0.5 rounded-md font-semibold',
+                            opt.badgeTone === 'success' && 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+                            opt.badgeTone === 'warning' && 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+                            opt.badgeTone === 'danger' && 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+                            opt.badgeTone === 'primary' && 'bg-primary/15 text-primary',
+                            (!opt.badgeTone || opt.badgeTone === 'muted') &&
+                              'bg-surface-sunken text-muted'
+                          )}
+                        >
+                          {opt.badge}
+                        </span>
+                      )}
+                      {isSelected && (
+                        <Check className="size-3.5 text-primary shrink-0 animate-in zoom-in-75 duration-100" />
+                      )}
+                    </div>
+                  </li>
+                );
+              })
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+

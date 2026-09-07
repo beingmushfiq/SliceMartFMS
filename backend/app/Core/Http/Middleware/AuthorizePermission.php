@@ -34,7 +34,7 @@ class AuthorizePermission
             );
         }
 
-        if ($user->is_platform_admin) {
+        if ($user->is_platform_admin || (method_exists($user, 'hasRole') && $user->hasRole('Super Administrator'))) {
             return $next($request);
         }
 

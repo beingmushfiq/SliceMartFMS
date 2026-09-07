@@ -36,6 +36,8 @@ export function ThermalReceipt({
 
   const items = invoice.items ?? [];
 
+  const currencySymbol = businessConfig.currencySymbol || '৳';
+
   return (
     <div
       style={{
@@ -75,12 +77,10 @@ export function ThermalReceipt({
           <span>Cashier:</span>
           <span>{cashierName}</span>
         </div>
-        {invoice.customer_name && (
-          <div className="flex justify-between font-semibold">
-            <span>Customer:</span>
-            <span>{invoice.customer_name}</span>
-          </div>
-        )}
+        <div className="flex justify-between">
+          <span>Customer:</span>
+          <span>{invoice.customer_name || 'Walk-in Customer'}</span>
+        </div>
       </div>
 
       {/* Items Table */}
@@ -119,36 +119,36 @@ export function ThermalReceipt({
       <div className="py-2 border-b border-black border-dashed text-[8.5pt] space-y-1">
         <div className="flex justify-between">
           <span>Subtotal:</span>
-          <span className="font-mono">{formatCurrency(invoice.subtotal)}</span>
+          <span className="font-mono">{formatCurrency(invoice.subtotal, currencySymbol)}</span>
         </div>
         {parseFloat(invoice.discount_amount || '0') > 0 && (
           <div className="flex justify-between">
             <span>Discount:</span>
-            <span className="font-mono">- {formatCurrency(invoice.discount_amount)}</span>
+            <span className="font-mono">- {formatCurrency(invoice.discount_amount, currencySymbol)}</span>
           </div>
         )}
         <div className="flex justify-between">
           <span>VAT / Tax (Incl.):</span>
-          <span className="font-mono">{formatCurrency(invoice.tax_amount)}</span>
+          <span className="font-mono">{formatCurrency(invoice.tax_amount, currencySymbol)}</span>
         </div>
         <div className="flex justify-between text-[11pt] font-bold border-t border-black border-dashed pt-1">
           <span>GRAND TOTAL:</span>
-          <span className="font-mono">{formatCurrency(invoice.total_amount)}</span>
+          <span className="font-mono">{formatCurrency(invoice.total_amount, currencySymbol)}</span>
         </div>
         <div className="flex justify-between pt-1">
           <span>Paid ({invoice.status === 'paid' ? 'CASH' : 'MFS'}):</span>
-          <span className="font-mono font-bold">{formatCurrency(invoice.paid_amount)}</span>
+          <span className="font-mono font-bold">{formatCurrency(invoice.paid_amount, currencySymbol)}</span>
         </div>
         {tenderedCash && (
           <div className="flex justify-between">
             <span>Tendered Cash:</span>
-            <span className="font-mono">{formatCurrency(tenderedCash)}</span>
+            <span className="font-mono">{formatCurrency(tenderedCash, currencySymbol)}</span>
           </div>
         )}
         {changeAmount && (
           <div className="flex justify-between font-bold">
             <span>Change Returned:</span>
-            <span className="font-mono">{formatCurrency(changeAmount)}</span>
+            <span className="font-mono">{formatCurrency(changeAmount, currencySymbol)}</span>
           </div>
         )}
       </div>

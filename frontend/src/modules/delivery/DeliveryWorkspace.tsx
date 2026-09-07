@@ -11,6 +11,8 @@ import { RunSheetsSection } from './sections/RunSheetsSection';
 import { CourierProvidersSection } from './sections/CourierProvidersSection';
 import { CodReconciliationSection } from './sections/CodReconciliationSection';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
+import { Truck, Bike, Building2, Banknote, RefreshCw } from 'lucide-react';
+import { cn } from '../../lib/utils';
 
 type DeliveryTab = 'shipments' | 'run_sheets' | 'providers' | 'cod_reconciliation';
 
@@ -315,115 +317,77 @@ export const DeliveryWorkspace: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="space-y-6 max-w-7xl mx-auto py-2">
       {/* Page Header */}
-      <div>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            color: '#6B7280',
-            fontSize: '0.875rem',
-          }}
-        >
-          <span>FMS</span>
-          <span>/</span>
-          <span>Logistics & Fulfillment</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-          <h1 style={{ margin: '6px 0 0', fontSize: '1.75rem', fontWeight: 700, color: 'var(--color-text, #111827)' }}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-default pb-5">
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-primary bg-primary-subtle px-2.5 py-0.5 rounded-full border border-primary/20 flex items-center gap-1">
+              <Truck className="size-3 text-primary" />
+              Logistics & Fleet Dispatch
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-default">
             Delivery, Couriers & Fleet Dispatch
           </h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Steadfast · Pathao · REDX Online
-            </span>
-            <button
-              onClick={() => alert('Synchronizing shipment statuses with Pathao & Steadfast APIs... All tracking records updated.')}
-              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
-            >
-              🔄 Bulk Courier Sync
-            </button>
-          </div>
+          <p className="mt-1 text-xs text-muted max-w-2xl leading-relaxed">
+            3PL courier API integrations, rider run sheets, and cash-on-delivery reconciliation.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            Steadfast · Pathao · REDX
+          </span>
+          <button
+            type="button"
+            onClick={() => alert('Synchronizing shipment statuses with Pathao & Steadfast APIs... All tracking records updated.')}
+            className="px-3.5 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-fg text-xs font-semibold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+          >
+            <RefreshCw className="size-3.5" />
+            Bulk Courier Sync
+          </button>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div
-        style={{
-          display: 'flex',
-          gap: 8,
-          borderBottom: '1px solid #E5E7EB',
-          paddingBottom: 2,
-        }}
-      >
-        <button
-          onClick={() => setActiveTab('shipments')}
-          style={{
-            padding: '10px 18px',
-            border: 'none',
-            background: 'none',
-            borderBottom: activeTab === 'shipments' ? '2px solid #2563EB' : '2px solid transparent',
-            color: activeTab === 'shipments' ? '#2563EB' : '#4B5563',
-            fontWeight: activeTab === 'shipments' ? 600 : 500,
-            fontSize: '0.9375rem',
-            cursor: 'pointer',
-          }}
-        >
-          📦 3PL Shipments & Tracking
-        </button>
-
-        <button
-          onClick={() => setActiveTab('run_sheets')}
-          style={{
-            padding: '10px 18px',
-            border: 'none',
-            background: 'none',
-            borderBottom:
-              activeTab === 'run_sheets' ? '2px solid #2563EB' : '2px solid transparent',
-            color: activeTab === 'run_sheets' ? '#2563EB' : '#4B5563',
-            fontWeight: activeTab === 'run_sheets' ? 600 : 500,
-            fontSize: '0.9375rem',
-            cursor: 'pointer',
-          }}
-        >
-          🛵 Rider Run Sheets
-        </button>
-
-        <button
-          onClick={() => setActiveTab('providers')}
-          style={{
-            padding: '10px 18px',
-            border: 'none',
-            background: 'none',
-            borderBottom: activeTab === 'providers' ? '2px solid #2563EB' : '2px solid transparent',
-            color: activeTab === 'providers' ? '#2563EB' : '#4B5563',
-            fontWeight: activeTab === 'providers' ? 600 : 500,
-            fontSize: '0.9375rem',
-            cursor: 'pointer',
-          }}
-        >
-          🏢 Courier Partners
-        </button>
-
-        <button
-          onClick={() => setActiveTab('cod_reconciliation')}
-          style={{
-            padding: '10px 18px',
-            border: 'none',
-            background: 'none',
-            borderBottom:
-              activeTab === 'cod_reconciliation' ? '2px solid #2563EB' : '2px solid transparent',
-            color: activeTab === 'cod_reconciliation' ? '#2563EB' : '#4B5563',
-            fontWeight: activeTab === 'cod_reconciliation' ? 600 : 500,
-            fontSize: '0.9375rem',
-            cursor: 'pointer',
-          }}
-        >
-          💵 COD Reconciliation
-        </button>
+      {/* Segmented Navigation Tabs Tray */}
+      <div className="flex overflow-x-auto p-1.5 bg-surface-sunken rounded-2xl border border-default shadow-2xs">
+        <div className="flex gap-1.5 min-w-full sm:min-w-0" aria-label="Delivery sections">
+          {[
+            { id: 'shipments', label: '3PL Shipments & Tracking', icon: Truck, count: shipments.length },
+            { id: 'run_sheets', label: 'Rider Run Sheets', icon: Bike, count: runSheets.length },
+            { id: 'providers', label: 'Courier Partners', icon: Building2, count: providers.length },
+            { id: 'cod_reconciliation', label: 'COD Reconciliation', icon: Banknote, count: reconciliations.length },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                className={cn(
+                  'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer',
+                  isActive
+                    ? 'bg-primary text-primary-fg font-semibold shadow-xs border border-primary'
+                    : 'text-muted hover:text-default hover:bg-surface/50 border border-transparent'
+                )}
+              >
+                <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
+                <span>{tab.label}</span>
+                <span
+                  className={cn(
+                    'text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold',
+                    isActive ? 'bg-white/20 text-white' : 'bg-surface text-muted border border-default'
+                  )}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Tab Panels */}

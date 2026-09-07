@@ -6,9 +6,11 @@ namespace App\Core\Capabilities;
 
 use App\Models\CustomFieldDefinition;
 use App\Models\IndustryProfile;
+use App\Models\Setting;
 use App\Models\Tenant;
 use App\Models\TenantModule;
 use App\Models\TenantProductionStage;
+use App\Modules\Platform\Controllers\TenantModuleController;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -150,6 +152,16 @@ final class TenantCapabilityManifest
                 ->mapWithKeys(fn ($row) => [$row->key => (bool) $row->enabled])
                 ->toArray();
 
+            // 6. Resolve Navigation Order
+            /** @var Setting|null $navSetting */
+            $navSetting = Setting::withoutTenantScope()
+                ->where('tenant_id', $tenantId)
+                ->where('group', 'navigation')
+                ->where('key', 'nav_order')
+                ->first();
+
+            $navOrder = $navSetting && is_array($navSetting->value) ? $navSetting->value : TenantModuleController::DEFAULT_NAV_ORDER;
+
             return [
                 'tenant_id' => $tenant->id,
                 'tenant_uuid' => $tenant->uuid,
@@ -162,6 +174,7 @@ final class TenantCapabilityManifest
                 'onboarding_completed' => (bool) $tenant->onboarding_completed_at,
                 'onboarding_step' => $tenant->onboarding_step ?? 1,
                 'modules' => $modules,
+                'nav_order' => $navOrder,
                 'terminology' => $terminology,
                 'production_stages' => $stages,
                 'custom_fields' => $customFields,
@@ -194,6 +207,7 @@ final class TenantCapabilityManifest
             'onboarding_completed' => true,
             'onboarding_step' => 1,
             'modules' => $modules,
+            'nav_order' => TenantModuleController::DEFAULT_NAV_ORDER,
             'terminology' => [
                 'raw_material' => 'Raw Material',
                 'finished_good' => 'Finished Good',

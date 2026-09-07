@@ -4,6 +4,7 @@ export interface QcParameter {
   name: string;
   category: string;
   data_type: 'numeric' | 'boolean' | 'options' | 'text';
+  type?: string;
   min_value?: string | null;
   max_value?: string | null;
   target_value?: string | null;
@@ -42,11 +43,13 @@ export interface QcInspection {
   product_name?: string;
   product_sku?: string;
   inspection_type: 'incoming' | 'in_process' | 'final';
-  status: 'draft' | 'in_progress' | 'passed' | 'rejected' | 'rework';
+  status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'in_progress' | 'passed' | 'rework';
+  result?: string | null;
   sample_size: string;
   inspected_quantity: string;
   passed_quantity: string;
   rejected_quantity: string;
+  failed_quantity?: string | null;
   inspection_date: string;
   inspector_name?: string | null;
   approved_by?: string | null;
@@ -61,6 +64,7 @@ export interface QcInspection {
 export interface WastageRecord {
   id: string;
   record_number: string;
+  wastage_number?: string;
   batch_id?: string | null;
   batch_number?: string | null;
   product_id: string;
@@ -70,11 +74,16 @@ export interface WastageRecord {
   warehouse_name?: string;
   warehouse_location_id?: string | null;
   reason_code_id: string;
-  reason_code?: string;
+  reason_code?: string | { id: string; code: string; name: string } | null;
+  reason_code_name?: string | null;
   reason_name?: string;
+  stage?: string;
   quantity: string;
   unit_cost: string;
   total_cost: string;
+  estimated_cost?: string;
+  is_recoverable?: boolean;
+  recovered_quantity?: string;
   recorded_date: string;
   notes?: string | null;
   created_at: string;

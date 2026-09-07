@@ -91,7 +91,7 @@ export function DeliveryChallanDocument({ delivery, businessConfig }: DeliveryCh
             <div>
               <span className="text-slate-500">COD Amount:</span>{' '}
               <span className="font-mono font-bold text-emerald-700">
-                {formatCurrency(delivery.cod_amount || '0.00', businessConfig.currencySymbol || '$')}
+                {formatCurrency(delivery.cod_amount || '0.00', businessConfig.currencySymbol || '৳')}
               </span>
             </div>
             <div>
@@ -121,7 +121,7 @@ export function DeliveryChallanDocument({ delivery, businessConfig }: DeliveryCh
                   {idx + 1}
                 </td>
                 <td className="py-2 px-2.5 border-r border-slate-200 font-bold text-slate-900">
-                  {item.product_name || 'Bakery Finished Goods'}
+                  {item.product_name || 'Appliance Finished Goods'}
                 </td>
                 <td className="py-2 px-2 border-r border-slate-200 text-center font-mono text-slate-600">
                   {item.batch_code || 'BAT-2026'}
@@ -144,7 +144,7 @@ export function DeliveryChallanDocument({ delivery, businessConfig }: DeliveryCh
           <span className="font-bold text-slate-700 block mb-1">Driver & Unloading Instructions:</span>
           <p className="text-slate-600">
             {delivery.special_instructions ||
-              'Handle confectionery and artisan bakery trays with care. Protect from direct heat. Verify package seals before handover.'}
+              'Handle electronic appliances and ceramic glass panels with care. Protect from impact and moisture. Verify package seals before handover.'}
           </p>
         </div>
         <div className="flex justify-end items-center">

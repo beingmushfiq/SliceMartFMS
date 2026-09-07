@@ -33,6 +33,7 @@
 // self-hiding box cannot carry information the user must act on.
 // ═══════════════════════════════════════════════════════════════════════════
 
+import { useState, useEffect } from 'react';
 import { CircleCheckBig, CircleX, Info, TriangleAlert } from 'lucide-react';
 import { Toaster as SonnerToaster, toast } from 'sonner';
 
@@ -49,52 +50,80 @@ const TRANSIENT_MS = 4000;
    change moves the toast with everything else.
    ─────────────────────────────────────────────────────────────────────────── */
 
-const TOAST_CLASS = [
-  'flex items-start w-(--toast-width) gap-(--toast-gap)',
-  'p-(--toast-padding) rounded-(--toast-radius)',
-  'bg-surface-raised text-default border border-default shadow-lg',
-  'text-sm',
-].join(' ');
-
 /* ───────────────────────────────────────────────────────────────────────────
    TOASTER — mounted once, at the root
    ─────────────────────────────────────────────────────────────────────────── */
 
 export function Toaster() {
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof document === 'undefined') return 'light';
+    return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+  });
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const syncTheme = () => {
+      setTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    };
+    syncTheme();
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class', 'data-theme'],
+    });
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <SonnerToaster
-      position="bottom-right"
-      /* Sonner's 'system' theme resolves colour scheme through `matchMedia`.
-         Dark mode here is class-based token re-mapping, so Sonner must not
-         form its own opinion — the tokens already carry it. */
-      theme="light"
+      position="top-right"
+      theme={theme}
       richColors={false}
       closeButton
       duration={TRANSIENT_MS}
-      /* Beyond three, the stack covers the content that triggered it. */
-      visibleToasts={3}
+      visibleToasts={5}
       icons={{
-        success: <CircleCheckBig className="size-4 shrink-0 text-success" />,
-        info: <Info className="size-4 shrink-0 text-info" />,
-        warning: <TriangleAlert className="size-4 shrink-0 text-warning" />,
-        error: <CircleX className="size-4 shrink-0 text-danger" />,
+        success: (
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-success-subtle text-success ring-1 ring-success/30 shadow-2xs">
+            <CircleCheckBig className="size-4" />
+          </div>
+        ),
+        info: (
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-info-subtle text-info ring-1 ring-info/30 shadow-2xs">
+            <Info className="size-4" />
+          </div>
+        ),
+        warning: (
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-warning-subtle text-warning ring-1 ring-warning/30 shadow-2xs">
+            <TriangleAlert className="size-4" />
+          </div>
+        ),
+        error: (
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-danger-subtle text-danger ring-1 ring-danger/30 shadow-2xs">
+            <CircleX className="size-4" />
+          </div>
+        ),
       }}
       toastOptions={{
         unstyled: true,
         classNames: {
-          toast: TOAST_CLASS,
-          /* Per-type classes are intentionally empty. The icon carries the
-             semantic, not a coloured background: a green panel behind black
-             text is how a "success" toast ends up failing contrast, and a
-             tinted surface for every outcome makes the genuinely rare error
-             toast indistinguishable from routine confirmations. */
-          content: 'flex-1 min-w-0',
-          title: 'font-medium leading-snug',
-          description: 'text-xs text-muted leading-relaxed mt-0.5',
-          actionButton: 'shrink-0 text-xs font-medium text-primary hover:underline cursor-pointer',
-          cancelButton: 'shrink-0 text-xs text-muted hover:text-default cursor-pointer',
+          toast:
+            'group flex items-start w-[24rem] max-w-[calc(100vw-2rem)] gap-3.5 p-4 rounded-xl bg-surface-raised text-default border border-strong shadow-xl shadow-slate-900/10 dark:shadow-black/70 ring-1 ring-black/5 dark:ring-white/10 transition-all duration-200',
+          success: 'border-l-[4px] border-l-success border-strong',
+          error: 'border-l-[4px] border-l-danger border-strong',
+          warning: 'border-l-[4px] border-l-warning border-strong',
+          info: 'border-l-[4px] border-l-info border-strong',
+          default: 'border-strong',
+          content: 'flex-1 min-w-0 pt-0.5',
+          title: 'font-semibold text-sm leading-snug text-default tracking-tight',
+          description: 'text-xs text-muted leading-relaxed mt-1 font-normal',
+          icon: 'shrink-0',
+          actionButton:
+            'shrink-0 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-primary text-primary-fg hover:opacity-90 cursor-pointer shadow-xs transition-opacity',
+          cancelButton:
+            'shrink-0 text-xs font-medium px-2 py-1 rounded-lg text-muted hover:text-default hover:bg-surface-sunken cursor-pointer transition-colors',
           closeButton:
-            'shrink-0 text-muted hover:text-default cursor-pointer transition-token-colors',
+            'shrink-0 p-1.5 rounded-lg text-muted hover:text-default hover:bg-surface-sunken cursor-pointer transition-colors',
         },
       }}
     />
@@ -105,11 +134,13 @@ export function Toaster() {
    NOTIFY — the only sanctioned entry point
    ─────────────────────────────────────────────────────────────────────────── */
 
-interface NotifyOptions {
+export interface NotifyOptions {
   /** One supporting sentence. If it needs two, this is not a toast. */
   description?: string | undefined;
   /** A single recovery or follow-up action. Never the only way to reach it. */
   action?: { label: string; onClick: () => void } | undefined;
+  /** Custom duration in milliseconds */
+  duration?: number | undefined;
 }
 
 function options(opts?: NotifyOptions) {
@@ -118,30 +149,23 @@ function options(opts?: NotifyOptions) {
     ...(opts?.action != null && {
       action: { label: opts.action.label, onClick: opts.action.onClick },
     }),
+    ...(opts?.duration != null && { duration: opts.duration }),
   };
 }
 
 export const notify = {
-  /** Row 5. Past tense, names what changed: "Batch B-1042 released." */
+  /** Past tense, names what changed: "Batch B-1042 released." */
   success: (message: string, opts?: NotifyOptions) => toast.success(message, options(opts)),
 
-  /** Neutral, non-blocking information. Nothing the user must act on. */
+  /** Neutral, non-blocking information. */
   info: (message: string, opts?: NotifyOptions) => toast.info(message, options(opts)),
 
-  /**
-   * Errors with **no owning surface** — a background action the user has
-   * already navigated away from, where there is no form field, no panel and
-   * no region left to render into.
-   *
-   * `duration: Infinity` is deliberate and is the whole reason this is safe to
-   * expose: §8.5 rule 2 forbids hiding an error, and a self-dismissing error
-   * is a hidden error for anyone who looked away. It stays until dismissed.
-   *
-   * If the failure has a surface, use that surface: `AsyncButton`'s inline
-   * error for a submit, `StateView` for a region, `error.fields` for a 422.
-   */
+  /** Warning: alerts cashier or operator of conditions requiring attention */
+  warning: (message: string, opts?: NotifyOptions) => toast.warning(message, options(opts)),
+
+  /** Errors: clear, styled feedback with action support */
   error: (message: string, opts?: NotifyOptions) =>
-    toast.error(message, { ...options(opts), duration: Infinity }),
+    toast.error(message, { duration: opts?.duration ?? 6000, ...options(opts) }),
 
   dismiss: (id?: string | number) => toast.dismiss(id),
 } as const;

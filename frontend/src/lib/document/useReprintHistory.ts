@@ -24,14 +24,23 @@ export function useReprintHistory(initialFilters?: ReprintHistoryFilter) {
   const fetchHistory = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get<{ data: DocumentPrintHistory[]; meta?: { total: number } }>(
+      const res = await api.get<DocumentPrintHistory[] | { data: DocumentPrintHistory[]; meta?: { total?: number } }>(
         '/documents/print-history',
         { params: filters }
       );
       if (res.data) {
-        setHistory(res.data.data || []);
-        if (res.data.meta?.total !== undefined) {
-          setTotal(res.data.meta.total);
+        if (Array.isArray(res.data)) {
+          setHistory(res.data);
+          setTotal(res.data.length);
+        } else if ('data' in res.data && Array.isArray(res.data.data)) {
+          setHistory(res.data.data);
+          const metaTotal = res.data.meta?.total;
+          if (typeof metaTotal === 'number') {
+            setTotal(metaTotal);
+          }
+        }
+        if (res.meta?.pagination?.total !== undefined) {
+          setTotal(res.meta.pagination.total);
         }
       }
     } catch {

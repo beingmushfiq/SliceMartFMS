@@ -55,28 +55,123 @@ final class CreateSalesOrderAction
         return DB::transaction(function () use ($data): SalesOrder {
             $orderNumber = $data['order_number'] ?? ('SO-' . date('Ymd') . '-' . strtoupper(Str::random(6)));
 
-            /** @var numeric-string $subtotal */
-            $subtotal = '0.0000';
-            /** @var numeric-string $totalTax */
-            $totalTax = '0.0000';
+            /** @var numeric-string $grossSubtotal */
+            $grossSubtotal = '0.0000';
+            $processedItems = [];
+
+            // Pass 1: calculate gross line amounts and line-level discounts
+            foreach ($data['items'] as $idx => $item) {
+                /** @var numeric-string $qty */
+                $qty = is_numeric($item['quantity'] ?? null) ? (string) $item['quantity'] : '0.0000';
+                /** @var numeric-string $price */
+                $price = is_numeric($item['unit_price'] ?? null) ? (string) $item['unit_price'] : '0.0000';
+                /** @var numeric-string $lineGross */
+                $lineGross = bcmul($qty, $price, 4);
+
+                $discType = $item['discount_type'] ?? 'flat';
+                $discVal = is_numeric($item['discount_value'] ?? null) ? (string) $item['discount_value'] : (is_numeric($item['discount_amount'] ?? null) ? (string) $item['discount_amount'] : '0.0000');
+                $discPct = is_numeric($item['discount_percentage'] ?? null) ? (string) $item['discount_percentage'] : '0.0000';
+
+                /** @var numeric-string $lineDisc */
+                if ($discType === 'percentage' || (bccomp($discPct, '0.0000', 4) > 0 && bccomp($discVal, '0.0000', 4) === 0)) {
+                    $pct = bccomp($discPct, '0.0000', 4) > 0 ? $discPct : $discVal;
+                    $lineDisc = bcmul($lineGross, bcdiv($pct, '100.0000', 6), 4);
+                    $discPct = $pct;
+                } else {
+                    $lineDisc = $discVal;
+                    $discPct = bccomp($lineGross, '0.0000', 4) > 0 ? bcmul(bcdiv($lineDisc, $lineGross, 6), '100.0000', 4) : '0.0000';
+                }
+
+                if (bccomp($lineDisc, $lineGross, 4) > 0) {
+                    $lineDisc = $lineGross;
+                }
+
+                /** @var numeric-string $lineNet */
+                $lineNet = bcsub($lineGross, $lineDisc, 4);
+                $grossSubtotal = bcadd($grossSubtotal, $lineGross, 4);
+
+                $processedItems[] = [
+                    'item' => $item,
+                    'idx' => $idx,
+                    'quantity' => $qty,
+                    'unit_price' => $price,
+                    'line_gross' => $lineGross,
+                    'line_disc' => $lineDisc,
+                    'disc_pct' => $discPct,
+                    'line_net' => $lineNet,
+                ];
+            }
+
+            // Calculate net subtotal after item-level discounts
+            /** @var numeric-string $netSubtotalBeforeOrderDisc */
+            $netSubtotalBeforeOrderDisc = '0.0000';
+            foreach ($processedItems as $pi) {
+                $netSubtotalBeforeOrderDisc = bcadd($netSubtotalBeforeOrderDisc, $pi['line_net'], 4);
+            }
+
+            // Total line discounts sum
+            $totalLineDiscounts = '0.0000';
+            foreach ($processedItems as $pi) {
+                $totalLineDiscounts = bcadd($totalLineDiscounts, $pi['line_disc'], 4);
+            }
+
+            // Calculate order-level discount
+            $orderDiscType = $data['order_discount_type'] ?? 'flat';
+            $orderDiscountAmount = '0.0000';
+
+            if ($orderDiscType === 'percentage') {
+                $orderPct = is_numeric($data['order_discount_value'] ?? null)
+                    ? (string) $data['order_discount_value']
+                    : (is_numeric($data['order_discount_percentage'] ?? null) ? (string) $data['order_discount_percentage'] : '0.0000');
+                $orderDiscountAmount = bcmul($netSubtotalBeforeOrderDisc, bcdiv($orderPct, '100.0000', 6), 4);
+            } elseif (isset($data['order_discount_value']) && is_numeric($data['order_discount_value'])) {
+                $orderDiscountAmount = (string) $data['order_discount_value'];
+            } elseif (isset($data['discount_amount']) && is_numeric($data['discount_amount'])) {
+                // If only total discount_amount is provided, subtract line discounts so line discounts are never double-counted!
+                $orderDiscountAmount = bcsub((string) $data['discount_amount'], $totalLineDiscounts, 4);
+                if (bccomp($orderDiscountAmount, '0.0000', 4) < 0) {
+                    $orderDiscountAmount = '0.0000';
+                }
+            }
+
+            if (bccomp($orderDiscountAmount, $netSubtotalBeforeOrderDisc, 4) > 0) {
+                $orderDiscountAmount = $netSubtotalBeforeOrderDisc;
+            }
+
+            // Pass 2: Allocate order discount proportionally to each item
             /** @var numeric-string $totalDiscount */
             $totalDiscount = '0.0000';
+            /** @var numeric-string $totalTax */
+            $totalTax = '0.0000';
+            $finalItems = [];
 
-            foreach ($data['items'] as $item) {
-                /** @var numeric-string $qty */
-                $qty = is_numeric($item['quantity']) ? (string) $item['quantity'] : '0.0000';
-                /** @var numeric-string $price */
-                $price = is_numeric($item['unit_price']) ? (string) $item['unit_price'] : '0.0000';
-                /** @var numeric-string $disc */
-                $disc = isset($item['discount_amount']) && is_numeric($item['discount_amount']) ? (string) $item['discount_amount'] : '0.0000';
-                /** @var numeric-string $taxAmt */
-                $taxAmt = isset($item['tax_amount']) && is_numeric($item['tax_amount']) ? (string) $item['tax_amount'] : '0.0000';
+            foreach ($processedItems as $pi) {
+                $allocatedOrderDisc = '0.0000';
+                if (bccomp($netSubtotalBeforeOrderDisc, '0.0000', 4) > 0 && bccomp($orderDiscountAmount, '0.0000', 4) > 0) {
+                    $ratio = bcdiv($pi['line_net'], $netSubtotalBeforeOrderDisc, 6);
+                    $allocatedOrderDisc = bcmul($orderDiscountAmount, $ratio, 4);
+                }
 
-                /** @var numeric-string $lineSub */
-                $lineSub = bcmul($qty, $price, 4);
-                $subtotal = bcadd($subtotal, $lineSub, 4);
-                $totalDiscount = bcadd($totalDiscount, $disc, 4);
+                $totalLineDisc = bcadd($pi['line_disc'], $allocatedOrderDisc, 4);
+                if (bccomp($totalLineDisc, $pi['line_gross'], 4) > 0) {
+                    $totalLineDisc = $pi['line_gross'];
+                }
+
+                $lineNetAfterAllDisc = bcsub($pi['line_gross'], $totalLineDisc, 4);
+
+                $taxAmt = isset($pi['item']['tax_amount']) && is_numeric($pi['item']['tax_amount']) ? (string) $pi['item']['tax_amount'] : '0.0000';
+                $lineTotal = bcadd($lineNetAfterAllDisc, $taxAmt, 4);
+
+                $totalDiscount = bcadd($totalDiscount, $totalLineDisc, 4);
                 $totalTax = bcadd($totalTax, $taxAmt, 4);
+
+                $finalItems[] = array_merge($pi, [
+                    'allocated_order_disc' => $allocatedOrderDisc,
+                    'total_line_disc' => $totalLineDisc,
+                    'line_net_final' => $lineNetAfterAllDisc,
+                    'tax_amount' => $taxAmt,
+                    'line_total' => $lineTotal,
+                ]);
             }
 
             /** @var numeric-string $shipping */
@@ -84,7 +179,7 @@ final class CreateSalesOrderAction
             /** @var numeric-string $roundOff */
             $roundOff = isset($data['round_off']) && is_numeric($data['round_off']) ? (string) $data['round_off'] : '0.0000';
             /** @var numeric-string $grandTotal */
-            $grandTotal = bcadd(bcadd(bcsub(bcadd($subtotal, $totalTax, 4), $totalDiscount, 4), $shipping, 4), $roundOff, 4);
+            $grandTotal = bcadd(bcadd(bcsub(bcadd($grossSubtotal, $totalTax, 4), $totalDiscount, 4), $shipping, 4), $roundOff, 4);
 
             $order = SalesOrder::create([
                 'tenant_id'       => $data['tenant_id'],
@@ -101,7 +196,7 @@ final class CreateSalesOrderAction
                 'required_date'   => $data['required_date'] ?? null,
                 'price_list_id'   => $data['price_list_id'] ?? null,
                 'currency_code'   => $data['currency_code'] ?? 'BDT',
-                'subtotal'        => $subtotal,
+                'subtotal'        => $grossSubtotal,
                 'discount_amount' => $totalDiscount,
                 'tax_amount'      => $totalTax,
                 'shipping_amount' => $shipping,
@@ -118,43 +213,25 @@ final class CreateSalesOrderAction
                 'created_by'      => $data['created_by'] ?? null,
             ]);
 
-            foreach ($data['items'] as $idx => $item) {
-                /** @var numeric-string $qty */
-                $qty = is_numeric($item['quantity']) ? (string) $item['quantity'] : '0.0000';
-                /** @var numeric-string $price */
-                $price = is_numeric($item['unit_price']) ? (string) $item['unit_price'] : '0.0000';
-                /** @var numeric-string $discPct */
-                $discPct = isset($item['discount_percentage']) && is_numeric($item['discount_percentage']) ? (string) $item['discount_percentage'] : '0.0000';
-                /** @var numeric-string $disc */
-                $disc = isset($item['discount_amount']) && is_numeric($item['discount_amount']) ? (string) $item['discount_amount'] : '0.0000';
-                /** @var numeric-string $taxAmt */
-                $taxAmt = isset($item['tax_amount']) && is_numeric($item['tax_amount']) ? (string) $item['tax_amount'] : '0.0000';
-
-                /** @var numeric-string $lineSub */
-                $lineSub = bcmul($qty, $price, 4);
-                /** @var numeric-string $lineNet */
-                $lineNet = bcsub($lineSub, $disc, 4);
-                /** @var numeric-string $lineTotal */
-                $lineTotal = bcadd($lineNet, $taxAmt, 4);
-
+            foreach ($finalItems as $fi) {
                 SalesOrderItem::create([
                     'tenant_id'           => $data['tenant_id'],
                     'sales_order_id'      => $order->id,
-                    'product_id'          => $item['product_id'],
-                    'variant_id'          => $item['variant_id'] ?? null,
-                    'description'         => $item['description'] ?? null,
-                    'quantity'            => $qty,
-                    'unit_id'             => $item['unit_id'],
-                    'unit_price'          => $price,
-                    'discount_percentage' => $discPct,
-                    'discount_amount'     => $disc,
-                    'tax_profile_id'      => $item['tax_profile_id'] ?? null,
-                    'tax_amount'          => $taxAmt,
-                    'line_total'          => $lineTotal,
+                    'product_id'          => $fi['item']['product_id'],
+                    'variant_id'          => $fi['item']['variant_id'] ?? null,
+                    'description'         => $fi['item']['description'] ?? null,
+                    'quantity'            => $fi['quantity'],
+                    'unit_id'             => $fi['item']['unit_id'],
+                    'unit_price'          => $fi['unit_price'],
+                    'discount_percentage' => $fi['disc_pct'],
+                    'discount_amount'     => $fi['total_line_disc'],
+                    'tax_profile_id'      => $fi['item']['tax_profile_id'] ?? null,
+                    'tax_amount'          => $fi['tax_amount'],
+                    'line_total'          => $fi['line_total'],
                     'delivered_quantity'  => '0.0000',
                     'returned_quantity'   => '0.0000',
-                    'batch_code'          => $item['batch_code'] ?? null,
-                    'sort_order'          => $item['sort_order'] ?? $idx,
+                    'batch_code'          => $fi['item']['batch_code'] ?? null,
+                    'sort_order'          => $fi['item']['sort_order'] ?? $fi['idx'],
                     'created_by'          => $data['created_by'] ?? null,
                 ]);
             }

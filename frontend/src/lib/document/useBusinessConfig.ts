@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
+import { useAuthStore } from '../auth/authStore';
+import { DEFAULT_CURRENCY_SYMBOLS } from '../format/currency';
 
 export interface BusinessConfig {
   name: string;
@@ -31,8 +33,8 @@ export const DEFAULT_BUSINESS_CONFIG: BusinessConfig = {
   vatNumber: '',
   tinNumber: '',
   tradeLicense: '',
-  currencySymbol: '$',
-  currencyCode: 'USD',
+  currencySymbol: '৳',
+  currencyCode: 'BDT',
   invoiceTerms:
     '1. Goods received in sound condition. Warranty claims valid within 7 days against manufacturer defect.\n2. Overdue balances beyond payment terms are subject to standard commercial finance charges.\n3. This is an authoritative computer-generated commercial document.',
   signaturePreparedBy: 'Prepared By (Billing Desk)',
@@ -42,7 +44,18 @@ export const DEFAULT_BUSINESS_CONFIG: BusinessConfig = {
 };
 
 export function useBusinessConfig(): { config: BusinessConfig; loading: boolean } {
-  const [config, setConfig] = useState<BusinessConfig>(DEFAULT_BUSINESS_CONFIG);
+  const tenant = useAuthStore((state) => state.tenant);
+  const tenantCurrencyCode = (tenant?.currency_code || 'BDT').toUpperCase();
+  const tenantCurrencySymbol =
+    (tenant as unknown as { currency_symbol?: string })?.currency_symbol ||
+    DEFAULT_CURRENCY_SYMBOLS[tenantCurrencyCode] ||
+    '৳';
+
+  const [config, setConfig] = useState<BusinessConfig>(() => ({
+    ...DEFAULT_BUSINESS_CONFIG,
+    currencySymbol: tenantCurrencySymbol,
+    currencyCode: tenantCurrencyCode,
+  }));
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -55,6 +68,8 @@ export function useBusinessConfig(): { config: BusinessConfig; loading: boolean 
           setConfig((prev) => ({
             ...prev,
             ...res.data,
+            currencySymbol: res.data.currencySymbol || tenantCurrencySymbol,
+            currencyCode: res.data.currencyCode || tenantCurrencyCode,
           }));
         }
       })
@@ -68,7 +83,7 @@ export function useBusinessConfig(): { config: BusinessConfig; loading: boolean 
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [tenantCurrencySymbol, tenantCurrencyCode]);
 
   return { config, loading };
 }

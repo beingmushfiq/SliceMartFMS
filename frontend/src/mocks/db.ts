@@ -151,8 +151,8 @@ function seedTenants(): MockTenant[] {
     {
       id: 1,
       uuid: '5b4f0d5c-1f2a-4a9e-8c3d-11d0e6a7b201',
-      name: 'Slice Mart Foods',
-      slug: 'slice-mart-foods',
+      name: 'SliceMart',
+      slug: 'slice-mart',
       status: 'active',
       currency: 'BDT',
       timezone: 'Asia/Dhaka',
@@ -162,8 +162,8 @@ function seedTenants(): MockTenant[] {
     {
       id: 2,
       uuid: '9a2c7e10-6b44-4f18-a0d7-33c1f5b9e402',
-      name: 'Golden Crust Bakery',
-      slug: 'golden-crust-bakery',
+      name: 'HyperHeat Infrared',
+      slug: 'hyperheat-infrared',
       status: 'active',
       currency: 'BDT',
       timezone: 'Asia/Dhaka',
@@ -175,8 +175,8 @@ function seedTenants(): MockTenant[] {
     {
       id: 3,
       uuid: 'c7d81b93-2e55-4c07-bb62-77a4e2d1f603',
-      name: 'Riverside Confectionery',
-      slug: 'riverside-confectionery',
+      name: 'FlameMaster Stoves',
+      slug: 'flamemaster-stoves',
       status: 'suspended',
       currency: 'BDT',
       timezone: 'Asia/Dhaka',

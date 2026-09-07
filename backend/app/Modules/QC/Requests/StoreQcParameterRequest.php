@@ -13,6 +13,20 @@ final class StoreQcParameterRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (! $this->has('type') && $this->has('data_type')) {
+            $this->merge(['type' => $this->input('data_type')]);
+        }
+
+        if ($this->input('type') !== 'numeric') {
+            $this->merge([
+                'min_value' => null,
+                'max_value' => null,
+            ]);
+        }
+    }
+
     /**
      * @return array<string, array<int, string>>
      */
@@ -28,6 +42,8 @@ final class StoreQcParameterRequest extends FormRequest
             'options' => ['nullable', 'array'],
             'is_mandatory' => ['nullable', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            'code' => ['nullable', 'string'],
+            'category' => ['nullable', 'string'],
         ];
     }
 }

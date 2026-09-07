@@ -20,28 +20,28 @@ final class BrandsTableSeeder extends Seeder
         Brand::create([
             'uuid' => (string) Str::uuid(),
             'code' => 'SLICEMART',
-            'name' => 'SliceMart Classic',
+            'name' => 'SliceMart Appliances',
             'is_active' => true,
         ]);
 
         Brand::create([
             'uuid' => (string) Str::uuid(),
-            'code' => 'ARTISAN',
-            'name' => 'Artisan Crust & Bake',
+            'code' => 'HYPERHEAT',
+            'name' => 'HyperHeat Infrared',
             'is_active' => true,
         ]);
 
         Brand::create([
             'uuid' => (string) Str::uuid(),
-            'code' => 'NUTRISLICE',
-            'name' => 'NutriSlice Healthy Grains',
+            'code' => 'FLAMEMASTER',
+            'name' => 'FlameMaster Stoves',
             'is_active' => true,
         ]);
 
         Brand::create([
             'uuid' => (string) Str::uuid(),
-            'code' => 'DAILYFRESH',
-            'name' => 'DailyFresh Quick Bakery',
+            'code' => 'ECOCOOK',
+            'name' => 'EcoCook Induction',
             'is_active' => true,
         ]);
 

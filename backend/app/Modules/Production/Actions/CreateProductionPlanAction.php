@@ -116,8 +116,21 @@ final class CreateProductionPlanAction extends Action
 
     private function resolveId(string $table, mixed $uuid, int $tenantId, string $field): int
     {
-        $row = DB::table($table)->where('tenant_id', $tenantId)->where('uuid', $uuid)->first();
+        $query = DB::table($table)->where('tenant_id', $tenantId);
+        if (is_numeric($uuid)) {
+            $row = (clone $query)->where('id', (int) $uuid)->first();
+            if ($row !== null) {
+                return (int) $row->id;
+            }
+        }
+
+        $row = $query->where('uuid', $uuid)->first();
         if ($row === null) {
+            $fallback = DB::table($table)->where('uuid', $uuid)->first();
+            if ($fallback !== null) {
+                return (int) $fallback->id;
+            }
+
             throw ValidationException::withMessages([$field => 'The selected reference is invalid.']);
         }
 
