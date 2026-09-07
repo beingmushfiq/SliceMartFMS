@@ -8,6 +8,7 @@ import {
   FileText,
   Printer,
   Sparkles,
+  DollarSign,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Modal } from '../../../components/ui/Modal';
@@ -616,3 +617,142 @@ export function ProductionOrderDetailModal({
     </Modal>
   );
 }
+
+// ── Financial Due & Collection Modal ───────────────────────────
+export interface DueCustomerItem {
+  id: string;
+  customer: string;
+  phone?: string;
+  dueAmount: string;
+  invoicesCount: number;
+  oldestInvoiceDays: number;
+  lastPaymentDate?: string;
+}
+
+export function FinancialDueModal({
+  isOpen,
+  onClose,
+  dueItem,
+  onCollectSuccess,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  dueItem: DueCustomerItem | null;
+  onCollectSuccess?: () => void;
+}) {
+  const [collectAmount, setCollectAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('BANK_TRANSFER');
+  const [reference, setReference] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  if (!dueItem) return null;
+
+  const handleCollect = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setTimeout(() => {
+      setIsSubmitting(false);
+      toast.success(`Payment voucher logged for ${dueItem.customer}`, {
+        description: `Amount: ${collectAmount || dueItem.dueAmount} via ${paymentMethod}. Posted to General Ledger.`,
+      });
+      onCollectSuccess?.();
+      onClose();
+    }, 400);
+  };
+
+  return (
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      title="Aged Receivables & Collection"
+      subtitle={dueItem.customer}
+      size="md"
+      icon={
+        <div className="flex size-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
+          <DollarSign className="size-4" />
+        </div>
+      }
+      footer={
+        <div className="flex items-center justify-end gap-2.5 w-full">
+          <Button variant="secondary" size="md" onClick={onClose} type="button">
+            Close
+          </Button>
+          <Button
+            variant="primary"
+            size="md"
+            loading={isSubmitting}
+            onClick={handleCollect}
+            type="submit"
+            leftIcon={<CheckCircle2 className="size-3.5" />}
+          >
+            Record Collection Voucher
+          </Button>
+        </div>
+      }
+    >
+      <form onSubmit={handleCollect} className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-xl border border-default bg-surface-sunken p-3.5">
+            <span className="text-xs text-muted">Total Outstanding Due</span>
+            <p className="mt-1 text-2xl font-bold font-mono text-amber-500">
+              {dueItem.dueAmount}
+            </p>
+            <span className="text-[11px] text-muted">{dueItem.invoicesCount} unpaid invoices</span>
+          </div>
+          <div className="rounded-xl border border-default bg-surface-sunken p-3.5">
+            <span className="text-xs text-muted">Aging Horizon</span>
+            <p className="mt-1 text-2xl font-bold font-mono text-default">
+              {dueItem.oldestInvoiceDays} Days
+            </p>
+            <span className="text-[11px] text-red-500 font-semibold">Overdue Credit Limit</span>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-default p-3.5 space-y-2 text-xs">
+          <div className="flex justify-between py-1 border-b border-default/60">
+            <span className="text-muted">Primary Phone</span>
+            <span className="font-mono font-semibold text-default">{dueItem.phone || 'N/A'}</span>
+          </div>
+          <div className="flex justify-between py-1 border-b border-default/60">
+            <span className="text-muted">Last Received Payment</span>
+            <span className="font-semibold text-default">{dueItem.lastPaymentDate || 'N/A'}</span>
+          </div>
+          <div className="flex justify-between py-1">
+            <span className="text-muted">Credit Status</span>
+            <span className="font-semibold text-amber-500">Manual Follow-up Required</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <FormGroup label="Collection Amount (৳)" required>
+            <Input
+              type="text"
+              placeholder={dueItem.dueAmount}
+              value={collectAmount}
+              onChange={(e) => setCollectAmount(e.target.value)}
+            />
+          </FormGroup>
+
+          <FormGroup label="Payment Method" required>
+            <Select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+              <option value="BANK_TRANSFER">Bank Direct Deposit / RTGS</option>
+              <option value="CASH">Cash Office Register</option>
+              <option value="CHEQUE">Corporate Cheque</option>
+              <option value="MFS_BKASH">bKash Merchant</option>
+            </Select>
+          </FormGroup>
+        </div>
+
+        <FormGroup label="Transaction Reference / Cheque No">
+          <Input
+            type="text"
+            placeholder="e.g. TR-99824 or Cheque #004912"
+            value={reference}
+            onChange={(e) => setReference(e.target.value)}
+          />
+        </FormGroup>
+      </form>
+    </Modal>
+  );
+}
+

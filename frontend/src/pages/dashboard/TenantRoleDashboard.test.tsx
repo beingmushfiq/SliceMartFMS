@@ -244,4 +244,155 @@ describe('TenantRoleDashboard Dynamic Role Perspectives', () => {
     expect(screen.getByText('Install App')).toBeInTheDocument();
     expect(screen.getByText('Maybe Later')).toBeInTheDocument();
   });
+
+  it('defaults to Finance & Accounts dashboard for Finance Manager', () => {
+    useAuthStore.setState({
+      user: {
+        id: '6',
+        name: 'Tariq Finance Lead',
+        email: 'finance@slicemart.test',
+        is_active: true,
+        is_platform_admin: false,
+        role: 'Finance Manager',
+        roles: ['Finance Manager'],
+        locale: 'en',
+        theme: 'light',
+        density: 'comfortable',
+        landing_page: '/dashboard',
+        tenant_id: 1,
+        default_company_id: 1,
+        default_branch_id: 1,
+        default_factory_id: 1,
+        default_warehouse_id: 1,
+      },
+      permissions: new Set([
+        'finance.account.view',
+        'finance.journal.view',
+        'finance.expense.view',
+        'sales.invoice.view',
+      ]),
+    });
+
+    renderWithProviders(<TenantRoleDashboard />);
+
+    expect(screen.getByText('Finance Manager')).toBeInTheDocument();
+    expect(screen.getByText('Finance & Accounts Command')).toBeInTheDocument();
+    expect(screen.getByText('RECEIVABLES DUE')).toBeInTheDocument();
+    expect(screen.getByText('COLLECTIONS TODAY')).toBeInTheDocument();
+  });
+
+  it('defaults to Workforce & HR dashboard for HR Officer', () => {
+    useAuthStore.setState({
+      user: {
+        id: '7',
+        name: 'Nasrin HR Lead',
+        email: 'hr@slicemart.test',
+        is_active: true,
+        is_platform_admin: false,
+        role: 'HR Officer',
+        roles: ['HR Officer'],
+        locale: 'en',
+        theme: 'light',
+        density: 'comfortable',
+        landing_page: '/dashboard',
+        tenant_id: 1,
+        default_company_id: 1,
+        default_branch_id: 1,
+        default_factory_id: 1,
+        default_warehouse_id: 1,
+      },
+      permissions: new Set([
+        'hr.employee.view',
+        'hr.attendance.view',
+        'hr.payroll.view',
+        'production.worker_entry.view',
+      ]),
+    });
+
+    renderWithProviders(<TenantRoleDashboard />);
+
+    expect(screen.getByText('HR Officer')).toBeInTheDocument();
+    expect(screen.getByText('Workforce & HR Command')).toBeInTheDocument();
+    expect(screen.getByText('TOTAL PERSONNEL')).toBeInTheDocument();
+    expect(screen.getByText('PRESENT TODAY')).toBeInTheDocument();
+  });
+
+  it('renders Enterprise Subsystem Cockpit showing all wings for Super Administrator', () => {
+    useAuthStore.setState({
+      user: {
+        id: '1',
+        name: 'System Administrator',
+        email: 'admin@slicemart.test',
+        is_active: true,
+        is_platform_admin: false,
+        role: 'Super Administrator',
+        roles: ['Super Administrator'],
+        locale: 'en',
+        theme: 'light',
+        density: 'comfortable',
+        landing_page: '/dashboard',
+        tenant_id: 1,
+        default_company_id: 1,
+        default_branch_id: 1,
+        default_factory_id: 1,
+        default_warehouse_id: 1,
+      },
+      permissions: new Set(['*']),
+    });
+
+    renderWithProviders(<TenantRoleDashboard />);
+
+    // Cockpit is present
+    expect(screen.getByText('Enterprise Subsystem Cockpit')).toBeInTheDocument();
+    expect(screen.getByText(/Navigate any operational wing/i)).toBeInTheDocument();
+
+    // All operational wings are accessible
+    expect(screen.getByText('Commercial & Omnichannel Demand')).toBeInTheDocument();
+    expect(screen.getByText('Supply Chain, SCM & Inventory')).toBeInTheDocument();
+    expect(screen.getByText('Manufacturing & Quality Assurance')).toBeInTheDocument();
+    expect(screen.getByText('Finance, Treasury & Assets')).toBeInTheDocument();
+    expect(screen.getByText('Workforce & Human Capital')).toBeInTheDocument();
+    expect(screen.getByText('Governance, Intelligence & Security')).toBeInTheDocument();
+  });
+
+  it('restricts Enterprise Subsystem Cockpit to permitted modules for Sales Officer', () => {
+    useAuthStore.setState({
+      user: {
+        id: '5',
+        name: 'Kamal Sales Officer',
+        email: 'sales@slicemart.test',
+        is_active: true,
+        is_platform_admin: false,
+        role: 'Sales Officer',
+        roles: ['Sales Officer'],
+        locale: 'en',
+        theme: 'light',
+        density: 'comfortable',
+        landing_page: '/dashboard',
+        tenant_id: 1,
+        default_company_id: 1,
+        default_branch_id: 1,
+        default_factory_id: 1,
+        default_warehouse_id: 1,
+      },
+      permissions: new Set([
+        'sales.order.view',
+        'sales.invoice.view',
+        'pos.terminal.view',
+        'pos.sale.create',
+      ]),
+    });
+
+    renderWithProviders(<TenantRoleDashboard />);
+
+    expect(screen.getByText('Enterprise Subsystem Cockpit')).toBeInTheDocument();
+    expect(screen.getByText('Commercial & Omnichannel Demand')).toBeInTheDocument();
+
+    // Disallowed wings should not be displayed
+    expect(screen.queryByText('Manufacturing & Quality Assurance')).not.toBeInTheDocument();
+    expect(screen.queryByText('Finance, Treasury & Assets')).not.toBeInTheDocument();
+    expect(screen.queryByText('Workforce & Human Capital')).not.toBeInTheDocument();
+    expect(screen.queryByText('Governance, Intelligence & Security')).not.toBeInTheDocument();
+  });
 });
+

@@ -24,6 +24,11 @@ import {
   Microscope,
   ShoppingBag,
   Factory,
+  Coins,
+  DollarSign,
+  Clock,
+  Plus,
+  Compass,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -43,7 +48,9 @@ import {
   CustomDateRangeModal,
   WorkerDetailModal,
   ProductionOrderDetailModal,
+  FinancialDueModal,
   type OrderPOItem,
+  type DueCustomerItem,
 } from './components/DashboardModals';
 import { Button } from '../../components/ui/Button';
 import { toast } from 'sonner';
@@ -55,10 +62,20 @@ import { ExecutiveDashboardView } from './components/ExecutiveDashboardView';
 import { SalesDashboardView } from './components/SalesDashboardView';
 import { InventoryDashboardView } from './components/InventoryDashboardView';
 import { QcDashboardView } from './components/QcDashboardView';
+import { FinanceDashboardView } from './components/FinanceDashboardView';
+import { WorkforceDashboardView } from './components/WorkforceDashboardView';
+import { EnterpriseSystemNavigator } from './components/EnterpriseSystemNavigator';
 
 // ── Types & Datasets ──────────────────────────────────────────
 
-export type DashboardRoleView = 'executive' | 'production' | 'inventory' | 'qc' | 'sales';
+export type DashboardRoleView =
+  | 'executive'
+  | 'production'
+  | 'inventory'
+  | 'qc'
+  | 'sales'
+  | 'finance'
+  | 'workforce';
 type TimeframeType = 'today' | '7days' | '30days' | 'custom';
 
 interface ProductionStat {
@@ -124,9 +141,23 @@ export const TenantRoleDashboard: React.FC = () => {
   const canAccessInventory = hasPermission(['inventory.stock.view', 'inventory.warehouse.view', 'inventory.movement.view']);
   const canAccessQC = hasPermission(['qc.inspection.view', 'qc.parameter.view', 'qc.wastage.view']);
   const canAccessSales = hasPermission(['sales.order.view', 'pos.terminal.view', 'pos.sale.create', 'sales.invoice.view']);
+  const canAccessFinance = hasPermission([
+    'finance.account.view',
+    'finance.journal.view',
+    'finance.expense.view',
+    'sales.invoice.view',
+  ]);
+  const canAccessWorkforce = hasPermission([
+    'hr.employee.view',
+    'hr.attendance.view',
+    'hr.payroll.view',
+    'production.worker_entry.view',
+  ]);
 
   const initialView: DashboardRoleView = useMemo(() => {
     const slug = roleName.toLowerCase();
+    if (slug.includes('finance') || slug.includes('account')) return 'finance';
+    if (slug.includes('hr') || slug.includes('workforce') || slug.includes('payroll')) return 'workforce';
     if (slug.includes('sales') || slug.includes('commercial') || slug.includes('pos')) return 'sales';
     if (slug.includes('store') || slug.includes('warehouse') || slug.includes('inventory')) return 'inventory';
     if (slug.includes('qc') || slug.includes('quality')) return 'qc';
@@ -136,8 +167,10 @@ export const TenantRoleDashboard: React.FC = () => {
     if (canAccessQC) return 'qc';
     if (canAccessInventory) return 'inventory';
     if (canAccessSales) return 'sales';
+    if (canAccessFinance) return 'finance';
+    if (canAccessWorkforce) return 'workforce';
     return 'executive';
-  }, [roleName, canAccessExecutive, canAccessProduction, canAccessQC, canAccessInventory, canAccessSales]);
+  }, [roleName, canAccessExecutive, canAccessProduction, canAccessQC, canAccessInventory, canAccessSales, canAccessFinance, canAccessWorkforce]);
 
   const availableViews = useMemo(() => {
     const views: Array<{ id: DashboardRoleView; label: string; icon: React.ComponentType<{ className?: string }> }> = [];
@@ -156,8 +189,14 @@ export const TenantRoleDashboard: React.FC = () => {
     if (canAccessSales) {
       views.push({ id: 'sales', label: 'Sales & POS', icon: ShoppingBag });
     }
+    if (canAccessFinance) {
+      views.push({ id: 'finance', label: 'Finance & Accounts', icon: Coins });
+    }
+    if (canAccessWorkforce) {
+      views.push({ id: 'workforce', label: 'Workforce & HR', icon: Users });
+    }
     return views;
-  }, [canAccessExecutive, canAccessProduction, canAccessInventory, canAccessQC, canAccessSales]);
+  }, [canAccessExecutive, canAccessProduction, canAccessInventory, canAccessQC, canAccessSales, canAccessFinance, canAccessWorkforce]);
 
   const [userSelectedView, setUserSelectedView] = useState<DashboardRoleView | null>(null);
 
@@ -279,6 +318,7 @@ export const TenantRoleDashboard: React.FC = () => {
     status: string;
     payment: string;
   } | null>(null);
+  const [selectedDueItem, setSelectedDueItem] = useState<DueCustomerItem | null>(null);
   const [selectedWorker, setSelectedWorker] = useState<{
     initials: string;
     name: string;
@@ -529,6 +569,97 @@ export const TenantRoleDashboard: React.FC = () => {
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
+          0.1 UNIVERSAL QUICK-ACTION WORKFLOW LAUNCHER
+      ───────────────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1 -mt-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-muted shrink-0 flex items-center gap-1.5 pl-1">
+          <Compass className="size-3.5 text-primary" />
+          <span>Quick Actions:</span>
+        </span>
+        {hasPermission(['sales.order.view', 'sales.order.create']) && (
+          <Link
+            to="/sales?action=new"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-default bg-surface px-2.5 py-1 text-xs font-semibold text-default hover:border-primary/40 hover:bg-surface-sunken transition-all shrink-0 shadow-2xs"
+          >
+            <Plus className="size-3 text-primary" />
+            <span>Sales Order</span>
+          </Link>
+        )}
+        {hasPermission(['pos.terminal.view', 'pos.sale.create']) && (
+          <Link
+            to="/pos"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-default bg-surface px-2.5 py-1 text-xs font-semibold text-default hover:border-primary/40 hover:bg-surface-sunken transition-all shrink-0 shadow-2xs"
+          >
+            <ShoppingCart className="size-3 text-blue-500" />
+            <span>POS Register</span>
+          </Link>
+        )}
+        {hasPermission(['production.batch.view', 'production.plan.view']) && (
+          <Link
+            to="/production?action=new"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-default bg-surface px-2.5 py-1 text-xs font-semibold text-default hover:border-primary/40 hover:bg-surface-sunken transition-all shrink-0 shadow-2xs"
+          >
+            <Factory className="size-3 text-indigo-500" />
+            <span>Batch Plan</span>
+          </Link>
+        )}
+        {hasPermission(['inventory.stock.view', 'inventory.movement.view']) && (
+          <Link
+            to="/inventory?action=transfer"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-default bg-surface px-2.5 py-1 text-xs font-semibold text-default hover:border-primary/40 hover:bg-surface-sunken transition-all shrink-0 shadow-2xs"
+          >
+            <Warehouse className="size-3 text-amber-500" />
+            <span>Transfer Stock</span>
+          </Link>
+        )}
+        {hasPermission(['purchasing.order.view', 'purchasing.requisition.view']) && (
+          <Link
+            to="/purchasing?action=new"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-default bg-surface px-2.5 py-1 text-xs font-semibold text-default hover:border-primary/40 hover:bg-surface-sunken transition-all shrink-0 shadow-2xs"
+          >
+            <FileText className="size-3 text-amber-600" />
+            <span>Purchase PO</span>
+          </Link>
+        )}
+        {hasPermission(['qc.inspection.view']) && (
+          <Link
+            to="/qc"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-default bg-surface px-2.5 py-1 text-xs font-semibold text-default hover:border-primary/40 hover:bg-surface-sunken transition-all shrink-0 shadow-2xs"
+          >
+            <Microscope className="size-3 text-cyan-500" />
+            <span>QC Audit</span>
+          </Link>
+        )}
+        {hasPermission(['finance.account.view']) && (
+          <Link
+            to="/finance?tab=due-collection"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-default bg-surface px-2.5 py-1 text-xs font-semibold text-default hover:border-primary/40 hover:bg-surface-sunken transition-all shrink-0 shadow-2xs"
+          >
+            <DollarSign className="size-3 text-emerald-500" />
+            <span>Due Collection</span>
+          </Link>
+        )}
+        {hasPermission(['hr.attendance.view']) && (
+          <Link
+            to="/hr?tab=attendance"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-default bg-surface px-2.5 py-1 text-xs font-semibold text-default hover:border-primary/40 hover:bg-surface-sunken transition-all shrink-0 shadow-2xs"
+          >
+            <Clock className="size-3 text-teal-500" />
+            <span>Attendance</span>
+          </Link>
+        )}
+        {hasPermission(['reports.report.view', 'reports.dashboard.view']) && (
+          <Link
+            to="/reports"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-default bg-surface px-2.5 py-1 text-xs font-semibold text-default hover:border-primary/40 hover:bg-surface-sunken transition-all shrink-0 shadow-2xs"
+          >
+            <Sparkles className="size-3 text-purple-500" />
+            <span>RMS BI</span>
+          </Link>
+        )}
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────
           DYNAMIC ROLE VIEWS
       ───────────────────────────────────────────────────────────── */}
       {activeView === 'executive' && (
@@ -555,6 +686,19 @@ export const TenantRoleDashboard: React.FC = () => {
         <QcDashboardView
           qcList={qcList}
           onOpenQC={setSelectedQCItem}
+        />
+      )}
+
+      {activeView === 'finance' && (
+        <FinanceDashboardView
+          onOpenDueItem={setSelectedDueItem}
+          onOpenInvoice={setSelectedInvoice}
+        />
+      )}
+
+      {activeView === 'workforce' && (
+        <WorkforceDashboardView
+          onOpenWorker={setSelectedWorker}
         />
       )}
 
@@ -1647,6 +1791,11 @@ export const TenantRoleDashboard: React.FC = () => {
   )}
 
       {/* ─────────────────────────────────────────────────────────────
+          6. ENTERPRISE SUBSYSTEM COCKPIT & NAVIGATOR
+      ───────────────────────────────────────────────────────────── */}
+      <EnterpriseSystemNavigator />
+
+      {/* ─────────────────────────────────────────────────────────────
           7. FLOATING PWA INSTALL PROMPT (CONDITIONAL & THEMED)
       ───────────────────────────────────────────────────────────── */}
       {showPwaPrompt && (
@@ -1733,6 +1882,12 @@ export const TenantRoleDashboard: React.FC = () => {
         isOpen={Boolean(selectedInvoice)}
         onClose={() => setSelectedInvoice(null)}
         invoice={selectedInvoice}
+      />
+
+      <FinancialDueModal
+        isOpen={Boolean(selectedDueItem)}
+        onClose={() => setSelectedDueItem(null)}
+        dueItem={selectedDueItem}
       />
 
       <WorkerDetailModal
