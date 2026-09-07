@@ -129,7 +129,7 @@ const GROUP_LABELS: Record<string, string> = {
   profile: 'Workstation & Profile',
   seo: 'SEO & Discoverability',
   custom_domains: 'Custom Domains & SSL',
-  modules: 'Active ERP Modules',
+  modules: 'ERP Modules & Navigation Order',
   terminology: 'Vocabulary & Terminology',
   production_stages: 'Production Stages',
   custom_fields: 'Custom Attributes & Fields',

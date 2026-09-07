@@ -21,7 +21,10 @@ final class RolesAndPermissionsSeeder extends Seeder
         // 1. Seed All Canonical System Permissions
         $permissionModelMap = [];
         foreach (PermissionCatalogue::ALL_PERMISSIONS as $permName) {
-            [$module, $resource, $action] = explode('.', $permName);
+            $parts = explode('.', $permName);
+            $module = $parts[0];
+            $resource = $parts[1] ?? 'general';
+            $action = $parts[2] ?? $parts[1] ?? 'view';
             /** @var Permission $permission */
             $permission = Permission::firstOrCreate(
                 ['name' => $permName],

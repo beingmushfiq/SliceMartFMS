@@ -16,6 +16,8 @@ export interface TenantCapabilityState {
   getTerm: (termKey: string, fallback?: string) => string;
   getProductionStages: () => ProductionStageConfig[];
   getCustomFields: (module: string, entity: string) => CustomFieldDefinitionRecord[];
+  getNavOrder: () => { sections?: string[]; items?: Record<string, string[]> } | null;
+  setNavOrder: (order: { sections?: string[]; items?: Record<string, string[]> }) => void;
 
   bootstrap: (forceRefresh?: boolean) => Promise<void>;
   invalidate: () => Promise<void>;
@@ -79,6 +81,41 @@ export const useTenantCapabilityStore = create<TenantCapabilityState>((set, get)
     if (!manifest || !manifest.custom_fields) return [];
     const groupKey = `${module}.${entity}`;
     return manifest.custom_fields[groupKey] || [];
+  },
+
+  getNavOrder: () => {
+    const { manifest } = get();
+    return manifest?.nav_order || null;
+  },
+
+  setNavOrder: (order) => {
+    const { manifest } = get();
+    const base: TenantCapabilityManifest = manifest || {
+      tenant_id: 1,
+      tenant_uuid: '00000000-0000-0000-0000-000000000000',
+      tenant_name: 'Default Workspace',
+      business_type_keys: [],
+      industry_profile_key: 'custom',
+      manufacturing_type: 'general',
+      currency_code: 'BDT',
+      timezone: 'Asia/Dhaka',
+      onboarding_completed: true,
+      onboarding_step: 1,
+      modules: {},
+      feature_flags: {},
+      terminology: {},
+      production_stages: [],
+      custom_fields: {},
+      nav_order: order,
+    };
+    const updated: TenantCapabilityManifest = {
+      ...base,
+      nav_order: order,
+    };
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    }
+    set({ manifest: updated });
   },
 
   bootstrap: async (forceRefresh = false) => {

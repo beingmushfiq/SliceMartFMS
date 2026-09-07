@@ -44,7 +44,7 @@ export const SettingsOverviewHub: React.FC<SettingsOverviewHubProps> = ({
     { label: 'Custom Storefront Domains & SSL', group: 'custom_domains', icon: Globe },
     { label: 'Staff Roles & Access Permissions', group: 'roles', icon: Users },
     { label: 'System Security Audit Trail', group: 'audit_logs', icon: ShieldCheck },
-    { label: 'Active ERP Modules', group: 'modules', icon: Sparkles },
+    { label: 'ERP Modules & Navigation Order', group: 'modules', icon: Sparkles },
     { label: 'Factory Production Stages', group: 'production_stages', icon: Factory },
   ];
 
@@ -63,7 +63,7 @@ export const SettingsOverviewHub: React.FC<SettingsOverviewHubProps> = ({
       name: 'Architecture & Customization',
       desc: 'Dynamic ERP ecosystem, multi-stage factory routing, and custom document templates.',
       items: [
-        { key: 'modules', title: 'Active ERP Modules', desc: 'Activate or pause manufacturing, POS, and procurement' },
+        { key: 'modules', title: 'ERP Modules & Navigation Order', desc: 'Customize sidebar sequence by workflow and toggle active modules' },
         { key: 'production_stages', title: 'Production Stages', desc: 'Work centers, operational routing, and checklists' },
         { key: 'terminology', title: 'Vocabulary & Terminology', desc: 'Custom labels for garments, food, or electronics' },
         { key: 'custom_fields', title: 'Custom Attributes & Fields', desc: 'Extend products, batches, and orders with custom metadata' },

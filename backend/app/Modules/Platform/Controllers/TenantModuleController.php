@@ -7,12 +7,36 @@ namespace App\Modules\Platform\Controllers;
 use App\Core\Capabilities\TenantCapabilityManifest;
 use App\Core\Tenancy\TenantContext;
 use App\Http\Controllers\Controller;
+use App\Models\Setting;
 use App\Models\TenantModule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 final class TenantModuleController extends Controller
 {
+    public const DEFAULT_NAV_ORDER = [
+        'sections' => [
+            'overview',
+            'crm',
+            'sales',
+            'supply',
+            'production',
+            'finance',
+            'hr',
+            'system',
+        ],
+        'items' => [
+            'overview' => ['dashboard', 'reports'],
+            'crm' => ['crm-leads', 'salesmen-directory', 'sales-targets', 'sales-incentives'],
+            'sales' => ['sales', 'pos', 'ecommerce'],
+            'supply' => ['catalogue', 'purchasing', 'inventory', 'delivery'],
+            'production' => ['production', 'qc'],
+            'finance' => ['finance', 'finance-due', 'assets', 'maintenance'],
+            'hr' => ['hr-employees', 'hr-attendance', 'hr-performance', 'hr-payroll', 'hr-departments'],
+            'system' => ['roles', 'audit', 'settings'],
+        ],
+    ];
+
     /**
      * List all modules with their enabled status for the current tenant.
      */
@@ -36,6 +60,69 @@ final class TenantModuleController extends Controller
         return response()->json([
             'success' => true,
             'data' => $result,
+        ]);
+    }
+
+    /**
+     * Get the configured navigation order for sections and modules.
+     */
+    public function getNavOrder(): JsonResponse
+    {
+        $tenantId = TenantContext::current()->tenantId();
+        /** @var Setting|null $setting */
+        $setting = Setting::withoutTenantScope()
+            ->where('tenant_id', $tenantId)
+            ->where('group', 'navigation')
+            ->where('key', 'nav_order')
+            ->first();
+
+        $navOrder = $setting && is_array($setting->value) ? $setting->value : self::DEFAULT_NAV_ORDER;
+
+        return response()->json([
+            'success' => true,
+            'data' => $navOrder,
+        ]);
+    }
+
+    /**
+     * Save customized navigation order for the tenant.
+     */
+    public function updateNavOrder(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'sections' => 'required|array',
+            'sections.*' => 'required|string',
+            'items' => 'nullable|array',
+        ]);
+
+        $tenantId = TenantContext::current()->tenantId();
+
+        $navOrder = [
+            'sections' => array_values($validated['sections']),
+            'items' => $validated['items'] ?? self::DEFAULT_NAV_ORDER['items'],
+        ];
+
+        Setting::withoutTenantScope()->updateOrCreate(
+            [
+                'tenant_id' => $tenantId,
+                'group' => 'navigation',
+                'key' => 'nav_order',
+            ],
+            [
+                'scope' => 'tenant',
+                'value' => $navOrder,
+                'value_type' => 'json',
+                'is_encrypted' => false,
+                'updated_by' => $request->user()?->id,
+            ]
+        );
+
+        TenantCapabilityManifest::invalidate($tenantId);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Navigation order updated successfully.',
+            'data' => $navOrder,
         ]);
     }
 

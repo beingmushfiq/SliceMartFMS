@@ -36,15 +36,18 @@ class ReportRegistryController extends Controller
         if ($user && method_exists($user, 'hasPermission')) {
             $isSuperAdmin = $user->hasRole('Super Administrator') || !empty($user->is_platform_admin);
             if (!$isSuperAdmin) {
-                $definitions = $definitions->filter(function ($def) use ($user) {
-                    if (empty($def->required_permission)) {
-                        return true;
-                    }
-                    $prefix = explode('.', $def->required_permission)[0];
-                    return $user->hasPermission($def->required_permission)
-                        || $user->hasPermission('reports.view')
-                        || $user->hasPermission("{$prefix}.view");
-                })->values();
+                $effective = method_exists($user, 'getEffectivePermissions') ? $user->getEffectivePermissions() : [];
+                if (!empty($effective) && !in_array('*', $effective, true)) {
+                    $definitions = $definitions->filter(function ($def) use ($user) {
+                        if (empty($def->required_permission)) {
+                            return true;
+                        }
+                        $prefix = explode('.', $def->required_permission)[0];
+                        return $user->hasPermission($def->required_permission)
+                            || $user->hasPermission('reports.view')
+                            || $user->hasPermission("{$prefix}.view");
+                    })->values();
+                }
             }
         }
 

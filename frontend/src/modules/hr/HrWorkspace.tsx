@@ -1,4 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  Users,
+  Building2,
+  Zap,
+  Wallet,
+  Clock,
+  CalendarCheck,
+  Search,
+  SlidersHorizontal,
+  X,
+} from 'lucide-react';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { useCurrency } from '../../hooks/useCurrency';
 import type {
@@ -16,8 +27,37 @@ import type {
 import { WorkerPerformanceSection } from './sections/WorkerPerformanceSection';
 import { DepartmentsSetupSection } from './sections/DepartmentsSetupSection';
 
-type HrTab = 'employees' | 'attendance' | 'leaves' | 'payroll' | 'performance' | 'departments';
+export type HrTab = 'employees' | 'attendance' | 'leaves' | 'payroll' | 'performance' | 'departments';
+export type HrCategory = 'people' | 'compensation';
 type EmploymentType = 'permanent' | 'contract' | 'daily_wage' | 'piece_rate';
+
+interface CategoryConfig {
+  id: HrCategory;
+  label: string;
+  tagline: string;
+  icon: typeof Users;
+  tabs: HrTab[];
+  defaultTab: HrTab;
+}
+
+const CATEGORIES: CategoryConfig[] = [
+  {
+    id: 'people',
+    label: 'People & Organization',
+    tagline: 'Staff directory, designations & worker piece-rate performance',
+    icon: Users,
+    tabs: ['employees', 'departments', 'performance'],
+    defaultTab: 'employees',
+  },
+  {
+    id: 'compensation',
+    label: 'Payroll & Attendance',
+    tagline: 'Monthly payroll runs, shift rosters & leave quota requests',
+    icon: Wallet,
+    tabs: ['payroll', 'attendance', 'leaves'],
+    defaultTab: 'payroll',
+  },
+];
 
 export const HrWorkspace: React.FC = () => {
   const { formatCurrency } = useCurrency();
@@ -26,6 +66,44 @@ export const HrWorkspace: React.FC = () => {
     ['employees', 'attendance', 'leaves', 'payroll', 'performance', 'departments'] as const
   );
   const [selectedEmployeeForBadge, setSelectedEmployeeForBadge] = useState<Employee | null>(null);
+  const [quickJumpOpen, setQuickJumpOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const quickJumpRef = useRef<HTMLDivElement>(null);
+
+  const activeCategory = CATEGORIES.find((cat) => cat.tabs.includes(activeTab))?.id ?? 'compensation';
+
+  const lastActivePerCategory = useRef<Record<HrCategory, HrTab>>({
+    people: 'employees',
+    compensation: 'payroll',
+  });
+
+  useEffect(() => {
+    const cat = CATEGORIES.find((c) => c.tabs.includes(activeTab))?.id;
+    if (cat) {
+      lastActivePerCategory.current[cat] = activeTab;
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (quickJumpRef.current && !quickJumpRef.current.contains(event.target as Node)) {
+        setQuickJumpOpen(false);
+      }
+    }
+    if (quickJumpOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [quickJumpOpen]);
+
+  const handleSelectCategory = (categoryId: HrCategory) => {
+    if (categoryId === activeCategory) return;
+    const targetTab =
+      lastActivePerCategory.current[categoryId] ??
+      CATEGORIES.find((cat) => cat.id === categoryId)?.defaultTab ??
+      'payroll';
+    setActiveTab(targetTab);
+  };
 
   // Master Reference Data
   const [departments] = useState<Department[]>([
@@ -411,38 +489,219 @@ export const HrWorkspace: React.FC = () => {
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex overflow-x-auto p-1.5 bg-surface-sunken rounded-2xl border border-default shadow-2xs">
-        <div className="flex gap-1.5 min-w-full sm:min-w-0">
-          {[
-            { id: 'payroll', label: '💰 Payroll Runs & Payslips', count: payslips.length },
-            { id: 'employees', label: '👔 Employee Directory', count: employees.length },
-            { id: 'attendance', label: '⏱️ Shifts & Attendance', count: attendances.length },
-            { id: 'leaves', label: '🏖️ Leave Management', count: leaveRequests.length },
-            { id: 'performance', label: '⚡ Worker Performance', count: 4 },
-            { id: 'departments', label: '🏢 Departments & Setup', count: departments.length },
-          ].map((tab) => {
-            const isActive = activeTab === tab.id;
+      {/* Intuitive Two-Tier HR Navigation */}
+      <div className="space-y-3">
+        {/* Tier 1: Category Pillars */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {CATEGORIES.map((cat) => {
+            const Icon = cat.icon;
+            const isCatActive = activeCategory === cat.id;
             return (
               <button
-                key={tab.id}
+                key={cat.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id as HrTab)}
-                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer ${
-                  isActive
-                    ? 'bg-primary text-primary-fg font-semibold shadow-xs border border-primary'
-                    : 'text-muted hover:text-default hover:bg-surface/50 border border-transparent'
+                onClick={() => handleSelectCategory(cat.id)}
+                className={`relative flex items-start gap-3.5 p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer ${
+                  isCatActive
+                    ? 'bg-surface border-primary/40 shadow-sm ring-1 ring-primary/20'
+                    : 'bg-surface-sunken/40 border-default hover:bg-surface hover:border-default/80 text-muted'
                 }`}
               >
-                <span>{tab.label}</span>
-                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
-                  isActive ? 'bg-white/20 text-white font-bold' : 'bg-surface-sunken text-muted'
-                }`}>
-                  {tab.count}
-                </span>
+                <div
+                  className={`size-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                    isCatActive
+                      ? 'bg-primary text-primary-fg shadow-2xs'
+                      : 'bg-surface border border-default text-muted group-hover:text-default'
+                  }`}
+                >
+                  <Icon className="size-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={`text-sm font-bold tracking-tight truncate ${
+                        isCatActive ? 'text-default' : 'text-default/80'
+                      }`}
+                    >
+                      {cat.label}
+                    </span>
+                    <span
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                        isCatActive
+                          ? 'bg-primary-subtle text-primary border-primary/20 font-bold'
+                          : 'bg-surface text-muted border-default'
+                      }`}
+                    >
+                      {cat.tabs.length} views
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted truncate mt-0.5">{cat.tagline}</p>
+                </div>
+                {isCatActive && (
+                  <div className="absolute bottom-0 left-6 right-6 h-0.5 bg-primary rounded-t-full" />
+                )}
               </button>
             );
           })}
+        </div>
+
+        {/* Tier 2: Contextual Sub-Navigation Bar & Quick Jump Popover */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-2 bg-surface rounded-2xl border border-default shadow-2xs">
+          {/* Sub-Tabs for Active Category */}
+          <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 px-1 scrollbar-none min-w-0">
+            {[
+              { id: 'payroll', label: 'Payroll Runs & Payslips', category: 'compensation', icon: Wallet, count: payslips.length },
+              { id: 'attendance', label: 'Shifts & Attendance', category: 'compensation', icon: Clock, count: attendances.length },
+              { id: 'leaves', label: 'Leave Management', category: 'compensation', icon: CalendarCheck, count: leaveRequests.length },
+              { id: 'employees', label: 'Employee Directory', category: 'people', icon: Users, count: employees.length },
+              { id: 'departments', label: 'Departments & Setup', category: 'people', icon: Building2, count: departments.length },
+              { id: 'performance', label: 'Worker Performance', category: 'people', icon: Zap, count: 4 },
+            ]
+              .filter((tab) => tab.category === activeCategory)
+              .map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id as HrTab)}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer ${
+                      isActive
+                        ? 'bg-primary text-primary-fg font-semibold shadow-xs border border-primary'
+                        : 'text-muted hover:text-default hover:bg-surface-sunken border border-transparent'
+                    }`}
+                  >
+                    <Icon className={`size-3.5 ${isActive ? 'text-primary-fg' : 'text-muted'}`} />
+                    <span>{tab.label}</span>
+                    <span
+                      className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                        isActive ? 'bg-white/20 text-white font-bold' : 'bg-surface-sunken text-muted'
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
+          </div>
+
+          {/* Quick Jump Dropdown Popover */}
+          <div className="relative shrink-0 sm:border-l sm:border-default sm:pl-3" ref={quickJumpRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setQuickJumpOpen(!quickJumpOpen);
+                setSearchQuery('');
+              }}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer w-full sm:w-auto justify-between sm:justify-start ${
+                quickJumpOpen
+                  ? 'bg-surface-sunken text-default border border-default'
+                  : 'text-muted hover:text-default hover:bg-surface-sunken/60 border border-transparent'
+              }`}
+              title="Jump directly to any of the 6 HR views"
+            >
+              <SlidersHorizontal className="size-3.5 text-muted" />
+              <span>All Views</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-sunken text-muted border border-default">
+                6
+              </span>
+            </button>
+
+            {quickJumpOpen && (
+              <div className="absolute right-0 top-full mt-2 w-80 max-w-[90vw] bg-surface rounded-2xl border border-default shadow-lg p-2.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="relative mb-2">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search workforce views..."
+                    autoFocus
+                    className="w-full pl-8 pr-7 py-1.5 text-xs bg-surface-sunken rounded-lg border border-default focus:border-primary focus:outline-none text-default"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-default"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="max-h-72 overflow-y-auto space-y-1 pr-1">
+                  {CATEGORIES.map((cat) => {
+                    const allTabs = [
+                      { id: 'payroll', label: 'Payroll Runs & Payslips', category: 'compensation', icon: Wallet, count: payslips.length },
+                      { id: 'attendance', label: 'Shifts & Attendance', category: 'compensation', icon: Clock, count: attendances.length },
+                      { id: 'leaves', label: 'Leave Management', category: 'compensation', icon: CalendarCheck, count: leaveRequests.length },
+                      { id: 'employees', label: 'Employee Directory', category: 'people', icon: Users, count: employees.length },
+                      { id: 'departments', label: 'Departments & Setup', category: 'people', icon: Building2, count: departments.length },
+                      { id: 'performance', label: 'Worker Performance', category: 'people', icon: Zap, count: 4 },
+                    ];
+                    const catTabs = allTabs
+                      .filter((t) => t.category === cat.id)
+                      .filter((t) =>
+                        searchQuery
+                          ? t.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            t.id.toLowerCase().includes(searchQuery.toLowerCase())
+                          : true
+                      );
+                    if (catTabs.length === 0) return null;
+
+                    return (
+                      <div key={cat.id} className="pt-1.5 first:pt-0">
+                        <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted flex items-center justify-between">
+                          <span>{cat.label}</span>
+                          <span className="font-mono text-[9px]">{catTabs.length}</span>
+                        </div>
+                        <div className="space-y-0.5">
+                          {catTabs.map((tab) => {
+                            const TabIcon = tab.icon;
+                            const isTabActive = activeTab === tab.id;
+                            return (
+                              <button
+                                key={tab.id}
+                                type="button"
+                                onClick={() => {
+                                  setActiveTab(tab.id as HrTab);
+                                  setQuickJumpOpen(false);
+                                }}
+                                className={`w-full flex items-center justify-between px-2 py-2 rounded-lg text-xs text-left transition cursor-pointer ${
+                                  isTabActive
+                                    ? 'bg-primary text-primary-fg font-semibold'
+                                    : 'hover:bg-surface-sunken text-default'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <TabIcon
+                                    className={`size-3.5 shrink-0 ${
+                                      isTabActive ? 'text-primary-fg' : 'text-muted'
+                                    }`}
+                                  />
+                                  <span className="truncate">{tab.label}</span>
+                                </div>
+                                <span
+                                  className={`text-[9px] px-1.5 py-0.5 rounded font-mono shrink-0 ${
+                                    isTabActive
+                                      ? 'bg-primary-fg/20 text-primary-fg'
+                                      : 'bg-surface-sunken text-muted'
+                                  }`}
+                                >
+                                  {tab.count}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

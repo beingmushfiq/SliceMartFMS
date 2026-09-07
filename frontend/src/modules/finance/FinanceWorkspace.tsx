@@ -1,4 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  BookOpen,
+  ReceiptText,
+  Landmark,
+  Calculator,
+  Scale,
+  TrendingUp,
+  Coins,
+  Search,
+  SlidersHorizontal,
+  X,
+} from 'lucide-react';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { useCurrency } from '../../hooks/useCurrency';
 import type {
@@ -11,7 +23,44 @@ import type {
 import { DueCollectionSection } from './sections/DueCollectionSection';
 import { notify } from '../../components/ui/Toast';
 
-type FinanceTab = 'coa' | 'journal' | 'banking' | 'expenses' | 'costing' | 'statements' | 'due-collection';
+export type FinanceTab = 'coa' | 'journal' | 'banking' | 'expenses' | 'costing' | 'statements' | 'due-collection';
+export type FinanceCategory = 'accounting' | 'treasury' | 'costing';
+
+interface CategoryConfig {
+  id: FinanceCategory;
+  label: string;
+  tagline: string;
+  icon: typeof BookOpen;
+  tabs: FinanceTab[];
+  defaultTab: FinanceTab;
+}
+
+const CATEGORIES: CategoryConfig[] = [
+  {
+    id: 'accounting',
+    label: 'General Ledger & Accounts',
+    tagline: 'Double-entry journals, COA & financial statements',
+    icon: BookOpen,
+    tabs: ['journal', 'coa', 'statements'],
+    defaultTab: 'journal',
+  },
+  {
+    id: 'treasury',
+    label: 'Treasury & Collections',
+    tagline: 'Due aging, receivables & bank accounts',
+    icon: Landmark,
+    tabs: ['due-collection', 'banking'],
+    defaultTab: 'due-collection',
+  },
+  {
+    id: 'costing',
+    label: 'Cost Rollup & Expenses',
+    tagline: 'Operational disbursements & multi-component costing',
+    icon: Calculator,
+    tabs: ['expenses', 'costing'],
+    defaultTab: 'expenses',
+  },
+];
 
 function createManualJournalEntry(
   entryIndex: number,
@@ -56,6 +105,46 @@ export const FinanceWorkspace: React.FC = () => {
     'journal',
     ['coa', 'journal', 'banking', 'expenses', 'costing', 'statements', 'due-collection'] as const
   );
+
+  const [quickJumpOpen, setQuickJumpOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const quickJumpRef = useRef<HTMLDivElement>(null);
+
+  const activeCategory = CATEGORIES.find((cat) => cat.tabs.includes(activeTab))?.id ?? 'accounting';
+
+  const lastActivePerCategory = useRef<Record<FinanceCategory, FinanceTab>>({
+    accounting: 'journal',
+    treasury: 'due-collection',
+    costing: 'expenses',
+  });
+
+  useEffect(() => {
+    const cat = CATEGORIES.find((c) => c.tabs.includes(activeTab))?.id;
+    if (cat) {
+      lastActivePerCategory.current[cat] = activeTab;
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (quickJumpRef.current && !quickJumpRef.current.contains(event.target as Node)) {
+        setQuickJumpOpen(false);
+      }
+    }
+    if (quickJumpOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [quickJumpOpen]);
+
+  const handleSelectCategory = (categoryId: FinanceCategory) => {
+    if (categoryId === activeCategory) return;
+    const targetTab =
+      lastActivePerCategory.current[categoryId] ??
+      CATEGORIES.find((cat) => cat.id === categoryId)?.defaultTab ??
+      'journal';
+    setActiveTab(targetTab);
+  };
 
   // Chart of Accounts State
   const [accounts] = useState<ChartOfAccount[]>([
@@ -385,6 +474,30 @@ export const FinanceWorkspace: React.FC = () => {
     });
   };
 
+  const financeTabsList: Array<{
+    id: FinanceTab;
+    label: string;
+    category: FinanceCategory;
+    icon: typeof BookOpen;
+    count: string | number;
+  }> = [
+    { id: 'journal', label: 'General Ledger & Journals', category: 'accounting', icon: BookOpen, count: journalEntries.length },
+    { id: 'coa', label: 'Chart of Accounts', category: 'accounting', icon: Scale, count: accounts.length },
+    { id: 'statements', label: 'Financial Statements & P&L', category: 'accounting', icon: TrendingUp, count: 'Live' },
+    { id: 'due-collection', label: 'Due Collections & Aging', category: 'treasury', icon: Coins, count: 'Aging' },
+    { id: 'banking', label: 'Banking & Treasury', category: 'treasury', icon: Landmark, count: bankAccounts.length },
+    { id: 'expenses', label: 'Operating Expenses', category: 'costing', icon: ReceiptText, count: expenses.length },
+    { id: 'costing', label: 'Product Cost Rollup', category: 'costing', icon: Calculator, count: productCosts.length },
+  ];
+
+  const filteredFinanceTabs = searchQuery.trim()
+    ? financeTabsList.filter(
+        (t) =>
+          t.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          t.id.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : financeTabsList;
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto py-2">
       {/* Module Header */}
@@ -405,7 +518,7 @@ export const FinanceWorkspace: React.FC = () => {
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setShowNewJournalModal(true)}
-            className="px-4 py-2 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs"
+            className="px-4 py-2 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs cursor-pointer"
           >
             <span>+</span> Post Journal Entry
           </button>
@@ -428,15 +541,15 @@ export const FinanceWorkspace: React.FC = () => {
           <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">
             Total Receivables
           </div>
-          <div className="text-2xl font-extrabold text-primary mt-2 font-mono">
+          <div className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-2 font-mono">
             {formatCurrency(340000)}
           </div>
-          <div className="text-[11px] text-muted mt-1">From Corporate & B2B Invoices</div>
+          <div className="text-[11px] text-muted mt-1">Accounts Receivable (GL 1050)</div>
         </div>
 
         <div className="bg-surface rounded-2xl p-6 shadow-xs border border-default">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-            Operating Payables
+            Total Payables
           </div>
           <div className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-2 font-mono">
             {formatCurrency(210000)}
@@ -455,38 +568,203 @@ export const FinanceWorkspace: React.FC = () => {
         </div>
       </div>
 
-      {/* Segmented Navigation Tabs Tray */}
-      <div className="flex overflow-x-auto p-1.5 bg-surface-sunken rounded-2xl border border-default shadow-2xs">
-        <div className="flex gap-1.5 min-w-full sm:min-w-0">
-          {([
-            { id: 'journal', label: 'General Ledger & Journals', count: journalEntries.length },
-            { id: 'due-collection', label: 'Due Collection & Receivables', count: 'Aging' },
-            { id: 'coa', label: 'Chart of Accounts', count: accounts.length },
-            { id: 'statements', label: 'Financial Statements & P&L', count: 'Live' },
-            { id: 'banking', label: 'Banking & Treasury', count: bankAccounts.length },
-            { id: 'expenses', label: 'Operating Expenses', count: expenses.length },
-            { id: 'costing', label: 'Product Cost Rollup', count: productCosts.length },
-          ] as const).map((tab) => {
-            const isActive = activeTab === tab.id;
+      {/* Intuitive Two-Tier Financial Navigation */}
+      <div className="space-y-3">
+        {/* Tier 1: Category Pillars */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+          {CATEGORIES.map((cat) => {
+            const Icon = cat.icon;
+            const isCatActive = activeCategory === cat.id;
             return (
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer ${
-                  isActive
-                    ? 'bg-primary text-primary-fg font-semibold shadow-xs border border-primary'
-                    : 'text-muted hover:text-default hover:bg-surface/50 border border-transparent'
+                key={cat.id}
+                type="button"
+                onClick={() => handleSelectCategory(cat.id)}
+                className={`relative flex items-start gap-3.5 p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer ${
+                  isCatActive
+                    ? 'bg-surface border-primary/40 shadow-sm ring-1 ring-primary/20'
+                    : 'bg-surface-sunken/40 border-default hover:bg-surface hover:border-default/80 text-muted'
                 }`}
               >
-                <span>{tab.label}</span>
-                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
-                  isActive ? 'bg-white/20 text-white font-bold' : 'bg-surface-sunken text-muted'
-                }`}>
-                  {tab.count}
-                </span>
+                <div
+                  className={`size-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                    isCatActive
+                      ? 'bg-primary text-primary-fg shadow-2xs'
+                      : 'bg-surface border border-default text-muted group-hover:text-default'
+                  }`}
+                >
+                  <Icon className="size-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={`text-sm font-bold tracking-tight truncate ${
+                        isCatActive ? 'text-default' : 'text-default/80'
+                      }`}
+                    >
+                      {cat.label}
+                    </span>
+                    <span
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                        isCatActive
+                          ? 'bg-primary-subtle text-primary border-primary/20 font-bold'
+                          : 'bg-surface text-muted border-default'
+                      }`}
+                    >
+                      {cat.tabs.length} views
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted truncate mt-0.5">{cat.tagline}</p>
+                </div>
+                {isCatActive && (
+                  <div className="absolute bottom-0 left-6 right-6 h-0.5 bg-primary rounded-t-full" />
+                )}
               </button>
             );
           })}
+        </div>
+
+        {/* Tier 2: Contextual Sub-Tabs Bar & Quick Jump Popover */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-2 bg-surface rounded-2xl border border-default shadow-2xs">
+          {/* Sub-Tabs for Active Category */}
+          <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 px-1 scrollbar-none min-w-0">
+            {financeTabsList
+              .filter((tab) => tab.category === activeCategory)
+              .map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer ${
+                      isActive
+                        ? 'bg-primary text-primary-fg font-semibold shadow-xs border border-primary'
+                        : 'text-muted hover:text-default hover:bg-surface-sunken border border-transparent'
+                    }`}
+                  >
+                    <Icon className={`size-3.5 ${isActive ? 'text-primary-fg' : 'text-muted'}`} />
+                    <span>{tab.label}</span>
+                    <span
+                      className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                        isActive ? 'bg-white/20 text-white font-bold' : 'bg-surface-sunken text-muted'
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
+          </div>
+
+          {/* Quick Jump Dropdown Popover */}
+          <div className="relative shrink-0 sm:border-l sm:border-default sm:pl-3" ref={quickJumpRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setQuickJumpOpen(!quickJumpOpen);
+                setSearchQuery('');
+              }}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer w-full sm:w-auto justify-between sm:justify-start ${
+                quickJumpOpen
+                  ? 'bg-surface-sunken text-default border border-default'
+                  : 'text-muted hover:text-default hover:bg-surface-sunken/60 border border-transparent'
+              }`}
+              title="Jump directly to any of the 7 finance views"
+            >
+              <SlidersHorizontal className="size-3.5 text-muted" />
+              <span>All Views</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-sunken text-muted border border-default">
+                7
+              </span>
+            </button>
+
+            {quickJumpOpen && (
+              <div className="absolute right-0 top-full mt-2 w-80 max-w-[90vw] bg-surface rounded-2xl border border-default shadow-lg p-2.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="relative mb-2">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search finance views..."
+                    autoFocus
+                    className="w-full pl-8 pr-7 py-1.5 text-xs bg-surface-sunken rounded-lg border border-default focus:border-primary focus:outline-none text-default"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-default"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="max-h-72 overflow-y-auto space-y-1 pr-1">
+                  {CATEGORIES.map((cat) => {
+                    const catTabs = filteredFinanceTabs.filter((t) => t.category === cat.id);
+                    if (catTabs.length === 0) return null;
+
+                    return (
+                      <div key={cat.id} className="pt-1.5 first:pt-0">
+                        <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted flex items-center justify-between">
+                          <span>{cat.label}</span>
+                          <span className="font-mono text-[9px]">{catTabs.length}</span>
+                        </div>
+                        <div className="space-y-0.5">
+                          {catTabs.map((tab) => {
+                            const TabIcon = tab.icon;
+                            const isTabActive = activeTab === tab.id;
+                            return (
+                              <button
+                                key={tab.id}
+                                type="button"
+                                onClick={() => {
+                                  setActiveTab(tab.id);
+                                  setQuickJumpOpen(false);
+                                }}
+                                className={`w-full flex items-center justify-between px-2 py-2 rounded-lg text-xs text-left transition cursor-pointer ${
+                                  isTabActive
+                                    ? 'bg-primary text-primary-fg font-semibold'
+                                    : 'hover:bg-surface-sunken text-default'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <TabIcon
+                                    className={`size-3.5 shrink-0 ${
+                                      isTabActive ? 'text-primary-fg' : 'text-muted'
+                                    }`}
+                                  />
+                                  <span className="truncate">{tab.label}</span>
+                                </div>
+                                <span
+                                  className={`text-[9px] px-1.5 py-0.5 rounded font-mono shrink-0 ${
+                                    isTabActive
+                                      ? 'bg-primary-fg/20 text-primary-fg'
+                                      : 'bg-surface-sunken text-muted'
+                                  }`}
+                                >
+                                  {tab.count}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {filteredFinanceTabs.length === 0 && (
+                    <div className="py-6 text-center text-xs text-muted">
+                      No finance views found matching &quot;{searchQuery}&quot;
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

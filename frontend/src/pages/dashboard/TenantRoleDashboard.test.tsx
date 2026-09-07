@@ -1,8 +1,29 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TenantRoleDashboard } from './TenantRoleDashboard';
 import { useAuthStore } from '../../lib/auth/authStore';
+
+const createTestQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
+const renderWithProviders = (ui: React.ReactElement) => {
+  const queryClient = createTestQueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        {ui}
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+};
 
 // Mock Recharts ResponsiveContainer to avoid size rendering issues in test DOM
 vi.mock('recharts', async () => {
@@ -58,11 +79,7 @@ describe('TenantRoleDashboard Dynamic Role Perspectives', () => {
       permissions: new Set(['*']),
     });
 
-    render(
-      <MemoryRouter>
-        <TenantRoleDashboard />
-      </MemoryRouter>
-    );
+    renderWithProviders(<TenantRoleDashboard />);
 
     // Active role header indicator
     expect(screen.getByText('Super Administrator')).toBeInTheDocument();
@@ -110,11 +127,7 @@ describe('TenantRoleDashboard Dynamic Role Perspectives', () => {
       ]),
     });
 
-    render(
-      <MemoryRouter>
-        <TenantRoleDashboard />
-      </MemoryRouter>
-    );
+    renderWithProviders(<TenantRoleDashboard />);
 
     expect(screen.getByText('Sales Officer')).toBeInTheDocument();
     expect(screen.getByText('Commercial & POS Operations')).toBeInTheDocument();
@@ -152,11 +165,7 @@ describe('TenantRoleDashboard Dynamic Role Perspectives', () => {
       ]),
     });
 
-    render(
-      <MemoryRouter>
-        <TenantRoleDashboard />
-      </MemoryRouter>
-    );
+    renderWithProviders(<TenantRoleDashboard />);
 
     expect(screen.getByText('Warehouse Storekeeper')).toBeInTheDocument();
     expect(screen.getByText('Warehouse & Stock Inventory')).toBeInTheDocument();
@@ -192,11 +201,7 @@ describe('TenantRoleDashboard Dynamic Role Perspectives', () => {
       ]),
     });
 
-    render(
-      <MemoryRouter>
-        <TenantRoleDashboard />
-      </MemoryRouter>
-    );
+    renderWithProviders(<TenantRoleDashboard />);
 
     expect(screen.getByText('QC Inspector')).toBeInTheDocument();
     expect(screen.getByText('Quality Assurance & Testing')).toBeInTheDocument();
@@ -226,11 +231,7 @@ describe('TenantRoleDashboard Dynamic Role Perspectives', () => {
       permissions: new Set(['*']),
     });
 
-    render(
-      <MemoryRouter>
-        <TenantRoleDashboard />
-      </MemoryRouter>
-    );
+    renderWithProviders(<TenantRoleDashboard />);
 
     // Trigger PWA install event
     act(() => {

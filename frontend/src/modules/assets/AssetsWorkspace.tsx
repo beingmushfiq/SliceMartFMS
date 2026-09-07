@@ -7,6 +7,8 @@ import type {
 } from '../../types/api/assets';
 import { useCurrency } from '../../hooks/useCurrency';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
+import { Building2, TrendingDown, Wrench, Tag, Plus } from 'lucide-react';
+import { cn } from '../../lib/utils';
 
 type AssetTab = 'assets' | 'depreciation' | 'categories' | 'maintenance';
 
@@ -228,104 +230,118 @@ export const AssetsWorkspace: React.FC = () => {
   const totalNetBookValue = assets.reduce((acc, a) => acc + parseFloat(a.book_value), 0);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto py-2">
       {/* Module Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-default pb-5">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <span>🏭</span> Fixed Assets & Depreciation
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-primary bg-primary-subtle px-2.5 py-0.5 rounded-full border border-primary/20 flex items-center gap-1">
+              <Building2 className="size-3 text-primary" />
+              Capital Equipment & Asset Lifecycle
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-default">
+            Fixed Assets & Depreciation
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Asset Register, Straight-Line Monthly Depreciation, GL Journal Linking & Maintenance
-            Work Orders
+          <p className="mt-1 text-xs text-muted max-w-2xl leading-relaxed">
+            Asset register, straight-line monthly depreciation, GL journal linking, and maintenance work orders.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={() => setShowAddAssetModal(true)}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow transition flex items-center gap-1 text-sm"
+            className="px-3.5 py-2 bg-primary hover:bg-primary/90 text-primary-fg font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs cursor-pointer"
           >
-            <span>+</span> Register New Asset
+            <Plus className="size-3.5" />
+            Register New Asset
           </button>
         </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-surface rounded-2xl p-4 shadow-2xs border border-default">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted">
             Total Gross Asset Value
           </div>
-          <div className="text-2xl font-extrabold text-gray-900 dark:text-gray-100 mt-2">
+          <div className="text-2xl font-extrabold text-default mt-2">
             {formatCurrency(totalAssetCost)}
           </div>
-          <div className="text-xs text-gray-400 mt-1">
+          <div className="text-xs text-muted mt-1">
             Acquisition Cost Across {assets.length} Assets
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <div className="bg-surface rounded-2xl p-4 shadow-2xs border border-default">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted">
             Accumulated Depreciation
           </div>
           <div className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-2">
             {formatCurrency(totalAccumulatedDepr)}
           </div>
-          <div className="text-xs text-gray-400 mt-1">Expensed to GL General Ledger</div>
+          <div className="text-xs text-muted mt-1">Expensed to GL General Ledger</div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <div className="bg-surface rounded-2xl p-4 shadow-2xs border border-default">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted">
             Net Carrying Book Value
           </div>
           <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-2">
             {formatCurrency(totalNetBookValue)}
           </div>
-          <div className="text-xs text-gray-400 mt-1">Balance Sheet Asset Value</div>
+          <div className="text-xs text-muted mt-1">Balance Sheet Asset Value</div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <div className="bg-surface rounded-2xl p-4 shadow-2xs border border-default">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted">
             Active Maintenance Orders
           </div>
           <div className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-2">
             {maintenanceOrders.length} Orders
           </div>
-          <div className="text-xs text-gray-400 mt-1">Preventive & Fleet Servicing</div>
+          <div className="text-xs text-muted mt-1">Preventive & Fleet Servicing</div>
         </div>
       </div>
 
       {/* Navigation Tabs */}
       <div className="flex overflow-x-auto p-1.5 bg-surface-sunken rounded-2xl border border-default shadow-2xs">
-        <div className="flex gap-1.5 min-w-full sm:min-w-0">
+        <div className="flex gap-1.5 min-w-full sm:min-w-0" aria-label="Asset Sections">
           {(
             [
-              { id: 'assets', label: '📋 Fixed Asset Register', count: assets.length },
+              { id: 'assets', label: 'Fixed Asset Register', icon: Building2, count: assets.length },
               {
                 id: 'depreciation',
-                label: '📉 Monthly Depreciation Logs',
+                label: 'Monthly Depreciation Logs',
+                icon: TrendingDown,
                 count: depreciationEntries.length,
               },
-              { id: 'maintenance', label: '🛠️ Maintenance & Repairs', count: maintenanceOrders.length },
-              { id: 'categories', label: '🏷️ Asset Categories', count: categories.length },
-            ] as { id: AssetTab; label: string; count: number }[]
+              { id: 'maintenance', label: 'Maintenance & Repairs', icon: Wrench, count: maintenanceOrders.length },
+              { id: 'categories', label: 'Asset Categories', icon: Tag, count: categories.length },
+            ] as { id: AssetTab; label: string; icon: typeof Building2; count: number }[]
           ).map((tab) => {
+            const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer ${
+                className={cn(
+                  'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer',
                   isActive
                     ? 'bg-primary text-primary-fg font-semibold shadow-xs border border-primary'
                     : 'text-muted hover:text-default hover:bg-surface/50 border border-transparent'
-                }`}
+                )}
               >
+                <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
                 <span>{tab.label}</span>
-                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
-                  isActive ? 'bg-white/20 text-white font-bold' : 'bg-surface-sunken text-muted'
-                }`}>
+                <span
+                  className={cn(
+                    'text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold',
+                    isActive ? 'bg-white/20 text-white' : 'bg-surface text-muted border border-default'
+                  )}
+                >
                   {tab.count}
                 </span>
               </button>

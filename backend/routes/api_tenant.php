@@ -832,6 +832,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
         // ── Dynamic Tenant Modules ──────────────────────────────────
         Route::prefix('tenant/modules')->name('tenant.modules.')->group(static function (): void {
             Route::get('/', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'index'])->name('index');
+            Route::get('nav-order', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'getNavOrder'])->name('nav-order.get');
+            Route::put('nav-order', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'updateNavOrder'])->name('nav-order.update');
             Route::put('{moduleKey}', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'update'])->name('update');
             Route::post('batch', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'batchUpdate'])->name('batch');
         });

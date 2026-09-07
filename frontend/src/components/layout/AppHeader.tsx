@@ -7,6 +7,7 @@ import {
   Menu,
   Moon,
   Sun,
+  LayoutDashboard,
   Bell,
   Check,
   AlertTriangle,
@@ -33,7 +34,8 @@ import {
   PlusCircle,
   X,
   CornerDownLeft,
-  LayoutDashboard,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { useAuthStore } from '../../lib/auth/authStore';
 import { cn } from '../../lib/utils';
@@ -43,6 +45,8 @@ import { api } from '../../lib/api/client';
 
 interface AppHeaderProps {
   onToggleSidebar: () => void;
+  isSidebarCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 // ── Search Item Definition & Registry ────────────────────────
@@ -373,7 +377,11 @@ const SAMPLE_NOTIFICATIONS: NotificationItem[] = [
   },
 ];
 
-export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
+export function AppHeader({
+  onToggleSidebar,
+  isSidebarCollapsed,
+  onToggleCollapse,
+}: AppHeaderProps) {
   const navigate = useNavigate();
   const { user, branches, activeBranch, switchBranch, logout } = useAuthStore();
   
@@ -529,6 +537,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
     <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-default bg-surface/95 px-3 sm:px-6 backdrop-blur-md transition-token-colors">
       {/* Left side: Hamburger + Search + Mobile Search Trigger */}
       <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 mr-2 sm:mr-4">
+        {/* Mobile Navigation Drawer Trigger (< lg) */}
         <button
           type="button"
           onClick={onToggleSidebar}
@@ -537,6 +546,23 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
         >
           <Menu className="size-5" />
         </button>
+
+        {/* Desktop Collapse/Expand Sidebar Trigger (>= lg) */}
+        {onToggleCollapse && (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="hidden lg:flex items-center justify-center rounded-lg p-2 text-muted hover:bg-surface-sunken hover:text-default transition-token-colors focus-visible:ring-focus cursor-pointer shrink-0"
+            title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {isSidebarCollapsed ? (
+              <PanelLeftOpen className="size-5 text-muted hover:text-primary transition-colors" />
+            ) : (
+              <PanelLeftClose className="size-5 text-muted hover:text-primary transition-colors" />
+            )}
+          </button>
+        )}
 
         {/* Mobile Search Button (< md) */}
         <button

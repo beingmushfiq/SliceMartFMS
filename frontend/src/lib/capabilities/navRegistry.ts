@@ -41,12 +41,31 @@ export interface DynamicNavItem {
 }
 
 export interface DynamicNavSection {
+  id: string;
   title: string;
   items: DynamicNavItem[];
 }
 
+export interface NavOrderConfig {
+  sections?: string[];
+  items?: Record<string, string[]>;
+}
+
+/**
+ * Canonical platform navigation registry ordered according to standard enterprise
+ * industrial workflow:
+ * 1. Overview & Monitoring (Dashboard & BI)
+ * 2. CRM & Salesmen (Demand Generation, Leads & Targets)
+ * 3. Sales & Commercials (Omnichannel B2B/Retail Orders, POS & Web Storefront)
+ * 4. Inventory & Supply (Master Catalogue, Procurement POs, Stock Ledgers & Logistics)
+ * 5. Production & Quality (Factory Batch Routing & Mandatory QC Gate)
+ * 6. Finance & Accounts (General Ledger, Due & Collections, Assets & Maintenance)
+ * 7. Workforce & HR (Employees, Attendance, Piece-Rate Performance & Payroll)
+ * 8. Intelligence & System (RBAC, Audit Logs & Settings Center)
+ */
 export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
   {
+    id: 'overview',
     title: 'Overview & Monitoring',
     items: [
       {
@@ -71,43 +90,7 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
     ],
   },
   {
-    title: 'Sales & Commercials',
-    items: [
-      {
-        id: 'sales',
-        moduleKey: 'sales',
-        defaultLabel: 'Sales & Invoices',
-        to: '/sales',
-        icon: ShoppingBag,
-        permission: [
-          'sales.order.view',
-          'sales.invoice.view',
-          'sales.return.view',
-        ],
-      },
-      {
-        id: 'pos',
-        moduleKey: 'pos',
-        defaultLabel: 'Point of Sale (POS)',
-        to: '/pos',
-        icon: ShoppingCart,
-        permission: ['pos.terminal.view', 'pos.session.view', 'pos.sale.create'],
-        badge: 'Fast',
-        badgeTone: 'primary',
-      },
-      {
-        id: 'ecommerce',
-        moduleKey: 'ecommerce',
-        defaultLabel: 'Storefront CMS',
-        to: '/storefront',
-        icon: Store,
-        permission: ['ecommerce.storefront.view', 'ecommerce.storefront.manage'],
-        badge: 'Live',
-        badgeTone: 'success',
-      },
-    ],
-  },
-  {
+    id: 'crm',
     title: 'CRM & Salesmen',
     items: [
       {
@@ -145,45 +128,47 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
     ],
   },
   {
-    title: 'Production & Quality',
+    id: 'sales',
+    title: 'Sales & Commercials',
     items: [
       {
-        id: 'production',
-        moduleKey: 'production',
-        labelKey: 'production',
-        defaultLabel: 'Production Chain',
-        to: '/production',
-        icon: Factory,
-        permission: ['production.batch.view', 'production.plan.view', 'production.worker_entry.view'],
+        id: 'sales',
+        moduleKey: 'sales',
+        defaultLabel: 'Sales & Invoices',
+        to: '/sales',
+        icon: ShoppingBag,
+        permission: [
+          'sales.order.view',
+          'sales.invoice.view',
+          'sales.return.view',
+        ],
       },
       {
-        id: 'qc',
-        moduleKey: 'qc',
-        defaultLabel: 'Quality Control (QC)',
-        to: '/qc',
-        icon: Microscope,
-        permission: ['qc.inspection.view', 'qc.parameter.view', 'qc.wastage.view'],
+        id: 'pos',
+        moduleKey: 'pos',
+        defaultLabel: 'Point of Sale (POS)',
+        to: '/pos',
+        icon: ShoppingCart,
+        permission: ['pos.terminal.view', 'pos.session.view', 'pos.sale.create'],
+        badge: 'Fast',
+        badgeTone: 'primary',
+      },
+      {
+        id: 'ecommerce',
+        moduleKey: 'ecommerce',
+        defaultLabel: 'Storefront CMS',
+        to: '/storefront',
+        icon: Store,
+        permission: ['ecommerce.storefront.view', 'ecommerce.storefront.manage'],
+        badge: 'Live',
+        badgeTone: 'success',
       },
     ],
   },
   {
+    id: 'supply',
     title: 'Inventory & Supply',
     items: [
-      {
-        id: 'inventory',
-        moduleKey: 'inventory',
-        labelKey: 'warehouse',
-        defaultLabel: 'Stock & Inventory',
-        to: '/inventory',
-        icon: Warehouse,
-        permission: [
-          'inventory.stock.view',
-          'inventory.warehouse.view',
-          'inventory.movement.view',
-          'inventory.transfer.view',
-          'inventory.count.view',
-        ],
-      },
       {
         id: 'catalogue',
         moduleKey: 'inventory',
@@ -216,6 +201,21 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
         ],
       },
       {
+        id: 'inventory',
+        moduleKey: 'inventory',
+        labelKey: 'warehouse',
+        defaultLabel: 'Stock & Inventory',
+        to: '/inventory',
+        icon: Warehouse,
+        permission: [
+          'inventory.stock.view',
+          'inventory.warehouse.view',
+          'inventory.movement.view',
+          'inventory.transfer.view',
+          'inventory.count.view',
+        ],
+      },
+      {
         id: 'delivery',
         moduleKey: 'delivery',
         defaultLabel: 'Logistics & Courier',
@@ -231,6 +231,30 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
     ],
   },
   {
+    id: 'production',
+    title: 'Production & Quality',
+    items: [
+      {
+        id: 'production',
+        moduleKey: 'production',
+        labelKey: 'production',
+        defaultLabel: 'Production Chain',
+        to: '/production',
+        icon: Factory,
+        permission: ['production.batch.view', 'production.plan.view', 'production.worker_entry.view'],
+      },
+      {
+        id: 'qc',
+        moduleKey: 'qc',
+        defaultLabel: 'Quality Control (QC)',
+        to: '/qc',
+        icon: Microscope,
+        permission: ['qc.inspection.view', 'qc.parameter.view', 'qc.wastage.view'],
+      },
+    ],
+  },
+  {
+    id: 'finance',
     title: 'Finance & Accounts',
     items: [
       {
@@ -274,6 +298,7 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
     ],
   },
   {
+    id: 'hr',
     title: 'Workforce & HR',
     items: [
       {
@@ -293,20 +318,20 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
         permission: ['hr.attendance.view'],
       },
       {
-        id: 'hr-payroll',
-        moduleKey: 'hr',
-        defaultLabel: 'Payroll & Payslips',
-        to: '/hr?tab=payroll',
-        icon: Receipt,
-        permission: ['hr.payroll.view', 'hr.payslip.view'],
-      },
-      {
         id: 'hr-performance',
         moduleKey: 'hr',
         defaultLabel: 'Worker Performance',
         to: '/hr?tab=performance',
         icon: BarChart3,
         permission: ['hr.employee.view', 'production.worker_entry.view'],
+      },
+      {
+        id: 'hr-payroll',
+        moduleKey: 'hr',
+        defaultLabel: 'Payroll & Payslips',
+        to: '/hr?tab=payroll',
+        icon: Receipt,
+        permission: ['hr.payroll.view', 'hr.payslip.view'],
       },
       {
         id: 'hr-departments',
@@ -319,6 +344,7 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
     ],
   },
   {
+    id: 'system',
     title: 'Intelligence & System',
     items: [
       {
@@ -346,13 +372,32 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
   },
 ];
 
+/**
+ * Returns the canonical default navigation sequence structure.
+ */
+export function getDefaultNavOrder(): NavOrderConfig {
+  return {
+    sections: PLATFORM_NAV_DEFINITIONS.map((s) => s.id),
+    items: PLATFORM_NAV_DEFINITIONS.reduce((acc, s) => {
+      acc[s.id] = s.items.map((i) => i.id);
+      return acc;
+    }, {} as Record<string, string[]>),
+  };
+}
+
+/**
+ * Builds active navigation sections dynamically, honoring enabled module gates,
+ * staff RBAC permissions, customized terminology, and custom section/item re-ordering.
+ */
 export function buildDynamicNavSections(
   isModuleEnabled: (key: string) => boolean,
   hasPermission: (perm: string | string[]) => boolean,
-  getTerm: (key: string, fallback?: string) => string
-): Array<{ title: string; items: Array<DynamicNavItem & { label: string }> }> {
-  return PLATFORM_NAV_DEFINITIONS.map((section) => {
-    const activeItems = section.items
+  getTerm: (key: string, fallback?: string) => string,
+  customOrder?: NavOrderConfig | null
+): Array<{ id: string; title: string; items: Array<DynamicNavItem & { label: string }> }> {
+  // 1. Map canonical definitions into active resolved sections
+  const mappedSections = PLATFORM_NAV_DEFINITIONS.map((section) => {
+    let activeItems = section.items
       .filter((item) => {
         if (item.moduleKey && !isModuleEnabled(item.moduleKey)) {
           return false;
@@ -373,9 +418,36 @@ export function buildDynamicNavSections(
         };
       });
 
+    // Reorder items within section if custom item order is configured
+    const customItemOrder = customOrder?.items?.[section.id];
+    if (customItemOrder && Array.isArray(customItemOrder) && customItemOrder.length > 0) {
+      activeItems = [...activeItems].sort((a, b) => {
+        const indexA = customItemOrder.indexOf(a.id);
+        const indexB = customItemOrder.indexOf(b.id);
+        const posA = indexA === -1 ? 999 : indexA;
+        const posB = indexB === -1 ? 999 : indexB;
+        return posA - posB;
+      });
+    }
+
     return {
+      id: section.id,
       title: section.title,
       items: activeItems,
     };
   }).filter((section) => section.items.length > 0);
+
+  // 2. Reorder sections if custom section order is configured
+  if (customOrder?.sections && Array.isArray(customOrder.sections) && customOrder.sections.length > 0) {
+    const sectionOrder = customOrder.sections;
+    return [...mappedSections].sort((a, b) => {
+      const indexA = sectionOrder.indexOf(a.id);
+      const indexB = sectionOrder.indexOf(b.id);
+      const posA = indexA === -1 ? 999 : indexA;
+      const posB = indexB === -1 ? 999 : indexB;
+      return posA - posB;
+    });
+  }
+
+  return mappedSections;
 }
