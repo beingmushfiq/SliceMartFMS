@@ -76,6 +76,7 @@ final class StockCountController extends Controller
     {
         $tenantId = TenantContext::current()->tenantId();
 
+        /** @var StockCount $count */
         $count = StockCount::with(['warehouse', 'items.product', 'items.unit'])
             ->where('tenant_id', $tenantId)
             ->where('id', $id)
@@ -88,6 +89,7 @@ final class StockCountController extends Controller
     {
         $tenantId = TenantContext::current()->tenantId();
 
+        /** @var StockCount $count */
         $count = StockCount::where('tenant_id', $tenantId)
             ->where('id', $id)
             ->firstOrFail();
@@ -112,6 +114,7 @@ final class StockCountController extends Controller
     {
         $tenantId = TenantContext::current()->tenantId();
 
+        /** @var StockCount $count */
         $count = StockCount::where('tenant_id', $tenantId)
             ->where('id', $id)
             ->firstOrFail();
@@ -126,6 +129,7 @@ final class StockCountController extends Controller
     {
         $tenantId = TenantContext::current()->tenantId();
 
+        /** @var StockCount $count */
         $count = StockCount::where('tenant_id', $tenantId)
             ->where('id', $id)
             ->firstOrFail();

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -58,35 +58,41 @@ export function IncentivesSection() {
   });
 
   // Fetch Policies
-  const { data: policiesResponse, isLoading: policiesLoading } = useQuery<{
-    data: IncentivePolicy[];
-  }>({
+  const { data: rawPolicies, isLoading: policiesLoading } = useQuery<IncentivePolicy[] | { data: IncentivePolicy[] }>({
     queryKey: ['sales', 'incentives', 'policies'],
     queryFn: async () => {
-      const res = await api.get<{ data: IncentivePolicy[] }>('/sales/incentives/policies');
+      const res = await api.get<IncentivePolicy[] | { data: IncentivePolicy[] }>('/sales/incentives/policies');
       return res.data;
     },
   });
 
-  const policies = policiesResponse?.data ?? [];
+  const policies: IncentivePolicy[] = useMemo(() => {
+    if (Array.isArray(rawPolicies)) return rawPolicies;
+    if (rawPolicies && Array.isArray((rawPolicies as any).data)) return (rawPolicies as any).data;
+    return [];
+  }, [rawPolicies]);
 
   // Fetch Calculations for month
   const {
-    data: calculationsResponse,
+    data: rawCalculations,
     isLoading: calculationsLoading,
     isFetching,
     refetch: refetchCalculations,
-  } = useQuery<{ data: IncentiveCalculation[] }>({
+  } = useQuery<IncentiveCalculation[] | { data: IncentiveCalculation[] }>({
     queryKey: ['sales', 'incentives', 'calculations', selectedMonth],
     queryFn: async () => {
-      const res = await api.get<{ data: IncentiveCalculation[] }>(
+      const res = await api.get<IncentiveCalculation[] | { data: IncentiveCalculation[] }>(
         `/sales/incentives/calculations?period_month=${selectedMonth}`
       );
       return res.data;
     },
   });
 
-  const calculations = calculationsResponse?.data ?? [];
+  const calculations: IncentiveCalculation[] = useMemo(() => {
+    if (Array.isArray(rawCalculations)) return rawCalculations;
+    if (rawCalculations && Array.isArray((rawCalculations as any).data)) return (rawCalculations as any).data;
+    return [];
+  }, [rawCalculations]);
 
   // Trigger Calculation Mutation
   const runCalculateMutation = useMutation({

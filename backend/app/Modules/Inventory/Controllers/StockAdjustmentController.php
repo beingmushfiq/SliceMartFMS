@@ -70,6 +70,7 @@ final class StockAdjustmentController extends Controller
     {
         $tenantId = TenantContext::current()->tenantId();
 
+        /** @var StockAdjustment $adjustment */
         $adjustment = StockAdjustment::with(['warehouse', 'reasonCode', 'items.product', 'items.unit'])
             ->where('tenant_id', $tenantId)
             ->where('id', $id)
@@ -82,6 +83,7 @@ final class StockAdjustmentController extends Controller
     {
         $tenantId = TenantContext::current()->tenantId();
 
+        /** @var StockAdjustment $adjustment */
         $adjustment = StockAdjustment::where('tenant_id', $tenantId)
             ->where('id', $id)
             ->firstOrFail();
@@ -98,6 +100,7 @@ final class StockAdjustmentController extends Controller
     {
         $tenantId = TenantContext::current()->tenantId();
 
+        /** @var StockAdjustment $adjustment */
         $adjustment = StockAdjustment::where('tenant_id', $tenantId)
             ->where('id', $id)
             ->firstOrFail();
@@ -112,6 +115,7 @@ final class StockAdjustmentController extends Controller
     {
         $tenantId = TenantContext::current()->tenantId();
 
+        /** @var StockAdjustment $adjustment */
         $adjustment = StockAdjustment::where('tenant_id', $tenantId)
             ->where('id', $id)
             ->firstOrFail();

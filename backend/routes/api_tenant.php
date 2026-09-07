@@ -568,6 +568,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                     ->name('show');
                 Route::put('{id}', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'update'])
                     ->name('update');
+                Route::delete('{id}', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'destroy'])
+                    ->name('destroy');
                 Route::post('{id}/recalculate', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'recalculate'])
                     ->name('recalculate');
             });

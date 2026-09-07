@@ -77,6 +77,7 @@ final class StockTransferController extends Controller
     {
         $tenantId = TenantContext::current()->tenantId();
 
+        /** @var StockTransfer $transfer */
         $transfer = StockTransfer::with(['fromWarehouse', 'toWarehouse', 'items.product', 'items.unit'])
             ->where('tenant_id', $tenantId)
             ->where('id', $id)
@@ -89,6 +90,7 @@ final class StockTransferController extends Controller
     {
         $tenantId = TenantContext::current()->tenantId();
 
+        /** @var StockTransfer $transfer */
         $transfer = StockTransfer::where('tenant_id', $tenantId)
             ->where('id', $id)
             ->firstOrFail();
@@ -105,6 +107,7 @@ final class StockTransferController extends Controller
     {
         $tenantId = TenantContext::current()->tenantId();
 
+        /** @var StockTransfer $transfer */
         $transfer = StockTransfer::where('tenant_id', $tenantId)
             ->where('id', $id)
             ->firstOrFail();
@@ -125,6 +128,7 @@ final class StockTransferController extends Controller
     {
         $tenantId = TenantContext::current()->tenantId();
 
+        /** @var StockTransfer $transfer */
         $transfer = StockTransfer::where('tenant_id', $tenantId)
             ->where('id', $id)
             ->firstOrFail();
@@ -139,6 +143,7 @@ final class StockTransferController extends Controller
     {
         $tenantId = TenantContext::current()->tenantId();
 
+        /** @var StockTransfer $transfer */
         $transfer = StockTransfer::where('tenant_id', $tenantId)
             ->where('id', $id)
             ->firstOrFail();

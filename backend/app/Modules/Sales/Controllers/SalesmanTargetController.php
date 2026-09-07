@@ -52,6 +52,19 @@ final class SalesmanTargetController extends Controller
     {
         $tenantId = TenantContext::current()->tenantId();
 
+        $rawEmployeeId = $request->input('employee_id');
+        if ($rawEmployeeId && !is_numeric($rawEmployeeId)) {
+            $emp = Employee::where('tenant_id', $tenantId)
+                ->where(function ($q) use ($rawEmployeeId) {
+                    $q->where('uuid', $rawEmployeeId)
+                        ->orWhere('employee_code', $rawEmployeeId);
+                })
+                ->first();
+            if ($emp) {
+                $request->merge(['employee_id' => $emp->id]);
+            }
+        }
+
         $validated = $request->validate([
             'employee_id'   => ['required', 'integer', 'exists:employees,id'],
             'period_month'  => ['required', 'string', 'regex:/^\d{4}-\d{2}$/'],
@@ -119,6 +132,19 @@ final class SalesmanTargetController extends Controller
         $this->syncTargetMetrics($target);
 
         return (new SalesmanTargetResource($target->load('employee')))->response();
+    }
+
+    public function destroy(int $id): JsonResponse
+    {
+        $tenantId = TenantContext::current()->tenantId();
+
+        $target = SalesmanTarget::where('tenant_id', $tenantId)->findOrFail($id);
+        $target->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Sales target removed successfully.',
+        ]);
     }
 
     public function salesmen(Request $request): JsonResponse

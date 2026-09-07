@@ -33,17 +33,21 @@ export function SalesmanDashboardSection({ initialSalesmanId }: Props) {
   );
 
   // Fetch salesmen list for dropdown
-  const { data: salesmenResponse } = useQuery<{ data: SalesmanSummary[] }>({
+  const { data: salesmenResponse } = useQuery<SalesmanSummary[] | { data: SalesmanSummary[] }>({
     queryKey: ['sales', 'salesmen', selectedMonth],
     queryFn: async () => {
-      const res = await api.get<{ data: SalesmanSummary[] }>(
+      const res = await api.get<SalesmanSummary[] | { data: SalesmanSummary[] }>(
         `/sales/salesmen?period_month=${selectedMonth}`
       );
       return res.data;
     },
   });
 
-  const salesmen = useMemo(() => salesmenResponse?.data ?? [], [salesmenResponse?.data]);
+  const salesmen: SalesmanSummary[] = useMemo(() => {
+    if (Array.isArray(salesmenResponse)) return salesmenResponse;
+    if (salesmenResponse && Array.isArray((salesmenResponse as any).data)) return (salesmenResponse as any).data;
+    return [];
+  }, [salesmenResponse]);
 
   const activeSalesmanId = selectedSalesmanId ?? (salesmen.length > 0 ? (salesmen[0]?.id ?? null) : null);
 

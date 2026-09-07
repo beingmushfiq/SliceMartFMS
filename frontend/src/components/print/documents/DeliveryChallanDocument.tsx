@@ -91,7 +91,7 @@ export function DeliveryChallanDocument({ delivery, businessConfig }: DeliveryCh
             <div>
               <span className="text-slate-500">COD Amount:</span>{' '}
               <span className="font-mono font-bold text-emerald-700">
-                {formatCurrency(delivery.cod_amount || '0.00', businessConfig.currencySymbol || '$')}
+                {formatCurrency(delivery.cod_amount || '0.00', businessConfig.currencySymbol || '৳')}
               </span>
             </div>
             <div>

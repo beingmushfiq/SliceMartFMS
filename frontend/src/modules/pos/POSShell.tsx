@@ -68,7 +68,7 @@ interface CartSlot {
 }
 
 export function POSShell({ session, onExit }: POSShellProps) {
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, currencySymbol, currencyCode } = useCurrency();
   const [search, setSearch] = useState('');
   
   // Multi-cart slots (up to 5 concurrent held transactions)
@@ -424,11 +424,17 @@ export function POSShell({ session, onExit }: POSShellProps) {
           })),
     };
 
+    const effectiveBusinessConfig = {
+      ...businessConfig,
+      currencySymbol: currencySymbol || businessConfig.currencySymbol || '৳',
+      currencyCode: currencyCode || businessConfig.currencyCode || 'BDT',
+    };
+
     if (format === 'a4') {
       printDocument(
         <SalesInvoiceDocument
           invoice={printableInvoice}
-          businessConfig={businessConfig}
+          businessConfig={effectiveBusinessConfig}
           copyType="CUSTOMER COPY"
         />,
         {
@@ -444,7 +450,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
     printDocument(
       <ThermalReceipt
         invoice={printableInvoice}
-        businessConfig={businessConfig}
+        businessConfig={effectiveBusinessConfig}
         paperWidth="80mm"
         cashierName={session.operator_name || 'Tanvir Hossain (Cashier A)'}
         terminalName={session.terminal_name || 'Gulshan Flagship - Counter 1'}

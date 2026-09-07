@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -8,10 +8,20 @@ import {
   TrendingUp,
   DollarSign,
   Users,
+  MoreHorizontal,
+  Edit,
+  Eye,
+  Trash2,
+  CheckCircle2,
+  XCircle,
+  RotateCcw,
+  X,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { KPICard } from '../../../components/ui/KPICard';
+import { Badge } from '../../../components/ui/Badge';
+import { cn } from '../../../lib/utils';
 import type { SalesmanTarget } from '../../../types/api/sales';
 import type { Employee } from '../../../types/api/hr';
 
@@ -29,20 +39,43 @@ export function SalesmanTargetsSection() {
   const [targetName, setTargetName] = useState<string>('');
   const [targetNotes, setTargetNotes] = useState<string>('');
 
+  // Actions menu, View Details modal, and Edit Target modal state
+  const [activeMenuTargetId, setActiveMenuTargetId] = useState<number | null>(null);
+  const [selectedTargetForView, setSelectedTargetForView] = useState<SalesmanTarget | null>(null);
+  const [editModalTarget, setEditModalTarget] = useState<SalesmanTarget | null>(null);
+  const [editAmount, setEditAmount] = useState<string>('');
+  const [editName, setEditName] = useState<string>('');
+  const [editStatus, setEditStatus] = useState<'active' | 'completed' | 'cancelled'>('active');
+  const [editNotes, setEditNotes] = useState<string>('');
+
+  // Close actions menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.target-actions-menu-container')) {
+        setActiveMenuTargetId(null);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
   // Fetch Targets for selected month
-  const { data: targetsResponse, isLoading, isFetching, refetch } = useQuery<{
-    data: SalesmanTarget[];
-  }>({
+  const { data: rawTargets, isLoading, isFetching, refetch } = useQuery<SalesmanTarget[] | { data: SalesmanTarget[] }>({
     queryKey: ['sales', 'targets', selectedMonth],
     queryFn: async () => {
-      const res = await api.get<{ data: SalesmanTarget[] }>(
+      const res = await api.get<SalesmanTarget[] | { data: SalesmanTarget[] }>(
         `/sales/targets?period_month=${selectedMonth}`
       );
       return res.data;
     },
   });
 
-  const targets = targetsResponse?.data ?? [];
+  const targets: SalesmanTarget[] = useMemo(() => {
+    if (Array.isArray(rawTargets)) return rawTargets;
+    if (rawTargets && 'data' in rawTargets && Array.isArray(rawTargets.data)) return rawTargets.data;
+    return [];
+  }, [rawTargets]);
 
   // Fetch employees list for target assignment dropdown
   const { data: employees = [] } = useQuery<Employee[]>({
@@ -79,8 +112,58 @@ export function SalesmanTargetsSection() {
       setTargetName('');
       setTargetNotes('');
     },
-    onError: (err: { response?: { data?: { message?: string } } }) => {
-      toast.error(err?.response?.data?.message || 'Failed to assign target');
+    onError: (err: { response?: { data?: { message?: string } }; message?: string; fields?: Record<string, string[]> }) => {
+      const fieldError = err?.fields ? Object.values(err.fields).flat()[0] : undefined;
+      toast.error(fieldError || err?.response?.data?.message || err?.message || 'Failed to assign target');
+    },
+  });
+
+  // Update Target Mutation
+  const updateTargetMutation = useMutation({
+    mutationFn: async ({
+      id,
+      target_amount,
+      target_name,
+      status,
+      notes,
+    }: {
+      id: number;
+      target_amount?: number;
+      target_name?: string;
+      status?: 'active' | 'completed' | 'cancelled';
+      notes?: string;
+    }) => {
+      return api.put(`/sales/targets/${id}`, {
+        target_amount,
+        target_name,
+        status,
+        notes,
+      });
+    },
+    onSuccess: () => {
+      toast.success('Sales target updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['sales', 'targets'] });
+      queryClient.invalidateQueries({ queryKey: ['sales', 'salesmen'] });
+      setEditModalTarget(null);
+    },
+    onError: (err: { response?: { data?: { message?: string } }; message?: string; fields?: Record<string, string[]> }) => {
+      const fieldError = err?.fields ? Object.values(err.fields).flat()[0] : undefined;
+      toast.error(fieldError || err?.response?.data?.message || err?.message || 'Failed to update target');
+    },
+  });
+
+  // Delete Target Mutation
+  const deleteTargetMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return api.delete(`/sales/targets/${id}`);
+    },
+    onSuccess: () => {
+      toast.success('Sales target removed successfully');
+      queryClient.invalidateQueries({ queryKey: ['sales', 'targets'] });
+      queryClient.invalidateQueries({ queryKey: ['sales', 'salesmen'] });
+    },
+    onError: (err: { response?: { data?: { message?: string } }; message?: string }) => {
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to remove target');
     },
   });
 
@@ -107,13 +190,56 @@ export function SalesmanTargetsSection() {
       return;
     }
 
+    const empId = parseInt(selectedEmployeeId, 10);
     createTargetMutation.mutate({
-      employee_id: parseInt(selectedEmployeeId, 10),
+      employee_id: !isNaN(empId) ? empId : (selectedEmployeeId as unknown as number),
       period_month: selectedMonth,
       target_amount: amt,
       target_name: targetName || `Monthly Target - ${selectedMonth}`,
       notes: targetNotes,
     });
+  };
+
+  const handleOpenEditModal = (target: SalesmanTarget) => {
+    setEditModalTarget(target);
+    setEditAmount(String(target.target_amount || ''));
+    setEditName(target.target_name || '');
+    setEditStatus(target.status || 'active');
+    setEditNotes(target.notes || '');
+    setActiveMenuTargetId(null);
+  };
+
+  const handleSaveEditTarget = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editModalTarget) return;
+    const amt = parseFloat(editAmount);
+    if (isNaN(amt) || amt < 0) {
+      toast.error('Please enter a valid target amount');
+      return;
+    }
+
+    updateTargetMutation.mutate({
+      id: editModalTarget.id,
+      target_amount: amt,
+      target_name: editName || `Monthly Target - ${editModalTarget.period_month}`,
+      status: editStatus,
+      notes: editNotes,
+    });
+  };
+
+  const handleQuickStatusChange = (target: SalesmanTarget, newStatus: 'active' | 'completed' | 'cancelled') => {
+    setActiveMenuTargetId(null);
+    updateTargetMutation.mutate({
+      id: target.id,
+      status: newStatus,
+    });
+  };
+
+  const handleDeleteTarget = (target: SalesmanTarget) => {
+    setActiveMenuTargetId(null);
+    if (window.confirm(`Are you sure you want to remove the sales target for ${target.employee_name || 'this representative'}?`)) {
+      deleteTargetMutation.mutate(target.id);
+    }
   };
 
   const totalTargetAmt = targets.reduce((sum, t) => sum + parseFloat(String(t.target_amount || '0')), 0);
@@ -299,15 +425,141 @@ export function SalesmanTargetsSection() {
                       </td>
 
                       <td className="px-4 py-3.5 text-right">
-                        <button
-                          type="button"
-                          onClick={() => recalculateMutation.mutate(t.id)}
-                          disabled={recalculateMutation.isPending}
-                          className="p-1.5 rounded-lg text-muted hover:text-default hover:bg-surface-sunken border border-default/50 transition-colors"
-                          title="Recalculate Real-time Progress"
-                        >
-                          <RefreshCw className={`size-3.5 ${recalculateMutation.isPending ? 'animate-spin' : ''}`} />
-                        </button>
+                        <div className="target-actions-menu-container flex items-center justify-end gap-1.5 relative">
+                          {/* Quick Edit button */}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal(t)}
+                            className="inline-flex items-center gap-1 rounded-xl bg-primary/10 border border-primary/20 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20 transition-all cursor-pointer shadow-2xs"
+                            title="Edit Target Quota & Details"
+                          >
+                            <Edit className="size-3" />
+                            <span>Edit</span>
+                          </button>
+
+                          {/* Quick Sync / Recalculate button */}
+                          <button
+                            type="button"
+                            onClick={() => recalculateMutation.mutate(t.id)}
+                            disabled={recalculateMutation.isPending}
+                            className="p-1.5 rounded-xl text-muted hover:text-default hover:bg-surface-sunken border border-default/60 transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
+                            title="Recalculate Real-time Progress"
+                          >
+                            <RefreshCw className={cn('size-3.5', recalculateMutation.isPending && 'animate-spin')} />
+                          </button>
+
+                          {/* More Options Menu (•••) */}
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveMenuTargetId(activeMenuTargetId === t.id ? null : t.id);
+                              }}
+                              className={cn(
+                                'flex size-7 items-center justify-center rounded-xl border transition-all cursor-pointer shadow-2xs',
+                                activeMenuTargetId === t.id
+                                  ? 'border-primary bg-primary/10 text-primary'
+                                  : 'border-default bg-surface hover:bg-surface-sunken hover:border-default/80 text-muted hover:text-default'
+                              )}
+                              title="More actions"
+                            >
+                              <MoreHorizontal className="size-3.5" />
+                            </button>
+
+                            {/* Floating Dropdown Menu */}
+                            {activeMenuTargetId === t.id && (
+                              <div
+                                className={cn(
+                                  'absolute right-0 top-full mt-1.5 z-40 w-48 rounded-xl border border-default bg-surface p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-100 text-left'
+                                )}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedTargetForView(t);
+                                    setActiveMenuTargetId(null);
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                                >
+                                  <Eye className="size-3.5 text-primary" />
+                                  <span>View Target Details</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEditModal(t)}
+                                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                                >
+                                  <Edit className="size-3.5 text-amber-500" />
+                                  <span>Edit Target Quota</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    recalculateMutation.mutate(t.id);
+                                    setActiveMenuTargetId(null);
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                                >
+                                  <RefreshCw className="size-3.5 text-emerald-500" />
+                                  <span>Recalculate Metrics</span>
+                                </button>
+
+                                <div className="my-1 border-t border-default/50" />
+
+                                <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted">
+                                  Status Action
+                                </div>
+
+                                {t.status !== 'completed' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleQuickStatusChange(t, 'completed')}
+                                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer"
+                                  >
+                                    <CheckCircle2 className="size-3.5" />
+                                    <span>Mark as Completed</span>
+                                  </button>
+                                )}
+
+                                {t.status !== 'active' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleQuickStatusChange(t, 'active')}
+                                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                                  >
+                                    <RotateCcw className="size-3.5" />
+                                    <span>Mark as Active</span>
+                                  </button>
+                                )}
+
+                                {t.status !== 'cancelled' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleQuickStatusChange(t, 'cancelled')}
+                                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted hover:bg-surface-sunken transition-colors cursor-pointer"
+                                  >
+                                    <XCircle className="size-3.5" />
+                                    <span>Mark as Cancelled</span>
+                                  </button>
+                                )}
+
+                                <div className="my-1 border-t border-default/50" />
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteTarget(t)}
+                                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-danger hover:bg-danger-subtle transition-colors cursor-pointer"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                  <span>Remove Target</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -425,6 +677,290 @@ export function SalesmanTargetsSection() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Target Modal */}
+      {editModalTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-md rounded-2xl border border-default bg-surface p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-default pb-3">
+              <div>
+                <h3 className="text-base font-bold text-default">Edit Sales Target</h3>
+                <p className="text-xs text-muted mt-0.5">
+                  {editModalTarget.employee_name} ({editModalTarget.employee_code}) · {editModalTarget.period_month}
+                </p>
+              </div>
+              <button
+                onClick={() => setEditModalTarget(null)}
+                className="text-muted hover:text-default cursor-pointer p-1 rounded-lg hover:bg-surface-sunken"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditTarget} className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                    Monthly Quota (৳) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={editAmount}
+                    onChange={(e) => setEditAmount(e.target.value)}
+                    className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 font-mono text-default focus:border-primary focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                    Status
+                  </label>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value as 'active' | 'completed' | 'cancelled')}
+                    className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default focus:border-primary focus:outline-none capitalize"
+                  >
+                    <option value="active">Active</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                  Target Label / Campaign
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Q3 Packaging Sales Drive"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
+                  Strategy & Notes
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Key deliverables, territory adjustments, customer portfolio focus..."
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-default">
+                <button
+                  type="button"
+                  onClick={() => setEditModalTarget(null)}
+                  className="px-4 py-2 rounded-xl border border-default text-xs font-medium text-muted hover:text-default cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updateTargetMutation.isPending}
+                  className="px-4 py-2 rounded-xl bg-primary text-xs font-medium text-white shadow-xs hover:bg-primary-hover disabled:opacity-50 cursor-pointer"
+                >
+                  {updateTargetMutation.isPending ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Target Details & Audit Modal */}
+      {selectedTargetForView && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-lg rounded-2xl border border-default bg-surface p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-default pb-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold text-default">{selectedTargetForView.employee_name}</h3>
+                  <Badge
+                    tone={
+                      selectedTargetForView.status === 'completed'
+                        ? 'success-subtle'
+                        : selectedTargetForView.status === 'active'
+                        ? 'primary-subtle'
+                        : 'surface-sunken'
+                    }
+                    className="text-[10px]"
+                  >
+                    {selectedTargetForView.status || 'Active'}
+                  </Badge>
+                </div>
+                <p className="text-xs font-mono text-muted mt-0.5">
+                  {selectedTargetForView.employee_code} · Period Month: {selectedTargetForView.period_month}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedTargetForView(null)}
+                className="text-muted hover:text-default cursor-pointer p-1 rounded-lg hover:bg-surface-sunken"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              {/* Campaign / Target Title */}
+              <div className="p-3 rounded-xl bg-surface-sunken border border-default/70 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">Campaign Title</span>
+                  <div className="text-sm font-bold text-default mt-0.5">
+                    {selectedTargetForView.target_name || `Monthly Target - ${selectedTargetForView.period_month}`}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">Achievement Rate</span>
+                  <div
+                    className={cn(
+                      'text-base font-mono font-bold mt-0.5',
+                      parseFloat(String(selectedTargetForView.achievement_percentage || '0')) >= 100
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : parseFloat(String(selectedTargetForView.achievement_percentage || '0')) >= 80
+                        ? 'text-amber-600 dark:text-amber-400'
+                        : 'text-rose-600 dark:text-rose-400'
+                    )}
+                  >
+                    {parseFloat(String(selectedTargetForView.achievement_percentage || '0')).toFixed(1)}%
+                  </div>
+                </div>
+              </div>
+
+              {/* 4 Metrics Strip */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="p-2.5 rounded-xl bg-surface-sunken border border-default">
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">Target Quota</span>
+                  <div className="font-mono font-bold text-default text-xs mt-1">
+                    {formatCurrency(selectedTargetForView.target_amount)}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-surface-sunken border border-default">
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">Achieved Revenue</span>
+                  <div className="font-mono font-bold text-default text-xs mt-1">
+                    {formatCurrency(selectedTargetForView.achieved_amount)}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-surface-sunken border border-default">
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">Remaining Deficit</span>
+                  <div className="font-mono font-bold text-warning text-xs mt-1">
+                    {formatCurrency(
+                      Math.max(
+                        0,
+                        parseFloat(String(selectedTargetForView.target_amount || '0')) -
+                          parseFloat(String(selectedTargetForView.achieved_amount || '0'))
+                      )
+                    )}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-surface-sunken border border-default">
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">Profit Generated</span>
+                  <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-xs mt-1">
+                    {formatCurrency(selectedTargetForView.profit_generated)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Leads Pipeline Performance */}
+              <div className="p-3.5 rounded-xl bg-surface-sunken border border-default space-y-2">
+                <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">
+                  Leads Pipeline Conversion
+                </span>
+                <div className="grid grid-cols-4 gap-2 text-center">
+                  <div className="p-2 rounded-lg bg-surface border border-default/50">
+                    <div className="text-[10px] text-muted">Total Leads</div>
+                    <div className="font-mono font-bold text-default text-sm mt-0.5">{selectedTargetForView.total_leads}</div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-surface border border-default/50">
+                    <div className="text-[10px] text-emerald-600 dark:text-emerald-400">Valid Leads</div>
+                    <div className="font-mono font-bold text-default text-sm mt-0.5">{selectedTargetForView.valid_leads}</div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-surface border border-default/50">
+                    <div className="text-[10px] text-danger">Fake Leads</div>
+                    <div className="font-mono font-bold text-danger text-sm mt-0.5">{selectedTargetForView.fake_leads}</div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-surface border border-default/50">
+                    <div className="text-[10px] text-primary">Won / Converted</div>
+                    <div className="font-mono font-bold text-primary text-sm mt-0.5">{selectedTargetForView.converted_leads}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Strategy & Commitment Notes */}
+              {selectedTargetForView.notes && (
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">
+                    Strategy & Notes
+                  </span>
+                  <div className="p-3 rounded-xl bg-surface-sunken border border-default text-default leading-relaxed whitespace-pre-wrap">
+                    {selectedTargetForView.notes}
+                  </div>
+                </div>
+              )}
+
+              {/* Audit Timestamps */}
+              <div className="flex items-center justify-between text-[11px] text-muted pt-2 border-t border-default/50 font-mono">
+                <span>
+                  Created:{' '}
+                  {selectedTargetForView.created_at
+                    ? new Date(selectedTargetForView.created_at).toLocaleString()
+                    : 'N/A'}
+                </span>
+                {selectedTargetForView.updated_at && (
+                  <span>Updated: {new Date(selectedTargetForView.updated_at).toLocaleString()}</span>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="flex items-center justify-between pt-3 border-t border-default">
+              <button
+                type="button"
+                onClick={() => {
+                  recalculateMutation.mutate(selectedTargetForView.id);
+                  setSelectedTargetForView(null);
+                }}
+                disabled={recalculateMutation.isPending}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-default px-3 py-2 text-xs font-semibold text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+              >
+                <RefreshCw className={cn('size-3.5 text-emerald-500', recalculateMutation.isPending && 'animate-spin')} />
+                <span>Sync Performance</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedTargetForView(null)}
+                  className="rounded-xl border border-default px-4 py-2 text-xs font-medium text-muted hover:text-default transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const t = selectedTargetForView;
+                    setSelectedTargetForView(null);
+                    handleOpenEditModal(t);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-primary-hover transition-colors cursor-pointer"
+                >
+                  <Edit className="size-3.5" />
+                  <span>Edit Target</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -13,7 +13,9 @@ export function toggleThemeWithTransition(
     try {
       localStorage.setItem('ui.theme', next);
       localStorage.setItem('theme', next);
-    } catch {}
+    } catch {
+      // Ignore localStorage write failures (e.g. storage quota exceeded or private mode)
+    }
 
     document.documentElement.setAttribute('data-theme', next);
     if (next === 'dark') {

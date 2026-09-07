@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -13,6 +13,13 @@ import {
   RefreshCw,
   AlertTriangle,
   UserCheck,
+  MoreHorizontal,
+  Eye,
+  ShieldAlert,
+  Check,
+  Phone,
+  Mail,
+  X,
 } from 'lucide-react';
 import type { Lead, LeadStatus, LeadSource } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
@@ -20,6 +27,7 @@ import { useCurrency } from '../../../hooks/useCurrency';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
 import { Badge } from '../../../components/ui/Badge';
 import { KPICard } from '../../../components/ui/KPICard';
+import { cn } from '../../../lib/utils';
 
 const SAMPLE_LEADS: Lead[] = [
   {
@@ -126,6 +134,24 @@ export function LeadsSection() {
   const [isFakeCheck, setIsFakeCheck] = useState<boolean>(true);
   const [auditReason, setAuditReason] = useState<string>('');
 
+  // Actions Menu & Details View State
+  const [activeMenuLeadId, setActiveMenuLeadId] = useState<number | null>(null);
+  const [selectedLeadForView, setSelectedLeadForView] = useState<Lead | null>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (!(event.target as HTMLElement)?.closest('.lead-actions-menu-container')) {
+        setActiveMenuLeadId(null);
+      }
+    }
+    if (activeMenuLeadId !== null) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [activeMenuLeadId]);
+
   // Form State
   const [formData, setFormData] = useState<{
     name: string;
@@ -189,19 +215,17 @@ type ApiError = { response?: { data?: { message?: string } } };
         const res = await api.get<{ data?: RawLeadResponse[] } | RawLeadResponse[]>('/sales/leads?per_page=100');
         const rawData = res.data;
         const list = Array.isArray(rawData) ? rawData : (rawData?.data ?? []);
-        if (Array.isArray(list) && list.length > 0) {
-          return list.map((item: RawLeadResponse): Lead => ({
-            ...item,
-            status: item.stage ?? item.status ?? 'new',
-            stage: item.stage ?? item.status ?? 'new',
-            deal_value: item.expected_value ?? item.deal_value ?? '0.00',
-            assigned_to: item.assigned_user_name ?? item.assigned_to ?? 'Unassigned',
-          }));
-        }
+        return list.map((item: RawLeadResponse): Lead => ({
+          ...item,
+          status: item.stage ?? item.status ?? 'new',
+          stage: item.stage ?? item.status ?? 'new',
+          deal_value: item.expected_value ?? item.deal_value ?? '0.00',
+          assigned_to: item.assigned_user_name ?? item.assigned_to ?? 'Unassigned',
+        }));
       } catch {
-        // Fallback to sample data
+        // Fallback to sample data if endpoint unreachable
+        return SAMPLE_LEADS;
       }
-      return SAMPLE_LEADS;
     },
     initialData: SAMPLE_LEADS,
   });
@@ -627,8 +651,12 @@ type ApiError = { response?: { data?: { message?: string } } };
                     </td>
                   </tr>
                 ) : (
-                  filteredLeads.map((l) => {
+                  filteredLeads.map((l, idx) => {
                     const currentStage = STAGES.find((s) => s.id === l.status);
+                    const isWon = l.status === 'won';
+                    const isFake = Boolean(l.is_fake || l.status === 'fake');
+                    const canConvert = !isWon && !isFake;
+
                     return (
                       <tr key={l.id} className="hover:bg-surface-sunken/60 transition-colors">
                         <td className="px-4 py-3.5">
@@ -675,40 +703,117 @@ type ApiError = { response?: { data?: { message?: string } } };
                           )}
                         </td>
                         <td className="px-4 py-3.5 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <select
-                              value={l.status}
-                              onChange={(e) =>
-                                updateStageMutation.mutate({ id: l.id, stage: e.target.value as LeadStatus })
-                              }
-                              className="text-[10px] rounded-lg border border-default bg-surface-sunken px-2 py-1 text-default focus:outline-none cursor-pointer"
-                            >
-                              {STAGES.map((s) => (
-                                <option key={s.id} value={s.id}>
-                                  {s.label}
-                                </option>
-                              ))}
-                            </select>
-
-                            <button
-                              type="button"
-                              onClick={() => handleOpenAuditModal(l)}
-                              className="p-1 rounded-lg text-muted hover:text-danger hover:bg-danger-subtle border border-default/50 transition-colors"
-                              title="Audit Fake / Valid"
-                            >
-                              <AlertTriangle className="size-3.5" />
-                            </button>
-
-                            {l.status !== 'won' && !l.is_fake && (
+                          <div className="lead-actions-menu-container flex items-center justify-end gap-1.5 relative">
+                            {/* Primary Quick Convert Action */}
+                            {canConvert && (
                               <button
                                 type="button"
                                 onClick={() => convertMutation.mutate(l.id)}
-                                className="p-1 rounded-lg text-muted hover:text-primary hover:bg-primary-subtle border border-default/50 transition-colors"
-                                title="Convert to Customer"
+                                disabled={convertMutation.isPending}
+                                className="inline-flex items-center gap-1 rounded-xl bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-all cursor-pointer disabled:opacity-50 shadow-2xs"
+                                title="Convert lead to Customer Account"
                               >
-                                <UserCheck className="size-3.5" />
+                                <UserCheck className="size-3" />
+                                <span>Convert</span>
                               </button>
                             )}
+
+                            {isWon && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                <CheckCircle2 className="size-3" />
+                                <span>Won</span>
+                              </span>
+                            )}
+
+                            {/* Dropdown Menu Trigger (•••) */}
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveMenuLeadId(activeMenuLeadId === l.id ? null : l.id);
+                                }}
+                                className={cn(
+                                  "flex size-7 items-center justify-center rounded-xl border transition-all cursor-pointer shadow-2xs",
+                                  activeMenuLeadId === l.id
+                                    ? "border-primary bg-primary/10 text-primary"
+                                    : "border-default bg-surface hover:bg-surface-sunken hover:border-default/80 text-muted hover:text-default"
+                                )}
+                                title="Lead actions & stage menu"
+                              >
+                                <MoreHorizontal className="size-3.5" />
+                              </button>
+
+                              {/* Floating Dropdown Menu */}
+                              {activeMenuLeadId === l.id && (
+                                <div
+                                  className={cn(
+                                    "absolute right-0 z-50 w-52 rounded-2xl border border-default bg-surface p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-100 text-left",
+                                    idx >= filteredLeads.length - 2 ? "bottom-full mb-1.5" : "top-full mt-1.5"
+                                  )}
+                                >
+                                  {/* View Details */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedLeadForView(l);
+                                      setActiveMenuLeadId(null);
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-medium text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                                  >
+                                    <Eye className="size-3.5 text-muted shrink-0" />
+                                    <span>View Lead Details</span>
+                                  </button>
+
+                                  {/* Audit Gate */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleOpenAuditModal(l);
+                                      setActiveMenuLeadId(null);
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-medium text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                                  >
+                                    <ShieldAlert className="size-3.5 text-amber-500 shrink-0" />
+                                    <span>Audit Quality Gate</span>
+                                  </button>
+
+                                  <div className="my-1 border-t border-default/70" />
+
+                                  {/* Change Stage Section */}
+                                  <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted">
+                                    Change Stage
+                                  </div>
+                                  <div className="space-y-0.5 max-h-48 overflow-y-auto pr-0.5">
+                                    {STAGES.map((s) => {
+                                      const isCurrent = l.status === s.id;
+                                      return (
+                                        <button
+                                          key={s.id}
+                                          type="button"
+                                          onClick={() => {
+                                            updateStageMutation.mutate({ id: l.id, stage: s.id });
+                                            setActiveMenuLeadId(null);
+                                          }}
+                                          className={cn(
+                                            "flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs font-medium transition-colors cursor-pointer",
+                                            isCurrent
+                                              ? "bg-primary/10 text-primary font-bold"
+                                              : "text-default hover:bg-surface-sunken"
+                                          )}
+                                        >
+                                          <div className="flex items-center gap-2 truncate">
+                                            <span className={cn("size-2 rounded-full shrink-0", s.dotBg)} />
+                                            <span className="truncate">{s.label}</span>
+                                          </div>
+                                          {isCurrent && <Check className="size-3 text-primary shrink-0" />}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </td>
                       </tr>
@@ -785,6 +890,157 @@ type ApiError = { response?: { data?: { message?: string } } };
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Lead Details Modal */}
+      {selectedLeadForView && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-lg rounded-2xl border border-default bg-surface p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-default pb-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold text-default">{selectedLeadForView.name}</h3>
+                  <Badge
+                    tone={selectedLeadForView.is_fake ? 'danger-subtle' : 'success-subtle'}
+                    className="text-[10px]"
+                  >
+                    {selectedLeadForView.is_fake ? 'Fake / Invalid' : 'Verified Lead'}
+                  </Badge>
+                </div>
+                <p className="text-xs font-mono text-muted mt-0.5">
+                  {selectedLeadForView.lead_number || `LD-${selectedLeadForView.id}`}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedLeadForView(null)}
+                className="text-muted hover:text-default cursor-pointer p-1 rounded-lg hover:bg-surface-sunken"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              {/* Core Details Grid */}
+              <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-surface-sunken border border-default/60">
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">Company</span>
+                  <div className="font-semibold text-default mt-0.5 flex items-center gap-1.5">
+                    <Building2 className="size-3.5 text-muted shrink-0" />
+                    <span>{selectedLeadForView.company_name || 'Individual / Walk-in'}</span>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">Est. Deal Value</span>
+                  <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                    {formatCurrency(selectedLeadForView.deal_value || '0')}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">Phone Contact</span>
+                  <div className="font-mono text-default mt-0.5 flex items-center gap-1.5">
+                    <Phone className="size-3.5 text-muted shrink-0" />
+                    {selectedLeadForView.phone ? (
+                      <a href={`tel:${selectedLeadForView.phone}`} className="hover:underline text-primary">
+                        {selectedLeadForView.phone}
+                      </a>
+                    ) : (
+                      <span className="text-muted">No phone</span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">Email Address</span>
+                  <div className="text-default mt-0.5 flex items-center gap-1.5 truncate">
+                    <Mail className="size-3.5 text-muted shrink-0" />
+                    {selectedLeadForView.email ? (
+                      <a href={`mailto:${selectedLeadForView.email}`} className="hover:underline text-primary truncate">
+                        {selectedLeadForView.email}
+                      </a>
+                    ) : (
+                      <span className="text-muted">No email</span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">Source</span>
+                  <span className="capitalize font-medium text-default mt-0.5 block">
+                    {selectedLeadForView.source.replace('_', ' ')}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">Assigned Rep</span>
+                  <span className="font-medium text-default mt-0.5 block">
+                    {String(selectedLeadForView.assigned_to || 'Unassigned')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Requirement Notes */}
+              {selectedLeadForView.notes && (
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">
+                    Inquiry Notes & Requirements
+                  </span>
+                  <div className="p-3 rounded-xl bg-surface-sunken/60 border border-default text-default/90 leading-relaxed whitespace-pre-wrap">
+                    {selectedLeadForView.notes}
+                  </div>
+                </div>
+              )}
+
+              {/* Validation Notes */}
+              {selectedLeadForView.validation_notes && (
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase text-danger tracking-wider block">
+                    Audit Notes & Validation History
+                  </span>
+                  <div className="p-3 rounded-xl bg-danger-subtle/30 border border-danger/30 text-danger leading-relaxed">
+                    {selectedLeadForView.validation_notes}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="flex items-center justify-between pt-3 border-t border-default">
+              <button
+                type="button"
+                onClick={() => {
+                  handleOpenAuditModal(selectedLeadForView);
+                  setSelectedLeadForView(null);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-default px-3 py-2 text-xs font-semibold text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+              >
+                <ShieldAlert className="size-3.5 text-amber-500" />
+                <span>Audit Gate</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedLeadForView(null)}
+                  className="rounded-xl border border-default px-4 py-2 text-xs font-medium text-muted hover:text-default transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+                {selectedLeadForView.status !== 'won' && !selectedLeadForView.is_fake && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      convertMutation.mutate(selectedLeadForView.id);
+                      setSelectedLeadForView(null);
+                    }}
+                    disabled={convertMutation.isPending}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <UserCheck className="size-3.5" />
+                    <span>Convert to Customer</span>
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

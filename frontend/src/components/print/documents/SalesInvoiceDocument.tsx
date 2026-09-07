@@ -47,7 +47,7 @@ export function SalesInvoiceDocument({
 
   const items = invoice.items ?? [];
   const dueAmountNum = parseFloat(invoice.due_amount || '0');
-  const currencySymbol = businessConfig.currencySymbol || '$';
+  const currencySymbol = businessConfig.currencySymbol || '৳';
 
   return (
     <div className="print-doc w-full text-slate-900 bg-white text-[9pt] leading-normal font-sans">
@@ -264,37 +264,37 @@ export function SalesInvoiceDocument({
           <div className="divide-y divide-slate-200 px-3 py-1">
             <div className="flex justify-between py-1 text-slate-600">
               <span>Subtotal:</span>
-              <span className="font-mono font-medium">{formatCurrency(invoice.subtotal)}</span>
+              <span className="font-mono font-medium">{formatCurrency(invoice.subtotal, currencySymbol)}</span>
             </div>
             {parseFloat(invoice.discount_amount || '0') > 0 && (
               <div className="flex justify-between py-1 text-slate-600">
                 <span>Total Discount:</span>
                 <span className="font-mono font-medium text-emerald-600">
-                  - {formatCurrency(invoice.discount_amount)}
+                  - {formatCurrency(invoice.discount_amount, currencySymbol)}
                 </span>
               </div>
             )}
             <div className="flex justify-between py-1 text-slate-600">
               <span>VAT / Tax (Standard Rate):</span>
-              <span className="font-mono font-medium">{formatCurrency(invoice.tax_amount)}</span>
+              <span className="font-mono font-medium">{formatCurrency(invoice.tax_amount, currencySymbol)}</span>
             </div>
             {parseFloat(invoice.shipping_amount || '0') > 0 && (
               <div className="flex justify-between py-1 text-slate-600">
                 <span>Delivery & Shipping:</span>
-                <span className="font-mono font-medium">{formatCurrency(invoice.shipping_amount)}</span>
+                <span className="font-mono font-medium">{formatCurrency(invoice.shipping_amount, currencySymbol)}</span>
               </div>
             )}
             <div className="flex justify-between py-1.5 font-bold text-slate-950 text-[10pt] border-t-2 border-slate-900 bg-slate-50/50">
               <span>Grand Total:</span>
-              <span className="font-mono">{formatCurrency(invoice.total_amount)}</span>
+              <span className="font-mono">{formatCurrency(invoice.total_amount, currencySymbol)}</span>
             </div>
             <div className="flex justify-between py-1 text-slate-700 font-semibold">
               <span>Paid Amount:</span>
-              <span className="font-mono text-emerald-700">{formatCurrency(invoice.paid_amount)}</span>
+              <span className="font-mono text-emerald-700">{formatCurrency(invoice.paid_amount, currencySymbol)}</span>
             </div>
             <div className="flex justify-between py-1 text-slate-900 font-bold bg-amber-50/50">
               <span>Net Due Balance:</span>
-              <span className="font-mono text-rose-600">{formatCurrency(invoice.due_amount)}</span>
+              <span className="font-mono text-rose-600">{formatCurrency(invoice.due_amount, currencySymbol)}</span>
             </div>
           </div>
         </div>

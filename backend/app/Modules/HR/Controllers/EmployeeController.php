@@ -60,11 +60,13 @@ class EmployeeController extends Controller
 
         $employees = $query->orderBy('display_name')->get()->map(function ($emp) {
             return [
-                'id' => $emp->uuid,
+                'id' => $emp->id,
+                'uuid' => $emp->uuid,
                 'employee_code' => $emp->employee_code,
                 'first_name' => $emp->first_name,
                 'last_name' => $emp->last_name ?? '',
                 'full_name' => $emp->display_name ?: trim("{$emp->first_name} {$emp->last_name}"),
+                'display_name' => $emp->display_name ?: trim("{$emp->first_name} {$emp->last_name}"),
                 'email' => $emp->email,
                 'phone' => $emp->phone,
                 'designation' => $emp->designation?->name,

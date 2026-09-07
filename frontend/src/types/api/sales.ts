@@ -288,6 +288,7 @@ export interface SalesmanTarget {
   status: 'active' | 'completed' | 'cancelled';
   notes?: string | null;
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface SalesmanSummary {

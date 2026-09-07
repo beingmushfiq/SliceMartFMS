@@ -125,9 +125,14 @@ final class WorkerProductionEntryController extends Controller
     {
         $query = WorkerProductionEntry::query();
 
-        $employeeUuid = $request->input('employee_id');
-        if (is_string($employeeUuid)) {
-            $query->whereHas('employee', fn ($emp) => $emp->where('employees.uuid', $employeeUuid));
+        $employeeParam = $request->input('employee_id');
+        if ($employeeParam !== null) {
+            $query->whereHas('employee', function ($emp) use ($employeeParam) {
+                $emp->where('employees.uuid', (string) $employeeParam);
+                if (is_numeric($employeeParam)) {
+                    $emp->orWhere('employees.id', (int) $employeeParam);
+                }
+            });
         }
 
         $dateFrom = $request->input('date_from');

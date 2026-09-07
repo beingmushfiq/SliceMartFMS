@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Modules\Platform\Controllers;
 
 use App\Core\Settings\SettingService;
+use App\Core\Tenancy\TenantContext;
 use App\Http\Controllers\Controller;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class TenantSettingsController extends Controller
 {
@@ -140,12 +143,14 @@ class TenantSettingsController extends Controller
         ]);
 
         $file = $request->file('file');
-        $tenantId = \App\Core\Tenancy\TenantContext::current()->tenantId() ?? 'default';
+        $tenantId = TenantContext::current()->tenantId() ?? 'default';
         $ext = $file->getClientOriginalExtension() ?: 'png';
         $filename = ($request->input('type') ?? 'asset') . '_' . time() . '_' . substr(md5(uniqid()), 0, 8) . '.' . $ext;
 
         $path = $file->storeAs("branding/{$tenantId}", $filename, 'public');
-        $url = \Illuminate\Support\Facades\Storage::disk('public')->url($path);
+        /** @var FilesystemAdapter $disk */
+        $disk = Storage::disk('public');
+        $url = $disk->url($path);
 
         return response()->json([
             'success' => true,

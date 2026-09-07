@@ -62,19 +62,25 @@ export function useTenantBranding(): TenantBranding {
             setCompanyName(data.name);
             try {
               localStorage.setItem('company_name', data.name);
-            } catch {}
+            } catch {
+              // Ignore localStorage write failures
+            }
           }
           if (data.logo_url) {
             setLogoUrl(data.logo_url);
             try {
               localStorage.setItem('brand_logo_url', data.logo_url);
-            } catch {}
+            } catch {
+              // Ignore localStorage write failures
+            }
           }
           if (data.favicon_url) {
             setFaviconUrl(data.favicon_url);
             try {
               localStorage.setItem('brand_favicon_url', data.favicon_url);
-            } catch {}
+            } catch {
+              // Ignore localStorage write failures
+            }
           }
         }
       })

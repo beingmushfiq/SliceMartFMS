@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -32,20 +32,24 @@ export function SalesmenProfilesSection({ onSelectSalesmanForDashboard }: Props)
   const [targetAmountInput, setTargetAmountInput] = useState<string>('');
   const [targetNotesInput, setTargetNotesInput] = useState<string>('');
 
-  const { data: responseData, isLoading, isFetching, refetch } = useQuery<{
-    period_month: string;
-    data: SalesmanSummary[];
-  }>({
+  // Fetch Salesmen Summary for selected month
+  const { data: responseData, isLoading, isFetching, refetch } = useQuery<
+    SalesmanSummary[] | { period_month?: string; data?: SalesmanSummary[] }
+  >({
     queryKey: ['sales', 'salesmen', selectedMonth],
     queryFn: async () => {
-      const res = await api.get<{ period_month: string; data: SalesmanSummary[] }>(
+      const res = await api.get<SalesmanSummary[] | { period_month?: string; data?: SalesmanSummary[] }>(
         `/sales/salesmen?period_month=${selectedMonth}`
       );
       return res.data;
     },
   });
 
-  const salesmen = responseData?.data ?? [];
+  const salesmen: SalesmanSummary[] = useMemo(() => {
+    if (Array.isArray(responseData)) return responseData;
+    if (responseData && Array.isArray((responseData as any).data)) return (responseData as any).data;
+    return [];
+  }, [responseData]);
 
   // Set/Update Target Mutation
   const targetMutation = useMutation({

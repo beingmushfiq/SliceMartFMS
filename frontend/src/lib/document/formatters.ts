@@ -108,19 +108,22 @@ export function numberToWords(amount: number | string, currencyUnit = 'Taka', su
  */
 export function formatCurrency(
   value: number | string | null | undefined,
-  currencySymbol = '$',
+  currencySymbol = '৳',
   decimals = 2
 ): string {
-  if (value === null || value === undefined || value === '') return `${currencySymbol}0.00`;
+  const prefix = currencySymbol
+    ? (currencySymbol.trim() ? (currencySymbol.trim() === '$' ? '$' : `${currencySymbol.trim()} `) : '')
+    : '';
+  if (value === null || value === undefined || value === '') return `${prefix}0.00`;
   const num = typeof value === 'string' ? parseFloat(value) : value;
-  if (isNaN(num)) return `${currencySymbol}0.00`;
+  if (isNaN(num)) return `${prefix}0.00`;
 
   const formatted = num.toLocaleString('en-IN', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
 
-  return `${currencySymbol}${formatted}`;
+  return `${prefix}${formatted}`;
 }
 
 /**
