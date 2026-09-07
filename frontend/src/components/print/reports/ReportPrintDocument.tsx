@@ -37,6 +37,13 @@ export function ReportPrintDocument({
   orientation = 'portrait',
 }: ReportPrintDocumentProps) {
   const isLandscape = orientation === 'landscape';
+  const companyInitials = (businessConfig.name || 'ERP')
+    .split(' ')
+    .map((w) => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase() || 'ERP';
 
   return (
     <div
@@ -48,9 +55,13 @@ export function ReportPrintDocument({
       <div className="flex items-start justify-between border-b-2 border-slate-900 pb-3 mb-3">
         <div className="max-w-[60%]">
           <div className="flex items-center gap-2 mb-1">
-            <div className="size-7 rounded bg-slate-900 text-white font-black text-xs flex items-center justify-center">
-              ERP
-            </div>
+            {businessConfig.logoUrl ? (
+              <img src={businessConfig.logoUrl} alt={businessConfig.name} className="size-7 rounded object-contain" />
+            ) : (
+              <div className="size-7 rounded bg-slate-900 text-white font-black text-xs flex items-center justify-center">
+                {companyInitials}
+              </div>
+            )}
             <div>
               <h1 className="text-sm font-black text-slate-950 uppercase tracking-tight">
                 {businessConfig.name}
@@ -189,7 +200,7 @@ export function ReportPrintDocument({
 
       {/* Footer */}
       <div className="flex justify-between items-center text-[6.5pt] text-slate-400 pt-3 mt-3 border-t border-dashed border-slate-200 font-mono">
-        <span>Confidential &bull; SliceMart Management Information System</span>
+        <span>Confidential &bull; {businessConfig.name || 'Enterprise'} Management Information System</span>
         <span>Page 1 of 1</span>
       </div>
     </div>

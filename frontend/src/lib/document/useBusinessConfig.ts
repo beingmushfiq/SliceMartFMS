@@ -15,7 +15,7 @@ export interface BusinessConfig {
   tradeLicense: string;
   currencySymbol: string;
   currencyCode: string;
-  logoUrl?: string;
+  logoUrl?: string | undefined;
   invoiceTerms: string;
   signaturePreparedBy: string;
   signatureCheckedBy: string;
@@ -53,6 +53,8 @@ export function useBusinessConfig(): { config: BusinessConfig; loading: boolean 
 
   const [config, setConfig] = useState<BusinessConfig>(() => ({
     ...DEFAULT_BUSINESS_CONFIG,
+    name: tenant?.name || DEFAULT_BUSINESS_CONFIG.name,
+    logoUrl: tenant?.logo_url,
     currencySymbol: tenantCurrencySymbol,
     currencyCode: tenantCurrencyCode,
   }));

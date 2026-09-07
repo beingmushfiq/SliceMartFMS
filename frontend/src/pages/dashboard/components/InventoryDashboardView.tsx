@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   Warehouse,
   Boxes,
@@ -11,6 +12,8 @@ import {
   ArrowRightLeft,
 } from 'lucide-react';
 import type { OrderPOItem } from './DashboardModals';
+import { api } from '../../../lib/api/client';
+import { useCurrency } from '../../../lib/format/currency';
 
 interface InventoryDashboardViewProps {
   attentionItems: OrderPOItem[];
@@ -23,44 +26,36 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
   onOpenOrderPO,
   onOpenReviewStock,
 }) => {
-  const stockMovements = [
-    {
-      id: 'TR-0891',
-      type: 'INBOUND GRN',
-      item: 'Copper Wiring Rolls (500m)',
-      qty: '+200 pcs',
-      warehouse: 'Warehouse A (Raw)',
-      time: '12m ago',
-      status: 'VERIFIED',
+  const { formatCurrency } = useCurrency();
+
+  const { data: metrics } = useQuery({
+    queryKey: ['tenant', 'dashboard', 'metrics'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{
+          data: {
+            inventory: {
+              total_valuation: number;
+              low_stock_count: number;
+            };
+          };
+        }>('/dashboard/metrics');
+        return res.data.data;
+      } catch {
+        return null;
+      }
     },
-    {
-      id: 'TR-0890',
-      type: 'INTERNAL TRANSFER',
-      item: 'Infrared Cooker IR-101 (Finished)',
-      qty: '48 pcs',
-      warehouse: 'WH-A → WH-B',
-      time: '45m ago',
-      status: 'IN TRANSIT',
-    },
-    {
-      id: 'TR-0889',
-      type: 'MATERIAL ISSUE',
-      item: 'PCB Control Board',
-      qty: '-50 pcs',
-      warehouse: 'Floor Line 1',
-      time: '2h ago',
-      status: 'ISSUED',
-    },
-    {
-      id: 'TR-0888',
-      type: 'INBOUND GRN',
-      item: 'Toughened Glass Top (30cm)',
-      qty: '+150 pcs',
-      warehouse: 'Warehouse A (Raw)',
-      time: '3h ago',
-      status: 'VERIFIED',
-    },
-  ];
+  });
+
+  const stockMovements: Array<{
+    id: string;
+    type: string;
+    item: string;
+    qty: string;
+    warehouse: string;
+    time: string;
+    status: string;
+  }> = [];
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -117,10 +112,10 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              489 SKUs
+              {metrics?.inventory?.total_valuation ? 'Live Catalog' : '0 SKUs'}
             </div>
             <span className="text-[10px] font-semibold text-muted">
-              2 Active Facilities
+              Active Facility
             </span>
           </div>
         </div>
@@ -137,7 +132,7 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              ৳ 14.6M
+              {formatCurrency(metrics?.inventory?.total_valuation ?? 0)}
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
               Raw & Finished Goods
@@ -157,10 +152,10 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-red-500">
-              1 Item
+              {metrics?.inventory?.low_stock_count ?? 0} Items
             </div>
             <span className="text-[10px] font-semibold text-red-500">
-              PCB Control Board
+              Immediate Reorder
             </span>
           </div>
         </div>
@@ -177,10 +172,10 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-amber-500">
-              2 Items
+              {attentionItems.length} Items
             </div>
             <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-              Glass Top & Regulator
+              Below Safety Threshold
             </span>
           </div>
         </div>
@@ -197,10 +192,10 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              3 Shipments
+              0 Shipments
             </div>
             <span className="text-[10px] font-semibold text-muted">
-              Apex Industrial / Vendor
+              Inbound Receiving
             </span>
           </div>
         </div>
@@ -217,10 +212,10 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              2 Transfers
+              0 Transfers
             </div>
             <span className="text-[10px] font-semibold text-muted">
-              WH-A → WH-B
+              Inter-facility Log
             </span>
           </div>
         </div>
@@ -238,53 +233,59 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
               <p className="text-[11px] text-muted">Material items requiring urgent purchase orders</p>
             </div>
             <span className="rounded-full bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 text-[10px] font-bold">
-              Action Required
+              {attentionItems.length} Alerts
             </span>
           </div>
 
           <div className="divide-y divide-default">
-            {attentionItems.map((item) => {
-              const isOutOfStock = item.currentStock <= 0;
-              return (
-                <div
-                  key={item.id}
-                  className="py-3 flex items-center justify-between gap-3 hover:bg-surface-sunken/40 px-2 rounded-xl transition-colors"
-                >
-                  <div className="space-y-0.5 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-default">{item.name}</span>
-                      <span className="text-[10px] text-muted font-mono">({item.sku})</span>
+            {attentionItems.length === 0 ? (
+              <div className="text-center py-8 text-xs text-muted">
+                All inventory stock levels are within optimal thresholds
+              </div>
+            ) : (
+              attentionItems.map((item) => {
+                const isOutOfStock = item.currentStock <= 0;
+                return (
+                  <div
+                    key={item.id}
+                    className="py-3 flex items-center justify-between gap-3 hover:bg-surface-sunken/40 px-2 rounded-xl transition-colors"
+                  >
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-default">{item.name}</span>
+                        <span className="text-[10px] text-muted font-mono">({item.sku})</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px] text-muted">
+                        <span>Warehouse: <strong className="text-default">{item.warehouse}</strong></span>
+                        <span>•</span>
+                        <span>Stock: <strong className={isOutOfStock ? 'text-red-500' : 'text-amber-500'}>{item.currentStock} {item.unit}</strong></span>
+                        <span>•</span>
+                        <span>Min: {item.minThreshold}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-[11px] text-muted">
-                      <span>Warehouse: <strong className="text-default">{item.warehouse}</strong></span>
-                      <span>•</span>
-                      <span>Stock: <strong className={isOutOfStock ? 'text-red-500' : 'text-amber-500'}>{item.currentStock} {item.unit}</strong></span>
-                      <span>•</span>
-                      <span>Min: {item.minThreshold}</span>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => onOpenReviewStock(item)}
-                      className="flex items-center gap-1 rounded-lg border border-default bg-surface px-2.5 py-1.5 text-xs font-semibold text-default hover:bg-surface-sunken transition-colors cursor-pointer shadow-2xs"
-                    >
-                      <Eye className="size-3 text-muted" />
-                      <span>Review</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onOpenOrderPO(item)}
-                      className="flex items-center gap-1 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-red-700 transition-colors cursor-pointer"
-                    >
-                      <ShoppingCart className="size-3" />
-                      <span>Order PO</span>
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => onOpenReviewStock(item)}
+                        className="flex items-center gap-1 rounded-lg border border-default bg-surface px-2.5 py-1.5 text-xs font-semibold text-default hover:bg-surface-sunken transition-colors cursor-pointer shadow-2xs"
+                      >
+                        <Eye className="size-3 text-muted" />
+                        <span>Review</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onOpenOrderPO(item)}
+                        className="flex items-center gap-1 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-red-700 transition-colors cursor-pointer"
+                      >
+                        <ShoppingCart className="size-3" />
+                        <span>Order PO</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
 
           <Link
@@ -305,48 +306,18 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
             </div>
 
             <div className="space-y-4">
-              {/* WH-A */}
+              {/* Primary Facility */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-default">Warehouse A (Raw Materials)</span>
-                  <span className="font-mono text-muted">72% Full</span>
+                  <span className="font-semibold text-default">Main Warehouse</span>
+                  <span className="font-mono text-muted">Optimal</span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-surface-sunken overflow-hidden">
-                  <div className="h-full rounded-full bg-blue-500" style={{ width: '72%' }} />
+                  <div className="h-full rounded-full bg-blue-500" style={{ width: '45%' }} />
                 </div>
                 <div className="flex items-center justify-between text-[10px] text-muted">
-                  <span>15 Raw Categories</span>
-                  <span>4,200 / 5,800 cu.m</span>
-                </div>
-              </div>
-
-              {/* WH-B */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-default">Warehouse B (Finished Goods)</span>
-                  <span className="font-mono text-muted">48% Full</span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-surface-sunken overflow-hidden">
-                  <div className="h-full rounded-full bg-emerald-500" style={{ width: '48%' }} />
-                </div>
-                <div className="flex items-center justify-between text-[10px] text-muted">
-                  <span>482 Packaged Units</span>
-                  <span>482 / 1,000 Pallets</span>
-                </div>
-              </div>
-
-              {/* WH-C */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-default">Cold Storage / Spares</span>
-                  <span className="font-mono text-muted">24% Full</span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-surface-sunken overflow-hidden">
-                  <div className="h-full rounded-full bg-purple-500" style={{ width: '24%' }} />
-                </div>
-                <div className="flex items-center justify-between text-[10px] text-muted">
-                  <span>Electronic Sub-assemblies</span>
-                  <span>Optimal Environment</span>
+                  <span>General Stock</span>
+                  <span>Operational Status</span>
                 </div>
               </div>
             </div>
@@ -381,23 +352,30 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          {stockMovements.map((move) => (
-            <div key={move.id} className="p-3 rounded-xl border border-default bg-surface-sunken/40 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="rounded-md bg-surface px-1.5 py-0.5 text-[9px] font-mono font-bold text-primary border border-default">
-                  {move.type}
-                </span>
-                <span className="text-[10px] text-muted font-mono">{move.time}</span>
-              </div>
-              <div className="text-xs font-bold text-default truncate">{move.item}</div>
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-muted">{move.warehouse}</span>
-                <strong className="font-mono text-emerald-500">{move.qty}</strong>
-              </div>
+          {stockMovements.length === 0 ? (
+            <div className="col-span-full text-center py-6 text-xs text-muted font-sans">
+              No recent stock movements or receipts recorded
             </div>
-          ))}
+          ) : (
+            stockMovements.map((move) => (
+              <div key={move.id} className="p-3 rounded-xl border border-default bg-surface-sunken/40 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="rounded-md bg-surface px-1.5 py-0.5 text-[9px] font-mono font-bold text-primary border border-default">
+                    {move.type}
+                  </span>
+                  <span className="text-[10px] text-muted font-mono">{move.time}</span>
+                </div>
+                <div className="text-xs font-bold text-default truncate">{move.item}</div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-muted">{move.warehouse}</span>
+                  <strong className="font-mono text-emerald-500">{move.qty}</strong>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
+
     </div>
   );
 };

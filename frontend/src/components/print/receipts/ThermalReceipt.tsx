@@ -18,21 +18,22 @@ export function ThermalReceipt({
   invoice,
   businessConfig,
   paperWidth = '80mm',
-  cashierName = 'Tanvir Hossain',
-  terminalName = 'POS-GUL-01',
+  cashierName = 'Authorized Cashier',
+  terminalName = 'POS-01',
   tenderedCash,
   changeAmount,
 }: ThermalReceiptProps) {
   const is58mm = paperWidth === '58mm';
 
   const qrSvg = useMemo(() => {
+    const posPrefix = (businessConfig.name || 'POS').replace(/[^a-zA-Z0-9]/g, '').slice(0, 10).toUpperCase() || 'POS';
     return generateBarcodeSvg({
       bcid: 'qrcode',
-      text: `SLICEMART-POS:${invoice.invoice_number}|AMT:${invoice.total_amount}|BIN:${businessConfig.vatNumber}`,
+      text: `${posPrefix}-POS:${invoice.invoice_number}|AMT:${invoice.total_amount}|BIN:${businessConfig.vatNumber}`,
       scale: 1.2,
       height: 14,
     });
-  }, [invoice.invoice_number, invoice.total_amount, businessConfig.vatNumber]);
+  }, [invoice.invoice_number, invoice.total_amount, businessConfig.vatNumber, businessConfig.name]);
 
   const items = invoice.items ?? [];
 
@@ -163,7 +164,7 @@ export function ThermalReceipt({
           Freshness Guaranteed &bull; Please visit again
         </div>
         <div className="text-[6.5pt] text-slate-500 font-mono">
-          Powered by SliceMart Enterprise FMS
+          Powered by {businessConfig.name || 'Enterprise'} FMS
         </div>
       </div>
     </div>

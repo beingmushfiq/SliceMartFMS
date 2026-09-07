@@ -7,7 +7,7 @@ interface StorefrontFooterProps {
 }
 
 export const StorefrontFooter: React.FC<StorefrontFooterProps> = ({ config }) => {
-  const subdomain = config?.subdomain || 'slicemart';
+  const subdomain = config?.subdomain || 'store';
   const whatsappNumber = config?.whatsapp_number?.replace(/[^0-9]/g, '') || '8801700000000';
 
   return (
@@ -60,7 +60,7 @@ export const StorefrontFooter: React.FC<StorefrontFooterProps> = ({ config }) =>
               </div>
               <div>
                 <span className="font-extrabold text-white text-base">
-                  {config?.name ?? 'SliceMart'}
+                  {config?.name ?? 'Official Store'}
                 </span>
                 <span className="ml-2 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wider text-emerald-400">
                   Official Store
@@ -69,7 +69,7 @@ export const StorefrontFooter: React.FC<StorefrontFooterProps> = ({ config }) =>
             </div>
             <p className="text-xs text-zinc-400 leading-relaxed max-w-sm">
               {config?.meta_description ||
-                'Precision infrared cookers and high-efficiency gas stoves delivered direct-to-consumer and wholesale distribution.'}
+                'Precision engineering and high-efficiency home appliances delivered direct-to-consumer and wholesale distribution.'}
             </p>
             <div className="flex items-center gap-3 pt-1">
               <a
@@ -165,7 +165,7 @@ export const StorefrontFooter: React.FC<StorefrontFooterProps> = ({ config }) =>
           </div>
 
           <div className="text-zinc-500 text-[11px]">
-            © {new Date().getFullYear()} {config?.name ?? 'SliceMart'}. Powered by DevCenterPoint Factory Platform.
+            © {new Date().getFullYear()} {config?.name ?? 'Official Store'}. Powered by DevCenterPoint Factory Platform.
           </div>
         </div>
       </div>

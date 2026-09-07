@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatCurrency, formatQuantity, formatPercent } from './currency';
+import { formatCurrency, formatQuantity, formatPercent, getCurrencySymbol } from './currency';
 
 describe('currency format utility', () => {
   it('formats BDT amounts with default symbol', () => {
@@ -11,6 +11,14 @@ describe('currency format utility', () => {
     expect(formatCurrency(450.75, { currency: 'USD' })).toBe('$ 450.75');
     expect(formatCurrency(1200, { currency: 'EUR' })).toBe('€ 1,200.00');
     expect(formatCurrency(8500, { currency: 'INR' })).toBe('₹ 8,500.00');
+    expect(formatCurrency(100, { currency: 'SAR' })).toBe('﷼ 100.00');
+  });
+
+  it('resolves correct currency symbols dynamically', () => {
+    expect(getCurrencySymbol('USD')).toBe('$');
+    expect(getCurrencySymbol('EUR')).toBe('€');
+    expect(getCurrencySymbol('BDT')).toBe('৳');
+    expect(getCurrencySymbol('GBP')).toBe('£');
   });
 
   it('handles null, undefined, and empty string safely', () => {

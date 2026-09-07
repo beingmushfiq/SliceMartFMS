@@ -199,4 +199,30 @@ final class SalesOrderController extends Controller
             'data'    => new \App\Modules\Sales\Resources\InvoiceResource($invoice),
         ], 201);
     }
+
+    public function destroy(int $id): JsonResponse
+    {
+        $tenantId = TenantContext::current()->tenantId();
+        $order = SalesOrder::where('tenant_id', $tenantId)->where('id', $id)->firstOrFail();
+
+        // If order has an active commercial invoice, check status before deleting
+        $hasInvoice = \App\Modules\Sales\Models\Invoice::where('tenant_id', $tenantId)
+            ->where('sales_order_id', $order->id)
+            ->whereNull('deleted_at')
+            ->exists();
+
+        if ($hasInvoice && !in_array($order->status, ['cancelled', 'draft'], true)) {
+            return response()->json([
+                'message' => 'Cannot delete an active order with an associated commercial invoice. Void or cancel the invoice first.',
+            ], 422);
+        }
+
+        $orderNumber = $order->order_number;
+        $order->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Sales order {$orderNumber} deleted successfully.",
+        ]);
+    }
 }

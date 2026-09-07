@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2,
@@ -126,23 +126,9 @@ export function WorkerProductionSection() {
 
   const entries = entriesQuery.data?.data ?? [];
   const summary = summaryQuery.data?.data;
-  const batches = batchesQuery.data?.data ?? [];
-  const products = productsQuery.data?.data ?? [];
-  const employees = employeesQuery.data?.data ?? [];
-
-  useEffect(() => {
-    if (isCreateOpen) {
-      setDraft((d) => {
-        const selectedBatch = batches.find((b) => b.id === d.batch_id) ?? batches[0];
-        return {
-          ...d,
-          batch_id: d.batch_id || selectedBatch?.id || '',
-          employee_id: d.employee_id || employees[0]?.id || '',
-          product_id: d.product_id || selectedBatch?.product_id || '',
-        };
-      });
-    }
-  }, [isCreateOpen, batches, employees]);
+  const batches = useMemo(() => batchesQuery.data?.data ?? [], [batchesQuery.data?.data]);
+  const products = useMemo(() => productsQuery.data?.data ?? [], [productsQuery.data?.data]);
+  const employees = useMemo(() => employeesQuery.data?.data ?? [], [employeesQuery.data?.data]);
 
   // Mutations
   const createMutation = useMutation({
@@ -530,7 +516,7 @@ export function WorkerProductionSection() {
                 Employee / Worker
               </label>
               <select
-                value={draft.employee_id}
+                value={draft.employee_id || employees[0]?.id || ''}
                 onChange={(e) => setDraft((d) => ({ ...d, employee_id: e.target.value }))}
                 className="w-full rounded-xl border border-default bg-surface-sunken p-2.5 text-xs text-default focus:border-primary focus:outline-none"
               >
@@ -547,7 +533,7 @@ export function WorkerProductionSection() {
                 Production Batch
               </label>
               <select
-                value={draft.batch_id}
+                value={draft.batch_id || batches[0]?.id || ''}
                 onChange={(e) => {
                   const val = e.target.value;
                   const b = batches.find((item) => item.id === val);
@@ -669,8 +655,22 @@ export function WorkerProductionSection() {
             </Button>
             <Button
               variant="primary"
-              onClick={() => createMutation.mutate(draft)}
-              disabled={createMutation.isPending || !draft.employee_id || !draft.batch_id}
+              onClick={() => {
+                const effectiveBatchId = draft.batch_id || batches[0]?.id || '';
+                const effectiveEmployeeId = draft.employee_id || employees[0]?.id || '';
+                const selectedBatch = batches.find((b) => b.id === effectiveBatchId);
+                createMutation.mutate({
+                  ...draft,
+                  batch_id: effectiveBatchId,
+                  employee_id: effectiveEmployeeId,
+                  product_id: draft.product_id || selectedBatch?.product_id || '',
+                });
+              }}
+              disabled={
+                createMutation.isPending ||
+                (!draft.employee_id && !employees[0]?.id) ||
+                (!draft.batch_id && !batches[0]?.id)
+              }
               className="min-h-11"
             >
               {createMutation.isPending ? 'Logging...' : 'Save Entry'}

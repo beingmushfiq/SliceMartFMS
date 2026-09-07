@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '../../../components/ui/Modal';
+import { notify } from '../../../components/ui/Toast';
 import {
   Target,
   Plus,
@@ -26,7 +28,7 @@ import type { SalesmanTarget } from '../../../types/api/sales';
 import type { Employee } from '../../../types/api/hr';
 
 export function SalesmanTargetsSection() {
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, currencySymbol } = useCurrency();
   const queryClient = useQueryClient();
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const d = new Date();
@@ -43,6 +45,7 @@ export function SalesmanTargetsSection() {
   const [activeMenuTargetId, setActiveMenuTargetId] = useState<number | null>(null);
   const [selectedTargetForView, setSelectedTargetForView] = useState<SalesmanTarget | null>(null);
   const [editModalTarget, setEditModalTarget] = useState<SalesmanTarget | null>(null);
+  const [targetToDelete, setTargetToDelete] = useState<SalesmanTarget | null>(null);
   const [editAmount, setEditAmount] = useState<string>('');
   const [editName, setEditName] = useState<string>('');
   const [editStatus, setEditStatus] = useState<'active' | 'completed' | 'cancelled'>('active');
@@ -158,12 +161,13 @@ export function SalesmanTargetsSection() {
       return api.delete(`/sales/targets/${id}`);
     },
     onSuccess: () => {
-      toast.success('Sales target removed successfully');
+      notify.success('Sales target removed successfully');
+      setTargetToDelete(null);
       queryClient.invalidateQueries({ queryKey: ['sales', 'targets'] });
       queryClient.invalidateQueries({ queryKey: ['sales', 'salesmen'] });
     },
     onError: (err: { response?: { data?: { message?: string } }; message?: string }) => {
-      toast.error(err?.response?.data?.message || err?.message || 'Failed to remove target');
+      notify.error(err?.response?.data?.message || err?.message || 'Failed to remove target');
     },
   });
 
@@ -237,9 +241,7 @@ export function SalesmanTargetsSection() {
 
   const handleDeleteTarget = (target: SalesmanTarget) => {
     setActiveMenuTargetId(null);
-    if (window.confirm(`Are you sure you want to remove the sales target for ${target.employee_name || 'this representative'}?`)) {
-      deleteTargetMutation.mutate(target.id);
-    }
+    setTargetToDelete(target);
   };
 
   const totalTargetAmt = targets.reduce((sum, t) => sum + parseFloat(String(t.target_amount || '0')), 0);
@@ -326,8 +328,8 @@ export function SalesmanTargetsSection() {
               <tr>
                 <th className="px-4 py-3.5">Salesman</th>
                 <th className="px-4 py-3.5">Period Month</th>
-                <th className="px-4 py-3.5">Target (৳)</th>
-                <th className="px-4 py-3.5">Achieved (৳)</th>
+                <th className="px-4 py-3.5">Target ({currencySymbol})</th>
+                <th className="px-4 py-3.5">Achieved ({currencySymbol})</th>
                 <th className="px-4 py-3.5">Achievement %</th>
                 <th className="px-4 py-3.5">Leads & Converted</th>
                 <th className="px-4 py-3.5">Profit Generated</th>
@@ -620,7 +622,7 @@ export function SalesmanTargetsSection() {
 
                 <div>
                   <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
-                    Target Quota (৳) *
+                    Target Quota ({currencySymbol}) *
                   </label>
                   <input
                     type="number"
@@ -704,7 +706,7 @@ export function SalesmanTargetsSection() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
-                    Monthly Quota (৳) *
+                    Monthly Quota ({currencySymbol}) *
                   </label>
                   <input
                     type="number"
@@ -964,6 +966,23 @@ export function SalesmanTargetsSection() {
           </div>
         </div>
       )}
+
+      {/* Delete Sales Target Confirmation Dialog */}
+      <ConfirmDialog
+        open={Boolean(targetToDelete)}
+        onClose={() => setTargetToDelete(null)}
+        onConfirm={() => {
+          if (targetToDelete) {
+            deleteTargetMutation.mutate(targetToDelete.id);
+          }
+        }}
+        title="Remove Sales Target"
+        message={`Are you sure you want to remove the sales target for ${targetToDelete?.employee_name || 'this representative'}? This action cannot be undone.`}
+        confirmLabel="Remove Target"
+        cancelLabel="Cancel"
+        variant="danger"
+        loading={deleteTargetMutation.isPending}
+      />
     </div>
   );
 }

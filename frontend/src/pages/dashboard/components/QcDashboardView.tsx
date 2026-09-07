@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   Microscope,
   ClipboardCheck,
@@ -10,6 +11,7 @@ import {
   RotateCcw,
   Sliders,
 } from 'lucide-react';
+import { api } from '../../../lib/api/client';
 
 export interface QcItem {
   id: string;
@@ -27,12 +29,31 @@ interface QcDashboardViewProps {
 }
 
 export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpenQC }) => {
+  const { data: metrics } = useQuery({
+    queryKey: ['tenant', 'dashboard', 'metrics'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{
+          data: {
+            quality: {
+              qc_pass_rate: number;
+              pending_inspections: number;
+            };
+          };
+        }>('/dashboard/metrics');
+        return res.data.data;
+      } catch {
+        return null;
+      }
+    },
+  });
+
   const parameters = [
-    { name: 'Electrical Insulation & Earth Resistance', spec: '> 10 MΩ @ 500V', passRate: 100, samples: 48, status: 'PASSED' },
-    { name: 'Thermal Cutoff & Heat Regulation (Bi-metal)', spec: '320°C ± 5°C', passRate: 97.5, samples: 48, status: 'PASSED' },
-    { name: 'Toughened Glass Impact Resistance (30cm)', spec: 'Drop Test 500g @ 1m', passRate: 98.2, samples: 25, status: 'PASSED' },
-    { name: 'Chassis Dimension & Screw Torque', spec: '2.5 N·m ± 0.2', passRate: 100, samples: 48, status: 'PASSED' },
-    { name: 'Carton Packaging & Barcode Scannability', spec: 'GS1-128 Compliance', passRate: 99.1, samples: 48, status: 'PASSED' },
+    { name: 'Electrical Insulation & Earth Resistance', spec: '> 10 MΩ @ 500V', passRate: 100, samples: 0, status: 'PASSED' },
+    { name: 'Thermal Cutoff & Heat Regulation (Bi-metal)', spec: '320°C ± 5°C', passRate: 100, samples: 0, status: 'PASSED' },
+    { name: 'Impact Resistance Standards', spec: 'Standard Drop Test', passRate: 100, samples: 0, status: 'PASSED' },
+    { name: 'Chassis Dimension & Fastener Torque', spec: 'Factory Tolerance Specification', passRate: 100, samples: 0, status: 'PASSED' },
+    { name: 'Carton Packaging & Barcode Scannability', spec: 'GS1 Compliance', passRate: 100, samples: 0, status: 'PASSED' },
   ];
 
   return (
@@ -94,10 +115,10 @@ export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpen
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-amber-500">
-              1 Batch
+              {metrics?.quality?.pending_inspections ?? 0} Batches
             </div>
             <span className="text-[10px] font-semibold text-muted">
-              PO-00125 • 48 pcs
+              Quality Inspection Queue
             </span>
           </div>
         </div>
@@ -114,10 +135,10 @@ export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpen
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              40 pcs
+              0 pcs
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-              PO-00124 Certified
+              Approved Units
             </span>
           </div>
         </div>
@@ -134,10 +155,10 @@ export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpen
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              2.5%
+              {metrics?.quality?.qc_pass_rate ? `${Math.max(0, 100 - Math.round(metrics.quality.qc_pass_rate))}%` : '0%'}
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-              Within 3% Target
+              Within Safety Target
             </span>
           </div>
         </div>
@@ -154,10 +175,10 @@ export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpen
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              3 pcs
+              0 pcs
             </div>
             <span className="text-[10px] font-semibold text-muted">
-              Thermal Calibration
+              Correction Station
             </span>
           </div>
         </div>
@@ -174,10 +195,10 @@ export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpen
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              1 pc
+              0 pcs
             </div>
-            <span className="text-[10px] font-semibold text-red-500">
-              Toughened Glass Crack
+            <span className="text-[10px] font-semibold text-emerald-500">
+              Zero Unsalvageable
             </span>
           </div>
         </div>
@@ -194,10 +215,10 @@ export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpen
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              98.4%
+              {metrics?.quality?.qc_pass_rate ? `${Math.round(metrics.quality.qc_pass_rate)}%` : '100%'}
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-              Grade A Factory Standard
+              Factory Certified Standard
             </span>
           </div>
         </div>
@@ -215,59 +236,66 @@ export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpen
               <p className="text-[11px] text-muted">Awaiting quality engineer sign-off before warehouse transfer</p>
             </div>
             <span className="rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 px-2 py-0.5 text-[10px] font-bold">
-              3 Batches
+              {qcList.length} Batches
             </span>
           </div>
 
           <div className="divide-y divide-default">
-            {qcList.map((item) => {
-              const isPending = item.status === 'PENDING';
-              return (
-                <div
-                  key={item.id}
-                  className="py-3 flex items-center justify-between gap-3 hover:bg-surface-sunken/40 px-2 rounded-xl transition-colors"
-                >
-                  <div className="space-y-0.5 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-default">{item.product}</span>
-                      <span
-                        className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+            {qcList.length === 0 ? (
+              <div className="text-center py-8 text-xs text-muted">
+                No batches currently pending quality inspection
+              </div>
+            ) : (
+              qcList.map((item) => {
+                const isPending = item.status === 'PENDING';
+                return (
+                  <div
+                    key={item.id}
+                    className="py-3 flex items-center justify-between gap-3 hover:bg-surface-sunken/40 px-2 rounded-xl transition-colors"
+                  >
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-default">{item.product}</span>
+                        <span
+                          className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                            isPending
+                              ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                              : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                          }`}
+                        >
+                          {item.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px] text-muted font-mono">
+                        <span>Ref: {item.id}</span>
+                        <span>•</span>
+                        <span>Batch: {item.orderNo}</span>
+                        <span>•</span>
+                        <span>Qty: <strong>{item.qty} pcs</strong></span>
+                        {item.failed && <span className="text-red-500">({item.failed} failed)</span>}
+                      </div>
+                    </div>
+
+                    <div className="shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => onOpenQC(item)}
+                        className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer shadow-2xs ${
                           isPending
-                            ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                            : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                            ? 'bg-cyan-600 text-white hover:bg-cyan-700 shadow-cyan-500/20'
+                            : 'border border-default bg-surface text-default hover:bg-surface-sunken'
                         }`}
                       >
-                        {item.status}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-[11px] text-muted font-mono">
-                      <span>Ref: {item.id}</span>
-                      <span>•</span>
-                      <span>Batch: {item.orderNo}</span>
-                      <span>•</span>
-                      <span>Qty: <strong>{item.qty} pcs</strong></span>
-                      {item.failed && <span className="text-red-500">({item.failed} failed)</span>}
+                        <ClipboardCheck className="size-3.5" />
+                        <span>{isPending ? 'Audit Now' : 'View Audit'}</span>
+                      </button>
                     </div>
                   </div>
-
-                  <div className="shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => onOpenQC(item)}
-                      className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer shadow-2xs ${
-                        isPending
-                          ? 'bg-cyan-600 text-white hover:bg-cyan-700 shadow-cyan-500/20'
-                          : 'border border-default bg-surface text-default hover:bg-surface-sunken'
-                      }`}
-                    >
-                      <ClipboardCheck className="size-3.5" />
-                      <span>{isPending ? 'Audit Now' : 'View Audit'}</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
+
 
           <Link
             to="/qc"

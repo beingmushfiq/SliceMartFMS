@@ -15,6 +15,9 @@ export interface User {
   default_warehouse_id: number | null;
   role?: string;
   roles?: string[];
+  phone?: string;
+  role_label?: string;
+  department?: string;
 }
 
 export interface TenantInfo {
@@ -22,9 +25,11 @@ export interface TenantInfo {
   uuid: string;
   name: string;
   slug: string;
+  subdomain?: string;
   status: string;
   currency_code: string;
   timezone: string;
+  logo_url?: string;
 }
 
 export interface BranchInfo {

@@ -113,7 +113,7 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [currencyCode]);
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();

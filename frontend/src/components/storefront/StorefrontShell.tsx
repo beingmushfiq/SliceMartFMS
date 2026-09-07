@@ -7,11 +7,13 @@ import { StorefrontFooter } from './StorefrontFooter';
 import { StorefrontCartDrawer } from './StorefrontCartDrawer';
 import { SeoHead } from '../seo/SeoHead';
 import { JsonLdSchema } from '../seo/JsonLdSchema';
+import { useAuthStore } from '../../lib/auth/authStore';
 import type { StorefrontConfig } from '../../types/api/storefront';
 
 export const StorefrontShell: React.FC = () => {
   const { subdomain: paramSubdomain } = useParams<{ subdomain?: string }>();
-  const subdomain = paramSubdomain || 'slicemart';
+  const tenantSubdomain = useAuthStore((state) => state.tenant?.subdomain);
+  const subdomain = paramSubdomain || tenantSubdomain || 'store';
 
   const [config, setConfig] = useState<StorefrontConfig | null>(null);
   const [loading, setLoading] = useState(true);

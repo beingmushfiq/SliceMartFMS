@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '../../../../lib/utils';
 import { Plus } from 'lucide-react';
+import { useCurrency } from '../../../../hooks/useCurrency';
 
 interface CurrencyAmountFieldProps {
   label: string;
@@ -18,11 +19,14 @@ export const CurrencyAmountField: React.FC<CurrencyAmountFieldProps> = ({
   settingKey,
   value,
   onChange,
-  currencySymbol = '৳',
-  currencyCode = 'BDT',
+  currencySymbol: propSymbol,
+  currencyCode: propCode,
   description,
   min = 0,
 }) => {
+  const { currencyCode: defaultCode, currencySymbol: defaultSymbol } = useCurrency();
+  const currencySymbol = propSymbol || defaultSymbol;
+  const currencyCode = propCode || defaultCode;
   const numericVal = typeof value === 'number' ? value : Number(value) || 0;
 
   const handleAdd = (delta: number) => {

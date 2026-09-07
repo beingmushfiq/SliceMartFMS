@@ -136,7 +136,7 @@ export default function LoginPage() {
     }
   };
 
-  const displayName = companyName || 'SliceMart ERP';
+  const displayName = companyName || 'Enterprise Operations Platform';
 
   return (
     <div className="relative flex min-h-dvh w-full items-center justify-center bg-base px-4 py-12 text-default transition-colors duration-200 sm:px-6 lg:px-8">

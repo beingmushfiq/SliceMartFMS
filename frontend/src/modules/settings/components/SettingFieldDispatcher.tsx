@@ -26,6 +26,7 @@ import { NumericStepperField } from './fields/NumericStepperField';
 import { FormattedNoteField } from './fields/FormattedNoteField';
 import { DynamicTextField } from './fields/DynamicTextField';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 interface SettingFieldDispatcherProps {
   settingKey: string;
@@ -205,9 +206,12 @@ export const SettingFieldDispatcher: React.FC<SettingFieldDispatcherProps> = ({
   meta,
   value,
   onChange,
-  currencySymbol = '৳',
-  currencyCode = 'BDT',
+  currencySymbol: propSymbol,
+  currencyCode: propCode,
 }) => {
+  const { currencyCode: defaultCode, currencySymbol: defaultSymbol } = useCurrency();
+  const currencySymbol = propSymbol || defaultSymbol;
+  const currencyCode = propCode || defaultCode;
   // 1. Encrypted Sensitive Credential Fields
   if (meta.sensitive) {
     return (

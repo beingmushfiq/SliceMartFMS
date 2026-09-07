@@ -379,10 +379,10 @@ export const StorefrontHomePage: React.FC = () => {
             Transparent Manufacturing
           </span>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-2">
-            The {config?.name ?? 'SliceMart'} Quality Journey
+            The {config?.name ? `${config.name} ` : ''}Quality Journey
           </h2>
           <p className="text-xs text-zinc-400 mt-1.5">
-            How we ensure every infrared cooker and stove meets stringent electrical safety and thermal efficiency standards.
+            How we ensure every batch meets stringent safety and thermal efficiency standards.
           </p>
         </div>
 
@@ -511,10 +511,10 @@ export const StorefrontHomePage: React.FC = () => {
         <div className="relative z-10 max-w-xl mx-auto space-y-4">
           <Award className="size-10 text-emerald-400 mx-auto" />
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
-            Join the {config?.name ?? 'SliceMart'} VIP Club
+            Join the {config?.name ? `${config.name} ` : ''}VIP Club
           </h2>
           <p className="text-xs text-zinc-300">
-            Get instant alerts when new cooker models and stove editions launch, plus exclusive warranty perks.
+            Get instant alerts when new products launch, plus exclusive perks and promotions.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
@@ -525,7 +525,7 @@ export const StorefrontHomePage: React.FC = () => {
             />
             <button
               type="button"
-              onClick={() => alert('Thank you for subscribing to SliceMart Appliance updates!')}
+              onClick={() => alert(`Thank you for subscribing to ${config?.name ?? 'store'} updates!`)}
               className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs transition-all shadow-md cursor-pointer"
             >
               Subscribe

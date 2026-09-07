@@ -19,7 +19,7 @@ export const StorefrontHeader: React.FC<StorefrontHeaderProps> = ({ config, subd
   const whatsappNumber = config?.whatsapp_number?.replace(/[^0-9]/g, '') || '8801700000000';
   const whatsappMsg = encodeURIComponent(
     config?.whatsapp_default_message ||
-      `Hello ${config?.name ?? 'SliceMart'}, I would like to place an order from your direct factory catalog.`
+      `Hello ${config?.name ?? 'Store'}, I would like to place an order from your direct factory catalog.`
   );
 
   return (
@@ -63,7 +63,7 @@ export const StorefrontHeader: React.FC<StorefrontHeaderProps> = ({ config, subd
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold tracking-tight text-white group-hover:text-emerald-400 text-base sm:text-lg transition-colors">
-                  {config?.name ?? 'SliceMart'}
+                  {config?.name ?? 'Official Store'}
                 </span>
                 <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wider text-emerald-400">
                   Official Store

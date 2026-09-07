@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { Badge } from '../../../components/ui/Badge';
 
+import { useCurrency } from '../../../hooks/useCurrency';
+
 interface BrandingPreviewProps {
   logoUrl?: string;
   faviconUrl?: string;
@@ -17,7 +19,7 @@ interface BrandingPreviewProps {
 export const BrandingPreview: React.FC<BrandingPreviewProps> = ({
   logoUrl,
   faviconUrl,
-  companyName = 'SliceMart Industries Ltd.',
+  companyName = 'Enterprise Company Ltd.',
 }) => {
   const [loadedLogoUrl, setLoadedLogoUrl] = useState<string | null>(null);
   const [loadedFaviconUrl, setLoadedFaviconUrl] = useState<string | null>(null);
@@ -130,14 +132,17 @@ interface CurrencyFormatPreviewProps {
 }
 
 export const CurrencyFormatPreview: React.FC<CurrencyFormatPreviewProps> = ({
-  currencySymbol = '৳',
-  currencyCode = 'BDT',
+  currencySymbol: propSymbol,
+  currencyCode: propCode,
   decimalPlaces = 2,
   thousandSeparator = ',',
   dateFormat = 'YYYY-MM-DD',
   timeFormat = '24h',
   timezone = 'Asia/Dhaka',
 }) => {
+  const { currencyCode: defaultCode, currencySymbol: defaultSymbol } = useCurrency();
+  const currencySymbol = propSymbol || defaultSymbol;
+  const currencyCode = propCode || defaultCode;
   const dec = Number(decimalPlaces) || 0;
   const sampleAmount = 145290.5;
   const parts = sampleAmount.toFixed(dec).split('.');

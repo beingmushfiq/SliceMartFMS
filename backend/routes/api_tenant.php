@@ -487,6 +487,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                     ->middleware('permission:sales.order.approve')->name('payment');
                 Route::post('{id}/invoice', [App\Modules\Sales\Controllers\SalesOrderController::class, 'generateInvoice'])
                     ->middleware('permission:sales.order.approve')->name('invoice');
+                Route::delete('{id}', [App\Modules\Sales\Controllers\SalesOrderController::class, 'destroy'])
+                    ->middleware('permission:sales.order.void|sales.order.create')->name('destroy');
             });
 
             Route::prefix('invoices')->name('invoices.')->group(static function (): void {

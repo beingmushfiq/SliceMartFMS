@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Building2,
@@ -22,13 +22,8 @@ import {
   Microscope,
   Store,
   FileText,
-  Package,
   Boxes,
   Truck,
-  Layers,
-  DollarSign,
-  Users,
-  Settings,
   ClipboardList,
   PackagePlus,
   PlusCircle,
@@ -38,6 +33,8 @@ import {
   PanelLeftOpen,
 } from 'lucide-react';
 import { useAuthStore } from '../../lib/auth/authStore';
+import { useTenantCapabilityStore } from '../../lib/capabilities/tenantCapabilityStore';
+import { PLATFORM_NAV_DEFINITIONS } from '../../lib/capabilities/navRegistry';
 import { cn } from '../../lib/utils';
 import type { NotificationItem } from '../../types/api/notifications';
 import { toggleThemeWithTransition } from '../../lib/theme/themeTransition';
@@ -53,329 +50,13 @@ interface AppHeaderProps {
 interface SearchResultItem {
   id: string;
   title: string;
-  category: 'Navigation' | 'Products' | 'Production' | 'Sales' | 'Purchasing';
-  subtitle?: string;
-  code?: string;
-  badge?: string;
+  category: string;
+  subtitle?: string | undefined;
+  code?: string | undefined;
+  badge?: string | undefined;
   url: string;
   icon: typeof LayoutDashboard;
 }
-
-const GLOBAL_SEARCH_REGISTRY: SearchResultItem[] = [
-  // Navigation & Modules
-  {
-    id: 'nav-dashboard',
-    title: 'Executive Dashboard',
-    category: 'Navigation',
-    subtitle: 'Live factory telemetry & 6-KPI metrics',
-    code: 'DASH',
-    url: '/dashboard',
-    icon: LayoutDashboard,
-  },
-  {
-    id: 'nav-pos',
-    title: 'Point of Sale (POS)',
-    category: 'Navigation',
-    subtitle: 'Counter register, receipt printer & cash sessions',
-    badge: 'Live Register',
-    code: 'POS',
-    url: '/pos',
-    icon: Store,
-  },
-  {
-    id: 'nav-production',
-    title: 'Production & Manufacturing',
-    category: 'Navigation',
-    subtitle: 'Assembly lines, production runs & batches',
-    code: 'PROD',
-    url: '/production',
-    icon: Factory,
-  },
-  {
-    id: 'nav-qc',
-    title: 'Quality Control (QC)',
-    category: 'Navigation',
-    subtitle: 'Final audit inspections, scrap & rework records',
-    code: 'QC',
-    url: '/qc',
-    icon: Microscope,
-  },
-  {
-    id: 'nav-inventory',
-    title: 'Inventory & Warehouses',
-    category: 'Navigation',
-    subtitle: 'Raw materials, bins, stock buffer & valuations',
-    code: 'INV',
-    url: '/inventory',
-    icon: Package,
-  },
-  {
-    id: 'nav-purchasing',
-    title: 'Purchasing & Procurement',
-    category: 'Navigation',
-    subtitle: 'Vendor orders, supplier lead times & requisitions',
-    code: 'PO',
-    url: '/purchasing',
-    icon: ShoppingCart,
-  },
-  {
-    id: 'nav-sales',
-    title: 'Sales & Invoicing',
-    category: 'Navigation',
-    subtitle: 'B2B/B2C invoices, receivables & customer orders',
-    code: 'SALE',
-    url: '/sales',
-    icon: FileText,
-  },
-  {
-    id: 'nav-logistics',
-    title: 'Logistics & Deliveries',
-    category: 'Navigation',
-    subtitle: 'Vehicle dispatches, driver manifests & tracking',
-    code: 'DEL',
-    url: '/logistics',
-    icon: Truck,
-  },
-  {
-    id: 'nav-catalogue',
-    title: 'Product Catalogue',
-    category: 'Navigation',
-    subtitle: 'SKU variants, categories & retail specifications',
-    code: 'CAT',
-    url: '/catalogue',
-    icon: Layers,
-  },
-  {
-    id: 'nav-finance',
-    title: 'Finance & Accounts',
-    category: 'Navigation',
-    subtitle: 'Bank accounts, ledger & financial reconciliations',
-    code: 'FIN',
-    url: '/finance',
-    icon: DollarSign,
-  },
-  {
-    id: 'nav-hr',
-    title: 'Workforce & Attendance',
-    category: 'Navigation',
-    subtitle: 'Factory operators, floor attendance & piece rates',
-    code: 'HR',
-    url: '/hr',
-    icon: Users,
-  },
-  {
-    id: 'nav-settings',
-    title: 'System Settings',
-    category: 'Navigation',
-    subtitle: 'Branch config, users, roles & tenant preferences',
-    code: 'CFG',
-    url: '/settings',
-    icon: Settings,
-  },
-
-  // Products & Raw Materials
-  {
-    id: 'prod-ir101',
-    title: 'Infrared Cooker IR-101',
-    category: 'Products',
-    subtitle: 'Finished Good • 2200W Commercial Burner',
-    badge: '482 in stock',
-    code: 'SKU-IR101',
-    url: '/catalogue',
-    icon: Package,
-  },
-  {
-    id: 'prod-ir102',
-    title: 'Infrared Cooker IR-102 (Touch Glass)',
-    category: 'Products',
-    subtitle: 'Finished Good • Premium Microcrystalline',
-    badge: '120 in stock',
-    code: 'SKU-IR102',
-    url: '/catalogue',
-    icon: Package,
-  },
-  {
-    id: 'prod-ir104',
-    title: 'Infrared Cooker IR-104 (Dual Burner)',
-    category: 'Products',
-    subtitle: 'Finished Good • Heavy Duty Double Plate',
-    badge: 'Ready to Run',
-    code: 'SKU-IR104',
-    url: '/catalogue',
-    icon: Package,
-  },
-  {
-    id: 'prod-is201',
-    title: 'Infrared Stove IS-201',
-    category: 'Products',
-    subtitle: 'Finished Good • Stainless Steel Base',
-    badge: '95 in stock',
-    code: 'SKU-IS201',
-    url: '/catalogue',
-    icon: Package,
-  },
-  {
-    id: 'raw-pcb',
-    title: 'PCB Control Board (V3.2)',
-    category: 'Products',
-    subtitle: 'Raw Material • WH-A Bin C-04',
-    badge: 'OUT OF STOCK',
-    code: 'RAW-PCB-001',
-    url: '/inventory',
-    icon: Boxes,
-  },
-  {
-    id: 'raw-glass',
-    title: 'Toughened Glass Top (30cm)',
-    category: 'Products',
-    subtitle: 'Raw Material • WH-A Bin B-12',
-    badge: 'LOW STOCK (45 pcs)',
-    code: 'RAW-GLS-105',
-    url: '/inventory',
-    icon: Boxes,
-  },
-  {
-    id: 'raw-regulator',
-    title: 'Heat Regulator (Bi-metal)',
-    category: 'Products',
-    subtitle: 'Raw Material • WH-A Bin A-08',
-    badge: 'LOW STOCK (85 pcs)',
-    code: 'RAW-REG-202',
-    url: '/inventory',
-    icon: Boxes,
-  },
-
-  // Production Orders
-  {
-    id: 'ord-po125',
-    title: 'PO-00125 • Infrared Cooker IR-101',
-    category: 'Production',
-    subtitle: 'Produced: 48 / 50 pcs (96% Yield)',
-    badge: 'QC PENDING',
-    code: 'PO-00125',
-    url: '/production',
-    icon: Factory,
-  },
-  {
-    id: 'ord-po124',
-    title: 'PO-00124 • Infrared Stove IS-201',
-    category: 'Production',
-    subtitle: 'Produced: 40 / 40 pcs (100% Complete)',
-    badge: 'COMPLETED',
-    code: 'PO-00124',
-    url: '/production',
-    icon: Factory,
-  },
-  {
-    id: 'ord-po126',
-    title: 'PO-00126 • Infrared Cooker IR-104',
-    category: 'Production',
-    subtitle: 'Target: 60 units • Ready for assembly line',
-    badge: 'READY',
-    code: 'PO-00126',
-    url: '/production',
-    icon: Factory,
-  },
-
-  // Sales Invoices
-  {
-    id: 'inv-715',
-    title: 'INV-0715 • Rahman Electronics',
-    category: 'Sales',
-    subtitle: 'B2B Wholesale • Total: ৳ 14,000',
-    badge: 'PARTIAL PAID',
-    code: 'INV-0715',
-    url: '/sales',
-    icon: FileText,
-  },
-  {
-    id: 'inv-716',
-    title: 'INV-0716 • Md. Shahidul Islam',
-    category: 'Sales',
-    subtitle: 'B2C Counter Sale • Total: ৳ 1,750',
-    badge: 'PAID',
-    code: 'INV-0716',
-    url: '/sales',
-    icon: FileText,
-  },
-  {
-    id: 'inv-717',
-    title: 'INV-0717 • Karim Trading Corporation',
-    category: 'Sales',
-    subtitle: 'B2B Bulk Purchase • Total: ৳ 59,500',
-    badge: 'UNPAID',
-    code: 'INV-0717',
-    url: '/sales',
-    icon: FileText,
-  },
-
-  // Procurement
-  {
-    id: 'sup-apex',
-    title: 'Apex Industrial Components Ltd',
-    category: 'Purchasing',
-    subtitle: 'Supplier of IC Chips & Assembled PCBs',
-    badge: 'Verified Vendor',
-    code: 'VEN-01',
-    url: '/purchasing',
-    icon: ShoppingCart,
-  },
-  {
-    id: 'req-8941',
-    title: 'PR-2026-8941 • Urgent PCB Requisition',
-    category: 'Purchasing',
-    subtitle: '200 pcs • Scheduled buffer restock',
-    badge: 'Immediate PO',
-    code: 'PR-8941',
-    url: '/purchasing',
-    icon: ShoppingCart,
-  },
-];
-
-const SAMPLE_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: 1,
-    uuid: 'notif-1',
-    user_id: 1,
-    type: 'production.batch.qc_passed',
-    channel: 'in_app',
-    title_key: 'QC Inspection Passed',
-    body_key: 'Batch BAT-202608-001 passed final quality audit (98.0% yield).',
-    severity: 'success',
-    action_url: '/production',
-    sent_at: '2026-08-28T10:15:00Z',
-    read_at: null,
-    created_at: '2026-08-28T10:15:00Z',
-  },
-  {
-    id: 2,
-    uuid: 'notif-2',
-    user_id: 1,
-    type: 'inventory.stock.low_reorder',
-    channel: 'in_app',
-    title_key: 'Low Stock Reorder Alert',
-    body_key: 'Cotton Yarn 30s is below safety stock threshold (50 kg remaining).',
-    severity: 'warning',
-    action_url: '/inventory',
-    sent_at: '2026-08-28T09:30:00Z',
-    read_at: null,
-    created_at: '2026-08-28T09:30:00Z',
-  },
-  {
-    id: 3,
-    uuid: 'notif-3',
-    user_id: 1,
-    type: 'finance.period.closing_soon',
-    channel: 'in_app',
-    title_key: 'Fiscal Month Closing Reminder',
-    body_key: 'August 2026 accounting period will lock in 3 business days.',
-    severity: 'info',
-    action_url: '/finance',
-    sent_at: '2026-08-27T16:00:00Z',
-    read_at: '2026-08-27T17:00:00Z',
-    created_at: '2026-08-27T16:00:00Z',
-  },
-];
 
 export function AppHeader({
   onToggleSidebar,
@@ -399,7 +80,33 @@ export function AppHeader({
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const [notifications, setNotifications] = useState<NotificationItem[]>(SAMPLE_NOTIFICATIONS);
+  const isModuleEnabled = useTenantCapabilityStore((s) => s.isModuleEnabled);
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+  const getTerm = useTenantCapabilityStore((s) => s.getTerm);
+
+  const dynamicSearchRegistry = useMemo<SearchResultItem[]>(() => {
+    const items: SearchResultItem[] = [];
+    for (const section of PLATFORM_NAV_DEFINITIONS) {
+      for (const navItem of section.items) {
+        if (navItem.moduleKey && !isModuleEnabled(navItem.moduleKey)) continue;
+        if (navItem.permission && !hasPermission(navItem.permission)) continue;
+        const title = navItem.labelKey ? getTerm(navItem.labelKey, navItem.defaultLabel) : navItem.defaultLabel;
+        items.push({
+          id: `nav-${navItem.id}`,
+          title,
+          category: 'Navigation',
+          subtitle: `${section.title} module`,
+          code: navItem.id.toUpperCase(),
+          badge: navItem.badge,
+          url: navItem.to,
+          icon: navItem.icon,
+        });
+      }
+    }
+    return items;
+  }, [isModuleEnabled, hasPermission, getTerm]);
+
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
   });
@@ -459,7 +166,7 @@ export function AppHeader({
   }, []);
 
   // Filtered search results
-  const filteredResults = GLOBAL_SEARCH_REGISTRY.filter((item) => {
+  const filteredResults = dynamicSearchRegistry.filter((item) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
     return (

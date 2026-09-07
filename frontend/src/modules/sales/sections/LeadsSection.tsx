@@ -121,7 +121,7 @@ const STAGES: { id: LeadStatus; label: string; tone: string; dotBg: string; badg
 ];
 
 export function LeadsSection() {
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, currencySymbol } = useCurrency();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
   const [search, setSearch] = useState('');
@@ -1139,7 +1139,7 @@ type ApiError = { response?: { data?: { message?: string } } };
 
                 <div>
                   <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
-                    Est. Deal Value (৳)
+                    Est. Deal Value ({currencySymbol})
                   </label>
                   <input
                     type="number"

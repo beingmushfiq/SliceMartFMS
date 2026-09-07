@@ -5,12 +5,12 @@ import {
   Layers,
   ChevronDown,
   ChevronRight,
-  PanelLeftClose,
-  PanelLeftOpen,
 } from 'lucide-react';
 import { useAuthStore } from '../../lib/auth/authStore';
 import { useTenantCapabilityStore } from '../../lib/capabilities/tenantCapabilityStore';
 import { buildDynamicNavSections } from '../../lib/capabilities/navRegistry';
+import { useTenantBranding } from '../../lib/theme/useTenantBranding';
+import { getAppVersion } from '../../lib/config/appVersion';
 import { cn } from '../../lib/utils';
 
 interface SidebarProps {
@@ -86,18 +86,22 @@ export function Sidebar({ isOpen, onClose, isCollapsed = false, onToggleCollapse
     [isModuleEnabled, hasPermission, getTerm, navOrder]
   );
 
+  const { companyName } = useTenantBranding();
   const tenantName = tenant?.name;
-  const tenantDisplayName = tenantName || 'Production Cloud';
+  const tenantDisplayName = companyName || tenantName || 'Enterprise Cloud';
+  const appVersion = getAppVersion();
+  const tenantTier = tenant?.status ? `${tenant.status.charAt(0).toUpperCase() + tenant.status.slice(1)} Edition` : 'Enterprise Edition';
   const tenantShortBadge = useMemo(() => {
-    if (!tenantName) return 'ERP';
-    const words = tenantName.trim().split(/\s+/);
+    const nameToUse = companyName || tenantName;
+    if (!nameToUse) return 'ERP';
+    const words = nameToUse.trim().split(/\s+/);
     const first = words[0];
     const second = words[1];
     if (words.length > 1 && first && second && first[0] && second[0]) {
       return (first[0] + second[0]).toUpperCase();
     }
-    return 'ERP';
-  }, [tenantName]);
+    return nameToUse.slice(0, 3).toUpperCase();
+  }, [companyName, tenantName]);
 
   return (
     <>
@@ -161,21 +165,6 @@ export function Sidebar({ isOpen, onClose, isCollapsed = false, onToggleCollapse
               </div>
             </div>
           </div>
-
-          {/* Desktop Quick Collapse Button in Header */}
-          {onToggleCollapse && (
-            <button
-              type="button"
-              onClick={onToggleCollapse}
-              className={cn(
-                'hidden lg:flex items-center justify-center p-1.5 rounded-lg text-muted hover:text-default hover:bg-surface-sunken/80 transition-colors cursor-pointer',
-                isCollapsed && 'hidden'
-              )}
-              title="Collapse sidebar"
-            >
-              <PanelLeftClose className="size-4" />
-            </button>
-          )}
         </div>
 
         {/* Quick Command & Workspace Search */}
@@ -197,17 +186,6 @@ export function Sidebar({ isOpen, onClose, isCollapsed = false, onToggleCollapse
           </div>
         ) : (
           <div className="hidden lg:flex flex-col items-center gap-1.5 pt-2.5 pb-1 shrink-0 px-2">
-            {onToggleCollapse && (
-              <button
-                type="button"
-                onClick={onToggleCollapse}
-                className="p-2 rounded-lg text-muted hover:text-primary hover:bg-surface-sunken/80 transition-colors cursor-pointer border border-default hover:border-primary/30"
-                title="Expand sidebar"
-                aria-label="Expand sidebar"
-              >
-                <PanelLeftOpen className="size-4" />
-              </button>
-            )}
             <button
               type="button"
               onClick={onToggleCollapse}
@@ -353,34 +331,24 @@ export function Sidebar({ isOpen, onClose, isCollapsed = false, onToggleCollapse
           })}
         </nav>
 
-        {/* Desktop Sidebar Bottom Footer with Expand/Collapse Rail Toggle */}
-        {onToggleCollapse && (
-          <div className="hidden lg:flex items-center justify-between border-t border-(--nav-border) p-3 bg-(--nav-bg-deep)/50 shrink-0">
-            {!isCollapsed ? (
-              <>
-                <button
-                  type="button"
-                  onClick={onToggleCollapse}
-                  className="flex items-center gap-2 text-xs text-muted hover:text-default p-1.5 rounded-lg hover:bg-surface-sunken/60 transition-colors cursor-pointer"
-                  title="Collapse sidebar to icon rail"
-                >
-                  <PanelLeftClose className="size-4" />
-                  <span className="font-medium">Collapse Sidebar</span>
-                </button>
-                <span className="text-[9px] font-mono text-muted/60 uppercase">v2.4</span>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={onToggleCollapse}
-                className="w-full flex items-center justify-center p-2 rounded-lg text-muted hover:text-primary hover:bg-surface-sunken/80 transition-colors cursor-pointer"
-                title="Expand sidebar"
-              >
-                <PanelLeftOpen className="size-4.5" />
-              </button>
-            )}
-          </div>
-        )}
+        {/* Desktop Sidebar Bottom Footer with Version & Status */}
+        <div className="hidden lg:flex items-center justify-between border-t border-(--nav-border) px-3 py-2.5 bg-(--nav-bg-deep)/50 shrink-0">
+          {!isCollapsed ? (
+            <>
+              <div className="flex items-center gap-1.5 text-xs text-muted/80">
+                <span className="size-1.5 rounded-full bg-emerald-500" />
+                <span className="font-medium text-[11px]">{tenantTier}</span>
+              </div>
+              <span className="text-[9px] font-mono text-muted/60 uppercase">{appVersion}</span>
+            </>
+          ) : (
+            <div className="w-full flex items-center justify-center py-0.5">
+              <span className="text-[9px] font-mono text-muted/60 uppercase" title={`${tenantDisplayName} ${appVersion}`}>
+                {appVersion}
+              </span>
+            </div>
+          )}
+        </div>
       </aside>
     </>
   );

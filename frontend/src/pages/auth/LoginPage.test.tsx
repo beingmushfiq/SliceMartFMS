@@ -37,6 +37,7 @@ describe('LoginPage', () => {
   });
 
   it('renders login form with SliceMart ERP and Business Operations Platform branding', async () => {
+    storage.set('company_name', 'SliceMart ERP');
     await act(async () => {
       render(
         <MemoryRouter>
@@ -121,6 +122,7 @@ describe('LoginPage', () => {
   });
 
   it('renders configured brand logo when set in settings/localStorage', async () => {
+    storage.set('company_name', 'SliceMart ERP');
     storage.set('brand_logo_url', 'https://example.com/custom-logo.png');
 
     await act(async () => {

@@ -57,7 +57,12 @@ import { toast } from 'sonner';
 import { promptPWAInstall, isPWAInstallable } from '../../registerSW';
 import { useAuthStore } from '../../lib/auth/authStore';
 import { useTenantBranding } from '../../lib/theme/useTenantBranding';
+import { useCurrency } from '../../lib/format/currency';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../../lib/api/client';
 import { cn } from '../../lib/utils';
+import { OnboardingStartupModal } from '../../modules/platform/OnboardingStartupModal';
+import { OnboardingProgressCard } from '../../modules/platform/OnboardingProgressCard';
 import { ExecutiveDashboardView } from './components/ExecutiveDashboardView';
 import { SalesDashboardView } from './components/SalesDashboardView';
 import { InventoryDashboardView } from './components/InventoryDashboardView';
@@ -87,48 +92,70 @@ interface ProductionStat {
   achievement: number;
 }
 
-const TODAY_PRODUCTION_STAT: ProductionStat = {
-  target: 50,
-  produced: 48,
-  pendingOrders: 1,
-  qcPending: 1,
-  reworkQty: 5,
-  achievement: 96,
-};
-
-// Chart series by timeframe
-const TREND_TODAY = [
-  { time: '08:00', produced: 6, qcPassed: 6, target: 8 },
-  { time: '10:00', produced: 18, qcPassed: 17, target: 16 },
-  { time: '12:00', produced: 28, qcPassed: 27, target: 26 },
-  { time: '14:00', produced: 38, qcPassed: 36, target: 36 },
-  { time: '16:00', produced: 45, qcPassed: 43, target: 44 },
-  { time: '18:00', produced: 48, qcPassed: 46, target: 50 },
+const EMPTY_TREND_TODAY = [
+  { time: '08:00', produced: 0, qcPassed: 0, target: 0 },
+  { time: '10:00', produced: 0, qcPassed: 0, target: 0 },
+  { time: '12:00', produced: 0, qcPassed: 0, target: 0 },
+  { time: '14:00', produced: 0, qcPassed: 0, target: 0 },
+  { time: '16:00', produced: 0, qcPassed: 0, target: 0 },
+  { time: '18:00', produced: 0, qcPassed: 0, target: 0 },
 ];
 
-const TREND_7DAYS = [
-  { time: 'Aug 11', produced: 185, qcPassed: 180, target: 190 },
-  { time: 'Aug 12', produced: 190, qcPassed: 188, target: 190 },
-  { time: 'Aug 13', produced: 170, qcPassed: 168, target: 185 },
-  { time: 'Aug 14', produced: 180, qcPassed: 177, target: 185 },
-  { time: 'Aug 15', produced: 195, qcPassed: 192, target: 190 },
-  { time: 'Aug 16', produced: 205, qcPassed: 200, target: 200 },
-  { time: 'Aug 17', produced: 48, qcPassed: 46, target: 50 },
-];
+const EMPTY_TREND_7DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => ({
+  time: day,
+  produced: 0,
+  qcPassed: 0,
+  target: 0,
+}));
 
-const TREND_30DAYS = [
-  { time: 'Week 1', produced: 1240, qcPassed: 1215, target: 1200 },
-  { time: 'Week 2', produced: 1310, qcPassed: 1285, target: 1250 },
-  { time: 'Week 3', produced: 1290, qcPassed: 1260, target: 1250 },
-  { time: 'Week 4', produced: 1420, qcPassed: 1390, target: 1350 },
-  { time: 'Week 5', produced: 680, qcPassed: 665, target: 700 },
-];
+const EMPTY_TREND_30DAYS = ['Week 1', 'Week 2', 'Week 3', 'Week 4'].map((week) => ({
+  time: week,
+  produced: 0,
+  qcPassed: 0,
+  target: 0,
+}));
 
 export const TenantRoleDashboard: React.FC = () => {
   // ── Auth & Role Resolution ───────────────────────────────────
   const user = useAuthStore((state) => state.user);
   const hasPermission = useAuthStore((state) => state.hasPermission);
   const { companyName, logoUrl } = useTenantBranding();
+  const { formatCurrency, currencySymbol } = useCurrency();
+
+  const { data: metrics } = useQuery({
+    queryKey: ['tenant', 'dashboard', 'metrics'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{
+          data: {
+            commercial: {
+              today_revenue: number;
+              month_revenue: number;
+              active_orders: number;
+              total_receivable_due: number;
+            };
+            production: {
+              today_output: number;
+              target_output: number;
+              achievement_rate: number;
+              active_batches: number;
+            };
+            inventory: {
+              total_valuation: number;
+              low_stock_count: number;
+            };
+            quality: {
+              qc_pass_rate: number;
+              pending_inspections: number;
+            };
+          };
+        }>('/dashboard/metrics');
+        return res.data.data;
+      } catch {
+        return null;
+      }
+    },
+  });
 
   const roleName = user?.role || (user?.is_platform_admin ? 'Super Administrator' : '');
 
@@ -277,7 +304,7 @@ export const TenantRoleDashboard: React.FC = () => {
     try {
       const accepted = await promptPWAInstall();
       if (accepted) {
-        toast.success(`${companyName || 'SliceMart ERP'} Installed`, {
+        toast.success(`${companyName || 'Enterprise Cloud'} Installed`, {
           description: 'Application successfully added to your home screen.',
         });
       }
@@ -339,194 +366,146 @@ export const TenantRoleDashboard: React.FC = () => {
   const [customRangeLabel, setCustomRangeLabel] = useState<string | null>(null);
 
   // Production KPIs for single daily operational shift
-  const currentKPIs = TODAY_PRODUCTION_STAT;
+  const currentKPIs: ProductionStat = useMemo(() => ({
+    target: metrics?.production?.target_output ?? 0,
+    produced: metrics?.production?.today_output ?? 0,
+    pendingOrders: metrics?.production?.active_batches ?? 0,
+    qcPending: metrics?.quality?.pending_inspections ?? 0,
+    reworkQty: 0,
+    achievement: metrics?.production?.achievement_rate ?? 0,
+  }), [metrics]);
 
   // Chart data resolution
   const chartData = useMemo(() => {
     switch (timeframe) {
       case 'today':
-        return TREND_TODAY;
+        return EMPTY_TREND_TODAY;
       case '30days':
-        return TREND_30DAYS;
+        return EMPTY_TREND_30DAYS;
       case 'custom':
-        return TREND_7DAYS;
+        return EMPTY_TREND_7DAYS;
       case '7days':
       default:
-        return TREND_7DAYS;
+        return EMPTY_TREND_7DAYS;
     }
   }, [timeframe]);
 
-  // Operational Attention Items
-  const attentionItems: OrderPOItem[] = [
-    {
-      id: 'item-pcb',
-      name: 'PCB Control Board',
-      sku: 'RAW-PCB-101',
-      warehouse: 'WH-A',
-      currentStock: 0,
-      minThreshold: 200,
-      unit: 'pcs',
-      suggestedQty: 250,
+  // Operational Attention Items - query low stock dynamically
+  const { data: rawLowStock = [] } = useQuery({
+    queryKey: ['inventory', 'low-stock-attention'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{
+          data: Array<{
+            id: number;
+            sku: string;
+            name: string;
+            current_stock: number;
+            min_stock_alert: number;
+            unit?: string;
+            warehouse?: { name?: string };
+          }>;
+        }>('/inventory/stock?low_stock=true&per_page=5');
+        return res.data.data;
+      } catch {
+        return [];
+      }
     },
-    {
-      id: 'item-glass',
-      name: 'Toughened Glass Top (30cm)',
-      sku: 'RAW-GLS-300',
-      warehouse: 'WH-A',
-      currentStock: 45,
-      minThreshold: 150,
-      unit: 'pcs',
-      suggestedQty: 150,
-    },
-    {
-      id: 'item-regulator',
-      name: 'Heat Regulator (Bi-metal)',
-      sku: 'RAW-REG-202',
-      warehouse: 'WH-A',
-      currentStock: 85,
-      minThreshold: 200,
-      unit: 'pcs',
-      suggestedQty: 200,
-    },
-  ];
+  });
 
-  // Invoices list
-  const invoices = useMemo(() => [
-    {
-      id: 'INV-0715',
-      customer: 'Rahman Electronics & Hardware',
+  const attentionItems: OrderPOItem[] = useMemo(() => {
+    return rawLowStock.map((item) => ({
+      id: String(item.id),
+      name: item.name,
+      sku: item.sku,
+      warehouse: item.warehouse?.name || 'Main Facility',
+      currentStock: item.current_stock ?? 0,
+      minThreshold: item.min_stock_alert ?? 0,
+      unit: item.unit || 'pcs',
+      suggestedQty: Math.max((item.min_stock_alert ?? 0) - (item.current_stock ?? 0), 10),
+    }));
+  }, [rawLowStock]);
+
+  // Invoices list - query dynamic invoices
+  const { data: rawInvoices = [] } = useQuery({
+    queryKey: ['sales', 'dashboard-invoices'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{
+          data: Array<{
+            id: number;
+            invoice_number: string;
+            total_amount: number;
+            status: string;
+            payment_status: string;
+            customer?: { name?: string };
+          }>;
+        }>('/sales/invoices?per_page=5');
+        return res.data.data;
+      } catch {
+        return [];
+      }
+    },
+  });
+
+  const invoices = useMemo(() => {
+    return rawInvoices.map((inv) => ({
+      id: inv.invoice_number,
+      customer: inv.customer?.name || 'Walk-in Customer',
       type: 'B2B' as const,
-      amount: '৳ 14,000',
-      status: 'DELIVERED',
-      payment: 'PARTIAL',
-    },
-    {
-      id: 'INV-0716',
-      customer: 'Md. Shahidul Islam',
-      type: 'B2C' as const,
-      amount: '৳ 1,750',
-      status: 'DELIVERED',
-      payment: 'PAID',
-    },
-    {
-      id: 'INV-0717',
-      customer: 'Karim Trading Corporation',
-      type: 'B2B' as const,
-      amount: '৳ 59,500',
-      status: 'CONFIRMED',
-      payment: 'UNPAID',
-    },
-  ], []);
+      amount: formatCurrency(inv.total_amount),
+      status: inv.status?.toUpperCase() || 'DELIVERED',
+      payment: inv.payment_status?.toUpperCase() || 'PAID',
+    }));
+  }, [rawInvoices, formatCurrency]);
 
   const filteredInvoices = useMemo(() => {
     if (salesFilter === 'all') return invoices;
     return invoices.filter((inv) => inv.status === salesFilter);
   }, [salesFilter, invoices]);
 
-  // Production orders
-  const productionOrders = useMemo(() => [
-    {
-      id: 'PO-00125',
-      product: 'Infrared Cooker IR-101',
-      code: 'IR-101',
-      target: 50,
-      produced: 48,
-      progress: 96,
-      status: 'QC PENDING',
-    },
-    {
-      id: 'PO-00124',
-      product: 'Infrared Stove IS-201',
-      code: 'IS-201',
-      target: 40,
-      produced: 40,
-      progress: 100,
-      status: 'COMPLETED',
-    },
-    {
-      id: 'PO-00126',
-      product: 'Infrared Cooker IR-104',
-      code: 'IR-104',
-      target: 60,
-      produced: 0,
-      progress: 0,
-      status: 'READY',
-    },
-    {
-      id: 'PO-00123',
-      product: 'Infrared Cooker IR-102',
-      code: 'IR-102',
-      target: 30,
-      produced: 30,
-      progress: 100,
-      status: 'COMPLETED',
-    },
-  ], []);
+  // Production orders - dynamic or empty array
+  const productionOrders: Array<{
+    id: string;
+    product: string;
+    code: string;
+    target: number;
+    produced: number;
+    progress: number;
+    status: string;
+  }> = useMemo(() => [], []);
 
   const filteredOrders = useMemo(() => {
     if (orderFilter === 'all') return productionOrders;
     return productionOrders.filter((ord) => ord.status === orderFilter);
   }, [orderFilter, productionOrders]);
 
-  // QC Items
-  const qcList = [
-    {
-      id: 'QC-00125',
-      orderNo: 'PO-00125',
-      product: 'Infrared Cooker IR-101',
-      qty: 48,
-      status: 'PENDING',
-    },
-    {
-      id: 'QC-00124',
-      orderNo: 'PO-00124',
-      product: 'Infrared Stove IS-201',
-      qty: 40,
-      status: 'PASSED',
-      failed: 2,
-      rework: 2,
-    },
-    {
-      id: 'QC-00123',
-      orderNo: 'PO-00123',
-      product: 'Infrared Cooker IR-102 (Premium)',
-      qty: 30,
-      status: 'RE-TESTED',
-      failed: 1,
-      rework: 1,
-    },
-  ];
+  // QC Items - dynamic or empty array
+  const qcList: Array<{
+    id: string;
+    orderNo: string;
+    product: string;
+    qty: number;
+    status: string;
+    failed?: number;
+    rework?: number;
+  }> = useMemo(() => [], []);
 
-  // Workers
-  const workers = [
-    {
-      initials: 'MA',
-      name: 'Abdur',
-      output: '125k pcs',
-      rate: 94,
-      badge: 'Senior',
-      color: 'bg-emerald-500',
-    },
-    {
-      initials: 'MK',
-      name: 'Karim',
-      output: '92k pcs',
-      rate: 89,
-      badge: 'Production',
-      color: 'bg-amber-500',
-    },
-    {
-      initials: 'RB',
-      name: 'Begum',
-      output: '105k pcs',
-      rate: 81,
-      badge: 'Assembly',
-      color: 'bg-orange-500',
-    },
-  ];
+  // Workers - dynamic or empty array
+  const workers: Array<{
+    initials: string;
+    name: string;
+    output: string;
+    rate: number;
+    badge: string;
+    color: string;
+  }> = useMemo(() => [], []);
+
 
   return (
     <div className="space-y-5 pb-16 max-w-[1600px] mx-auto transition-token-colors">
+      <OnboardingStartupModal />
+      <OnboardingProgressCard />
       {/* ─────────────────────────────────────────────────────────────
           0. DYNAMIC ROLE PERSPECTIVE SELECTOR
       ───────────────────────────────────────────────────────────── */}
@@ -850,7 +829,7 @@ export const TenantRoleDashboard: React.FC = () => {
               Today's Production
             </h2>
             <div className="flex items-center gap-2 text-xs text-muted mt-0.5">
-              <span>17 August 2026</span>
+              <span>{new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}</span>
               <span>•</span>
               <span className="font-medium text-default">Daily Factory Run</span>
             </div>
@@ -1181,17 +1160,25 @@ export const TenantRoleDashboard: React.FC = () => {
           {/* 2 Big Stat Tiles */}
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl border border-default bg-surface-sunken p-3.5 space-y-1">
-              <div className="text-2xl font-extrabold font-mono text-default">15</div>
-              <div className="text-[11px] font-semibold text-muted">Raw Materials</div>
-              <div className="text-xs font-bold font-mono text-default">৳ 8.5L</div>
-              <div className="text-[10px] text-muted font-mono">6,370 pcs</div>
+              <div className="text-2xl font-extrabold font-mono text-default">
+                {metrics?.inventory?.low_stock_count ?? 0}
+              </div>
+              <div className="text-[11px] font-semibold text-muted">Stock Alerts</div>
+              <div className="text-xs font-bold font-mono text-default">
+                {formatCurrency(metrics?.inventory?.total_valuation ?? 0)}
+              </div>
+              <div className="text-[10px] text-muted font-mono">Total Valuation</div>
             </div>
 
             <div className="rounded-xl border border-default bg-surface-sunken p-3.5 space-y-1">
-              <div className="text-2xl font-extrabold font-mono text-default">482</div>
-              <div className="text-[11px] font-semibold text-muted">Finished Goods</div>
-              <div className="text-xs font-bold font-mono text-default">৳ 6.1L</div>
-              <div className="text-[10px] text-muted font-mono">7 SKUs</div>
+              <div className="text-2xl font-extrabold font-mono text-default">
+                {rawLowStock.length}
+              </div>
+              <div className="text-[11px] font-semibold text-muted">Attention Items</div>
+              <div className="text-xs font-bold font-mono text-default">
+                {formatCurrency(0)}
+              </div>
+              <div className="text-[10px] text-muted font-mono">PO Reorder Value</div>
             </div>
           </div>
 
@@ -1264,7 +1251,7 @@ export const TenantRoleDashboard: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-default pb-3">
             <div>
               <h3 className="text-sm font-bold text-default">Sales Overview</h3>
-              <p className="text-[11px] text-muted">August 2026</p>
+              <p className="text-[11px] text-muted">{new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</p>
             </div>
             
             <div className="flex items-center gap-2">
@@ -1307,19 +1294,27 @@ export const TenantRoleDashboard: React.FC = () => {
           {/* 4 Metric Summary Strip */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-1">
             <div>
-              <div className="text-lg sm:text-xl font-extrabold font-mono text-default">৳ 61,350</div>
+              <div className="text-lg sm:text-xl font-extrabold font-mono text-default">
+                {formatCurrency(metrics?.commercial?.today_revenue ?? 0)}
+              </div>
               <div className="text-[11px] text-muted">Today's Sales</div>
             </div>
             <div>
-              <div className="text-lg sm:text-xl font-extrabold font-mono text-default">৳ 1.1L</div>
+              <div className="text-lg sm:text-xl font-extrabold font-mono text-default">
+                {formatCurrency(metrics?.commercial?.month_revenue ?? 0)}
+              </div>
               <div className="text-[11px] text-muted">Monthly Revenue</div>
             </div>
             <div>
-              <div className="text-lg sm:text-xl font-extrabold font-mono text-red-500">৳ 83.5K</div>
+              <div className="text-lg sm:text-xl font-extrabold font-mono text-red-500">
+                {formatCurrency(metrics?.commercial?.total_receivable_due ?? 0)}
+              </div>
               <div className="text-[11px] text-muted">Outstanding</div>
             </div>
             <div>
-              <div className="text-lg sm:text-xl font-extrabold font-mono text-default">1</div>
+              <div className="text-lg sm:text-xl font-extrabold font-mono text-default">
+                {metrics?.commercial?.active_orders ?? 0}
+              </div>
               <div className="text-[11px] text-muted">Pending Delivery</div>
             </div>
           </div>
@@ -1338,48 +1333,56 @@ export const TenantRoleDashboard: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-default font-sans">
-                {filteredInvoices.map((inv) => (
-                  <tr
-                    key={inv.id}
-                    onClick={() => setSelectedInvoice(inv)}
-                    className="hover:bg-surface-sunken/60 cursor-pointer transition-colors"
-                  >
-                    <td className="px-3.5 py-2.5 font-mono font-bold text-primary">{inv.id}</td>
-                    <td className="px-3.5 py-2.5 font-medium text-default">{inv.customer}</td>
-                    <td className="px-3.5 py-2.5">
-                      <span className="rounded-md bg-blue-500/10 text-blue-500 px-1.5 py-0.5 text-[10px] font-bold">
-                        {inv.type}
-                      </span>
-                    </td>
-                    <td className="px-3.5 py-2.5 font-mono font-semibold text-default">{inv.amount}</td>
-                    <td className="px-3.5 py-2.5">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                          inv.status === 'DELIVERED'
-                            ? 'bg-emerald-500/15 text-emerald-600'
-                            : 'bg-surface-sunken text-muted'
-                        }`}
-                      >
-                        <span className="size-1.5 rounded-full bg-current" />
-                        {inv.status}
-                      </span>
-                    </td>
-                    <td className="px-3.5 py-2.5">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                          inv.payment === 'PAID'
-                            ? 'bg-emerald-500/15 text-emerald-600'
-                            : inv.payment === 'PARTIAL'
-                            ? 'bg-amber-500/15 text-amber-600'
-                            : 'bg-red-500/15 text-red-600'
-                        }`}
-                      >
-                        <span className="size-1.5 rounded-full bg-current" />
-                        {inv.payment}
-                      </span>
+                {filteredInvoices.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-6 text-muted text-xs">
+                      No invoices found for current filter
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredInvoices.map((inv) => (
+                    <tr
+                      key={inv.id}
+                      onClick={() => setSelectedInvoice(inv)}
+                      className="hover:bg-surface-sunken/60 cursor-pointer transition-colors"
+                    >
+                      <td className="px-3.5 py-2.5 font-mono font-bold text-primary">{inv.id}</td>
+                      <td className="px-3.5 py-2.5 font-medium text-default">{inv.customer}</td>
+                      <td className="px-3.5 py-2.5">
+                        <span className="rounded-md bg-blue-500/10 text-blue-500 px-1.5 py-0.5 text-[10px] font-bold">
+                          {inv.type}
+                        </span>
+                      </td>
+                      <td className="px-3.5 py-2.5 font-mono font-semibold text-default">{inv.amount}</td>
+                      <td className="px-3.5 py-2.5">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            inv.status === 'DELIVERED'
+                              ? 'bg-emerald-500/15 text-emerald-600'
+                              : 'bg-surface-sunken text-muted'
+                          }`}
+                        >
+                          <span className="size-1.5 rounded-full bg-current" />
+                          {inv.status}
+                        </span>
+                      </td>
+                      <td className="px-3.5 py-2.5">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            inv.payment === 'PAID'
+                              ? 'bg-emerald-500/15 text-emerald-600'
+                              : inv.payment === 'PARTIAL'
+                              ? 'bg-amber-500/15 text-amber-600'
+                              : 'bg-red-500/15 text-red-600'
+                          }`}
+                        >
+                          <span className="size-1.5 rounded-full bg-current" />
+                          {inv.payment}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -1394,7 +1397,7 @@ export const TenantRoleDashboard: React.FC = () => {
             >
               <div className="flex items-center justify-between gap-1 w-full">
                 <span className="text-xs font-bold font-mono text-default">
-                  {showBalance ? '৳ 122,000' : '৳ ••••••'}
+                  {showBalance ? formatCurrency(metrics?.commercial?.month_revenue ?? 0) : `${currencySymbol} ••••••`}
                 </span>
                 {showBalance ? (
                   <Eye className="size-3.5 text-muted group-hover:text-primary transition-colors shrink-0" />
@@ -1409,7 +1412,7 @@ export const TenantRoleDashboard: React.FC = () => {
             </button>
 
             <div className="rounded-xl border border-default bg-surface-sunken p-2.5 text-left flex flex-col justify-between">
-              <div className="text-xs font-bold font-mono text-default">৳ 0</div>
+              <div className="text-xs font-bold font-mono text-default">{formatCurrency(0)}</div>
               <div className="text-[10px] text-muted mt-1">Today's Expenses</div>
             </div>
 
@@ -1419,7 +1422,7 @@ export const TenantRoleDashboard: React.FC = () => {
               title="View bank accounts & ledgers"
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold font-mono text-default">4</span>
+                <span className="text-xs font-bold font-mono text-default">0</span>
                 <ArrowRight className="size-3 text-muted group-hover:text-primary transition-colors" />
               </div>
               <div className="text-[10px] text-muted group-hover:text-primary transition-colors mt-1">
@@ -1440,39 +1443,45 @@ export const TenantRoleDashboard: React.FC = () => {
 
           {/* Worker Leaderboard */}
           <div className="space-y-4">
-            {workers.map((w) => (
-              <button
-                type="button"
-                key={w.name}
-                onClick={() => setSelectedWorker(w)}
-                className="w-full text-left group rounded-xl border border-transparent hover:border-default hover:bg-surface-sunken/40 p-2.5 -mx-2.5 transition-all cursor-pointer space-y-1.5"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex size-7 items-center justify-center rounded-full bg-surface-sunken font-bold text-xs text-default border border-default">
-                      {w.initials}
+            {workers.length === 0 ? (
+              <div className="text-center py-8 text-xs text-muted">
+                No worker performance records for this shift
+              </div>
+            ) : (
+              workers.map((w) => (
+                <button
+                  type="button"
+                  key={w.name}
+                  onClick={() => setSelectedWorker(w)}
+                  className="w-full text-left group rounded-xl border border-transparent hover:border-default hover:bg-surface-sunken/40 p-2.5 -mx-2.5 transition-all cursor-pointer space-y-1.5"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex size-7 items-center justify-center rounded-full bg-surface-sunken font-bold text-xs text-default border border-default">
+                        {w.initials}
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-default group-hover:text-primary transition-colors">
+                          {w.name}
+                        </span>
+                        <span className="block text-[10px] text-muted font-mono">{w.output}</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-xs font-bold text-default group-hover:text-primary transition-colors">
-                        {w.name}
-                      </span>
-                      <span className="block text-[10px] text-muted font-mono">{w.output}</span>
+                    <div className="text-right">
+                      <span className="text-xs font-bold font-mono text-default">{w.rate}%</span>
+                      <span className="block text-[9px] text-muted">{w.badge}</span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-xs font-bold font-mono text-default">{w.rate}%</span>
-                    <span className="block text-[9px] text-muted">{w.badge}</span>
-                  </div>
-                </div>
 
-                <div className="h-1.5 w-full rounded-full bg-surface-sunken overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${w.color}`}
-                    style={{ width: `${w.rate}%` }}
-                  />
-                </div>
-              </button>
-            ))}
+                  <div className="h-1.5 w-full rounded-full bg-surface-sunken overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${w.color}`}
+                      style={{ width: `${w.rate}%` }}
+                    />
+                  </div>
+                </button>
+              ))
+            )}
           </div>
 
           <div className="pt-2 border-t border-default">
@@ -1480,11 +1489,12 @@ export const TenantRoleDashboard: React.FC = () => {
               to="/workforce"
               className="text-xs font-semibold text-muted hover:text-default flex items-center justify-center gap-1"
             >
-              <span>View all 10 employees</span>
+              <span>View all workforce members</span>
               <ArrowRight className="size-3" />
             </Link>
           </div>
         </div>
+
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
@@ -1546,55 +1556,63 @@ export const TenantRoleDashboard: React.FC = () => {
             <table className="w-full text-left text-xs">
               <thead className="bg-surface-sunken text-[10px] uppercase font-bold text-muted border-b border-default">
                 <tr>
-                  <th className="px-3 py-2.5">ORDER #</th>
-                  <th className="px-3 py-2.5">PRODUCT</th>
-                  <th className="px-3 py-2.5">TARGET</th>
-                  <th className="px-3 py-2.5">PRODUCED</th>
-                  <th className="px-3 py-2.5">PROGRESS</th>
-                  <th className="px-3 py-2.5">STATUS</th>
+                  <th className="px-3.5 py-2.5">ORDER #</th>
+                  <th className="px-3.5 py-2.5">PRODUCT</th>
+                  <th className="px-3.5 py-2.5">TARGET</th>
+                  <th className="px-3.5 py-2.5">PRODUCED</th>
+                  <th className="px-3.5 py-2.5">PROGRESS</th>
+                  <th className="px-3.5 py-2.5">STATUS</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-default">
-                {filteredOrders.map((ord) => (
-                  <tr
-                    key={ord.id}
-                    onClick={() => setSelectedOrder(ord)}
-                    className="hover:bg-surface-sunken/60 cursor-pointer transition-colors"
-                  >
-                    <td className="px-3 py-2.5 font-mono font-bold text-primary">{ord.id}</td>
-                    <td className="px-3 py-2.5">
-                      <div className="font-semibold text-default">{ord.code}</div>
-                      <div className="text-[10px] text-muted truncate max-w-40">{ord.product}</div>
-                    </td>
-                    <td className="px-3 py-2.5 font-mono font-semibold">{ord.target}</td>
-                    <td className="px-3 py-2.5 font-mono font-semibold">{ord.produced}</td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="h-1.5 w-14 rounded-full bg-surface-sunken overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-emerald-500"
-                            style={{ width: `${ord.progress}%` }}
-                          />
-                        </div>
-                        <span className="text-[10px] font-mono text-muted">{ord.progress}%</span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                          ord.status === 'COMPLETED'
-                            ? 'bg-emerald-500/15 text-emerald-600'
-                            : ord.status === 'QC PENDING'
-                            ? 'bg-amber-500/15 text-amber-600'
-                            : 'bg-blue-500/15 text-blue-600'
-                        }`}
-                      >
-                        <span className="size-1.5 rounded-full bg-current" />
-                        {ord.status}
-                      </span>
+                {filteredOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-6 text-muted text-xs">
+                      No active production orders
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredOrders.map((ord) => (
+                    <tr
+                      key={ord.id}
+                      onClick={() => setSelectedOrder(ord)}
+                      className="hover:bg-surface-sunken/60 cursor-pointer transition-colors"
+                    >
+                      <td className="px-3.5 py-2.5 font-mono font-bold text-primary">{ord.id}</td>
+                      <td className="px-3.5 py-2.5">
+                        <div className="font-semibold text-default">{ord.code}</div>
+                        <div className="text-[10px] text-muted truncate max-w-40">{ord.product}</div>
+                      </td>
+                      <td className="px-3.5 py-2.5 font-mono font-semibold">{ord.target}</td>
+                      <td className="px-3.5 py-2.5 font-mono font-semibold">{ord.produced}</td>
+                      <td className="px-3.5 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-14 rounded-full bg-surface-sunken overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-emerald-500"
+                              style={{ width: `${ord.progress}%` }}
+                            />
+                          </div>
+                          <span className="text-[10px] font-mono text-muted">{ord.progress}%</span>
+                        </div>
+                      </td>
+                      <td className="px-3.5 py-2.5">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            ord.status === 'COMPLETED'
+                              ? 'bg-emerald-500/15 text-emerald-600'
+                              : ord.status === 'QC PENDING'
+                              ? 'bg-amber-500/15 text-amber-600'
+                              : 'bg-blue-500/15 text-blue-600'
+                          }`}
+                        >
+                          <span className="size-1.5 rounded-full bg-current" />
+                          {ord.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -1610,59 +1628,69 @@ export const TenantRoleDashboard: React.FC = () => {
           </div>
 
           <div className="space-y-3">
-            {qcList.map((qc) => (
-              <button
-                type="button"
-                key={qc.id}
-                onClick={() => setSelectedQCItem(qc)}
-                className="w-full text-left group rounded-xl border border-default bg-surface-sunken/30 hover:border-primary/40 hover:bg-surface-sunken p-3 transition-all cursor-pointer space-y-1.5"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-xs text-primary">{qc.id}</span>
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold ${
-                        qc.status === 'PASSED'
-                          ? 'bg-emerald-500/15 text-emerald-600'
-                          : qc.status === 'PENDING'
-                          ? 'bg-amber-500/15 text-amber-600'
-                          : 'bg-blue-500/15 text-blue-600'
-                      }`}
-                    >
-                      <span className="size-1 rounded-full bg-current" />
-                      {qc.status}
-                    </span>
+            {qcList.length === 0 ? (
+              <div className="text-center py-8 text-xs text-muted">
+                No active QC audit queue items
+              </div>
+            ) : (
+              qcList.map((qc) => (
+                <button
+                  type="button"
+                  key={qc.id}
+                  onClick={() => setSelectedQCItem(qc)}
+                  className="w-full text-left group rounded-xl border border-default bg-surface-sunken/30 hover:border-primary/40 hover:bg-surface-sunken p-3 transition-all cursor-pointer space-y-1.5"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-xs text-primary">{qc.id}</span>
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                          qc.status === 'PASSED'
+                            ? 'bg-emerald-500/15 text-emerald-600'
+                            : qc.status === 'PENDING'
+                            ? 'bg-amber-500/15 text-amber-600'
+                            : 'bg-blue-500/15 text-blue-600'
+                        }`}
+                      >
+                        <span className="size-1 rounded-full bg-current" />
+                        {qc.status}
+                      </span>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-default">{qc.qty} pcs</span>
                   </div>
-                  <span className="text-xs font-mono font-bold text-default">{qc.qty} pcs</span>
-                </div>
 
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-medium text-default">{qc.product}</span>
-                  <span className="text-[10px] text-muted font-mono">{qc.orderNo}</span>
-                </div>
-
-                {qc.failed !== undefined && (
-                  <div className="flex items-center gap-3 text-[10px] text-muted pt-1">
-                    <span className="text-red-500">{qc.failed} failed</span>
-                    <span className="text-amber-500">{qc.rework} rework</span>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-medium text-default">{qc.product}</span>
+                    <span className="text-[10px] text-muted font-mono">{qc.orderNo}</span>
                   </div>
-                )}
-              </button>
-            ))}
+
+                  {qc.failed !== undefined && (
+                    <div className="flex items-center gap-3 text-[10px] text-muted pt-1">
+                      <span className="text-red-500">{qc.failed} failed</span>
+                      <span className="text-amber-500">{qc.rework} rework</span>
+                    </div>
+                  )}
+                </button>
+              ))
+            )}
           </div>
 
           {/* 3 Summary Pill Counters */}
           <div className="grid grid-cols-3 gap-2.5 pt-1">
             <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-2 text-center">
-              <div className="text-base font-extrabold font-mono text-amber-600 dark:text-amber-400">1</div>
+              <div className="text-base font-extrabold font-mono text-amber-600 dark:text-amber-400">
+                {metrics?.quality?.pending_inspections ?? 0}
+              </div>
               <div className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase">PENDING</div>
             </div>
             <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-2 text-center">
-              <div className="text-base font-extrabold font-mono text-emerald-600 dark:text-emerald-400">1</div>
-              <div className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">PASSED</div>
+              <div className="text-base font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
+                {metrics?.quality?.qc_pass_rate ? `${Math.round(metrics.quality.qc_pass_rate)}%` : '0%'}
+              </div>
+              <div className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">PASS RATE</div>
             </div>
             <div className="rounded-xl border border-orange-500/25 bg-orange-500/10 p-2 text-center">
-              <div className="text-base font-extrabold font-mono text-orange-600 dark:text-orange-400">1</div>
+              <div className="text-base font-extrabold font-mono text-orange-600 dark:text-orange-400">0</div>
               <div className="text-[9px] font-bold text-orange-600 dark:text-orange-400 uppercase">REWORK</div>
             </div>
           </div>
@@ -1695,30 +1723,9 @@ export const TenantRoleDashboard: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-default">
-                <tr className="hover:bg-surface-sunken/60 transition-colors">
-                  <td className="px-3.5 py-2.5 font-mono font-bold text-primary">DEL-0201</td>
-                  <td className="px-3.5 py-2.5 font-medium text-default truncate max-w-44">
-                    Rahman Electronics & Hardware
-                  </td>
-                  <td className="px-3.5 py-2.5 font-mono">30 pcs</td>
-                  <td className="px-3.5 py-2.5">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
-                      <span className="size-1.5 rounded-full bg-current" />
-                      DELIVERED
-                    </span>
-                  </td>
-                </tr>
-                <tr className="hover:bg-surface-sunken/60 transition-colors">
-                  <td className="px-3.5 py-2.5 font-mono font-bold text-primary">DEL-0202</td>
-                  <td className="px-3.5 py-2.5 font-medium text-default truncate max-w-44">
-                    Karim Trading Corporation
-                  </td>
-                  <td className="px-3.5 py-2.5 font-mono">50 pcs</td>
-                  <td className="px-3.5 py-2.5">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-600">
-                      <span className="size-1.5 rounded-full bg-current" />
-                      PENDING
-                    </span>
+                <tr>
+                  <td colSpan={4} className="text-center py-6 text-muted text-xs font-sans">
+                    No outbound deliveries recorded today
                   </td>
                 </tr>
               </tbody>
@@ -1741,15 +1748,15 @@ export const TenantRoleDashboard: React.FC = () => {
           {/* Single Shift Daily Attendance Counters */}
           <div className="grid grid-cols-3 gap-3">
             <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-center">
-              <div className="text-xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">9</div>
+              <div className="text-xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">0</div>
               <div className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">Present on Floor</div>
             </div>
             <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-center">
-              <div className="text-xl font-extrabold font-mono text-amber-600 dark:text-amber-400">1</div>
+              <div className="text-xl font-extrabold font-mono text-amber-600 dark:text-amber-400">0</div>
               <div className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">Approved Leave</div>
             </div>
             <div className="rounded-xl border border-blue-500/25 bg-blue-500/10 p-3 text-center">
-              <div className="text-xl font-extrabold font-mono text-blue-600 dark:text-blue-400">10</div>
+              <div className="text-xl font-extrabold font-mono text-blue-600 dark:text-blue-400">0</div>
               <div className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">Total Headcount</div>
             </div>
           </div>
@@ -1809,7 +1816,7 @@ export const TenantRoleDashboard: React.FC = () => {
                 {logoUrl ? (
                   <img
                     src={logoUrl}
-                    alt={companyName || 'SliceMart ERP'}
+                    alt={companyName || 'Enterprise Cloud'}
                     className="size-5 object-contain"
                   />
                 ) : (
@@ -1817,7 +1824,7 @@ export const TenantRoleDashboard: React.FC = () => {
                 )}
               </div>
               <div className="min-w-0">
-                <h4 className="font-bold text-xs text-default truncate">Install {companyName || 'SliceMart ERP'}</h4>
+                <h4 className="font-bold text-xs text-default truncate">Install {companyName || 'Enterprise Cloud'}</h4>
                 <span className="text-[10px] text-muted">Business Operations Platform PWA</span>
               </div>
             </div>

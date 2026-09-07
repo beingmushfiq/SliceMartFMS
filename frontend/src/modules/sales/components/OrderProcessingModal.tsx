@@ -12,13 +12,14 @@ import {
   Phone,
   User,
   AlertCircle,
+  Trash2,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import type { SalesOrder, SalesOrderStatus } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
-import { Modal } from '../../../components/ui/Modal';
+import { Modal, ConfirmDialog } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
+import { notify } from '../../../components/ui/Toast';
 
 interface OrderProcessingModalProps {
   order: SalesOrder | null;
@@ -41,6 +42,7 @@ export function OrderProcessingModal({ order, onClose, onNavigateToTab }: OrderP
   const queryClient = useQueryClient();
   const [cancelReason, setCancelReason] = useState('');
   const [showCancelPrompt, setShowCancelPrompt] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Status mutation
   const statusMutation = useMutation({
@@ -49,12 +51,12 @@ export function OrderProcessingModal({ order, onClose, onNavigateToTab }: OrderP
       await api.patch(`/sales/orders/${order.id}/status`, { status, notes });
     },
     onSuccess: (_, vars) => {
-      toast.success(`Order status updated to "${vars.status.toUpperCase()}".`);
+      notify.success(`Order status updated to "${vars.status.toUpperCase()}".`);
       queryClient.invalidateQueries({ queryKey: ['sales', 'orders'] });
       setShowCancelPrompt(false);
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : 'Failed to update order status');
+      notify.error(err instanceof Error ? err.message : 'Failed to update order status');
     },
   });
 
@@ -65,11 +67,11 @@ export function OrderProcessingModal({ order, onClose, onNavigateToTab }: OrderP
       await api.post(`/sales/orders/${order.id}/approve`, {});
     },
     onSuccess: () => {
-      toast.success('Sales order confirmed successfully.');
+      notify.success('Sales order confirmed successfully.');
       queryClient.invalidateQueries({ queryKey: ['sales', 'orders'] });
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : 'Failed to confirm sales order');
+      notify.error(err instanceof Error ? err.message : 'Failed to confirm sales order');
     },
   });
 
@@ -84,12 +86,12 @@ export function OrderProcessingModal({ order, onClose, onNavigateToTab }: OrderP
       return res.data;
     },
     onSuccess: (data) => {
-      toast.success(data?.message || 'Invoice created successfully.');
+      notify.success(data?.message || 'Invoice created successfully.');
       queryClient.invalidateQueries({ queryKey: ['sales', 'orders'] });
       queryClient.invalidateQueries({ queryKey: ['sales', 'invoices'] });
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : 'Failed to generate invoice');
+      notify.error(err instanceof Error ? err.message : 'Failed to generate invoice');
     },
   });
 
@@ -102,11 +104,28 @@ export function OrderProcessingModal({ order, onClose, onNavigateToTab }: OrderP
       });
     },
     onSuccess: () => {
-      toast.success('Payment recorded successfully.');
+      notify.success('Payment recorded successfully.');
       queryClient.invalidateQueries({ queryKey: ['sales', 'orders'] });
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : 'Failed to record payment');
+      notify.error(err instanceof Error ? err.message : 'Failed to record payment');
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!order) return;
+      await api.delete(`/sales/orders/${order.id}`);
+    },
+    onSuccess: () => {
+      notify.success('Sales order deleted successfully.');
+      setShowDeleteConfirm(false);
+      queryClient.invalidateQueries({ queryKey: ['sales', 'orders'] });
+      onClose();
+    },
+    onError: (err: unknown) => {
+      notify.error(err instanceof Error ? err.message : 'Failed to delete sales order');
     },
   });
 
@@ -116,6 +135,7 @@ export function OrderProcessingModal({ order, onClose, onNavigateToTab }: OrderP
   const isCancelled = order.status === 'cancelled';
 
   return (
+    <>
     <Modal
       open={Boolean(order)}
       onClose={onClose}
@@ -130,11 +150,35 @@ export function OrderProcessingModal({ order, onClose, onNavigateToTab }: OrderP
 
           <div className="flex items-center gap-2">
             {isCancelled ? (
-              <span className="text-xs font-semibold text-rose-500 flex items-center gap-1.5">
-                <XCircle className="size-4" /> This order has been cancelled
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-semibold text-rose-500 flex items-center gap-1.5">
+                  <XCircle className="size-4" /> Cancelled
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  loading={deleteMutation.isPending}
+                  className="text-rose-500 hover:bg-rose-500/10 hover:text-rose-600 flex items-center gap-1"
+                >
+                  <Trash2 className="size-3.5" />
+                  <span>Delete Order</span>
+                </Button>
+              </div>
             ) : (
               <>
+                {(order.status === 'draft' || order.status === 'pending') && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    loading={deleteMutation.isPending}
+                    className="text-rose-500 hover:bg-rose-500/10 hover:text-rose-600 flex items-center gap-1 mr-1"
+                  >
+                    <Trash2 className="size-3.5" />
+                    <span>Delete</span>
+                  </Button>
+                )}
                 {(order.status === 'draft' || order.status === 'pending') && (
                   <Button
                     variant="primary"
@@ -532,5 +576,18 @@ export function OrderProcessingModal({ order, onClose, onNavigateToTab }: OrderP
         </div>
       </div>
     </Modal>
+
+    <ConfirmDialog
+      open={showDeleteConfirm}
+      onClose={() => setShowDeleteConfirm(false)}
+      onConfirm={() => deleteMutation.mutate()}
+      title="Delete Sales Order"
+      message={`Are you sure you want to permanently delete order "${order.order_number}"? This will remove it from the active orders registry.`}
+      confirmLabel="Delete Order"
+      cancelLabel="Cancel"
+      variant="danger"
+      loading={deleteMutation.isPending}
+    />
+    </>
   );
 }

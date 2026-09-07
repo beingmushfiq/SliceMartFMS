@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   TrendingUp,
   ShoppingBag,
@@ -10,7 +11,11 @@ import {
   Store,
   ArrowRight,
   Eye,
+  Inbox,
+  Package,
 } from 'lucide-react';
+import { api } from '../../../lib/api/client';
+import { useCurrency } from '../../../lib/format/currency';
 
 export interface DashboardInvoice {
   id: string;
@@ -27,53 +32,84 @@ interface SalesDashboardViewProps {
 }
 
 export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenInvoice }) => {
+  const { formatCurrency } = useCurrency();
   const [salesFilter, setSalesFilter] = useState<'all' | 'DELIVERED' | 'CONFIRMED'>('all');
 
-  const invoices = useMemo(() => [
-    {
-      id: 'INV-0715',
-      customer: 'Rahman Electronics & Hardware',
-      type: 'B2B' as const,
-      amount: '৳ 14,000',
-      status: 'DELIVERED',
-      payment: 'PARTIAL',
-      date: 'Today, 11:30 AM',
+  const { data: metrics } = useQuery({
+    queryKey: ['tenant', 'dashboard', 'metrics'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{
+          data: {
+            commercial: {
+              today_revenue: number;
+              month_revenue: number;
+              active_orders: number;
+              total_receivable_due: number;
+            };
+          };
+        }>('/dashboard/metrics');
+        return res.data.data;
+      } catch {
+        return null;
+      }
     },
-    {
-      id: 'INV-0716',
-      customer: 'Md. Shahidul Islam',
-      type: 'B2C' as const,
-      amount: '৳ 1,750',
-      status: 'DELIVERED',
-      payment: 'PAID',
-      date: 'Today, 01:15 PM',
-    },
-    {
-      id: 'INV-0717',
-      customer: 'Karim Trading Corporation',
-      type: 'B2B' as const,
-      amount: '৳ 59,500',
-      status: 'CONFIRMED',
-      payment: 'UNPAID',
-      date: 'Today, 03:45 PM',
-    },
-    {
-      id: 'INV-0718',
-      customer: 'Chittagong Retail Storefront',
-      type: 'B2B' as const,
-      amount: '৳ 22,300',
-      status: 'CONFIRMED',
-      payment: 'PARTIAL',
-      date: 'Yesterday',
-    },
-  ], []);
+  });
 
-  const topProducts = [
-    { name: 'Infrared Cooker IR-101', code: 'IR-101', units: 48, revenue: '৳ 144,000', trend: '+24%' },
-    { name: 'Toughened Glass Top (30cm)', code: 'RAW-GLS-300', units: 35, revenue: '৳ 52,500', trend: '+15%' },
-    { name: 'Infrared Stove IS-201', code: 'IS-201', units: 18, revenue: '৳ 72,000', trend: '+8%' },
-    { name: 'Heat Regulator (Bi-metal)', code: 'RAW-REG-202', units: 28, revenue: '৳ 22,400', trend: '+12%' },
-  ];
+  const { data: rawInvoices = [] } = useQuery({
+    queryKey: ['sales', 'dashboard-invoices-list'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{
+          data: Array<{
+            id: number;
+            invoice_number: string;
+            total_amount: number;
+            status: string;
+            payment_status?: string;
+            customer?: { name: string };
+            invoice_date?: string;
+            created_at: string;
+          }>;
+        }>('/sales/invoices?per_page=10');
+        return res.data?.data || [];
+      } catch {
+        return [];
+      }
+    },
+  });
+
+  const { data: rawProducts = [] } = useQuery({
+    queryKey: ['catalogue', 'fast-moving-products'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{
+          data: Array<{
+            id: number;
+            uuid: string;
+            name: string;
+            sku: string;
+            sale_price?: number;
+          }>;
+        }>('/products?per_page=5');
+        return res.data?.data || [];
+      } catch {
+        return [];
+      }
+    },
+  });
+
+  const invoices: DashboardInvoice[] = useMemo(() => {
+    return rawInvoices.map((inv) => ({
+      id: inv.invoice_number,
+      customer: inv.customer?.name || 'Commercial Customer',
+      type: 'B2B',
+      amount: formatCurrency(Number(inv.total_amount) || 0),
+      status: inv.status,
+      payment: inv.payment_status || 'UNPAID',
+      date: inv.invoice_date || new Date(inv.created_at).toLocaleDateString(),
+    }));
+  }, [rawInvoices, formatCurrency]);
 
   const filteredInvoices = useMemo(() => {
     if (salesFilter === 'all') return invoices;
@@ -135,10 +171,10 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              ৳ 75,250
+              {metrics ? formatCurrency(metrics.commercial.today_revenue) : formatCurrency(0)}
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-              32 Transactions
+              Month: {metrics ? formatCurrency(metrics.commercial.month_revenue) : formatCurrency(0)}
             </span>
           </div>
         </div>
@@ -155,10 +191,10 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              12 Orders
+              {metrics ? `${metrics.commercial.active_orders} Orders` : '0 Orders'}
             </div>
             <span className="text-[10px] font-semibold text-muted">
-              4 Ready for Delivery
+              Active Fulfillment
             </span>
           </div>
         </div>
@@ -175,10 +211,10 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              ৳ 15,200
+              {formatCurrency(0)}
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-              Session Open
+              Terminal Active
             </span>
           </div>
         </div>
@@ -195,10 +231,10 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              ৳ 73,500
+              {metrics ? formatCurrency(metrics.commercial.total_receivable_due) : formatCurrency(0)}
             </div>
             <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-              3 Invoices Unpaid
+              Outstanding Due
             </span>
           </div>
         </div>
@@ -215,10 +251,10 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              5 Orders
+              0 Orders
             </div>
             <span className="text-[10px] font-semibold text-muted">
-              ৳ 12,400 Today
+              Ecom Sync Online
             </span>
           </div>
         </div>
@@ -235,10 +271,10 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              8 Prospects
+              0 Prospects
             </div>
             <span className="text-[10px] font-semibold text-muted">
-              2 High Priority
+              Pipeline Ready
             </span>
           </div>
         </div>
@@ -287,51 +323,61 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
           </div>
 
           <div className="divide-y divide-default">
-            {filteredInvoices.map((inv) => (
-              <div
-                key={inv.id}
-                className="py-3 flex items-center justify-between gap-3 hover:bg-surface-sunken/40 px-2 rounded-xl transition-colors"
-              >
-                <div className="space-y-0.5 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-default">{inv.customer}</span>
-                    <span className="rounded-md bg-surface-sunken px-1.5 py-0.5 text-[9px] font-mono font-bold text-muted border border-default">
-                      {inv.type}
-                    </span>
+            {filteredInvoices.length > 0 ? (
+              filteredInvoices.map((inv) => (
+                <div
+                  key={inv.id}
+                  className="py-3 flex items-center justify-between gap-3 hover:bg-surface-sunken/40 px-2 rounded-xl transition-colors"
+                >
+                  <div className="space-y-0.5 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-default truncate">{inv.customer}</span>
+                      <span className="rounded-md bg-surface-sunken px-1.5 py-0.5 text-[9px] font-mono font-bold text-muted border border-default">
+                        {inv.type}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-muted font-mono">
+                      <span>{inv.id}</span>
+                      <span>•</span>
+                      <span>{inv.date}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-[11px] text-muted font-mono">
-                    <span>{inv.id}</span>
-                    <span>•</span>
-                    <span>{inv.date}</span>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <div className="text-xs font-extrabold font-mono text-default">{inv.amount}</div>
-                    <span
-                      className={`text-[9px] font-bold uppercase tracking-wider ${
-                        inv.payment === 'PAID'
-                          ? 'text-emerald-500'
-                          : inv.payment === 'PARTIAL'
-                          ? 'text-amber-500'
-                          : 'text-red-500'
-                      }`}
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <div className="text-xs font-extrabold font-mono text-default">{inv.amount}</div>
+                      <span
+                        className={`text-[9px] font-bold uppercase tracking-wider ${
+                          inv.payment === 'PAID'
+                            ? 'text-emerald-500'
+                            : inv.payment === 'PARTIAL'
+                            ? 'text-amber-500'
+                            : 'text-red-500'
+                        }`}
+                      >
+                        {inv.payment}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onOpenInvoice?.(inv)}
+                      className="flex items-center gap-1 rounded-lg border border-default bg-surface px-2.5 py-1 text-xs font-semibold text-default hover:bg-surface-sunken transition-colors cursor-pointer shadow-2xs"
                     >
-                      {inv.payment}
-                    </span>
+                      <Eye className="size-3 text-muted" />
+                      <span>View</span>
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => onOpenInvoice?.(inv)}
-                    className="flex items-center gap-1 rounded-lg border border-default bg-surface px-2.5 py-1 text-xs font-semibold text-default hover:bg-surface-sunken transition-colors cursor-pointer shadow-2xs"
-                  >
-                    <Eye className="size-3 text-muted" />
-                    <span>View</span>
-                  </button>
                 </div>
+              ))
+            ) : (
+              <div className="p-8 text-center text-muted text-xs flex flex-col items-center justify-center gap-2">
+                <Inbox className="size-8 text-muted/50" />
+                <p>No commercial invoices recorded.</p>
+                <Link to="/sales" className="text-xs text-primary font-semibold hover:underline">
+                  Create Commercial Invoice
+                </Link>
               </div>
-            ))}
+            )}
           </div>
 
           <Link
@@ -347,24 +393,35 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
         <div className="rounded-2xl border border-default bg-surface p-5 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3 border-b border-default pb-2">
-              <h3 className="text-sm font-bold text-default">Fast-Moving SKUs</h3>
-              <span className="text-[10px] text-muted uppercase font-semibold">Today</span>
+              <h3 className="text-sm font-bold text-default">Catalogue SKUs</h3>
+              <span className="text-[10px] text-muted uppercase font-semibold">Active Master</span>
             </div>
             <div className="space-y-3">
-              {topProducts.map((p) => (
-                <div key={p.code} className="flex items-center justify-between p-2 rounded-xl bg-surface-sunken/50">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-default truncate">{p.name}</span>
+              {rawProducts.length > 0 ? (
+                rawProducts.map((p) => (
+                  <div key={p.id || p.sku} className="flex items-center justify-between p-2 rounded-xl bg-surface-sunken/50">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-default truncate">{p.name}</span>
+                      </div>
+                      <div className="text-[10px] text-muted font-mono">{p.sku}</div>
                     </div>
-                    <div className="text-[10px] text-muted font-mono">{p.units} units sold • {p.code}</div>
+                    <div className="text-right shrink-0">
+                      <div className="text-xs font-bold font-mono text-default">
+                        {formatCurrency(Number(p.sale_price) || 0)}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <div className="text-xs font-bold font-mono text-default">{p.revenue}</div>
-                    <span className="text-[10px] font-semibold text-emerald-500">{p.trend}</span>
-                  </div>
+                ))
+              ) : (
+                <div className="p-8 text-center text-muted text-xs flex flex-col items-center justify-center gap-2">
+                  <Package className="size-8 text-muted/50" />
+                  <p>No catalogue items recorded.</p>
+                  <Link to="/catalogue" className="text-xs text-primary font-semibold hover:underline">
+                    Manage Catalogue
+                  </Link>
                 </div>
-              ))}
+              )}
             </div>
           </div>
 

@@ -14,6 +14,8 @@ import {
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
 import type { SettingsSchemaDictionary } from '../../../types/api/settings';
+import { useTenantBranding } from '../../../lib/theme/useTenantBranding';
+import { useCurrency } from '../../../hooks/useCurrency';
 
 interface SettingsOverviewHubProps {
   schema: SettingsSchemaDictionary;
@@ -27,9 +29,11 @@ export const SettingsOverviewHub: React.FC<SettingsOverviewHubProps> = ({
   onSelectGroup,
   onOpenOmniSearch,
 }) => {
-  const companyName = String(formValues['company_legal_name'] || 'SliceMart Industries Ltd.');
-  const currency = String(formValues['currency_code'] || 'BDT');
-  const currencySymbol = String(formValues['currency_symbol'] || '৳');
+  const { companyName: tenantBrandName } = useTenantBranding();
+  const { currencyCode: activeCurrency, currencySymbol: activeSymbol } = useCurrency();
+  const companyName = String(formValues['company_legal_name'] || tenantBrandName || 'Enterprise Cloud');
+  const currency = String(formValues['currency_code'] || activeCurrency || 'USD');
+  const currencySymbol = String(formValues['currency_symbol'] || activeSymbol || '$');
   const timezone = String(formValues['system_timezone'] || 'Asia/Dhaka');
   const invoicePrefix = String(formValues['invoice_prefix'] || 'INV-');
 

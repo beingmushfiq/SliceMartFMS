@@ -10,6 +10,7 @@ import {
   Calendar,
   Briefcase,
 } from 'lucide-react';
+import { useCurrency } from '../../../lib/format/currency';
 
 interface WorkerItem {
   initials: string;
@@ -27,62 +28,23 @@ interface WorkforceDashboardViewProps {
 }
 
 export const WorkforceDashboardView: React.FC<WorkforceDashboardViewProps> = ({ onOpenWorker }) => {
-  const workers: WorkerItem[] = [
-    {
-      initials: 'MA',
-      name: 'Abdur Rahman',
-      department: 'Assembly Line 1',
-      output: '125k pcs',
-      rate: 94,
-      badge: 'Senior Master',
-      color: 'bg-emerald-500',
-      shift: 'Morning Shift',
-    },
-    {
-      initials: 'MK',
-      name: 'Karim Ullah',
-      department: 'Line 2 — Wiring',
-      output: '92k pcs',
-      rate: 89,
-      badge: 'Production Tech',
-      color: 'bg-amber-500',
-      shift: 'Morning Shift',
-    },
-    {
-      initials: 'RB',
-      name: 'Begum Rokeya',
-      department: 'Packaging & Seal',
-      output: '105k pcs',
-      rate: 81,
-      badge: 'Assembly Lead',
-      color: 'bg-orange-500',
-      shift: 'Morning Shift',
-    },
-    {
-      initials: 'SH',
-      name: 'Shahidul Islam',
-      department: 'QC Inspection',
-      output: '88k pcs',
-      rate: 96,
-      badge: 'QA Specialist',
-      color: 'bg-teal-500',
-      shift: 'Morning Shift',
-    },
-  ];
+  const { formatCurrency } = useCurrency();
+
+  const workers: WorkerItem[] = [];
 
   const departmentDistribution = [
-    { name: 'Factory Production Floor', count: 18, percent: 56, color: 'bg-indigo-500' },
-    { name: 'Warehouse & Storekeeping', count: 5, percent: 16, color: 'bg-amber-500' },
-    { name: 'Quality Control & Testing', count: 4, percent: 12, color: 'bg-cyan-500' },
-    { name: 'Commercial, Retail & POS', count: 5, percent: 16, color: 'bg-blue-500' },
+    { name: 'Factory Production Floor', count: 0, percent: 0, color: 'bg-indigo-500' },
+    { name: 'Warehouse & Storekeeping', count: 0, percent: 0, color: 'bg-amber-500' },
+    { name: 'Quality Control & Testing', count: 0, percent: 0, color: 'bg-cyan-500' },
+    { name: 'Commercial, Retail & POS', count: 0, percent: 0, color: 'bg-blue-500' },
   ];
 
-  const recentClockIns = [
-    { name: 'Abdur Rahman', time: '07:48 AM', status: 'ON TIME', line: 'Line 01' },
-    { name: 'Begum Rokeya', time: '07:52 AM', status: 'ON TIME', line: 'Packaging' },
-    { name: 'Karim Ullah', time: '08:04 AM', status: 'LATE (4m)', line: 'Line 02' },
-    { name: 'Shahidul Islam', time: '07:45 AM', status: 'ON TIME', line: 'QC Station' },
-  ];
+  const recentClockIns: Array<{
+    name: string;
+    time: string;
+    status: string;
+    line: string;
+  }> = [];
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -97,7 +59,7 @@ export const WorkforceDashboardView: React.FC<WorkforceDashboardViewProps> = ({ 
             </h2>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Morning Shift Operating (24/32 Clocked-In)
+              Daily Shift Attendance
             </span>
           </div>
           <p className="text-xs text-muted mt-0.5">
@@ -139,10 +101,10 @@ export const WorkforceDashboardView: React.FC<WorkforceDashboardViewProps> = ({ 
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              32 Staff
+              0 Staff
             </div>
             <span className="text-[10px] font-semibold text-muted">
-              4 Departments
+              Active Roster
             </span>
           </div>
         </div>
@@ -159,10 +121,10 @@ export const WorkforceDashboardView: React.FC<WorkforceDashboardViewProps> = ({ 
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              24 Clocked-In
+              0 Clocked-In
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-              75% Attendance Rate
+              Shift Active
             </span>
           </div>
         </div>
@@ -179,7 +141,7 @@ export const WorkforceDashboardView: React.FC<WorkforceDashboardViewProps> = ({ 
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              4 Staff
+              0 Staff
             </div>
             <span className="text-[10px] font-semibold text-muted">
               Approved Requests
@@ -199,10 +161,10 @@ export const WorkforceDashboardView: React.FC<WorkforceDashboardViewProps> = ({ 
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              96%
+              100%
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-              1 Late Clock-In Today
+              Optimal Shift Arrival
             </span>
           </div>
         </div>
@@ -219,10 +181,10 @@ export const WorkforceDashboardView: React.FC<WorkforceDashboardViewProps> = ({ 
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              125k pcs
+              0 pcs
             </div>
-            <span className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">
-              Abdur Rahman (94%)
+            <span className="text-[10px] font-semibold text-muted">
+              Daily Shift Benchmarks
             </span>
           </div>
         </div>
@@ -239,10 +201,10 @@ export const WorkforceDashboardView: React.FC<WorkforceDashboardViewProps> = ({ 
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              ৳ 485k
+              {formatCurrency(0)}
             </div>
             <span className="text-[10px] font-semibold text-muted">
-              August Cycle Open
+              {new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' })} Cycle
             </span>
           </div>
         </div>
@@ -269,41 +231,48 @@ export const WorkforceDashboardView: React.FC<WorkforceDashboardViewProps> = ({ 
           </div>
 
           <div className="space-y-2.5">
-            {workers.map((w) => (
-              <button
-                type="button"
-                key={w.name}
-                onClick={() => onOpenWorker?.(w)}
-                className="w-full text-left group rounded-xl border border-transparent hover:border-default hover:bg-surface-sunken/40 p-3 -mx-2 transition-all cursor-pointer space-y-2"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-8 items-center justify-center rounded-full bg-surface-sunken font-bold text-xs text-default border border-default">
-                      {w.initials}
+            {workers.length === 0 ? (
+              <div className="text-center py-8 text-xs text-muted">
+                No worker performance entries recorded for today's shift
+              </div>
+            ) : (
+              workers.map((w) => (
+                <button
+                  type="button"
+                  key={w.name}
+                  onClick={() => onOpenWorker?.(w)}
+                  className="w-full text-left group rounded-xl border border-transparent hover:border-default hover:bg-surface-sunken/40 p-3 -mx-2 transition-all cursor-pointer space-y-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-8 items-center justify-center rounded-full bg-surface-sunken font-bold text-xs text-default border border-default">
+                        {w.initials}
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-default group-hover:text-primary transition-colors">
+                          {w.name}
+                        </span>
+                        <span className="block text-[10px] text-muted">{w.department} • {w.shift}</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-xs font-bold text-default group-hover:text-primary transition-colors">
-                        {w.name}
-                      </span>
-                      <span className="block text-[10px] text-muted">{w.department} • {w.shift}</span>
+                    <div className="text-right">
+                      <span className="text-xs font-bold font-mono text-default">{w.rate}% Efficiency</span>
+                      <span className="block text-[10px] font-mono text-muted">{w.output}</span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-xs font-bold font-mono text-default">{w.rate}% Efficiency</span>
-                    <span className="block text-[10px] font-mono text-muted">{w.output}</span>
-                  </div>
-                </div>
 
-                <div className="h-1.5 w-full rounded-full bg-surface-sunken overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${w.color}`}
-                    style={{ width: `${w.rate}%` }}
-                  />
-                </div>
-              </button>
-            ))}
+                  <div className="h-1.5 w-full rounded-full bg-surface-sunken overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${w.color}`}
+                      style={{ width: `${w.rate}%` }}
+                    />
+                  </div>
+                </button>
+              ))
+            )}
           </div>
         </div>
+
 
         {/* Right (5 cols): Department Headcount & Morning Clock-in */}
         <div className="lg:col-span-5 rounded-2xl border border-default bg-surface p-5 shadow-xs flex flex-col justify-between space-y-4">
@@ -328,26 +297,32 @@ export const WorkforceDashboardView: React.FC<WorkforceDashboardViewProps> = ({ 
             </div>
 
             <div className="mt-5 pt-3 border-t border-default">
-              <h4 className="text-xs font-bold text-default mb-2">Morning Shift Clock-Ins</h4>
+              <h4 className="text-xs font-bold text-default mb-2">Shift Clock-Ins</h4>
               <div className="space-y-1.5">
-                {recentClockIns.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-xs p-1.5 rounded-lg bg-surface-sunken/40">
-                    <div>
-                      <span className="font-semibold text-default">{item.name}</span>
-                      <span className="text-[10px] text-muted block">{item.line}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-mono text-default font-semibold">{item.time}</span>
-                      <span
-                        className={`block text-[9px] font-bold ${
-                          item.status.includes('LATE') ? 'text-amber-500' : 'text-emerald-500'
-                        }`}
-                      >
-                        {item.status}
-                      </span>
-                    </div>
+                {recentClockIns.length === 0 ? (
+                  <div className="text-center py-4 text-xs text-muted font-sans">
+                    No active attendance records logged for this shift
                   </div>
-                ))}
+                ) : (
+                  recentClockIns.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-xs p-1.5 rounded-lg bg-surface-sunken/40">
+                      <div>
+                        <span className="font-semibold text-default">{item.name}</span>
+                        <span className="text-[10px] text-muted block">{item.line}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-mono text-default font-semibold">{item.time}</span>
+                        <span
+                          className={`block text-[9px] font-bold ${
+                            item.status.includes('LATE') ? 'text-amber-500' : 'text-emerald-500'
+                          }`}
+                        >
+                          {item.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>

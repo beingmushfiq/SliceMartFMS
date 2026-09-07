@@ -48,12 +48,13 @@ import { StorefrontDynamicPage } from '../pages/storefront/StorefrontDynamicPage
 import { StorefrontAccountPage } from '../pages/storefront/StorefrontAccountPage';
 import { StorefrontSettingsWorkspace } from '../modules/storefront/StorefrontSettingsWorkspace';
 import { StorefrontPageBuilderWorkspace } from '../modules/storefront/StorefrontPageBuilderWorkspace';
+import { StorefrontRedirect } from '../components/routing/StorefrontRedirect';
 
 export const router = createBrowserRouter([
   // Public Headless Storefront Routes
   {
     path: '/store',
-    element: <Navigate to="/store/slicemart" replace />,
+    element: <StorefrontRedirect />,
   },
   {
     path: '/store/:subdomain',

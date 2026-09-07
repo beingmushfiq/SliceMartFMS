@@ -108,7 +108,7 @@ const SAMPLE_RETURNS: SalesReturn[] = [
 ];
 
 export function SalesReturnsSection() {
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, currencySymbol } = useCurrency();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -654,7 +654,7 @@ export function SalesReturnsSection() {
                 <div className="grid grid-cols-12 gap-2 text-[10px] font-semibold text-muted px-1">
                   <div className="col-span-5">Product Description</div>
                   <div className="col-span-2">Return Qty</div>
-                  <div className="col-span-2">Net Rate (৳)</div>
+                  <div className="col-span-2">Net Rate ({currencySymbol})</div>
                   <div className="col-span-2">Disposition</div>
                   <div className="col-span-1 text-center">Del</div>
                 </div>

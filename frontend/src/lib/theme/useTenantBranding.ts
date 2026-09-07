@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
+import { useAuthStore } from '../auth/authStore';
 
 export interface TenantBranding {
   companyName: string;
@@ -9,13 +10,16 @@ export interface TenantBranding {
 }
 
 export function useTenantBranding(): TenantBranding {
-  const [companyName, setCompanyName] = useState<string>(() => {
+  const authTenantName = useAuthStore((s) => s.tenant?.name);
+  const [customCompanyName, setCustomCompanyName] = useState<string | null>(() => {
     try {
-      return localStorage.getItem('company_name') || 'SliceMart ERP';
+      return localStorage.getItem('company_name') || null;
     } catch {
-      return 'SliceMart ERP';
+      return null;
     }
   });
+
+  const companyName = customCompanyName || authTenantName || 'Enterprise Cloud ERP';
 
   const [logoUrl, setLogoUrl] = useState<string | null>(() => {
     try {
@@ -59,7 +63,7 @@ export function useTenantBranding(): TenantBranding {
         const data = res.data;
         if (data) {
           if (data.name) {
-            setCompanyName(data.name);
+            setCustomCompanyName(data.name);
             try {
               localStorage.setItem('company_name', data.name);
             } catch {

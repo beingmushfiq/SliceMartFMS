@@ -12,18 +12,134 @@ use App\Models\IndustryProfile;
 use App\Models\Tenant;
 use App\Models\TenantModule;
 use App\Models\TenantProductionStage;
+use App\Models\Unit;
+use App\Models\Warehouse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 final class TenantOnboardingController extends Controller
 {
     /**
-     * Get current onboarding progress, draft data, and tenant config.
+     * Calculate 0 to 100% profile setup completion score and milestone status.
+     */
+    public static function calculateCompletionScore(Tenant $tenant): array
+    {
+        if ($tenant->onboarding_completed_at !== null) {
+            return [
+                'percentage' => 100,
+                'is_completed' => true,
+                'completed_milestones' => [
+                    'legal_identity',
+                    'financial_defaults',
+                    'operational_facilities',
+                    'industry_blueprint',
+                    'workflow_stages',
+                    'standards_branding',
+                ],
+                'pending_milestones' => [],
+            ];
+        }
+
+        $branding = is_array($tenant->branding) ? $tenant->branding : [];
+        $draft = is_array($tenant->onboarding_draft) ? $tenant->onboarding_draft : [];
+
+        $milestones = [];
+        $score = 0;
+
+        // 1. Company & Legal Identity (Weight: 20%)
+        $hasLegal = !empty($tenant->name) && (
+            !empty($branding['company_legal_name']) ||
+            !empty($branding['tax_number']) ||
+            !empty($branding['address']) ||
+            !empty($draft['company_legal_name']) ||
+            !empty($draft['step_1']['company_legal_name'])
+        );
+        if ($hasLegal) {
+            $score += 20;
+            $milestones['legal_identity'] = true;
+        } else {
+            $milestones['legal_identity'] = false;
+        }
+
+        // 2. Financial & Localization (Weight: 15%)
+        $hasFinancial = !empty($tenant->currency_code) && !empty($tenant->timezone);
+        if ($hasFinancial) {
+            $score += 15;
+            $milestones['financial_defaults'] = true;
+        } else {
+            $milestones['financial_defaults'] = false;
+        }
+
+        // 3. Operational Facilities & Warehousing (Weight: 15%)
+        $hasFacility = Warehouse::where('tenant_id', $tenant->id)->exists() ||
+            !empty($draft['warehouse_name']) ||
+            !empty($draft['step_3']['warehouse_name']);
+        if ($hasFacility) {
+            $score += 15;
+            $milestones['operational_facilities'] = true;
+        } else {
+            $milestones['operational_facilities'] = false;
+        }
+
+        // 4. Industry Blueprint & Business Model (Weight: 15%)
+        $hasBlueprint = !empty($tenant->industry_profile_key) && !empty($tenant->business_type_keys);
+        if ($hasBlueprint) {
+            $score += 15;
+            $milestones['industry_blueprint'] = true;
+        } else {
+            $milestones['industry_blueprint'] = false;
+        }
+
+        // 5. Workflow Modules & Production Stages (Weight: 20%)
+        $hasStages = TenantProductionStage::where('tenant_id', $tenant->id)->exists() ||
+            !empty($draft['production_stages']) ||
+            !empty($draft['step_5']['production_stages']);
+        if ($hasStages) {
+            $score += 20;
+            $milestones['workflow_stages'] = true;
+        } else {
+            $milestones['workflow_stages'] = false;
+        }
+
+        // 6. Standards, Units & Branding (Weight: 15%)
+        $hasStandards = Unit::where('tenant_id', $tenant->id)->exists() ||
+            !empty($draft['units']) ||
+            !empty($draft['step_6']['units']) ||
+            !empty($branding['logo_url']) ||
+            !empty($branding['invoice_terms']);
+        if ($hasStandards) {
+            $score += 15;
+            $milestones['standards_branding'] = true;
+        } else {
+            $milestones['standards_branding'] = false;
+        }
+
+        $completed = array_keys(array_filter($milestones));
+        $pending = array_keys(array_filter($milestones, fn ($v) => !$v));
+
+        return [
+            'percentage' => min(100, $score),
+            'is_completed' => $score >= 100,
+            'completed_milestones' => $completed,
+            'pending_milestones' => $pending,
+        ];
+    }
+
+    /**
+     * Get current onboarding progress, draft data, completion score, and tenant config.
      */
     public function state(): JsonResponse
     {
         $tenantId = TenantContext::current()->tenantId();
         $tenant = Tenant::findOrFail($tenantId);
+
+        $completion = self::calculateCompletionScore($tenant);
+        $branding = is_array($tenant->branding) ? $tenant->branding : [];
+        $draft = is_array($tenant->onboarding_draft) ? $tenant->onboarding_draft : [];
+
+        // Check if primary warehouse exists
+        $primaryWarehouse = Warehouse::where('tenant_id', $tenantId)->where('is_default', true)->first();
 
         return response()->json([
             'success' => true,
@@ -38,7 +154,23 @@ final class TenantOnboardingController extends Controller
                 'manufacturing_type' => $tenant->manufacturing_type ?? 'discrete',
                 'onboarding_step' => $tenant->onboarding_step ?? 1,
                 'onboarding_completed' => (bool) $tenant->onboarding_completed_at,
-                'onboarding_draft' => $tenant->onboarding_draft ?? [],
+                'onboarding_draft' => $draft,
+                'completion_score' => $completion,
+
+                // Merged foundational attributes for easy wizard hydration
+                'company_legal_name' => $branding['company_legal_name'] ?? $draft['company_legal_name'] ?? $tenant->name,
+                'tax_number' => $branding['tax_number'] ?? $draft['tax_number'] ?? '',
+                'trade_license' => $branding['trade_license'] ?? $draft['trade_license'] ?? '',
+                'address' => $branding['address'] ?? $draft['address'] ?? '',
+                'phone' => $branding['phone'] ?? $draft['phone'] ?? '',
+                'email' => $branding['email'] ?? $draft['email'] ?? '',
+                'warehouse_name' => $primaryWarehouse?->name ?? $draft['warehouse_name'] ?? 'Main Central Warehouse',
+                'warehouse_address' => $primaryWarehouse?->address ?? $draft['warehouse_address'] ?? ($branding['address'] ?? ''),
+                'pos_counter_name' => $draft['pos_counter_name'] ?? 'Main Cash Counter 01',
+                'brand_color' => $branding['brand_color'] ?? $draft['brand_color'] ?? '#6366f1',
+                'logo_url' => $branding['logo_url'] ?? $draft['logo_url'] ?? '',
+                'invoice_terms' => $branding['invoice_terms'] ?? $draft['invoice_terms'] ?? '',
+                'units' => $draft['units'] ?? ['PCS', 'KG', 'BOX', 'PACK'],
             ],
         ]);
     }
@@ -56,28 +188,51 @@ final class TenantOnboardingController extends Controller
         $tenantId = TenantContext::current()->tenantId();
         $tenant = Tenant::findOrFail($tenantId);
 
-        $draft = $tenant->onboarding_draft ?? [];
-        $draft["step_{$validated['step']}"] = $validated['data'];
+        $draft = is_array($tenant->onboarding_draft) ? $tenant->onboarding_draft : [];
+        $stepData = $validated['data'];
+
+        $draft["step_{$validated['step']}"] = $stepData;
+        // Merge into root draft for quick top-level access
+        $draft = array_merge($draft, $stepData);
 
         $tenant->onboarding_step = max($tenant->onboarding_step ?? 1, $validated['step']);
-        $tenant->onboarding_draft = $draft;
+
+        // Update branding attributes if provided
+        $branding = is_array($tenant->branding) ? $tenant->branding : [];
+        $brandingFields = [
+            'company_legal_name', 'tax_number', 'trade_license', 'address',
+            'phone', 'email', 'brand_color', 'logo_url', 'invoice_terms'
+        ];
+        foreach ($brandingFields as $bf) {
+            if (isset($stepData[$bf]) && $stepData[$bf] !== '') {
+                $branding[$bf] = $stepData[$bf];
+            }
+        }
+        $tenant->branding = $branding;
 
         // Apply immediate tenant configuration if present
-        if (!empty($validated['data']['business_type_keys'])) {
-            $tenant->business_type_keys = $validated['data']['business_type_keys'];
+        if (!empty($stepData['company_name'])) {
+            $tenant->name = $stepData['company_name'];
         }
-        if (!empty($validated['data']['industry_profile_key'])) {
-            $tenant->industry_profile_key = $validated['data']['industry_profile_key'];
+        if (!empty($stepData['business_type_keys'])) {
+            $tenant->business_type_keys = $stepData['business_type_keys'];
         }
-        if (!empty($validated['data']['manufacturing_type'])) {
-            $tenant->manufacturing_type = $validated['data']['manufacturing_type'];
+        if (!empty($stepData['industry_profile_key'])) {
+            $tenant->industry_profile_key = $stepData['industry_profile_key'];
         }
-        if (!empty($validated['data']['currency_code'])) {
-            $tenant->currency_code = $validated['data']['currency_code'];
+        if (!empty($stepData['manufacturing_type'])) {
+            $tenant->manufacturing_type = $stepData['manufacturing_type'];
         }
-        if (!empty($validated['data']['timezone'])) {
-            $tenant->timezone = $validated['data']['timezone'];
+        if (!empty($stepData['currency_code'])) {
+            $tenant->currency_code = $stepData['currency_code'];
         }
+        if (!empty($stepData['timezone'])) {
+            $tenant->timezone = $stepData['timezone'];
+        }
+
+        $completion = self::calculateCompletionScore($tenant);
+        $draft['completion_score'] = $completion;
+        $tenant->onboarding_draft = $draft;
 
         $tenant->save();
         TenantCapabilityManifest::invalidate($tenantId);
@@ -88,12 +243,13 @@ final class TenantOnboardingController extends Controller
             'data' => [
                 'onboarding_step' => $tenant->onboarding_step,
                 'onboarding_draft' => $tenant->onboarding_draft,
+                'completion_score' => $completion,
             ],
         ]);
     }
 
     /**
-     * Complete the 10-step onboarding and provision all configured modules, stages, units, fields.
+     * Complete onboarding, provision default warehouse, units, modules, and finalize workspace.
      */
     public function complete(Request $request): JsonResponse
     {
@@ -111,6 +267,9 @@ final class TenantOnboardingController extends Controller
         $tenant->business_type_keys = $draft['business_type_keys'] ?? $profile?->business_type_keys ?? ['manufacturing'];
         $tenant->manufacturing_type = $draft['manufacturing_type'] ?? 'discrete';
 
+        if (!empty($draft['company_name'])) {
+            $tenant->name = $draft['company_name'];
+        }
         if (!empty($draft['currency_code'])) {
             $tenant->currency_code = $draft['currency_code'];
         }
@@ -123,8 +282,21 @@ final class TenantOnboardingController extends Controller
             $tenant->terminology = $profile->default_terminology;
         }
 
+        // Save Legal & Branding in $tenant->branding
+        $branding = is_array($tenant->branding) ? $tenant->branding : [];
+        $brandingFields = [
+            'company_legal_name', 'tax_number', 'trade_license', 'address',
+            'phone', 'email', 'brand_color', 'logo_url', 'invoice_terms'
+        ];
+        foreach ($brandingFields as $bf) {
+            if (isset($draft[$bf]) && $draft[$bf] !== '') {
+                $branding[$bf] = $draft[$bf];
+            }
+        }
+        $tenant->branding = $branding;
+
         $tenant->onboarding_completed_at = now();
-        $tenant->onboarding_step = 10;
+        $tenant->onboarding_step = 6;
         $tenant->save();
 
         // 2. Configure Modules
@@ -155,7 +327,43 @@ final class TenantOnboardingController extends Controller
             }
         }
 
-        // 4. Default Custom Fields
+        // 4. Ensure Default Central Warehouse exists
+        $warehouseName = $draft['warehouse_name'] ?? 'Main Central Warehouse';
+        $warehouseAddress = $draft['warehouse_address'] ?? ($branding['address'] ?? 'Central Operations Facility');
+        $existingWarehouse = Warehouse::where('tenant_id', $tenantId)->where('is_default', true)->first();
+        if (!$existingWarehouse) {
+            Warehouse::create([
+                'uuid' => (string) Str::uuid(),
+                'tenant_id' => $tenantId,
+                'code' => 'WH-MAIN',
+                'name' => $warehouseName,
+                'type' => 'central',
+                'address' => $warehouseAddress,
+                'is_default' => true,
+                'allows_negative_stock' => false,
+                'is_active' => true,
+            ]);
+        }
+
+        // 5. Ensure Standard Units of Measure exist
+        $units = $draft['units'] ?? ['PCS', 'KG', 'BOX', 'PACK'];
+        foreach ($units as $unitCode) {
+            $code = strtoupper(trim($unitCode));
+            if (empty($code)) continue;
+            Unit::firstOrCreate(
+                ['tenant_id' => $tenantId, 'code' => $code],
+                [
+                    'uuid' => (string) Str::uuid(),
+                    'name' => ucfirst(strtolower($code)),
+                    'type' => in_array($code, ['KG', 'GM', 'TON'], true) ? 'weight' : (in_array($code, ['LTR', 'ML'], true) ? 'volume' : 'count'),
+                    'is_base' => $code === 'PCS' || $code === 'KG',
+                    'precision' => 2,
+                    'is_active' => true,
+                ]
+            );
+        }
+
+        // 6. Default Custom Fields
         $customFields = $draft['custom_fields'] ?? $profile?->default_custom_fields ?? [];
         if (!empty($customFields)) {
             foreach ($customFields as $cf) {
@@ -179,7 +387,7 @@ final class TenantOnboardingController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Onboarding finalized successfully. Platform initialized.',
+            'message' => 'Onboarding finalized successfully. Platform initialized with 100% profile score.',
             'data' => TenantCapabilityManifest::forTenant($tenantId, true),
         ]);
     }

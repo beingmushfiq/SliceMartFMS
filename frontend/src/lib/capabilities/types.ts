@@ -61,6 +61,7 @@ export interface TenantCapabilityManifest {
   timezone: string;
   onboarding_completed: boolean;
   onboarding_step: number;
+  onboarding_percentage?: number;
   modules: Record<string, ModuleCapability>;
   nav_order?: {
     sections?: string[];

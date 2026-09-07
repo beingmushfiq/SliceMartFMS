@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Clock, Plus, RefreshCw, Search, XCircle, ShoppingCart, SlidersHorizontal } from 'lucide-react';
-import { toast } from 'sonner';
+import { CheckCircle2, Clock, Plus, RefreshCw, Search, XCircle, ShoppingCart, SlidersHorizontal, Trash2, Eye } from 'lucide-react';
 import type { SalesOrder } from '../../../types/api/sales';
 import type { Product } from '../../../types/api/catalog';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { OrderProcessingModal } from '../components/OrderProcessingModal';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
+import { ConfirmDialog } from '../../../components/ui/Modal';
+import { notify } from '../../../components/ui/Toast';
 
 interface SalesOrdersSectionProps {
   onNavigateToTab?: (tab: string) => void;
@@ -24,12 +25,13 @@ interface SoFormItem {
 }
 
 export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps = {}) {
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, currencySymbol } = useCurrency();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [channelFilter, setChannelFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
+  const [orderToDelete, setOrderToDelete] = useState<SalesOrder | null>(null);
 
   // New Order Form state
   const [channel, setChannel] = useState<'counter' | 'dealer' | 'phone' | 'field' | 'online'>(
@@ -141,11 +143,25 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
       await api.post(`/sales/orders/${orderId}/approve`, {});
     },
     onSuccess: () => {
-      toast.success('Sales order confirmed successfully.');
+      notify.success('Sales order confirmed successfully.');
       queryClient.invalidateQueries({ queryKey: ['sales', 'orders'] });
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : 'Failed to confirm sales order');
+      notify.error(err instanceof Error ? err.message : 'Failed to confirm sales order');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (orderId: number) => {
+      await api.delete(`/sales/orders/${orderId}`);
+    },
+    onSuccess: () => {
+      notify.success('Sales order deleted successfully.');
+      setOrderToDelete(null);
+      queryClient.invalidateQueries({ queryKey: ['sales', 'orders'] });
+    },
+    onError: (err: unknown) => {
+      notify.error(err instanceof Error ? err.message : 'Failed to delete sales order');
     },
   });
 
@@ -171,7 +187,7 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
       });
     },
     onSuccess: () => {
-      toast.success('Sales order created.');
+      notify.success('Sales order created.');
       setShowCreateModal(false);
       setCustomerName('');
       setCustomerPhone('');
@@ -192,7 +208,7 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
       queryClient.invalidateQueries({ queryKey: ['sales', 'orders'] });
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : 'Failed to create sales order');
+      notify.error(err instanceof Error ? err.message : 'Failed to create sales order');
     },
   });
 
@@ -411,14 +427,36 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
                             {approveMutation.isPending ? 'Confirming...' : 'Confirm'}
                           </button>
                         )}
+                        {order.status !== 'cancelled' ? (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedOrder(order)}
+                            className="rounded-lg bg-primary/10 border border-primary/20 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20 cursor-pointer transition-colors flex items-center gap-1"
+                            title="Open order processing workflow"
+                          >
+                            <SlidersHorizontal className="size-3" />
+                            <span>Process</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedOrder(order)}
+                            className="rounded-lg bg-surface-sunken border border-default px-2.5 py-1 text-[11px] font-semibold text-muted hover:text-default cursor-pointer transition-colors flex items-center gap-1"
+                            title="View cancelled order details"
+                          >
+                            <Eye className="size-3" />
+                            <span>View</span>
+                          </button>
+                        )}
                         <button
                           type="button"
-                          onClick={() => setSelectedOrder(order)}
-                          className="rounded-lg bg-primary/10 border border-primary/20 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20 cursor-pointer transition-colors flex items-center gap-1"
-                          title="Open order processing workflow"
+                          onClick={() => setOrderToDelete(order)}
+                          disabled={deleteMutation.isPending}
+                          className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-2 py-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 disabled:opacity-50 cursor-pointer transition-colors flex items-center gap-1"
+                          title="Delete sales order"
                         >
-                          <SlidersHorizontal className="size-3" />
-                          <span>Process</span>
+                          <Trash2 className="size-3" />
+                          <span>Delete</span>
                         </button>
                       </div>
                     </td>
@@ -515,8 +553,8 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
                 <div className="grid grid-cols-12 gap-2 text-[10px] font-semibold text-muted px-1">
                   <div className="col-span-5">Product / Item</div>
                   <div className="col-span-2">Qty</div>
-                  <div className="col-span-2">Price (৳)</div>
-                  <div className="col-span-2">Discount (৳)</div>
+                  <div className="col-span-2">Price ({currencySymbol})</div>
+                  <div className="col-span-2">Discount ({currencySymbol})</div>
                   <div className="col-span-1 text-center">Del</div>
                 </div>
 
@@ -597,9 +635,9 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
                             })
                           }
                           className="flex h-7.5 w-6 shrink-0 items-center justify-center rounded-r-lg border border-l-0 border-default bg-surface hover:bg-surface-sunken font-bold text-[10px] text-muted hover:text-default cursor-pointer transition-colors"
-                          title="Toggle Flat (৳) or Percentage (%)"
+                          title={`Toggle Flat (${currencySymbol}) or Percentage (%)`}
                         >
-                          {item.discount_type === 'percentage' ? '%' : '৳'}
+                          {item.discount_type === 'percentage' ? '%' : currencySymbol}
                         </button>
                       </div>
                     </div>
@@ -646,9 +684,9 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
                               setOrderDiscountType(orderDiscountType === 'percentage' ? 'flat' : 'percentage')
                             }
                             className="flex h-7.5 w-7 shrink-0 items-center justify-center rounded-r-lg border border-l-0 border-default bg-surface-sunken hover:bg-surface font-bold text-[10px] text-muted hover:text-default cursor-pointer transition-colors"
-                            title="Toggle Flat (৳) or Percentage (%)"
+                            title={`Toggle Flat (${currencySymbol}) or Percentage (%)`}
                           >
-                            {orderDiscountType === 'percentage' ? '%' : '৳'}
+                            {orderDiscountType === 'percentage' ? '%' : currencySymbol}
                           </button>
                         </div>
                       </div>
@@ -718,6 +756,23 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
         order={orders.find((o) => o.id === selectedOrder?.id) ?? selectedOrder}
         onClose={() => setSelectedOrder(null)}
         onNavigateToTab={onNavigateToTab}
+      />
+
+      {/* Delete Sales Order Confirmation Dialog */}
+      <ConfirmDialog
+        open={Boolean(orderToDelete)}
+        onClose={() => setOrderToDelete(null)}
+        onConfirm={() => {
+          if (orderToDelete) {
+            deleteMutation.mutate(orderToDelete.id);
+          }
+        }}
+        title="Delete Sales Order"
+        message={`Delete sales order ${orderToDelete?.order_number}? This action will permanently remove it from the active orders registry.`}
+        confirmLabel="Delete Order"
+        cancelLabel="Keep Order"
+        variant="danger"
+        loading={deleteMutation.isPending}
       />
     </div>
   );

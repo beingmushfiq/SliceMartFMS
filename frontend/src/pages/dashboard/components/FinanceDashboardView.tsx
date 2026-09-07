@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   Coins,
   TrendingUp,
@@ -22,6 +23,8 @@ import {
 } from 'recharts';
 import type { DashboardInvoice } from './SalesDashboardView';
 import type { DueCustomerItem } from './DashboardModals';
+import { api } from '../../../lib/api/client';
+import { useCurrency } from '../../../lib/format/currency';
 
 interface FinanceDashboardViewProps {
   onOpenDueItem?: (item: DueCustomerItem) => void;
@@ -29,63 +32,78 @@ interface FinanceDashboardViewProps {
 }
 
 const CASH_FLOW_DATA = [
-  { month: 'Mar', inflow: 620000, outflow: 480000 },
-  { month: 'Apr', inflow: 710000, outflow: 530000 },
-  { month: 'May', inflow: 830000, outflow: 610000 },
-  { month: 'Jun', inflow: 790000, outflow: 580000 },
-  { month: 'Jul', inflow: 910000, outflow: 670000 },
-  { month: 'Aug', inflow: 950000, outflow: 710000 },
+  { month: 'Current', inflow: 0, outflow: 0 },
 ];
 
 export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
   onOpenDueItem,
   onOpenInvoice,
 }) => {
+  const { formatCurrency, currencySymbol } = useCurrency();
 
-  const dueAccounts: DueCustomerItem[] = [
-    {
-      id: 'DUE-001',
-      customer: 'Karim Trading Corporation',
-      phone: '+880 1711-234567',
-      dueAmount: '৳ 59,500',
-      invoicesCount: 2,
-      oldestInvoiceDays: 14,
-      lastPaymentDate: '10 Aug 2026',
+  const { data: metrics } = useQuery({
+    queryKey: ['tenant', 'dashboard', 'metrics'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{
+          data: {
+            commercial: {
+              today_revenue: number;
+              month_revenue: number;
+              active_orders: number;
+              total_receivable_due: number;
+            };
+          };
+        }>('/dashboard/metrics');
+        return res.data.data;
+      } catch {
+        return null;
+      }
     },
-    {
-      id: 'DUE-002',
-      customer: 'Modern Kitchen & Home Appliance',
-      phone: '+880 1819-876543',
-      dueAmount: '৳ 85,000',
-      invoicesCount: 3,
-      oldestInvoiceDays: 22,
-      lastPaymentDate: '28 Jul 2026',
+  });
+
+  const { data: rawInvoices = [] } = useQuery({
+    queryKey: ['sales', 'unpaid-invoices-finance'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{
+          data: Array<{
+            id: number;
+            invoice_number: string;
+            total_amount: number;
+            status: string;
+            payment_status?: string;
+            customer?: { name: string; phone?: string };
+            invoice_date?: string;
+            created_at: string;
+          }>;
+        }>('/sales/invoices?per_page=10');
+        return res.data?.data || [];
+      } catch {
+        return [];
+      }
     },
-    {
-      id: 'DUE-003',
-      customer: 'Rahman Electronics & Hardware',
-      phone: '+880 1912-345678',
-      dueAmount: '৳ 14,000',
-      invoicesCount: 1,
-      oldestInvoiceDays: 8,
-      lastPaymentDate: '14 Aug 2026',
-    },
-    {
-      id: 'DUE-004',
-      customer: 'Dhaka Division Wholesale Agency',
-      phone: '+880 1610-998877',
-      dueAmount: '৳ 42,000',
-      invoicesCount: 2,
-      oldestInvoiceDays: 19,
-      lastPaymentDate: '02 Aug 2026',
-    },
-  ];
+  });
+
+  const dueAccounts: DueCustomerItem[] = useMemo(() => {
+    return rawInvoices
+      .filter((inv) => inv.payment_status !== 'PAID')
+      .map((inv) => ({
+        id: String(inv.id),
+        customer: inv.customer?.name || 'Commercial Client',
+        phone: inv.customer?.phone || 'N/A',
+        dueAmount: formatCurrency(Number(inv.total_amount) || 0),
+        invoicesCount: 1,
+        oldestInvoiceDays: 1,
+        lastPaymentDate: inv.invoice_date || 'Pending',
+      }));
+  }, [rawInvoices, formatCurrency]);
 
   const expenseBreakdown = [
-    { category: 'Raw Materials & Components', amount: '৳ 380,000', percent: 52, color: 'bg-blue-500' },
-    { category: 'Factory Labor & Piece-Rate', amount: '৳ 195,000', percent: 27, color: 'bg-emerald-500' },
-    { category: 'Machinery Power & Utilities', amount: '৳ 85,000', percent: 12, color: 'bg-amber-500' },
-    { category: 'Courier & Shipping Logistics', amount: '৳ 65,000', percent: 9, color: 'bg-purple-500' },
+    { category: 'Raw Materials & Components', amount: formatCurrency(0), percent: 0, color: 'bg-blue-500' },
+    { category: 'Factory Labor & Operations', amount: formatCurrency(0), percent: 0, color: 'bg-emerald-500' },
+    { category: 'Machinery & Utilities', amount: formatCurrency(0), percent: 0, color: 'bg-amber-500' },
+    { category: 'Logistics & Shipping', amount: formatCurrency(0), percent: 0, color: 'bg-purple-500' },
   ];
 
   return (
@@ -143,10 +161,10 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              ৳ 245,000
+              {metrics ? formatCurrency(metrics.commercial.total_receivable_due) : formatCurrency(0)}
             </div>
             <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-              12 Active Accounts
+              Active Accounts
             </span>
           </div>
         </div>
@@ -163,10 +181,10 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              ৳ 42,500
+              {metrics ? formatCurrency(metrics.commercial.today_revenue) : formatCurrency(0)}
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-              +18% vs Yesterday
+              Realtime Ledger
             </span>
           </div>
         </div>
@@ -183,10 +201,10 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              ৳ 950,000
+              {metrics ? formatCurrency(metrics.commercial.month_revenue) : formatCurrency(0)}
             </div>
             <span className="text-[10px] font-semibold text-muted">
-              Target: ৳ 1,200,000
+              Current Month
             </span>
           </div>
         </div>
@@ -203,10 +221,10 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              ৳ 180,000
+              {formatCurrency(0)}
             </div>
             <span className="text-[10px] font-semibold text-muted">
-              4 Vendor Invoices
+              Vendor Invoices
             </span>
           </div>
         </div>
@@ -223,10 +241,10 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              ৳ 1.42M
+              {formatCurrency(0)}
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-              Prime Bank & Cash
+              Cash & Bank Balance
             </span>
           </div>
         </div>
@@ -243,10 +261,10 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              ৳ 8.45M
+              {formatCurrency(0)}
             </div>
             <span className="text-[10px] font-semibold text-muted">
-              18 Factory Machines
+              Asset Registry
             </span>
           </div>
         </div>
@@ -261,16 +279,16 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
           <div className="flex items-center justify-between border-b border-default pb-3">
             <div>
               <h3 className="text-sm font-bold text-default">Enterprise Cash Flow Trend</h3>
-              <p className="text-[11px] text-muted">6-month revenue inflow vs operating expense outflow</p>
+              <p className="text-[11px] text-muted">Revenue inflow vs operating expense outflow</p>
             </div>
             <div className="flex items-center gap-3 text-xs">
               <span className="flex items-center gap-1.5 text-muted">
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                Inflow (৳)
+                Inflow ({currencySymbol})
               </span>
               <span className="flex items-center gap-1.5 text-muted">
                 <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
-                Outflow (৳)
+                Outflow ({currencySymbol})
               </span>
             </div>
           </div>
@@ -371,63 +389,71 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-default">
-              {dueAccounts.map((due) => (
-                <tr
-                  key={due.id}
-                  className="hover:bg-surface-sunken/60 cursor-pointer transition-colors"
-                  onClick={() => onOpenDueItem?.(due)}
-                >
-                  <td className="px-3 py-2.5 font-semibold text-default">{due.customer}</td>
-                  <td className="px-3 py-2.5 font-mono text-muted">{due.phone}</td>
-                  <td className="px-3 py-2.5 font-mono">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onOpenInvoice?.({
-                          id: `INV-${due.id.slice(-3)}`,
-                          customer: due.customer,
-                          type: 'B2B',
-                          amount: due.dueAmount,
-                          status: 'CONFIRMED',
-                          payment: 'UNPAID',
-                        });
-                      }}
-                      className="text-primary hover:underline font-semibold cursor-pointer"
-                      title="Quick view latest invoice"
-                    >
-                      {due.invoicesCount} Invoices
-                    </button>
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                        due.oldestInvoiceDays > 20
-                          ? 'bg-red-500/15 text-red-600'
-                          : due.oldestInvoiceDays > 10
-                          ? 'bg-amber-500/15 text-amber-600'
-                          : 'bg-blue-500/15 text-blue-600'
-                      }`}
-                    >
-                      {due.oldestInvoiceDays} days overdue
-                    </span>
-                  </td>
-                  <td className="px-3 py-2.5 font-mono font-bold text-amber-500">{due.dueAmount}</td>
-                  <td className="px-3 py-2.5 text-right">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onOpenDueItem?.(due);
-                      }}
-                      className="inline-flex items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-[11px] font-semibold text-primary border border-default hover:bg-surface-sunken transition-colors"
-                    >
-                      <Eye className="size-3" />
-                      <span>Review</span>
-                    </button>
+              {dueAccounts.length > 0 ? (
+                dueAccounts.map((due) => (
+                  <tr
+                    key={due.id}
+                    className="hover:bg-surface-sunken/60 cursor-pointer transition-colors"
+                    onClick={() => onOpenDueItem?.(due)}
+                  >
+                    <td className="px-3 py-2.5 font-semibold text-default">{due.customer}</td>
+                    <td className="px-3 py-2.5 font-mono text-muted">{due.phone}</td>
+                    <td className="px-3 py-2.5 font-mono">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenInvoice?.({
+                            id: `INV-${due.id}`,
+                            customer: due.customer,
+                            type: 'B2B',
+                            amount: due.dueAmount,
+                            status: 'CONFIRMED',
+                            payment: 'UNPAID',
+                          });
+                        }}
+                        className="text-primary hover:underline font-semibold cursor-pointer"
+                        title="Quick view latest invoice"
+                      >
+                        {due.invoicesCount} Invoices
+                      </button>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          due.oldestInvoiceDays > 20
+                            ? 'bg-red-500/15 text-red-600'
+                            : due.oldestInvoiceDays > 10
+                            ? 'bg-amber-500/15 text-amber-600'
+                            : 'bg-blue-500/15 text-blue-600'
+                        }`}
+                      >
+                        {due.oldestInvoiceDays} days overdue
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 font-mono font-bold text-amber-500">{due.dueAmount}</td>
+                    <td className="px-3 py-2.5 text-right">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenDueItem?.(due);
+                        }}
+                        className="inline-flex items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-[11px] font-semibold text-primary border border-default hover:bg-surface-sunken transition-colors"
+                      >
+                        <Eye className="size-3" />
+                        <span>Review</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-muted">
+                    No pending customer dues recorded.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

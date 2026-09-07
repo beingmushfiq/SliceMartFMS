@@ -18,18 +18,20 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { useAuthStore } from '../../lib/auth/authStore';
+import { useCurrency } from '../../lib/format/currency';
 import { Button } from '../../components/ui/Button';
 import { SelectDropdown } from '../../components/ui/Dropdown';
 
 export const ProfileSettingsWorkspace: React.FC = () => {
   const { user, tenant, activeBranch, branches, permissions } = useAuthStore();
+  const { currencyCode, currencySymbol } = useCurrency();
 
   const [activeTab, setActiveTab] = useState<'general' | 'security' | 'permissions' | 'preferences'>('general');
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
-  const [phone, setPhone] = useState('+880 1711-234567');
-  const [designation, setDesignation] = useState('Factory Operations Supervisor');
-  const [department, setDepartment] = useState('Production & Quality Assurance');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [designation, setDesignation] = useState(user?.role_label || user?.role || 'Staff Member');
+  const [department, setDepartment] = useState(user?.department || 'Operations');
 
   // Security state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -286,8 +288,8 @@ export const ProfileSettingsWorkspace: React.FC = () => {
                       <Clock className="size-3.5 text-amber-500" />
                       <span className="font-semibold text-[11px]">Timezone</span>
                     </div>
-                    <p className="font-bold text-default">{tenant?.timezone || 'Asia/Dhaka (GMT+6)'}</p>
-                    <p className="text-[10px] text-muted">Currency: {tenant?.currency_code || 'BDT (৳)'}</p>
+                    <p className="font-bold text-default">{tenant?.timezone || 'UTC'}</p>
+                    <p className="text-[10px] text-muted">Currency: {currencyCode} ({currencySymbol})</p>
                   </div>
                 </div>
               </div>
@@ -511,9 +513,9 @@ export const ProfileSettingsWorkspace: React.FC = () => {
                   </label>
                   <SelectDropdown
                     options={[
-                      { value: 'en-BD', label: 'English (Bangladesh) — ৳ Bangladeshi Taka' },
-                      { value: 'en-US', label: 'English (United States) — $ USD' },
-                      { value: 'bn-BD', label: 'বাংলা (বাংলাদেশ) — ৳ টাকা' },
+                      { value: 'en-US', label: `English — ${currencyCode} (${currencySymbol})` },
+                      { value: 'en-BD', label: `English (Regional) — ${currencyCode} (${currencySymbol})` },
+                      { value: 'bn-BD', label: `বাংলা — ${currencyCode} (${currencySymbol})` },
                     ]}
                     value={locale}
                     onChange={(val) => setLocale(val)}

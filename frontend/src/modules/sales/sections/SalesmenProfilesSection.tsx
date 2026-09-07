@@ -20,7 +20,7 @@ interface Props {
 }
 
 export function SalesmenProfilesSection({ onSelectSalesmanForDashboard }: Props) {
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, currencySymbol } = useCurrency();
   const queryClient = useQueryClient();
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const d = new Date();
@@ -47,7 +47,7 @@ export function SalesmenProfilesSection({ onSelectSalesmanForDashboard }: Props)
 
   const salesmen: SalesmanSummary[] = useMemo(() => {
     if (Array.isArray(responseData)) return responseData;
-    if (responseData && Array.isArray((responseData as any).data)) return (responseData as any).data;
+    if (responseData && 'data' in responseData && Array.isArray(responseData.data)) return responseData.data;
     return [];
   }, [responseData]);
 
@@ -347,7 +347,7 @@ export function SalesmenProfilesSection({ onSelectSalesmanForDashboard }: Props)
             <form onSubmit={handleSaveTarget} className="space-y-4 text-xs">
               <div>
                 <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
-                  Monthly Target Amount (৳) *
+                  Monthly Target Amount ({currencySymbol}) *
                 </label>
                 <input
                   type="number"

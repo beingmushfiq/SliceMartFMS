@@ -6,9 +6,15 @@ import { ImpersonationBanner } from './ImpersonationBanner';
 import { OfflineBanner } from './OfflineBanner';
 import { SeoHead } from '../seo/SeoHead';
 import { cn } from '../../lib/utils';
+import { useTenantBranding } from '../../lib/theme/useTenantBranding';
+import { useAuthStore } from '../../lib/auth/authStore';
 
 export function AppShell() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const { companyName } = useTenantBranding();
+  const tenantName = useAuthStore((s) => s.tenant?.name);
+  const brandName = companyName || tenantName || 'Enterprise ERP';
+
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     try {
       return localStorage.getItem('erp_sidebar_collapsed') === 'true';
@@ -32,10 +38,10 @@ export function AppShell() {
   return (
     <div className="flex min-h-dvh bg-base text-default font-sans antialiased flex-col">
       <SeoHead
-        title="SliceMart ERP"
+        title={brandName}
         description="Private Tenant Enterprise Management Portal"
         noIndex={true}
-        brandName="SliceMart ERP"
+        brandName={brandName}
       />
       <OfflineBanner />
       <ImpersonationBanner />

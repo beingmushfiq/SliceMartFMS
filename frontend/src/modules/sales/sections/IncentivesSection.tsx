@@ -21,7 +21,7 @@ import type {
 } from '../../../types/api/sales';
 
 export function IncentivesSection() {
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, currencySymbol } = useCurrency();
   const queryClient = useQueryClient();
   const [subTab, setSubTab] = useState<'calculations' | 'policies'>('calculations');
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
@@ -68,7 +68,7 @@ export function IncentivesSection() {
 
   const policies: IncentivePolicy[] = useMemo(() => {
     if (Array.isArray(rawPolicies)) return rawPolicies;
-    if (rawPolicies && Array.isArray((rawPolicies as any).data)) return (rawPolicies as any).data;
+    if (rawPolicies && 'data' in rawPolicies && Array.isArray(rawPolicies.data)) return rawPolicies.data;
     return [];
   }, [rawPolicies]);
 
@@ -90,22 +90,22 @@ export function IncentivesSection() {
 
   const calculations: IncentiveCalculation[] = useMemo(() => {
     if (Array.isArray(rawCalculations)) return rawCalculations;
-    if (rawCalculations && Array.isArray((rawCalculations as any).data)) return (rawCalculations as any).data;
+    if (rawCalculations && 'data' in rawCalculations && Array.isArray(rawCalculations.data)) return rawCalculations.data;
     return [];
   }, [rawCalculations]);
 
   // Trigger Calculation Mutation
   const runCalculateMutation = useMutation({
     mutationFn: async () => {
-      return api.post('/sales/incentives/calculate', {
+      return api.post<{ message?: string }>('/sales/incentives/calculate', {
         period_month: selectedMonth,
       });
     },
-    onSuccess: (res: any) => {
+    onSuccess: (res: { data?: { message?: string } }) => {
       toast.success(res.data?.message || 'Incentives evaluated successfully');
       queryClient.invalidateQueries({ queryKey: ['sales', 'incentives', 'calculations'] });
     },
-    onError: (err: any) => {
+    onError: (err: { response?: { data?: { message?: string } } }) => {
       toast.error(err?.response?.data?.message || 'Failed to calculate incentives');
     },
   });
@@ -123,7 +123,7 @@ export function IncentivesSection() {
       queryClient.invalidateQueries({ queryKey: ['sales', 'incentives', 'calculations'] });
       setApproveModalOpen(false);
     },
-    onError: (err: any) => {
+    onError: (err: { response?: { data?: { message?: string } } }) => {
       toast.error(err?.response?.data?.message || 'Failed to approve incentive');
     },
   });
@@ -138,7 +138,7 @@ export function IncentivesSection() {
       queryClient.invalidateQueries({ queryKey: ['sales', 'incentives', 'policies'] });
       setCreatePolicyModalOpen(false);
     },
-    onError: (err: any) => {
+    onError: (err: { response?: { data?: { message?: string } } }) => {
       toast.error(err?.response?.data?.message || 'Failed to create policy');
     },
   });
@@ -299,8 +299,8 @@ export function IncentivesSection() {
                 <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
                   <tr>
                     <th className="px-4 py-3.5">Sales Representative</th>
-                    <th className="px-4 py-3.5">Target (৳)</th>
-                    <th className="px-4 py-3.5">Achieved (৳)</th>
+                    <th className="px-4 py-3.5">Target ({currencySymbol})</th>
+                    <th className="px-4 py-3.5">Achieved ({currencySymbol})</th>
                     <th className="px-4 py-3.5">Achievement %</th>
                     <th className="px-4 py-3.5">Calculated Incentive</th>
                     <th className="px-4 py-3.5">Approved Amount</th>
@@ -520,7 +520,7 @@ export function IncentivesSection() {
 
               <div>
                 <label className="block text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">
-                  Approved Payout Amount (৳) *
+                  Approved Payout Amount ({currencySymbol}) *
                 </label>
                 <input
                   type="number"
@@ -622,7 +622,9 @@ export function IncentivesSection() {
                   </label>
                   <select
                     value={policyForm.basis}
-                    onChange={(e: any) => setPolicyForm({ ...policyForm, basis: e.target.value })}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                      setPolicyForm({ ...policyForm, basis: e.target.value as 'total_revenue' | 'profit' | 'collection' })
+                    }
                     className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-default focus:border-primary focus:outline-none"
                   >
                     <option value="total_revenue">Total Revenue Achieved</option>
@@ -700,8 +702,8 @@ export function IncentivesSection() {
                     />
                     <select
                       value={rule.incentive_type}
-                      onChange={(e: any) => {
-                        const val = e.target.value;
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                        const val = e.target.value as 'percentage' | 'fixed';
                         setPolicyForm((prev) => {
                           const copy = [...prev.rules];
                           const target = copy[idx];
@@ -712,7 +714,7 @@ export function IncentivesSection() {
                       className="rounded-lg border border-default bg-surface px-2 py-1 text-xs text-default"
                     >
                       <option value="percentage">% of Basis</option>
-                      <option value="fixed">Fixed (৳)</option>
+                      <option value="fixed">Fixed ({currencySymbol})</option>
                     </select>
                     <input
                       type="number"

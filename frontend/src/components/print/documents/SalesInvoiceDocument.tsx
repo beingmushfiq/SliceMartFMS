@@ -27,13 +27,14 @@ export function SalesInvoiceDocument({
   signatureLabels,
 }: SalesInvoiceDocumentProps) {
   const qrSvg = useMemo(() => {
+    const invPrefix = (businessConfig.name || 'ERP').replace(/[^a-zA-Z0-9]/g, '').slice(0, 10).toUpperCase() || 'ERP';
     return generateBarcodeSvg({
       bcid: 'qrcode',
-      text: `SLICEMART-INV:${invoice.invoice_number}|AMT:${invoice.total_amount}|DATE:${invoice.invoice_date}|BIN:${businessConfig.vatNumber}`,
+      text: `${invPrefix}-INV:${invoice.invoice_number}|AMT:${invoice.total_amount}|DATE:${invoice.invoice_date}|BIN:${businessConfig.vatNumber}`,
       scale: 1.5,
       height: 16,
     });
-  }, [invoice.invoice_number, invoice.total_amount, invoice.invoice_date, businessConfig.vatNumber]);
+  }, [invoice.invoice_number, invoice.total_amount, invoice.invoice_date, businessConfig.vatNumber, businessConfig.name]);
 
   const barcodeSvg = useMemo(() => {
     return generateBarcodeSvg({
@@ -48,6 +49,25 @@ export function SalesInvoiceDocument({
   const items = invoice.items ?? [];
   const dueAmountNum = parseFloat(invoice.due_amount || '0');
   const currencySymbol = businessConfig.currencySymbol || '৳';
+  const companyInitials = (businessConfig.name || 'ERP')
+    .split(' ')
+    .map((w) => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase() || 'ERP';
+
+  const currencyUnit =
+    businessConfig.currencyCode === 'USD'
+      ? 'Dollars'
+      : businessConfig.currencyCode === 'EUR'
+      ? 'Euros'
+      : businessConfig.currencyCode === 'GBP'
+      ? 'Pounds'
+      : businessConfig.currencyCode === 'BDT'
+      ? 'Taka'
+      : businessConfig.currencyCode || 'Units';
+  const subUnit = businessConfig.currencyCode === 'BDT' ? 'Paisa' : 'Cents';
 
   return (
     <div className="print-doc w-full text-slate-900 bg-white text-[9pt] leading-normal font-sans">
@@ -56,9 +76,13 @@ export function SalesInvoiceDocument({
         {/* Company Identity */}
         <div className="max-w-[55%]">
           <div className="flex items-center gap-2 mb-1">
-            <div className="size-8 rounded-lg bg-slate-900 text-white font-black text-sm flex items-center justify-center tracking-tighter">
-              SM
-            </div>
+            {businessConfig.logoUrl ? (
+              <img src={businessConfig.logoUrl} alt={businessConfig.name} className="size-8 rounded-lg object-contain" />
+            ) : (
+              <div className="size-8 rounded-lg bg-slate-900 text-white font-black text-sm flex items-center justify-center tracking-tighter">
+                {companyInitials}
+              </div>
+            )}
             <div>
               <h1 className="text-base font-black text-slate-950 uppercase tracking-tight">
                 {businessConfig.name}
@@ -129,7 +153,7 @@ export function SalesInvoiceDocument({
           </div>
           <div className="text-slate-600 mt-0.5 space-y-0.5">
             <p>Client ID: <span className="font-mono font-semibold text-slate-800">CUST-{invoice.party_id || 'RETAIL'}</span></p>
-            <p>Branch / POS: <span className="font-medium text-slate-800">Gulshan Flagship Store</span></p>
+            <p>Facility / Station: <span className="font-medium text-slate-800">{(invoice as unknown as { branch_name?: string })?.branch_name || 'Primary Operations'}</span></p>
           </div>
         </div>
 
@@ -142,7 +166,7 @@ export function SalesInvoiceDocument({
             <div>
               <span className="text-slate-500">Sales Order:</span>{' '}
               <span className="font-mono font-semibold text-slate-900">
-                {invoice.sales_order_number || 'DIRECT-POS'}
+                {invoice.sales_order_number || 'DIRECT-SALE'}
               </span>
             </div>
             <div>
@@ -159,11 +183,11 @@ export function SalesInvoiceDocument({
             </div>
             <div>
               <span className="text-slate-500">Payment Mode:</span>{' '}
-              <span className="font-medium text-slate-900">Cash / Mobile Banking</span>
+              <span className="font-medium text-slate-900">{(invoice as unknown as { payment_terms?: string })?.payment_terms || 'Standard Settlement'}</span>
             </div>
             <div>
-              <span className="text-slate-500">Warehouse:</span>{' '}
-              <span className="font-medium text-slate-900">Central Retail Floor</span>
+              <span className="text-slate-500">Distribution:</span>{' '}
+              <span className="font-medium text-slate-900">Central Fulfillment Hub</span>
             </div>
           </div>
         </div>
@@ -237,7 +261,7 @@ export function SalesInvoiceDocument({
               Total Amount in Words
             </span>
             <p className="font-bold text-slate-900 italic text-[8.5pt]">
-              {numberToWords(invoice.total_amount, 'Taka', 'Paisa')}
+              {numberToWords(invoice.total_amount, currencyUnit, subUnit)}
             </p>
           </div>
 
@@ -327,7 +351,7 @@ export function SalesInvoiceDocument({
       {/* Document Footer */}
       <div className="flex justify-between items-center text-[7pt] text-slate-400 pt-4 mt-4 border-t border-dashed border-slate-200 font-mono">
         <span>Document ID: {invoice.uuid || invoice.invoice_number}</span>
-        <span>Generated via SliceMart FMS &bull; Printed on {new Date().toLocaleString()}</span>
+        <span>Generated via {businessConfig.name || 'Enterprise FMS'} &bull; Printed on {new Date().toLocaleString()}</span>
       </div>
     </div>
   );

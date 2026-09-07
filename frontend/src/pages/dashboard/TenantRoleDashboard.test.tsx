@@ -210,6 +210,15 @@ describe('TenantRoleDashboard Dynamic Role Perspectives', () => {
 
   it('renders PWA banner with SliceMart ERP branding when install event fires', () => {
     useAuthStore.setState({
+      tenant: {
+        id: 1,
+        uuid: 'ten-1',
+        name: 'SliceMart ERP',
+        slug: 'slicemart',
+        status: 'active',
+        currency_code: 'BDT',
+        timezone: 'UTC',
+      },
       user: {
         id: '1',
         name: 'System Administrator',

@@ -16,6 +16,7 @@ import {
   ClipboardCheck,
   Building2,
   CheckCircle2,
+  Inbox,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -29,7 +30,7 @@ import {
 
 import type { DashboardInvoice } from './SalesDashboardView';
 import { api } from '../../../lib/api/client';
-import { useCurrency } from '../../../hooks/useCurrency';
+import { useCurrency } from '../../../lib/format/currency';
 
 interface ExecutiveDashboardViewProps {
   onOpenOrderPO?: (item: unknown) => void;
@@ -39,19 +40,19 @@ interface ExecutiveDashboardViewProps {
 }
 
 const REVENUE_DATA = [
-  { day: 'Mon', revenue: 62000, production: 42 },
-  { day: 'Tue', revenue: 71000, production: 46 },
-  { day: 'Wed', revenue: 58000, production: 39 },
-  { day: 'Thu', revenue: 84000, production: 50 },
-  { day: 'Fri', revenue: 92000, production: 54 },
-  { day: 'Sat', revenue: 68000, production: 45 },
-  { day: 'Sun', revenue: 75250, production: 48 },
+  { day: 'Mon', revenue: 0, production: 0 },
+  { day: 'Tue', revenue: 0, production: 0 },
+  { day: 'Wed', revenue: 0, production: 0 },
+  { day: 'Thu', revenue: 0, production: 0 },
+  { day: 'Fri', revenue: 0, production: 0 },
+  { day: 'Sat', revenue: 0, production: 0 },
+  { day: 'Sun', revenue: 0, production: 0 },
 ];
 
 export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
   onOpenInvoice,
 }) => {
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, currencySymbol } = useCurrency();
 
   const { data: metrics } = useQuery({
     queryKey: ['tenant', 'dashboard', 'metrics'],
@@ -84,6 +85,28 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
         return res.data.data;
       } catch {
         return null;
+      }
+    },
+  });
+
+  const { data: recentInvoices = [] } = useQuery({
+    queryKey: ['sales', 'recent-invoices-dashboard'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{
+          data: Array<{
+            id: number;
+            invoice_number: string;
+            total_amount: number;
+            status: string;
+            payment_status?: string;
+            customer?: { name: string };
+            created_at: string;
+          }>;
+        }>('/sales/invoices?per_page=4');
+        return res.data?.data || [];
+      } catch {
+        return [];
       }
     },
   });
@@ -142,10 +165,10 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              {metrics ? formatCurrency(metrics.commercial.today_revenue) : '৳ 75,250'}
+              {metrics ? formatCurrency(metrics.commercial.today_revenue) : formatCurrency(0)}
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-              Month: {metrics ? formatCurrency(metrics.commercial.month_revenue) : '৳ 950,000'}
+              Month: {metrics ? formatCurrency(metrics.commercial.month_revenue) : formatCurrency(0)}
             </span>
           </div>
         </div>
@@ -162,10 +185,10 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              {metrics ? `${metrics.commercial.active_orders} Orders` : '14 Orders'}
+              {metrics ? `${metrics.commercial.active_orders} Orders` : '0 Orders'}
             </div>
             <span className="text-[10px] font-semibold text-muted">
-              Due: {metrics ? formatCurrency(metrics.commercial.total_receivable_due) : '৳ 245,000'}
+              Due: {metrics ? formatCurrency(metrics.commercial.total_receivable_due) : formatCurrency(0)}
             </span>
           </div>
         </div>
@@ -182,10 +205,10 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              {metrics ? `${metrics.production.today_output} pcs` : '48 pcs'}
+              {metrics ? `${metrics.production.today_output} pcs` : '0 pcs'}
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-              {metrics ? `${metrics.production.achievement_rate}% Target Achieved` : '96% Target Achieved'}
+              {metrics ? `${metrics.production.achievement_rate}% Target Achieved` : '0% Target Achieved'}
             </span>
           </div>
         </div>
@@ -202,10 +225,10 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              {metrics ? formatCurrency(metrics.inventory.total_valuation) : '৳ 14.6M'}
+              {metrics ? formatCurrency(metrics.inventory.total_valuation) : formatCurrency(0)}
             </div>
             <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-              {metrics ? `${metrics.inventory.low_stock_count} Reorder Warnings` : '3 Reorder Warnings'}
+              {metrics ? `${metrics.inventory.low_stock_count} Reorder Warnings` : '0 Reorder Warnings'}
             </span>
           </div>
         </div>
@@ -222,10 +245,10 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              {metrics ? `${metrics.quality.qc_pass_rate}%` : '97.5%'}
+              {metrics ? `${metrics.quality.qc_pass_rate}%` : '100%'}
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-              {metrics ? `${metrics.quality.pending_inspections} Pending Tests` : 'Grade A Compliance'}
+              {metrics ? `${metrics.quality.pending_inspections} Pending Tests` : '0 Pending Tests'}
             </span>
           </div>
         </div>
@@ -242,10 +265,10 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              82%
+              {metrics ? `${metrics.production.achievement_rate}%` : '0%'}
             </div>
             <span className="text-[10px] font-semibold text-muted">
-              {metrics ? `${metrics.production.active_batches} Active Batches` : '4 Active Lines'}
+              {metrics ? `${metrics.production.active_batches} Active Batches` : '0 Active Batches'}
             </span>
           </div>
         </div>
@@ -367,23 +390,23 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
                 <span className="text-xs font-bold text-default">Commercial & POS</span>
               </div>
               <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400">
-                12 Orders
+                {metrics ? `${metrics.commercial.active_orders} Orders` : '0 Orders'}
               </span>
             </div>
             <div className="mt-3 space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted">Today's Revenue:</span>
-                <strong className="text-default font-mono">৳ 75,250</strong>
+                <strong className="text-default font-mono">{metrics ? formatCurrency(metrics.commercial.today_revenue) : formatCurrency(0)}</strong>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted">Invoices Pending:</span>
-                <strong className="text-amber-500 font-mono">৳ 73,500</strong>
+                <strong className="text-amber-500 font-mono">{metrics ? formatCurrency(metrics.commercial.total_receivable_due) : formatCurrency(0)}</strong>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted">POS Register:</span>
                 <span className="text-emerald-500 font-semibold flex items-center gap-1">
                   <span className="size-1.5 rounded-full bg-emerald-500" />
-                  Terminal #01 Active
+                  Terminal Online
                 </span>
               </div>
             </div>
@@ -406,23 +429,27 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
                 <span className="text-xs font-bold text-default">Factory Floor</span>
               </div>
               <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                96% Output
+                {metrics ? `${metrics.production.achievement_rate}% Output` : '0% Output'}
               </span>
             </div>
             <div className="mt-3 space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted">Units Produced:</span>
-                <strong className="text-default font-mono">48 / 50 pcs</strong>
+                <strong className="text-default font-mono">
+                  {metrics ? `${metrics.production.today_output} / ${metrics.production.target_output || 0} pcs` : '0 pcs'}
+                </strong>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted">Active Batches:</span>
-                <strong className="text-default font-mono">2 In-Progress</strong>
+                <strong className="text-default font-mono">
+                  {metrics ? `${metrics.production.active_batches} In-Progress` : '0 In-Progress'}
+                </strong>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted">Shift Status:</span>
                 <span className="text-emerald-500 font-semibold flex items-center gap-1">
                   <span className="size-1.5 rounded-full bg-emerald-500" />
-                  Morning Shift Lead
+                  Active Shift
                 </span>
               </div>
             </div>
@@ -445,21 +472,25 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
                 <span className="text-xs font-bold text-default">Warehouse Stock</span>
               </div>
               <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
-                3 Low Items
+                {metrics ? `${metrics.inventory.low_stock_count} Low Items` : '0 Low Items'}
               </span>
             </div>
             <div className="mt-3 space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted">Finished Goods:</span>
-                <strong className="text-default font-mono">482 Units</strong>
+                <span className="text-muted">Valuation:</span>
+                <strong className="text-default font-mono">
+                  {metrics ? formatCurrency(metrics.inventory.total_valuation) : formatCurrency(0)}
+                </strong>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted">Raw Materials:</span>
-                <strong className="text-default font-mono">15 Categories</strong>
+                <span className="text-muted">Stock Status:</span>
+                <strong className="text-default font-mono">
+                  {metrics && metrics.inventory.low_stock_count > 0 ? 'Warnings Active' : 'Normal'}
+                </strong>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted">Pending Inbound:</span>
-                <span className="text-blue-500 font-semibold">3 GRNs Expected</span>
+                <span className="text-muted">Ledger Tracking:</span>
+                <span className="text-blue-500 font-semibold">Active Realtime</span>
               </div>
             </div>
           </div>
@@ -481,21 +512,23 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
                 <span className="text-xs font-bold text-default">Quality Control</span>
               </div>
               <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[10px] font-bold text-cyan-600 dark:text-cyan-400">
-                97.5% Pass
+                {metrics ? `${metrics.quality.qc_pass_rate}% Pass` : '100% Pass'}
               </span>
             </div>
             <div className="mt-3 space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted">Inspections Done:</span>
-                <strong className="text-default font-mono">40 Passed</strong>
+                <span className="text-muted">Compliance:</span>
+                <strong className="text-default font-mono">ISO Standard</strong>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted">Queue Pending:</span>
-                <strong className="text-amber-500 font-mono">1 Batch (48 pcs)</strong>
+                <strong className="text-amber-500 font-mono">
+                  {metrics ? `${metrics.quality.pending_inspections} Inspections` : '0 Pending'}
+                </strong>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted">Rework Quantity:</span>
-                <span className="text-muted font-semibold">5 Units</span>
+                <span className="text-muted">Audits:</span>
+                <span className="text-muted font-semibold">Live Monitored</span>
               </div>
             </div>
           </div>
@@ -523,7 +556,7 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
             <div className="flex items-center gap-3 text-xs">
               <span className="flex items-center gap-1.5 text-muted">
                 <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
-                Revenue (৳)
+                Revenue ({currencySymbol})
               </span>
               <span className="flex items-center gap-1.5 text-muted">
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
@@ -566,53 +599,46 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
               <span className="text-[10px] text-muted uppercase font-semibold">Live Audit</span>
             </div>
             <div className="space-y-3">
-              <button
-                type="button"
-                onClick={() => onOpenInvoice?.({ id: 'INV-0717', customer: 'Karim Trading Corporation', type: 'B2B', amount: '৳ 59,500', status: 'CONFIRMED', payment: 'UNPAID' })}
-                className="w-full text-left flex items-start gap-2.5 p-2 rounded-xl hover:bg-surface-sunken transition-colors cursor-pointer"
-              >
-                <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 shrink-0 mt-0.5">
-                  <CheckCircle2 className="size-3.5" />
+              {recentInvoices.length > 0 ? (
+                recentInvoices.map((inv) => (
+                  <button
+                    key={inv.id}
+                    type="button"
+                    onClick={() =>
+                      onOpenInvoice?.({
+                        id: inv.invoice_number,
+                        customer: inv.customer?.name || 'Commercial Customer',
+                        type: 'B2B',
+                        amount: formatCurrency(Number(inv.total_amount) || 0),
+                        status: inv.status,
+                        payment: inv.payment_status || 'UNPAID',
+                      })
+                    }
+                    className="w-full text-left flex items-start gap-2.5 p-2 rounded-xl hover:bg-surface-sunken transition-colors cursor-pointer"
+                  >
+                    <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 shrink-0 mt-0.5">
+                      <CheckCircle2 className="size-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-default truncate">
+                        {inv.customer?.name || 'Direct Customer'}
+                      </div>
+                      <div className="text-[10px] text-muted">
+                        Invoice {inv.invoice_number} • {formatCurrency(Number(inv.total_amount) || 0)}
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono text-muted uppercase">{inv.status}</span>
+                  </button>
+                ))
+              ) : (
+                <div className="p-6 text-center text-muted text-xs flex flex-col items-center justify-center gap-2">
+                  <Inbox className="size-8 text-muted/50" />
+                  <p>No recent transactions recorded.</p>
+                  <Link to="/sales" className="text-xs text-primary font-semibold hover:underline">
+                    Create Commercial Order
+                  </Link>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-bold text-default truncate">Karim Trading Corporation</div>
-                  <div className="text-[10px] text-muted">B2B Invoice INV-0717 • ৳ 59,500</div>
-                </div>
-                <span className="text-[10px] font-mono text-muted">10m ago</span>
-              </button>
-
-              <div className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-surface-sunken transition-colors">
-                <div className="flex size-7 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 shrink-0 mt-0.5">
-                  <Factory className="size-3.5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-bold text-default truncate">Batch PO-00125 Completed</div>
-                  <div className="text-[10px] text-muted">48 pcs Infrared Cooker IR-101</div>
-                </div>
-                <span className="text-[10px] font-mono text-muted">45m ago</span>
-              </div>
-
-              <div className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-surface-sunken transition-colors">
-                <div className="flex size-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 shrink-0 mt-0.5">
-                  <Warehouse className="size-3.5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-bold text-default truncate">Stock Transfer Approved</div>
-                  <div className="text-[10px] text-muted">50 pcs IR-102 moved to WH-B</div>
-                </div>
-                <span className="text-[10px] font-mono text-muted">2h ago</span>
-              </div>
-
-              <div className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-surface-sunken transition-colors">
-                <div className="flex size-7 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-600 shrink-0 mt-0.5">
-                  <Microscope className="size-3.5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-bold text-default truncate">Batch PO-00124 QC Passed</div>
-                  <div className="text-[10px] text-muted">40 pcs Infrared Stove IS-201</div>
-                </div>
-                <span className="text-[10px] font-mono text-muted">3h ago</span>
-              </div>
+              )}
             </div>
           </div>
 

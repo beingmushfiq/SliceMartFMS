@@ -164,8 +164,8 @@ export const StorefrontDynamicPage: React.FC = () => {
       <div className="max-w-4xl mx-auto space-y-10 py-4">
         <SeoHead
           title="About Our Factory & Manufacturing Standards"
-          description={`Learn about ${config?.name || 'SliceMart'} manufacturing facility, certified quality controls, automated production batching, and direct wholesale pricing.`}
-          brandName={config?.name ?? 'Slice Mart'}
+          description={`Learn about ${config?.name || 'our'} manufacturing facility, certified quality controls, automated production batching, and direct wholesale pricing.`}
+          brandName={config?.name ?? 'Official Store'}
         />
 
         <BreadcrumbNav items={breadcrumbs} className="py-1" />
@@ -182,7 +182,7 @@ export const StorefrontDynamicPage: React.FC = () => {
           </h1>
 
           <p className="text-xs sm:text-sm text-zinc-300 max-w-2xl leading-relaxed">
-            {config?.name || 'SliceMart'} is an integrated manufacturing facility engineered to produce 
+            {config?.name ? `${config.name} ` : 'Our enterprise '}is an integrated manufacturing facility engineered to produce 
             premium-grade goods with absolute traceability, automated quality control, and zero middleman inflation.
           </p>
         </div>
