@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Actions;
 
+use App\Models\Party;
+use App\Modules\HR\Models\Employee;
+use App\Modules\Sales\Models\CrmActivity;
+use App\Modules\Sales\Models\CrmLead;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesOrderItem;
 use Illuminate\Support\Facades\DB;
@@ -181,6 +185,88 @@ final class CreateSalesOrderAction
             /** @var numeric-string $grandTotal */
             $grandTotal = bcadd(bcadd(bcsub(bcadd($grossSubtotal, $totalTax, 4), $totalDiscount, 4), $shipping, 4), $roundOff, 4);
 
+            // 1. Resolve Party (Customer)
+            $partyId = $data['party_id'] ?? null;
+            $party = null;
+            if ($partyId) {
+                $partyQuery = Party::where('tenant_id', $data['tenant_id']);
+                if (is_numeric($partyId)) {
+                    $party = $partyQuery->find((int) $partyId);
+                } else {
+                    $party = $partyQuery->where('uuid', (string) $partyId)->first();
+                }
+                if ($party) {
+                    $partyId = $party->id;
+                }
+            }
+
+            $customerName = $data['customer_name'] ?? ($party?->name ?? 'Walk-in Customer');
+            $customerPhone = $data['customer_phone'] ?? ($party?->phone ?? null);
+
+            // 2. Resolve Salesman / Salesperson
+            $userId = isset($data['created_by']) ? (int) $data['created_by'] : null;
+            $salespersonId = isset($data['salesperson_id']) ? (int) $data['salesperson_id'] : $userId;
+            $salesmanId = isset($data['salesman_id']) ? (int) $data['salesman_id'] : null;
+            if (!$salesmanId && $userId) {
+                $employee = Employee::where('tenant_id', $data['tenant_id'])->where('user_id', $userId)->first();
+                if ($employee) {
+                    $salesmanId = $employee->id;
+                }
+            }
+
+            // 3. Create CRM Lead first with all info (pending verification if sold later)
+            $leadId = isset($data['lead_id']) && is_numeric($data['lead_id']) ? (int) $data['lead_id'] : null;
+            if (!$leadId) {
+                $channel = $data['channel'] ?? 'counter';
+                $sourceMapping = [
+                    'counter' => 'walk_in',
+                    'dealer'  => 'referral',
+                    'phone'   => 'phone',
+                    'field'   => 'field_visit',
+                    'online'  => 'online',
+                ];
+                $leadSource = $sourceMapping[$channel] ?? 'walk_in';
+
+                $lead = new CrmLead();
+                $lead->tenant_id = $data['tenant_id'];
+                $lead->name = $customerName;
+                $lead->company_name = $party?->legal_name ?? $party?->name ?? null;
+                $lead->phone = $customerPhone;
+                $lead->email = $party?->email ?? null;
+                $lead->source = $leadSource;
+                $lead->stage = 'proposal'; // Placed order proposal, waiting for sale verification
+                $lead->is_fake = false;
+                $lead->validated_at = null; // Unverified initially; verified later when sold
+                $lead->validated_by = null;
+                $lead->assigned_to = $salespersonId;
+                $lead->expected_value = $grandTotal;
+                $lead->expected_close_date = $data['order_date'] ?? date('Y-m-d');
+                $lead->converted_party_id = $partyId;
+
+                $leadNotes = "Auto-created from sales order {$orderNumber}. Line items: " . count($data['items']) . ", Amount: {$grandTotal} BDT.";
+                if (!empty($data['notes'])) {
+                    $leadNotes .= "\nOrder Instructions: " . $data['notes'];
+                }
+                $lead->notes = $leadNotes;
+                $lead->created_by = $userId;
+                $lead->save();
+
+                $leadId = $lead->id;
+
+                // Log task activity on the newly minted lead
+                $activity = new CrmActivity();
+                $activity->tenant_id = $data['tenant_id'];
+                $activity->subject_type = 'lead';
+                $activity->subject_id = $lead->id;
+                $activity->type = 'task';
+                $activity->title = "Sales Order {$orderNumber} Placed";
+                $activity->description = "Order for {$grandTotal} BDT placed. Lead pending sale verification.";
+                $activity->assigned_to = $salespersonId;
+                $activity->created_by = $userId;
+                $activity->save();
+            }
+
+            // 4. Create Sales Order linked to Lead & Salesman
             $order = SalesOrder::create([
                 'tenant_id'       => $data['tenant_id'],
                 'order_number'    => $orderNumber,
@@ -188,9 +274,11 @@ final class CreateSalesOrderAction
                 'company_id'      => $data['company_id'] ?? null,
                 'branch_id'       => $data['branch_id'] ?? null,
                 'warehouse_id'    => $data['warehouse_id'] ?? null,
-                'party_id'        => $data['party_id'] ?? null,
-                'customer_name'   => $data['customer_name'] ?? null,
-                'customer_phone'  => $data['customer_phone'] ?? null,
+                'party_id'        => $partyId,
+                'lead_id'         => $leadId,
+                'salesman_id'     => $salesmanId,
+                'customer_name'   => $customerName,
+                'customer_phone'  => $customerPhone,
                 'pos_session_id'  => $data['pos_session_id'] ?? null,
                 'order_date'      => $data['order_date'],
                 'required_date'   => $data['required_date'] ?? null,
@@ -207,10 +295,10 @@ final class CreateSalesOrderAction
                 'delivery_type'   => $data['delivery_type'] ?? 'pickup',
                 'status'          => 'draft',
                 'payment_status'  => 'unpaid',
-                'salesperson_id'  => $data['salesperson_id'] ?? null,
+                'salesperson_id'  => $salespersonId,
                 'notes'           => $data['notes'] ?? null,
                 'internal_notes'  => $data['internal_notes'] ?? null,
-                'created_by'      => $data['created_by'] ?? null,
+                'created_by'      => $userId,
             ]);
 
             foreach ($finalItems as $fi) {
@@ -232,11 +320,18 @@ final class CreateSalesOrderAction
                     'returned_quantity'   => '0.0000',
                     'batch_code'          => $fi['item']['batch_code'] ?? null,
                     'sort_order'          => $fi['item']['sort_order'] ?? $fi['idx'],
-                    'created_by'          => $data['created_by'] ?? null,
+                    'created_by'          => $userId,
                 ]);
             }
 
-            return $order->load(['items.product', 'items.unit', 'customer', 'warehouse']);
+            // Sync salesman targets for the current month
+            if ($salesmanId || $userId) {
+                $periodMonth = substr($data['order_date'], 0, 7);
+                app(\App\Modules\Sales\Actions\SyncSalesmanAchievementAction::class)
+                    ->execute($data['tenant_id'], $salesmanId, $userId, $periodMonth);
+            }
+
+            return $order->load(['items.product', 'items.unit', 'customer', 'warehouse', 'lead']);
         });
     }
 }

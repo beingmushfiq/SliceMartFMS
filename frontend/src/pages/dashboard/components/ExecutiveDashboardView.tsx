@@ -32,11 +32,22 @@ import type { DashboardInvoice } from './SalesDashboardView';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../lib/format/currency';
 
+export interface TrendDataPoint {
+  day?: string;
+  time?: string;
+  date?: string;
+  revenue: number;
+  production?: number;
+  produced?: number;
+  target?: number;
+}
+
 interface ExecutiveDashboardViewProps {
   onOpenOrderPO?: (item: unknown) => void;
   onOpenReviewStock?: (item: unknown) => void;
   onOpenQC?: (item: unknown) => void;
   onOpenInvoice?: (invoice: DashboardInvoice) => void;
+  trends?: TrendDataPoint[] | undefined;
 }
 
 const REVENUE_DATA = [
@@ -51,6 +62,7 @@ const REVENUE_DATA = [
 
 export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
   onOpenInvoice,
+  trends,
 }) => {
   const { formatCurrency, currencySymbol } = useCurrency();
 
@@ -58,53 +70,43 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
     queryKey: ['tenant', 'dashboard', 'metrics'],
     queryFn: async () => {
       try {
-        const res = await api.get<{
-          data: {
-            commercial: {
-              today_revenue: number;
-              month_revenue: number;
-              active_orders: number;
-              total_receivable_due: number;
-            };
-            production: {
-              today_output: number;
-              target_output: number;
-              achievement_rate: number;
-              active_batches: number;
-            };
-            inventory: {
-              total_valuation: number;
-              low_stock_count: number;
-            };
-            quality: {
-              qc_pass_rate: number;
-              pending_inspections: number;
-            };
-          };
-        }>('/dashboard/metrics');
-        return res.data.data;
+        const res = await api.get<any>('/dashboard/metrics');
+        const raw = res.data;
+        if (raw && typeof raw === 'object') {
+          if ('commercial' in raw) return raw;
+          if ('data' in raw && raw.data && typeof raw.data === 'object' && 'commercial' in raw.data) {
+            return raw.data;
+          }
+        }
+        return raw ?? null;
       } catch {
         return null;
       }
     },
+    refetchInterval: 10000,
+    staleTime: 4000,
   });
+
+  const chartData = React.useMemo(() => {
+    const raw = (trends && trends.length > 0)
+      ? trends
+      : (metrics?.trends?.weekly && metrics.trends.weekly.length > 0 ? (metrics.trends.weekly as TrendDataPoint[]) : null);
+    if (!raw) return REVENUE_DATA;
+    return raw.map((d: TrendDataPoint) => ({
+      day: d.day || d.time || 'Day',
+      revenue: Number(d.revenue) || 0,
+      production: Number(d.production ?? d.produced ?? 0),
+      target: Number(d.target ?? 50),
+    }));
+  }, [trends, metrics?.trends?.weekly]);
 
   const { data: recentInvoices = [] } = useQuery({
     queryKey: ['sales', 'recent-invoices-dashboard'],
     queryFn: async () => {
       try {
-        const res = await api.get<{
-          data: Array<{
-            id: number;
-            invoice_number: string;
-            total_amount: number;
-            status: string;
-            payment_status?: string;
-            customer?: { name: string };
-            created_at: string;
-          }>;
-        }>('/sales/invoices?per_page=4');
-        return res.data?.data || [];
+        const res = await api.get<any>('/sales/invoices?per_page=4');
+        const d = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+        return Array.isArray(d) ? d : [];
       } catch {
         return [];
       }
@@ -567,17 +569,25 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
 
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={REVENUE_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="execRevenueGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="execProdGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" opacity={0.07} />
                 <XAxis dataKey="day" tickLine={false} axisLine={false} tick={{ fill: 'currentColor', fontSize: 11, opacity: 0.6 }} />
                 <YAxis tickLine={false} axisLine={false} tick={{ fill: 'currentColor', fontSize: 11, opacity: 0.6 }} />
                 <Tooltip
+                  formatter={(value: any, name: any) => [
+                    name === 'revenue' ? formatCurrency(Number(value) || 0) : `${value} pcs`,
+                    name === 'revenue' ? 'Revenue' : 'Production Output',
+                  ]}
                   contentStyle={{
                     backgroundColor: 'var(--surface-raised, #18181b)',
                     borderColor: 'var(--border-default, #27272a)',
@@ -585,7 +595,8 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
                     fontSize: '11px',
                   }}
                 />
-                <Area type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2.5} fillOpacity={1} fill="url(#execRevenueGrad)" />
+                <Area type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2.5} fillOpacity={1} fill="url(#execRevenueGrad)" name="revenue" />
+                <Area type="monotone" dataKey="production" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#execProdGrad)" name="production" />
               </AreaChart>
             </ResponsiveContainer>
           </div>

@@ -7,7 +7,6 @@ import {
   Truck,
   Undo2,
   Users,
-  Kanban,
   Target,
   Award,
   UserCheck,
@@ -94,7 +93,7 @@ const CATEGORIES: CategoryConfig[] = [
   {
     id: 'crm',
     label: 'CRM & Accounts',
-    tagline: 'Leads Pipeline & Customer Balances',
+    tagline: 'Leads Directory & Customer Balances',
     icon: Users,
     tabs: ['leads', 'customers'],
     defaultTab: 'leads',
@@ -158,11 +157,11 @@ const TABS: TabConfig[] = [
   {
     id: 'leads',
     label: 'Commercial Leads',
-    shortLabel: 'Leads Pipeline',
+    shortLabel: 'Commercial Leads',
     category: 'crm',
-    badge: 'Pipeline',
-    icon: Kanban,
-    description: 'Opportunity pipeline, stage tracking, quotation follow-up & win/loss analytics',
+    badge: 'Leads',
+    icon: UserCheck,
+    description: 'Lead generation, stage qualification, quotation follow-up & conversion tracking',
   },
   {
     id: 'customers',

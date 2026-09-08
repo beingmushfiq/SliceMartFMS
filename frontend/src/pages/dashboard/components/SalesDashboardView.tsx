@@ -39,17 +39,15 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
     queryKey: ['tenant', 'dashboard', 'metrics'],
     queryFn: async () => {
       try {
-        const res = await api.get<{
-          data: {
-            commercial: {
-              today_revenue: number;
-              month_revenue: number;
-              active_orders: number;
-              total_receivable_due: number;
-            };
-          };
-        }>('/dashboard/metrics');
-        return res.data.data;
+        const res = await api.get<any>('/dashboard/metrics');
+        const raw = res.data;
+        if (raw && typeof raw === 'object') {
+          if ('commercial' in raw) return raw;
+          if ('data' in raw && raw.data && typeof raw.data === 'object' && 'commercial' in raw.data) {
+            return raw.data;
+          }
+        }
+        return raw ?? null;
       } catch {
         return null;
       }
@@ -60,19 +58,9 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
     queryKey: ['sales', 'dashboard-invoices-list'],
     queryFn: async () => {
       try {
-        const res = await api.get<{
-          data: Array<{
-            id: number;
-            invoice_number: string;
-            total_amount: number;
-            status: string;
-            payment_status?: string;
-            customer?: { name: string };
-            invoice_date?: string;
-            created_at: string;
-          }>;
-        }>('/sales/invoices?per_page=10');
-        return res.data?.data || [];
+        const res = await api.get<any>('/sales/invoices?per_page=10');
+        const d = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+        return Array.isArray(d) ? d : [];
       } catch {
         return [];
       }
@@ -83,16 +71,9 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
     queryKey: ['catalogue', 'fast-moving-products'],
     queryFn: async () => {
       try {
-        const res = await api.get<{
-          data: Array<{
-            id: number;
-            uuid: string;
-            name: string;
-            sku: string;
-            sale_price?: number;
-          }>;
-        }>('/products?per_page=5');
-        return res.data?.data || [];
+        const res = await api.get<any>('/products?per_page=5');
+        const d = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+        return Array.isArray(d) ? d : [];
       } catch {
         return [];
       }

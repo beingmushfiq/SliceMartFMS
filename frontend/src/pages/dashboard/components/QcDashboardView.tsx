@@ -33,15 +33,15 @@ export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpen
     queryKey: ['tenant', 'dashboard', 'metrics'],
     queryFn: async () => {
       try {
-        const res = await api.get<{
-          data: {
-            quality: {
-              qc_pass_rate: number;
-              pending_inspections: number;
-            };
-          };
-        }>('/dashboard/metrics');
-        return res.data.data;
+        const res = await api.get<any>('/dashboard/metrics');
+        const raw = res.data;
+        if (raw && typeof raw === 'object') {
+          if ('quality' in raw) return raw;
+          if ('data' in raw && raw.data && typeof raw.data === 'object' && 'quality' in raw.data) {
+            return raw.data;
+          }
+        }
+        return raw ?? null;
       } catch {
         return null;
       }

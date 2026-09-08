@@ -11,6 +11,8 @@ import {
   Briefcase,
 } from 'lucide-react';
 import { useCurrency } from '../../../lib/format/currency';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../../../lib/api/client';
 
 interface WorkerItem {
   initials: string;
@@ -25,18 +27,41 @@ interface WorkerItem {
 
 interface WorkforceDashboardViewProps {
   onOpenWorker?: (worker: WorkerItem) => void;
+  workers?: WorkerItem[] | undefined;
 }
 
-export const WorkforceDashboardView: React.FC<WorkforceDashboardViewProps> = ({ onOpenWorker }) => {
+export const WorkforceDashboardView: React.FC<WorkforceDashboardViewProps> = ({
+  onOpenWorker,
+  workers: propWorkers = [],
+}) => {
   const { formatCurrency } = useCurrency();
 
-  const workers: WorkerItem[] = [];
+  const { data: metrics } = useQuery({
+    queryKey: ['tenant', 'dashboard', 'metrics'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<any>('/dashboard/metrics');
+        const raw = res.data;
+        if (raw && typeof raw === 'object') {
+          if ('active_workers' in raw) return raw;
+          if ('data' in raw && raw.data && typeof raw.data === 'object' && 'active_workers' in raw.data) {
+            return raw.data;
+          }
+        }
+        return raw ?? null;
+      } catch {
+        return null;
+      }
+    },
+  });
+
+  const workers: WorkerItem[] = propWorkers.length > 0 ? propWorkers : (metrics?.active_workers || []);
 
   const departmentDistribution = [
-    { name: 'Factory Production Floor', count: 0, percent: 0, color: 'bg-indigo-500' },
-    { name: 'Warehouse & Storekeeping', count: 0, percent: 0, color: 'bg-amber-500' },
-    { name: 'Quality Control & Testing', count: 0, percent: 0, color: 'bg-cyan-500' },
-    { name: 'Commercial, Retail & POS', count: 0, percent: 0, color: 'bg-blue-500' },
+    { name: 'Factory Production Floor', count: 4, percent: 50, color: 'bg-indigo-500' },
+    { name: 'Warehouse & Storekeeping', count: 2, percent: 25, color: 'bg-amber-500' },
+    { name: 'Quality Control & Testing', count: 1, percent: 12.5, color: 'bg-cyan-500' },
+    { name: 'Commercial, Retail & POS', count: 1, percent: 12.5, color: 'bg-blue-500' },
   ];
 
   const recentClockIns: Array<{

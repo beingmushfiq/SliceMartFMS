@@ -3,6 +3,7 @@ import {
   ArrowDown,
   ArrowUp,
   Code,
+  ChevronLeft,
   Eye,
   FileText,
   HelpCircle,
@@ -11,6 +12,7 @@ import {
   Layout,
   Plus,
   Save,
+  Store,
   Trash2,
   Sparkles,
 } from 'lucide-react';
@@ -54,7 +56,10 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
       const res = await api.get<{ data: CmsPage[] }>('/storefront/cms/pages');
       const list = res.data.data ?? (res.data as unknown as CmsPage[]) ?? [];
       setPages(list);
-      setSelectedPage((prev) => (prev ? prev : (list[0] ?? null)));
+      setSelectedPage((prev) => {
+        if (!prev) return list[0] ?? null;
+        return list.find((p) => p.id === prev.id) ?? list[0] ?? null;
+      });
     } catch (err) {
       console.error('Failed to fetch pages', err);
     } finally {
@@ -237,24 +242,41 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-6 p-4 sm:p-6 lg:p-8">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-zinc-800 pb-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-default pb-5">
         <div>
-          <h1 className="text-xl font-bold text-zinc-100 flex items-center gap-2">
-            <Layout className="h-5 w-5 text-emerald-400" />
+          <div className="flex items-center gap-2 mb-1">
+            <a
+              href="/storefront"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-muted hover:text-default transition-colors"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              <span>Back to Storefront CMS</span>
+            </a>
+          </div>
+          <h1 className="text-xl font-bold text-default flex items-center gap-2">
+            <Layout className="h-5 w-5 text-emerald-500" />
             <span>Storefront Page & Section Builder</span>
           </h1>
-          <p className="text-xs text-zinc-400 mt-1">
+          <p className="text-xs text-muted mt-1">
             Build and arrange dynamic CMS pages, hero sliders, FAQs, policies, and sandboxed promo blocks.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
+          <a
+            href="/storefront"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-default bg-surface px-3.5 py-2 text-xs font-semibold text-default hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all cursor-pointer shadow-2xs"
+          >
+            <Store className="h-3.5 w-3.5 text-emerald-500" />
+            <span>Storefront Settings</span>
+          </a>
+
           <button
             type="button"
             onClick={() => setPreviewMode(previewMode === 'edit' ? 'preview' : 'edit')}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800 px-3.5 py-2 text-xs font-semibold text-zinc-200 hover:text-white transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-default bg-surface px-3.5 py-2 text-xs font-semibold text-default hover:text-primary transition-all cursor-pointer shadow-2xs"
           >
-            <Eye className="h-3.5 w-3.5 text-emerald-400" />
+            <Eye className="h-3.5 w-3.5 text-emerald-500" />
             <span>{previewMode === 'edit' ? 'Live Preview' : 'Back to Editor'}</span>
           </button>
 
@@ -262,7 +284,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
             type="button"
             disabled={saving || !selectedPage}
             onClick={() => handleSavePage('published')}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-zinc-950 hover:bg-emerald-400 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer disabled:opacity-50"
           >
             <Save className="h-3.5 w-3.5" />
             <span>{saving ? 'Saving...' : 'Publish Live'}</span>
@@ -713,6 +735,48 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Empty State when No Page is Selected */}
+        {!selectedPage && (
+          <div className="lg:col-span-3 flex flex-col items-center justify-center rounded-2xl border border-dashed border-default bg-surface p-12 text-center min-h-110 shadow-2xs">
+            <div className="h-14 w-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-4 shadow-inner">
+              <Layout className="h-7 w-7" />
+            </div>
+            <h3 className="text-base font-bold text-default">Storefront Dynamic Page Builder</h3>
+            <p className="text-xs text-muted max-w-md mt-1 mb-6">
+              Create and manage dynamic CMS pages, hero sliders, FAQs, warranty policies, and promotional blocks synced directly with your live customer storefront.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-xl">
+              <button
+                type="button"
+                onClick={() => handleCreateNewPage('about')}
+                className="flex flex-col items-center gap-2 p-4 rounded-xl border border-default bg-surface-sunken hover:border-emerald-500/50 hover:bg-surface transition-all text-center cursor-pointer group"
+              >
+                <Sparkles className="h-5 w-5 text-emerald-500 group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-semibold text-default">About Us Page</span>
+                <span className="text-[10px] text-muted">Factory heritage & story</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCreateNewPage('faq')}
+                className="flex flex-col items-center gap-2 p-4 rounded-xl border border-default bg-surface-sunken hover:border-emerald-500/50 hover:bg-surface transition-all text-center cursor-pointer group"
+              >
+                <HelpCircle className="h-5 w-5 text-blue-500 group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-semibold text-default">Help & FAQ</span>
+                <span className="text-[10px] text-muted">Common customer questions</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCreateNewPage('policy')}
+                className="flex flex-col items-center gap-2 p-4 rounded-xl border border-default bg-surface-sunken hover:border-emerald-500/50 hover:bg-surface transition-all text-center cursor-pointer group"
+              >
+                <FileText className="h-5 w-5 text-amber-500 group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-semibold text-default">Return Policy</span>
+                <span className="text-[10px] text-muted">Warranty & refund terms</span>
+              </button>
             </div>
           </div>
         )}

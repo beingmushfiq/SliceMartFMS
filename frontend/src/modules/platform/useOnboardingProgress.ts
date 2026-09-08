@@ -61,11 +61,22 @@ export function useOnboardingProgress() {
   const stateQuery = useQuery({
     queryKey: ['tenant', 'onboarding', 'state'],
     queryFn: async ({ signal }) => {
-      const res = await api.get<{ success: boolean; data: OnboardingStateResponse }>(
-        '/tenant/onboarding/state',
-        { signal }
-      );
-      return res.data?.data;
+      try {
+        const res = await api.get<any>(
+          '/tenant/onboarding/state',
+          { signal }
+        );
+        const raw = res.data;
+        if (raw && typeof raw === 'object') {
+          if ('onboarding_completed' in raw) return raw as OnboardingStateResponse;
+          if ('data' in raw && raw.data && typeof raw.data === 'object') {
+            return raw.data as OnboardingStateResponse;
+          }
+        }
+        return (raw as OnboardingStateResponse) ?? null;
+      } catch {
+        return null;
+      }
     },
     enabled: isAuthenticated && Boolean(tenant),
     staleTime: 30_000,

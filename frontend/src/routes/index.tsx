@@ -176,6 +176,10 @@ export const router = createBrowserRouter([
             element: <TenantRoleDashboard />,
           },
           {
+            path: 'overview',
+            element: <Navigate to="/dashboard" replace />,
+          },
+          {
             path: 'catalogue',
             element: <CatalogueWorkspace />,
           },

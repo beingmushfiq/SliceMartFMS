@@ -14,6 +14,7 @@ use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Modules\Sales\Models\CrmLead;
 use App\Modules\Sales\Models\SalesOrder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -436,6 +437,168 @@ final class SalesOrderTest extends TestCase
             ->assertJsonPath('data.discount_amount', '50.0000')
             ->assertJsonPath('data.tax_amount', '30.0000')
             ->assertJsonPath('data.total_amount', '980.0000');
+    }
+
+    public function test_create_sales_order_automatically_creates_unverified_crm_lead(): void
+    {
+        $res = $this->postJson('/api/v1/sales/orders', [
+            'order_date'     => now()->toDateString(),
+            'channel'        => 'dealer',
+            'party_id'       => $this->customer->id,
+            'customer_name'  => 'Diamond Electronics',
+            'customer_phone' => '+8801700112233',
+            'notes'          => 'Urgent delivery required',
+            'items'          => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity'   => '5.0000',
+                    'unit_id'    => $this->unit->id,
+                    'unit_price' => '300.0000',
+                ],
+            ],
+        ], $this->headers());
+
+        $res->assertStatus(201);
+        $orderData = $res->json('data');
+        $leadId = $orderData['lead_id'];
+
+        $this->assertNotNull($leadId);
+        $this->assertDatabaseHas('crm_leads', [
+            'id'                  => $leadId,
+            'tenant_id'           => 1,
+            'name'                => 'Diamond Electronics',
+            'phone'               => '+8801700112233',
+            'source'              => 'referral', // dealer channel maps to referral
+            'stage'               => 'proposal',
+            'is_fake'             => false,
+            'validated_at'        => null,
+            'converted_party_id'  => $this->customer->id,
+        ]);
+    }
+
+    public function test_approving_sales_order_verifies_linked_lead_as_sold(): void
+    {
+        $res = $this->postJson('/api/v1/sales/orders', [
+            'order_date'     => now()->toDateString(),
+            'channel'        => 'counter',
+            'party_id'       => $this->customer->id,
+            'customer_name'  => 'Apex Super Store',
+            'customer_phone' => '+8801811223344',
+            'items'          => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity'   => '2.0000',
+                    'unit_id'    => $this->unit->id,
+                    'unit_price' => '500.0000',
+                ],
+            ],
+        ], $this->headers());
+
+        $res->assertStatus(201);
+        $orderId = $res->json('data.id');
+        $leadId = $res->json('data.lead_id');
+
+        // Confirm / approve order (sold!)
+        $approveRes = $this->postJson("/api/v1/sales/orders/{$orderId}/approve", [], $this->headers());
+        $approveRes->assertStatus(200)
+            ->assertJsonPath('data.status', 'confirmed');
+
+        // Verify lead has transitioned to won & validated_at set
+        $this->assertDatabaseHas('crm_leads', [
+            'id'           => $leadId,
+            'stage'        => 'won',
+            'is_fake'      => false,
+            'validated_by' => $this->user->id,
+        ]);
+
+        $lead = CrmLead::find($leadId);
+        $this->assertNotNull($lead->validated_at);
+        $this->assertStringContainsString('Sale verified upon order', $lead->validation_notes);
+    }
+
+    public function test_manual_verify_sale_creates_party_and_confirms_lead_and_order(): void
+    {
+        // Create an order for a walk-in lead (no party_id initially)
+        $createRes = $this->postJson('/api/v1/sales/orders', [
+            'customer_name' => 'Walk-in Customer Test',
+            'order_date'    => now()->toDateString(),
+            'notes'         => 'Walk-in buyer',
+            'items'         => [[
+                'product_id' => $this->product->id,
+                'quantity'   => '2.0000',
+                'unit_id'    => $this->unit->id,
+                'unit_price' => '250.0000',
+            ]],
+        ], $this->headers());
+
+        $createRes->assertStatus(201);
+        $leadId = $createRes->json('data.lead_id');
+        $orderId = $createRes->json('data.id');
+        $this->assertNotNull($leadId);
+
+        // Verify the sale via POST /api/v1/sales/leads/{id}/verify-sale
+        $verifyRes = $this->postJson("/api/v1/sales/leads/{$leadId}/verify-sale", [
+            'notes' => 'Verified counter cash sale.',
+        ], $this->headers());
+
+        $verifyRes->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('lead.stage', 'won');
+
+        $lead = CrmLead::find($leadId);
+        $this->assertNotNull($lead->validated_at);
+        $this->assertNotNull($lead->converted_party_id);
+
+        // Assert party was created with non-null uuid and code
+        $party = Party::find($lead->converted_party_id);
+        $this->assertNotNull($party);
+        $this->assertNotNull($party->uuid);
+        $this->assertNotNull($party->code);
+        $this->assertEquals('Walk-in Customer Test', $party->name);
+
+        // Assert associated draft order was confirmed
+        $order = SalesOrder::find($orderId);
+        $this->assertEquals('confirmed', $order->status);
+    }
+
+    public function test_changeable_order_status_and_payment_status(): void
+    {
+        $createRes = $this->postJson('/api/v1/sales/orders', [
+            'customer_name' => 'Status Change Test',
+            'order_date'    => now()->toDateString(),
+            'items'         => [[
+                'product_id' => $this->product->id,
+                'quantity'   => '1.0000',
+                'unit_id'    => $this->unit->id,
+                'unit_price' => '100.0000',
+            ]],
+        ], $this->headers());
+
+        $orderId = $createRes->json('data.id');
+
+        // Test changing status directly to delivered
+        $statusRes = $this->patchJson("/api/v1/sales/orders/{$orderId}/status", [
+            'status' => 'delivered',
+        ], $this->headers());
+
+        $statusRes->assertStatus(200)
+            ->assertJsonPath('data.status', 'delivered');
+
+        // Test changing payment status to paid
+        $payRes = $this->postJson("/api/v1/sales/orders/{$orderId}/payment", [
+            'payment_status' => 'paid',
+        ], $this->headers());
+
+        $payRes->assertStatus(200)
+            ->assertJsonPath('data.payment_status', 'paid');
+
+        // Test changing payment status back to unpaid
+        $unpaidRes = $this->postJson("/api/v1/sales/orders/{$orderId}/payment", [
+            'payment_status' => 'unpaid',
+        ], $this->headers());
+
+        $unpaidRes->assertStatus(200)
+            ->assertJsonPath('data.payment_status', 'unpaid');
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

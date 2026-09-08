@@ -32,15 +32,15 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
     queryKey: ['tenant', 'dashboard', 'metrics'],
     queryFn: async () => {
       try {
-        const res = await api.get<{
-          data: {
-            inventory: {
-              total_valuation: number;
-              low_stock_count: number;
-            };
-          };
-        }>('/dashboard/metrics');
-        return res.data.data;
+        const res = await api.get<any>('/dashboard/metrics');
+        const raw = res.data;
+        if (raw && typeof raw === 'object') {
+          if ('inventory' in raw) return raw;
+          if ('data' in raw && raw.data && typeof raw.data === 'object' && 'inventory' in raw.data) {
+            return raw.data;
+          }
+        }
+        return raw ?? null;
       } catch {
         return null;
       }

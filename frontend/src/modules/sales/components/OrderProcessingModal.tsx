@@ -407,6 +407,28 @@ export function OrderProcessingModal({ order, onClose, onNavigateToTab }: OrderP
                 </span>
               </div>
 
+              {order.lead && (
+                <div className="flex items-center justify-between pt-1.5 border-t border-default/50">
+                  <span className="text-muted">CRM Lead Status:</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono text-[10px] text-muted">{order.lead.lead_number || `LD-#${order.lead.id}`}</span>
+                    {order.lead.validated_at || order.lead.stage === 'won' ? (
+                      <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        <CheckCircle2 className="size-2.5" /> Verified Sold
+                      </span>
+                    ) : order.lead.is_fake ? (
+                      <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                        <XCircle className="size-2.5" /> Fake / Invalid
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                        <Clock className="size-2.5" /> Pending Verification
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {order.notes && (
                 <div className="rounded-lg bg-surface-sunken p-2 text-[11px] text-muted italic">
                   "{order.notes}"

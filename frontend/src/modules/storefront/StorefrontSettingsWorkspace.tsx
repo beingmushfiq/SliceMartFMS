@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import {
+  CheckCircle2,
   Eye,
   Globe,
   Layout,
   Palette,
+  RefreshCw,
   Save,
   ShieldCheck,
   ShoppingBag,
@@ -65,42 +67,48 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
     status: 'live' as 'draft' | 'live' | 'maintenance' | 'suspended',
   });
 
+  const [syncing, setSyncing] = useState(false);
+
   useEffect(() => {
     let ignore = false;
-    Promise.all([
+    Promise.allSettled([
       api.get<{ data: StorefrontConfig }>('/storefront/settings'),
-      api.get<{ data: PublishedProductItem[] }>('/storefront/products'),
+      api.get<{ data: PublishedProductItem[] }>('/storefront/cms-products'),
     ])
       .then(([settingsRes, prodRes]) => {
         if (!ignore) {
-          const settingsPayload = settingsRes.data as unknown as Record<string, unknown>;
-          const conf = (settingsPayload.data ?? settingsPayload) as StorefrontConfig;
+          if (settingsRes.status === 'fulfilled') {
+            const settingsPayload = settingsRes.value.data as unknown as Record<string, unknown>;
+            const conf = (settingsPayload.data ?? settingsPayload) as StorefrontConfig;
 
-          const prodPayload = prodRes.data as unknown;
-          const prodList = Array.isArray(prodPayload)
-            ? (prodPayload as PublishedProductItem[])
-            : (((prodPayload as Record<string, unknown>)?.data as PublishedProductItem[]) ?? []);
-          setProducts(prodList);
+            setForm({
+              name: conf.name ?? '',
+              subdomain: conf.subdomain ?? '',
+              currency: conf.currency ?? currencyCode,
+              primary_color: conf.theme?.primary_color ?? '#10b981',
+              accent_color: conf.theme?.accent_color ?? '#14b8a6',
+              hero_title: conf.theme?.hero_title ?? 'Factory Fresh Goods',
+              hero_subtitle:
+                conf.theme?.hero_subtitle ?? 'Industrial quality delivered straight to your door.',
+              meta_title: conf.meta_title ?? '',
+              meta_description: conf.meta_description ?? '',
+              guest_checkout_enabled: conf.guest_checkout_enabled ?? true,
+              cod_enabled: conf.cod_enabled ?? true,
+              online_payment_enabled: conf.online_payment_enabled ?? true,
+              whatsapp_number: conf.whatsapp_number ?? '+8801700000000',
+              whatsapp_ordering_enabled: conf.whatsapp_ordering_enabled ?? true,
+              min_order_amount: conf.min_order_amount ? String(conf.min_order_amount) : '',
+              status: conf.status ?? 'live',
+            });
+          }
 
-          setForm({
-            name: conf.name ?? '',
-            subdomain: conf.subdomain ?? '',
-            currency: conf.currency ?? currencyCode,
-            primary_color: conf.theme?.primary_color ?? '#10b981',
-            accent_color: conf.theme?.accent_color ?? '#14b8a6',
-            hero_title: conf.theme?.hero_title ?? 'Factory Fresh Goods',
-            hero_subtitle:
-              conf.theme?.hero_subtitle ?? 'Industrial quality delivered straight to your door.',
-            meta_title: conf.meta_title ?? '',
-            meta_description: conf.meta_description ?? '',
-            guest_checkout_enabled: conf.guest_checkout_enabled ?? true,
-            cod_enabled: conf.cod_enabled ?? true,
-            online_payment_enabled: conf.online_payment_enabled ?? true,
-            whatsapp_number: conf.whatsapp_number ?? '+8801700000000',
-            whatsapp_ordering_enabled: conf.whatsapp_ordering_enabled ?? true,
-            min_order_amount: conf.min_order_amount ?? '',
-            status: conf.status ?? 'live',
-          });
+          if (prodRes.status === 'fulfilled') {
+            const prodPayload = prodRes.value.data as unknown;
+            const prodList = Array.isArray(prodPayload)
+              ? (prodPayload as PublishedProductItem[])
+              : (((prodPayload as Record<string, unknown>)?.data as PublishedProductItem[]) ?? []);
+            setProducts(prodList);
+          }
         }
       })
       .catch((err: unknown) => {
@@ -151,7 +159,7 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
   const handleToggleProduct = async (product: PublishedProductItem) => {
     const newStatus = !product.is_published;
     try {
-      await api.post('/storefront/products/toggle-publish', {
+      await api.post('/storefront/cms-products/toggle-publish', {
         product_id: product.id,
         is_published: newStatus,
         is_featured: product.is_featured,
@@ -171,6 +179,24 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
     }
   };
 
+  const handleBulkPublishFinished = async () => {
+    setSyncing(true);
+    try {
+      await api.post('/storefront/cms-products/bulk-publish-finished');
+      notify.success('All finished products synced and published to storefront!');
+      const res = await api.get<{ data: PublishedProductItem[] }>('/storefront/cms-products');
+      const prodPayload = res.data as unknown;
+      const prodList = Array.isArray(prodPayload)
+        ? (prodPayload as PublishedProductItem[])
+        : (((prodPayload as Record<string, unknown>)?.data as PublishedProductItem[]) ?? []);
+      setProducts(prodList);
+    } catch (err: unknown) {
+      notify.error(err instanceof Error ? err.message : 'Failed to sync finished products');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-96 items-center justify-center">
@@ -185,12 +211,7 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
       {/* Header & Quick Links */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-default pb-5">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-default">Storefront CMS & Customizer</h1>
-            <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-              Subdomain: {form.subdomain}.devcenterpoint.com
-            </span>
-          </div>
+          <h1 className="text-xl font-bold text-default">Storefront CMS & Customizer</h1>
           <p className="text-xs text-muted mt-1">
             Manage your branded online customer storefront, theme styling, and published products.
           </p>
@@ -280,20 +301,7 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block mb-1">
-                  Subdomain Slug
-                </label>
-                <div className="flex items-center rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-xs">
-                  <input
-                    type="text"
-                    value={form.subdomain}
-                    onChange={(e) => setForm({ ...form, subdomain: e.target.value })}
-                    className="flex-1 bg-transparent text-default focus:outline-none"
-                  />
-                  <span className="text-muted">.devcenterpoint.com</span>
-                </div>
-              </div>
+
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -403,11 +411,26 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
       {/* Tab: Products */}
       {activeTab === 'products' && (
         <div className="rounded-2xl border border-default bg-surface p-6 space-y-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-default">Catalog Product Publication</h2>
-            <span className="text-xs text-muted">
-              Toggle products on or off to make them available to public online shoppers.
-            </span>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-sm font-bold text-default">Catalog Product Publication</h2>
+              <span className="text-xs text-muted">
+                Toggle products on or off to make them available to public online shoppers.
+              </span>
+            </div>
+            <button
+              type="button"
+              disabled={syncing}
+              onClick={handleBulkPublishFinished}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-xs font-bold text-default hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all cursor-pointer disabled:opacity-50 shadow-2xs"
+            >
+              {syncing ? (
+                <RefreshCw className="h-4 w-4 animate-spin text-emerald-500" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              )}
+              <span>{syncing ? 'Syncing...' : 'Sync & Publish All Finished Goods'}</span>
+            </button>
           </div>
 
           <div className="divide-y divide-default overflow-hidden rounded-xl border border-default bg-surface">

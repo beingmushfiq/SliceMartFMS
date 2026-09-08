@@ -1,15 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Clock, Plus, RefreshCw, Search, XCircle, ShoppingCart, SlidersHorizontal, Trash2, Eye } from 'lucide-react';
-import type { SalesOrder } from '../../../types/api/sales';
+import { CheckCircle2, Clock, Plus, RefreshCw, Search, XCircle, ShoppingCart, SlidersHorizontal, Trash2, Eye, Sparkles, ChevronDown, Check } from 'lucide-react';
+import type { SalesOrder, SalesOrderStatus, SalesOrderPaymentStatus } from '../../../types/api/sales';
 import type { Product } from '../../../types/api/catalog';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { OrderProcessingModal } from '../components/OrderProcessingModal';
+import { CustomerSearchCombobox } from '../components/CustomerSearchCombobox';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
 import { ConfirmDialog } from '../../../components/ui/Modal';
 import { notify } from '../../../components/ui/Toast';
 import { useAuthStore } from '../../../lib/auth/authStore';
+import { cn } from '../../../lib/utils';
 
 interface SalesOrdersSectionProps {
   onNavigateToTab?: (tab: string) => void;
@@ -25,11 +27,38 @@ interface SoFormItem {
   discount_amount: string;
 }
 
+const ORDER_STATUS_CONFIG: Record<
+  SalesOrderStatus,
+  { label: string; tone: string; icon: React.ElementType }
+> = {
+  draft: { label: 'Draft', tone: 'bg-zinc-800 text-zinc-300 border-zinc-700', icon: Clock },
+  pending: { label: 'Pending Review', tone: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20', icon: Clock },
+  confirmed: { label: 'Confirmed', tone: 'bg-blue-500/10 text-blue-500 dark:text-blue-400 border-blue-500/20', icon: CheckCircle2 },
+  allocated: { label: 'Allocated', tone: 'bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 border-indigo-500/20', icon: RefreshCw },
+  picking: { label: 'Picking', tone: 'bg-purple-500/10 text-purple-500 dark:text-purple-400 border-purple-500/20', icon: RefreshCw },
+  packed: { label: 'Packed', tone: 'bg-teal-500/10 text-teal-500 dark:text-teal-400 border-teal-500/20', icon: RefreshCw },
+  dispatched: { label: 'Dispatched', tone: 'bg-cyan-500/10 text-cyan-500 dark:text-cyan-400 border-cyan-500/20', icon: CheckCircle2 },
+  delivered: { label: 'Delivered', tone: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20', icon: CheckCircle2 },
+  cancelled: { label: 'Cancelled', tone: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20', icon: XCircle },
+};
+
+const PAYMENT_STATUS_CONFIG: Record<
+  SalesOrderPaymentStatus,
+  { label: string; tone: string }
+> = {
+  paid: { label: 'Paid', tone: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' },
+  unpaid: { label: 'Unpaid', tone: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' },
+  partially_paid: { label: 'Partially Paid', tone: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' },
+  pending: { label: 'Pending', tone: 'bg-blue-500/10 text-blue-500 dark:text-blue-400 border-blue-500/20' },
+  failed: { label: 'Failed', tone: 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30' },
+};
+
 export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps = {}) {
   const { hasPermission } = useAuthStore();
   const canCreateOrder = hasPermission('sales.order.create');
   const canApproveOrder = hasPermission('sales.order.approve');
   const canDeleteOrder = hasPermission('sales.order.delete');
+  const canChangeStatus = canApproveOrder || canCreateOrder;
 
   const { formatCurrency, currencySymbol } = useCurrency();
   const queryClient = useQueryClient();
@@ -38,11 +67,29 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<SalesOrder | null>(null);
+  const [activeStatusMenuId, setActiveStatusMenuId] = useState<number | null>(null);
+  const [activePaymentMenuId, setActivePaymentMenuId] = useState<number | null>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      if (!target.closest('.order-status-dropdown-container')) {
+        setActiveStatusMenuId(null);
+      }
+      if (!target.closest('.order-payment-dropdown-container')) {
+        setActivePaymentMenuId(null);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // New Order Form state
   const [channel, setChannel] = useState<'counter' | 'dealer' | 'phone' | 'field' | 'online'>(
     'dealer'
   );
+  const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [orderDate, setOrderDate] = useState(new Date().toISOString().slice(0, 10));
@@ -149,11 +196,41 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
       await api.post(`/sales/orders/${orderId}/approve`, {});
     },
     onSuccess: () => {
-      notify.success('Sales order confirmed successfully.');
+      notify.success('Sales order confirmed & lead verified as sold.');
       queryClient.invalidateQueries({ queryKey: ['sales', 'orders'] });
+      queryClient.invalidateQueries({ queryKey: ['crm', 'leads'] });
+      queryClient.invalidateQueries({ queryKey: ['sales', 'salesmen'] });
     },
     onError: (err: unknown) => {
       notify.error(err instanceof Error ? err.message : 'Failed to confirm sales order');
+    },
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ orderId, status }: { orderId: number; status: SalesOrderStatus }) => {
+      await api.patch(`/sales/orders/${orderId}/status`, { status });
+    },
+    onSuccess: (_, vars) => {
+      notify.success(`Order status updated to "${vars.status.toUpperCase()}".`);
+      queryClient.invalidateQueries({ queryKey: ['sales', 'orders'] });
+      queryClient.invalidateQueries({ queryKey: ['crm', 'leads'] });
+      queryClient.invalidateQueries({ queryKey: ['sales', 'salesmen'] });
+    },
+    onError: (err: unknown) => {
+      notify.error(err instanceof Error ? err.message : 'Failed to update order status');
+    },
+  });
+
+  const updatePaymentMutation = useMutation({
+    mutationFn: async ({ orderId, paymentStatus }: { orderId: number; paymentStatus: SalesOrderPaymentStatus }) => {
+      await api.post(`/sales/orders/${orderId}/payment`, { payment_status: paymentStatus });
+    },
+    onSuccess: (_, vars) => {
+      notify.success(`Payment status updated to "${vars.paymentStatus.replace('_', ' ').toUpperCase()}".`);
+      queryClient.invalidateQueries({ queryKey: ['sales', 'orders'] });
+    },
+    onError: (err: unknown) => {
+      notify.error(err instanceof Error ? err.message : 'Failed to update payment status');
     },
   });
 
@@ -165,6 +242,7 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
       notify.success('Sales order deleted successfully.');
       setOrderToDelete(null);
       queryClient.invalidateQueries({ queryKey: ['sales', 'orders'] });
+      queryClient.invalidateQueries({ queryKey: ['tenant', 'dashboard'] });
     },
     onError: (err: unknown) => {
       notify.error(err instanceof Error ? err.message : 'Failed to delete sales order');
@@ -175,6 +253,7 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
     mutationFn: async () => {
       await api.post('/sales/orders', {
         channel,
+        party_id: selectedPartyId || undefined,
         customer_name: customerName || undefined,
         customer_phone: customerPhone || undefined,
         order_date: orderDate,
@@ -193,8 +272,9 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
       });
     },
     onSuccess: () => {
-      notify.success('Sales order created.');
+      notify.success('Sales order created & CRM lead generated.');
       setShowCreateModal(false);
+      setSelectedPartyId(null);
       setCustomerName('');
       setCustomerPhone('');
       setNotes('');
@@ -212,6 +292,9 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
         },
       ]);
       queryClient.invalidateQueries({ queryKey: ['sales', 'orders'] });
+      queryClient.invalidateQueries({ queryKey: ['crm', 'leads'] });
+      queryClient.invalidateQueries({ queryKey: ['sales', 'salesmen'] });
+      queryClient.invalidateQueries({ queryKey: ['tenant', 'dashboard'] });
     },
     onError: (err: unknown) => {
       notify.error(err instanceof Error ? err.message : 'Failed to create sales order');
@@ -389,7 +472,7 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
                   </td>
                 </tr>
               ) : (
-                filteredOrders.map((order) => (
+                filteredOrders.map((order, idx) => (
                   <tr
                     key={order.id}
                     onClick={() => setSelectedOrder(order)}
@@ -402,24 +485,199 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
                     <td className="px-4 py-3.5 text-muted">{order.order_date}</td>
                     <td className="px-4 py-3.5">{getChannelBadge(order.channel)}</td>
                     <td className="px-4 py-3.5 text-default font-medium">
-                      {order.customer_name ?? 'Walk-in / Direct'}
+                      <div>{order.customer_name ?? 'Walk-in / Direct'}</div>
+                      {order.lead ? (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          {order.lead.validated_at || order.lead.stage === 'won' ? (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                              <CheckCircle2 className="size-2.5" /> Verified Sold
+                            </span>
+                          ) : order.lead.is_fake ? (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-rose-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                              <XCircle className="size-2.5" /> Fake / Invalid
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                              <Clock className="size-2.5" /> Lead Pending Verification
+                            </span>
+                          )}
+                        </div>
+                      ) : order.lead_id ? (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                            <Clock className="size-2.5" /> Lead #{order.lead_id}
+                          </span>
+                        </div>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3.5 font-mono font-medium text-default">
                       {formatCurrency(order.total_amount)}
                     </td>
-                    <td className="px-4 py-3.5">{getStatusBadge(order.status)}</td>
-                    <td className="px-4 py-3.5">
-                      <span
-                        className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
-                          order.payment_status === 'paid'
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                            : order.payment_status === 'partially_paid'
-                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                              : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
-                        }`}
-                      >
-                        {order.payment_status}
-                      </span>
+                    <td className="px-4 py-3.5 relative" onClick={(e) => e.stopPropagation()}>
+                      {canChangeStatus ? (
+                        <div className="order-status-dropdown-container relative inline-block">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActivePaymentMenuId(null);
+                              setActiveStatusMenuId(activeStatusMenuId === order.id ? null : order.id);
+                            }}
+                            className={cn(
+                              "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-semibold uppercase border transition-all cursor-pointer hover:brightness-95 dark:hover:brightness-110",
+                              ORDER_STATUS_CONFIG[order.status]?.tone || "bg-surface-sunken text-muted border-default",
+                              activeStatusMenuId === order.id && "ring-1 ring-primary shadow-xs"
+                            )}
+                            title="Click to change order status"
+                          >
+                            {updateStatusMutation.isPending && updateStatusMutation.variables?.orderId === order.id ? (
+                              <RefreshCw className="size-3 animate-spin" />
+                            ) : (
+                              (() => {
+                                const Icon = ORDER_STATUS_CONFIG[order.status]?.icon || Clock;
+                                return <Icon className="size-3" />;
+                              })()
+                            )}
+                            <span>{ORDER_STATUS_CONFIG[order.status]?.label || order.status}</span>
+                            <ChevronDown className="size-2.5 opacity-60 ml-0.5" />
+                          </button>
+
+                          {activeStatusMenuId === order.id && (
+                            <div
+                              className={cn(
+                                "absolute left-0 z-50 w-44 rounded-xl border border-default bg-surface p-1 shadow-xl ring-1 ring-black/5 animate-in fade-in zoom-in-95",
+                                idx >= filteredOrders.length - 2 ? "bottom-full mb-1.5" : "top-full mt-1.5"
+                              )}
+                            >
+                              <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted border-b border-default/50 mb-1">
+                                Set Order Status
+                              </div>
+                              <div className="space-y-0.5 max-h-56 overflow-y-auto pr-0.5">
+                                {Object.entries(ORDER_STATUS_CONFIG).map(([key, config]) => {
+                                  const isCurrent = order.status === key;
+                                  const Icon = config.icon;
+                                  return (
+                                    <button
+                                      key={key}
+                                      type="button"
+                                      onClick={() => {
+                                        updateStatusMutation.mutate({ orderId: order.id, status: key as SalesOrderStatus });
+                                        setActiveStatusMenuId(null);
+                                      }}
+                                      className={cn(
+                                        "flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-xs font-medium transition-colors cursor-pointer text-left",
+                                        isCurrent
+                                          ? "bg-primary/10 text-primary font-bold"
+                                          : "text-default hover:bg-surface-sunken"
+                                      )}
+                                    >
+                                      <div className="flex items-center gap-2 truncate">
+                                        <Icon className="size-3.5 shrink-0 opacity-80" />
+                                        <span className="truncate capitalize">{config.label}</span>
+                                      </div>
+                                      {isCurrent && <Check className="size-3 text-primary shrink-0" />}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        getStatusBadge(order.status)
+                      )}
+                    </td>
+                    <td className="px-4 py-3.5 relative" onClick={(e) => e.stopPropagation()}>
+                      {canChangeStatus ? (
+                        <div className="order-payment-dropdown-container relative inline-block">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveStatusMenuId(null);
+                              setActivePaymentMenuId(activePaymentMenuId === order.id ? null : order.id);
+                            }}
+                            className={cn(
+                              "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase border transition-all cursor-pointer hover:brightness-95 dark:hover:brightness-110",
+                              PAYMENT_STATUS_CONFIG[order.payment_status as SalesOrderPaymentStatus]?.tone ||
+                                (order.payment_status === 'paid'
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                  : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'),
+                              activePaymentMenuId === order.id && "ring-1 ring-primary shadow-xs"
+                            )}
+                            title="Click to change payment status"
+                          >
+                            {updatePaymentMutation.isPending && updatePaymentMutation.variables?.orderId === order.id ? (
+                              <RefreshCw className="size-2.5 animate-spin" />
+                            ) : null}
+                            <span>{PAYMENT_STATUS_CONFIG[order.payment_status as SalesOrderPaymentStatus]?.label || order.payment_status || 'Unpaid'}</span>
+                            <ChevronDown className="size-2.5 opacity-60 ml-0.5" />
+                          </button>
+
+                          {activePaymentMenuId === order.id && (
+                            <div
+                              className={cn(
+                                "absolute left-0 z-50 w-40 rounded-xl border border-default bg-surface p-1 shadow-xl ring-1 ring-black/5 animate-in fade-in zoom-in-95",
+                                idx >= filteredOrders.length - 2 ? "bottom-full mb-1.5" : "top-full mt-1.5"
+                              )}
+                            >
+                              <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted border-b border-default/50 mb-1">
+                                Set Payment Status
+                              </div>
+                              <div className="space-y-0.5">
+                                {Object.entries(PAYMENT_STATUS_CONFIG).map(([key, config]) => {
+                                  const isCurrent = order.payment_status === key;
+                                  return (
+                                    <button
+                                      key={key}
+                                      type="button"
+                                      onClick={() => {
+                                        updatePaymentMutation.mutate({ orderId: order.id, paymentStatus: key as SalesOrderPaymentStatus });
+                                        setActivePaymentMenuId(null);
+                                      }}
+                                      className={cn(
+                                        "flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-xs font-medium transition-colors cursor-pointer text-left",
+                                        isCurrent
+                                          ? "bg-primary/10 text-primary font-bold"
+                                          : "text-default hover:bg-surface-sunken"
+                                      )}
+                                    >
+                                      <div className="flex items-center gap-2 truncate">
+                                        <span
+                                          className={cn(
+                                            "size-2 rounded-full shrink-0",
+                                            key === 'paid'
+                                              ? 'bg-emerald-500'
+                                              : key === 'unpaid'
+                                                ? 'bg-rose-500'
+                                                : key === 'partially_paid'
+                                                  ? 'bg-amber-500'
+                                                  : key === 'pending'
+                                                    ? 'bg-blue-500'
+                                                    : 'bg-rose-600'
+                                          )}
+                                        />
+                                        <span className="truncate">{config.label}</span>
+                                      </div>
+                                      {isCurrent && <Check className="size-3 text-primary shrink-0" />}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span
+                          className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
+                            order.payment_status === 'paid'
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                              : order.payment_status === 'partially_paid'
+                                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                          }`}
+                        >
+                          {order.payment_status}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">
@@ -497,53 +755,64 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
             </div>
 
             <form onSubmit={handleCreateOrder} className="space-y-4 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-default mb-1">Channel</label>
-                  <select
-                    value={channel}
-                    onChange={(e) => setChannel(e.target.value as typeof channel)}
-                    className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
-                  >
-                    <option value="dealer">Dealer</option>
-                    <option value="counter">Counter</option>
-                    <option value="phone">Phone</option>
-                    <option value="field">Field</option>
-                    <option value="online">Online</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-default mb-1">Customer Name</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Retail Partner A"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-default mb-1">Customer Phone</label>
-                  <input
-                    type="text"
-                    placeholder="+8801700000000"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-default mb-1">Order Date</label>
-                <input
-                  type="date"
-                  value={orderDate}
-                  onChange={(e) => setOrderDate(e.target.value)}
-                  className="w-full rounded-xl border border-default bg-surface-sunken px-3 py-2 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
+              {/* Customer Search & Account Selection */}
+              <div className="rounded-xl border border-default p-3 bg-surface-sunken/40 space-y-3">
+                <CustomerSearchCombobox
+                  selectedPartyId={selectedPartyId}
+                  customerName={customerName}
+                  customerPhone={customerPhone}
+                  onChange={({ partyId, customerName: cName, customerPhone: cPhone, isDealer }) => {
+                    setSelectedPartyId(partyId);
+                    setCustomerName(cName);
+                    if (cPhone) setCustomerPhone(cPhone);
+                    if (isDealer) setChannel('dealer');
+                  }}
                 />
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-default/50">
+                  <div>
+                    <label className="block text-xs font-medium text-default mb-1">Customer Phone</label>
+                    <input
+                      type="text"
+                      placeholder="+8801700000000"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      className="w-full rounded-xl border border-default bg-surface px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-default mb-1">Channel</label>
+                    <select
+                      value={channel}
+                      onChange={(e) => setChannel(e.target.value as typeof channel)}
+                      className="w-full rounded-xl border border-default bg-surface px-3 py-2 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
+                    >
+                      <option value="dealer">Dealer</option>
+                      <option value="counter">Counter</option>
+                      <option value="phone">Phone</option>
+                      <option value="field">Field</option>
+                      <option value="online">Online</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-default mb-1">Order Date</label>
+                    <input
+                      type="date"
+                      value={orderDate}
+                      onChange={(e) => setOrderDate(e.target.value)}
+                      className="w-full rounded-xl border border-default bg-surface px-3 py-2 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-sky-500/10 border border-sky-500/20 text-[11px] text-sky-700 dark:text-sky-300">
+                  <Sparkles className="size-3.5 text-sky-500 shrink-0" />
+                  <span>
+                    <strong>CRM Lead Tracking:</strong> A new lead will be created automatically with all order details and queued for sale verification once confirmed.
+                  </span>
+                </div>
               </div>
 
               {/* Items Builder */}

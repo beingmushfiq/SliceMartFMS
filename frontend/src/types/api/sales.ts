@@ -52,6 +52,16 @@ export interface SalesOrder {
   order_number: string;
   channel: SalesOrderChannel;
   party_id?: number | null;
+  lead_id?: number | null;
+  salesman_id?: number | null;
+  lead?: {
+    id: number;
+    lead_number?: string;
+    stage?: LeadStatus;
+    is_fake?: boolean;
+    validated_at?: string | null;
+    validated_by?: number | null;
+  } | null;
   customer_name?: string | null;
   customer_phone?: string | null;
   warehouse_id?: number | null;
@@ -264,6 +274,13 @@ export interface Lead {
   converted_party_name?: string | null;
   converted_at?: string | null;
   converted_to_customer_id?: number | null;
+  orders?: Array<{
+    id: number;
+    order_number: string;
+    total_amount: string;
+    status: string;
+    payment_status: string;
+  }>;
   created_at: string;
   updated_at?: string;
 }

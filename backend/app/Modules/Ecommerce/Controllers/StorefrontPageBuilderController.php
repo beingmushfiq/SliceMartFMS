@@ -45,8 +45,159 @@ final class StorefrontPageBuilderController extends Controller
             ->orderBy('title')
             ->get();
 
+        if ($pages->isEmpty()) {
+            $this->seedDefaultPages($tenantId, $storefront->id);
+            $pages = StorefrontPage::where('tenant_id', $tenantId)
+                ->where('storefront_id', $storefront->id)
+                ->orderBy('sort_order')
+                ->orderBy('title')
+                ->get();
+        }
+
         return response()->json([
             'success' => true,
+            'data' => $pages,
+        ]);
+    }
+
+    /**
+     * Seed standard default CMS pages for storefront
+     */
+    public function seedDefaultPages(int $tenantId, int $storefrontId): void
+    {
+        $defaultPages = [
+            [
+                'title' => 'About Our Factory',
+                'slug' => 'about-us',
+                'page_type' => 'content',
+                'meta_title' => 'About Our Manufacturing Heritage & Precision Engineering',
+                'meta_description' => 'SliceMart manufactures energy-efficient infrared cookers and heavy-duty gas stoves with industrial-grade microcrystalline glass technology.',
+                'status' => 'published',
+                'sort_order' => 1,
+                'blocks' => [
+                    [
+                        'id' => 'b1',
+                        'type' => 'hero_banner',
+                        'title' => 'Precision Engineering & Thermal Innovation',
+                        'subtitle' => 'High-efficiency infrared cookers, induction surfaces, and precision gas stoves direct from our ISO-certified factory.',
+                        'cta_text' => 'Explore Product Catalog',
+                        'cta_url' => '/store/slicemart',
+                    ],
+                    [
+                        'id' => 'b2',
+                        'type' => 'rich_text',
+                        'title' => 'Our Manufacturing Heritage',
+                        'content' => 'Founded with a dedication to energy efficiency and culinary reliability, SliceMart produces appliances with A-grade microcrystalline ceramic glass, precision thermocouples, and pure copper heating cores. Every unit undergoes rigorous 5-stage quality assurance before leaving our assembly floor.',
+                    ],
+                    [
+                        'id' => 'b3',
+                        'type' => 'features',
+                        'title' => 'Why Choose SliceMart Appliances',
+                        'subtitle' => 'Quality and safety standards built into every single unit.',
+                    ],
+                ],
+            ],
+            [
+                'title' => 'Help & FAQ',
+                'slug' => 'faq',
+                'page_type' => 'faq',
+                'meta_title' => 'Frequently Asked Questions & Support',
+                'meta_description' => 'Find answers to common questions regarding SliceMart infrared cookers, gas stoves, warranty, delivery, and spare parts.',
+                'status' => 'published',
+                'sort_order' => 2,
+                'blocks' => [
+                    [
+                        'id' => 'b1',
+                        'type' => 'faq',
+                        'title' => 'Frequently Asked Questions',
+                        'subtitle' => 'Everything you need to know about our products, orders, and warranty coverage.',
+                        'faqs' => [
+                            [
+                                'q' => 'What cookware is compatible with SliceMart Infrared Cookers?',
+                                'a' => 'All flat-bottom cookware works seamlessly on SliceMart infrared cookers, including stainless steel, cast iron, ceramic, tempered glass, and aluminum. Unlike induction, no magnetic base is required.',
+                            ],
+                            [
+                                'q' => 'What warranty is provided with appliances?',
+                                'a' => 'All SliceMart infrared cookers and gas stoves include a 1-year comprehensive replacement and service warranty backed by nationwide authorized service centers.',
+                            ],
+                            [
+                                'q' => 'How long does nationwide delivery take?',
+                                'a' => 'Orders within the metropolitan area arrive within 24 to 48 hours. Nationwide district deliveries typically arrive in 3 to 4 business days via Steadfast or Pathao Express.',
+                            ],
+                            [
+                                'q' => 'Is Cash on Delivery (COD) available?',
+                                'a' => 'Yes! We offer nationwide Cash on Delivery with parcel unboxing inspection permitted before final payment.',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'title' => 'Return & Warranty Policy',
+                'slug' => 'return-policy',
+                'page_type' => 'policy',
+                'meta_title' => 'Return, Replacement & 1-Year Warranty Policy',
+                'meta_description' => 'Learn about our 7-day hassle-free replacement guarantee and nationwide 1-year product warranty.',
+                'status' => 'published',
+                'sort_order' => 3,
+                'blocks' => [
+                    [
+                        'id' => 'b1',
+                        'type' => 'rich_text',
+                        'title' => 'SliceMart 7-Day Replacement Guarantee',
+                        'content' => 'If your product arrives damaged, defective, or does not match specifications, contact our customer support within 7 days of delivery for an immediate free doorstep replacement.',
+                    ],
+                    [
+                        'id' => 'b2',
+                        'type' => 'rich_text',
+                        'title' => '1-Year Official Manufacturer Warranty',
+                        'content' => 'Every appliance is registered automatically for our 1-year factory warranty. We guarantee authentic spare parts, free diagnostic service, and dedicated technician assistance.',
+                    ],
+                ],
+            ],
+        ];
+
+        foreach ($defaultPages as $pageData) {
+            StorefrontPage::firstOrCreate(
+                [
+                    'tenant_id' => $tenantId,
+                    'storefront_id' => $storefrontId,
+                    'slug' => $pageData['slug'],
+                ],
+                [
+                    'uuid' => (string) Str::uuid(),
+                    'title' => $pageData['title'],
+                    'page_type' => $pageData['page_type'],
+                    'meta_title' => $pageData['meta_title'],
+                    'meta_description' => $pageData['meta_description'],
+                    'status' => $pageData['status'],
+                    'published_at' => now(),
+                    'blocks' => $pageData['blocks'],
+                    'sort_order' => $pageData['sort_order'],
+                ]
+            );
+        }
+    }
+
+    /**
+     * Tenant Admin: Seed or reset standard preset pages
+     */
+    public function seedDefaults(Request $request): JsonResponse
+    {
+        $tenantId = TenantContext::current()->tenantId();
+        $storefront = $this->getTenantStorefront($tenantId);
+
+        $this->seedDefaultPages($tenantId, $storefront->id);
+
+        $pages = StorefrontPage::where('tenant_id', $tenantId)
+            ->where('storefront_id', $storefront->id)
+            ->orderBy('sort_order')
+            ->orderBy('title')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Default storefront pages seeded successfully.',
             'data' => $pages,
         ]);
     }

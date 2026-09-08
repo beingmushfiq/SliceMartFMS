@@ -10,7 +10,6 @@ import {
   DollarSign,
   Factory,
   FileSpreadsheet,
-  Kanban,
   LayoutDashboard,
   Microscope,
   Receipt,
@@ -55,7 +54,7 @@ export interface NavOrderConfig {
  * Canonical platform navigation registry ordered according to standard enterprise
  * industrial workflow:
  * 1. Overview & Monitoring (Dashboard & BI)
- * 2. CRM & Salesmen (Demand Generation, Leads & Targets)
+ * 2. CRM & Sales Force (Demand Generation — Leads, Salesmen, Targets, Incentives)
  * 3. Sales & Commercials (Omnichannel B2B/Retail Orders, POS & Web Storefront)
  * 4. Inventory & Supply (Master Catalogue, Procurement POs, Stock Ledgers & Logistics)
  * 5. Production & Quality (Factory Batch Routing & Mandatory QC Gate)
@@ -64,6 +63,7 @@ export interface NavOrderConfig {
  * 8. Intelligence & System (RBAC, Audit Logs & Settings Center)
  */
 export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
+  // ── 1. Overview & Monitoring ─────────────────────────────────────────────
   {
     id: 'overview',
     title: 'Overview & Monitoring',
@@ -89,16 +89,20 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
       },
     ],
   },
+
+  // ── 2. CRM & Sales Force ─────────────────────────────────────────────────
+  // Lead generation and pipeline comes BEFORE order capture.
+  // A salesman generates a lead → qualifies it → converts it to a sales order.
   {
     id: 'crm',
-    title: 'CRM & Salesmen',
+    title: 'CRM & Sales Force',
     items: [
       {
         id: 'crm-leads',
         moduleKey: 'sales',
         defaultLabel: 'Commercial Leads',
         to: '/sales?tab=leads',
-        icon: Kanban,
+        icon: UserCheck,
         permission: ['sales.lead.view', 'crm.lead.view', 'sales.order.view'],
       },
       {
@@ -106,7 +110,7 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
         moduleKey: 'sales',
         defaultLabel: 'Salesmen Directory',
         to: '/sales?tab=salesmen',
-        icon: UserCheck,
+        icon: Users,
         permission: ['sales.order.view', 'hr.employee.view'],
       },
       {
@@ -127,6 +131,9 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
       },
     ],
   },
+
+  // ── 3. Sales & Commercials ───────────────────────────────────────────────
+  // Order capture, invoicing, POS counter sales, and the live web storefront.
   {
     id: 'sales',
     title: 'Sales & Commercials',
@@ -165,6 +172,9 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
       },
     ],
   },
+
+  // ── 4. Inventory & Supply ────────────────────────────────────────────────
+  // Once an order is captured, materials need to be sourced & stocked.
   {
     id: 'supply',
     title: 'Inventory & Supply',
@@ -230,6 +240,9 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
       },
     ],
   },
+
+  // ── 5. Production & Quality ──────────────────────────────────────────────
+  // Materials are converted into finished goods on the factory floor.
   {
     id: 'production',
     title: 'Production & Quality',
@@ -251,8 +264,19 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
         icon: Microscope,
         permission: ['qc.inspection.view', 'qc.parameter.view', 'qc.wastage.view'],
       },
+      {
+        id: 'maintenance',
+        moduleKey: 'maintenance',
+        defaultLabel: 'Machine Maintenance',
+        to: '/assets?tab=maintenance',
+        icon: Wrench,
+        permission: ['assets.asset.view', 'assets.maintenance.view'],
+      },
     ],
   },
+
+  // ── 6. Finance & Accounts ────────────────────────────────────────────────
+  // Record all financial transactions: revenue, expenses, receivables, assets.
   {
     id: 'finance',
     title: 'Finance & Accounts',
@@ -287,16 +311,11 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
         icon: Building2,
         permission: ['assets.asset.view', 'assets.maintenance.view'],
       },
-      {
-        id: 'maintenance',
-        moduleKey: 'maintenance',
-        defaultLabel: 'Machine Maintenance',
-        to: '/assets?tab=maintenance',
-        icon: Wrench,
-        permission: ['assets.asset.view', 'assets.maintenance.view'],
-      },
     ],
   },
+
+  // ── 7. Workforce & HR ────────────────────────────────────────────────────
+  // People operations: hire, clock in, measure output, pay.
   {
     id: 'hr',
     title: 'Workforce & HR',
@@ -343,6 +362,9 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
       },
     ],
   },
+
+  // ── 8. Intelligence & System ─────────────────────────────────────────────
+  // Access control, audit trails, and global configuration.
   {
     id: 'system',
     title: 'Intelligence & System',
@@ -371,6 +393,7 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
     ],
   },
 ];
+
 
 /**
  * Returns the canonical default navigation sequence structure.

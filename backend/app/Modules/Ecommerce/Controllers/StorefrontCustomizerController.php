@@ -179,4 +179,45 @@ final class StorefrontCustomizerController extends Controller
             'data' => $storefrontProduct,
         ]);
     }
+
+    /**
+     * Publish all active finished goods to the storefront in bulk.
+     */
+    public function bulkPublishFinished(Request $request): JsonResponse
+    {
+        $tenantId = TenantContext::current()->tenantId();
+        $storefront = Storefront::where('tenant_id', $tenantId)->first();
+        if (! $storefront) {
+            $this->getSettings();
+            $storefront = Storefront::where('tenant_id', $tenantId)->firstOrFail();
+        }
+
+        $finishedProducts = Product::where('tenant_id', $tenantId)
+            ->where('status', 'active')
+            ->where('type', 'finished')
+            ->get();
+
+        foreach ($finishedProducts as $index => $prod) {
+            StorefrontProduct::updateOrCreate(
+                [
+                    'tenant_id' => $tenantId,
+                    'storefront_id' => $storefront->id,
+                    'product_id' => $prod->id,
+                ],
+                [
+                    'uuid' => (string) Str::uuid(),
+                    'seo_slug' => Str::slug($prod->name) . '-' . strtolower($prod->sku),
+                    'is_available' => true,
+                    'is_featured' => true,
+                    'sort_order' => $index + 1,
+                ]
+            );
+            $prod->update(['is_online' => true]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Successfully synced and published {$finishedProducts->count()} finished products to the storefront.",
+        ]);
+    }
 }

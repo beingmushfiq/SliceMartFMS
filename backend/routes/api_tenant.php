@@ -489,9 +489,9 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::post('{id}/approve', [App\Modules\Sales\Controllers\SalesOrderController::class, 'approve'])
                     ->middleware('permission:sales.order.approve')->name('approve');
                 Route::patch('{id}/status', [App\Modules\Sales\Controllers\SalesOrderController::class, 'updateStatus'])
-                    ->middleware('permission:sales.order.approve')->name('status');
+                    ->middleware('permission:sales.order.approve,sales.order.create')->name('status');
                 Route::post('{id}/payment', [App\Modules\Sales\Controllers\SalesOrderController::class, 'recordPayment'])
-                    ->middleware('permission:sales.order.approve')->name('payment');
+                    ->middleware('permission:sales.order.approve,sales.order.create')->name('payment');
                 Route::post('{id}/invoice', [App\Modules\Sales\Controllers\SalesOrderController::class, 'generateInvoice'])
                     ->middleware('permission:sales.order.approve')->name('invoice');
                 Route::delete('{id}', [App\Modules\Sales\Controllers\SalesOrderController::class, 'destroy'])
@@ -556,8 +556,10 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                     ->middleware('permission:sales.lead.update')->name('stage');
                 Route::post('{id}/validate-fake', [App\Modules\Sales\Controllers\CrmLeadController::class, 'validateFake'])
                     ->middleware('permission:sales.lead.update')->name('validate-fake');
+                Route::post('{id}/verify-sale', [App\Modules\Sales\Controllers\CrmLeadController::class, 'verifySale'])
+                    ->middleware('permission:sales.lead.update,sales.order.approve')->name('verify-sale');
                 Route::post('{id}/convert', [App\Modules\Sales\Controllers\CrmLeadController::class, 'convert'])
-                    ->middleware('permission:sales.lead.update')->name('convert');
+                    ->middleware('permission:sales.lead.update,sales.order.approve')->name('convert');
                 Route::post('{id}/activities', [App\Modules\Sales\Controllers\CrmLeadController::class, 'addActivity'])
                     ->middleware('permission:sales.lead.update')->name('activities');
             });
@@ -839,12 +841,16 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
         Route::prefix('storefront')->name('storefront.')->group(static function (): void {
             Route::get('settings', [\App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'getSettings'])->name('settings.get');
             Route::put('settings', [\App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'updateSettings'])->name('settings.update');
-            Route::get('products', [\App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'getPublishedProducts'])->name('products.index');
-            Route::post('products/toggle-publish', [\App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'togglePublishProduct'])->name('products.toggle');
+            Route::get('cms-products', [\App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'getPublishedProducts'])->name('products.index');
+            Route::post('cms-products/toggle-publish', [\App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'togglePublishProduct'])->name('products.toggle');
+            Route::post('cms-products/bulk-publish-finished', [\App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'bulkPublishFinished'])->name('products.bulk-publish');
+            Route::post('products/toggle-publish', [\App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'togglePublishProduct'])->name('products.toggle.legacy');
+
 
             // Page Builder
             Route::get('cms/pages', [\App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'index'])->name('cms.pages.index');
             Route::post('cms/pages', [\App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'store'])->name('cms.pages.store');
+            Route::post('cms/pages/seed-defaults', [\App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'seedDefaults'])->name('cms.pages.seed-defaults');
             Route::get('cms/pages/{idOrSlug}', [\App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'show'])->name('cms.pages.show');
             Route::put('cms/pages/{id}', [\App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'update'])->name('cms.pages.update');
             Route::delete('cms/pages/{id}', [\App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'destroy'])->name('cms.pages.destroy');

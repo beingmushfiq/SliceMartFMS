@@ -4,8 +4,6 @@ import { toast } from 'sonner';
 import {
   Plus,
   Search,
-  Kanban,
-  Table as TableIcon,
   Building2,
   DollarSign,
   CheckCircle2,
@@ -20,6 +18,7 @@ import {
   Phone,
   Mail,
   X,
+  ShoppingCart,
 } from 'lucide-react';
 import type { Lead, LeadStatus, LeadSource } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
@@ -123,7 +122,7 @@ const STAGES: { id: LeadStatus; label: string; tone: string; dotBg: string; badg
 export function LeadsSection() {
   const { formatCurrency, currencySymbol } = useCurrency();
   const queryClient = useQueryClient();
-  const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
+
   const [search, setSearch] = useState('');
   const [stageFilter, setStageFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -301,6 +300,7 @@ type ApiError = { response?: { data?: { message?: string } } };
       queryClient.invalidateQueries({ queryKey: ['crm', 'leads'] });
       queryClient.invalidateQueries({ queryKey: ['sales', 'salesmen'] });
       queryClient.invalidateQueries({ queryKey: ['sales', 'targets'] });
+      queryClient.invalidateQueries({ queryKey: ['tenant', 'dashboard'] });
       setAuditModalOpen(false);
     },
     onError: (err: ApiError) => {
@@ -318,9 +318,28 @@ type ApiError = { response?: { data?: { message?: string } } };
       queryClient.invalidateQueries({ queryKey: ['crm', 'leads'] });
       queryClient.invalidateQueries({ queryKey: ['sales', 'customers'] });
       queryClient.invalidateQueries({ queryKey: ['sales', 'salesmen'] });
+      queryClient.invalidateQueries({ queryKey: ['tenant', 'dashboard'] });
     },
     onError: (err: ApiError) => {
       toast.error(err?.response?.data?.message || 'Conversion failed');
+    },
+  });
+
+  // Verify Sale Mutation (For leads originating from orders)
+  const verifySaleMutation = useMutation({
+    mutationFn: async ({ id, notes }: { id: number; notes?: string }) => {
+      return api.post(`/sales/leads/${id}/verify-sale`, { notes });
+    },
+    onSuccess: () => {
+      toast.success('Lead verified as sold successfully!');
+      queryClient.invalidateQueries({ queryKey: ['crm', 'leads'] });
+      queryClient.invalidateQueries({ queryKey: ['sales', 'orders'] });
+      queryClient.invalidateQueries({ queryKey: ['sales', 'customers'] });
+      queryClient.invalidateQueries({ queryKey: ['sales', 'salesmen'] });
+      queryClient.invalidateQueries({ queryKey: ['tenant', 'dashboard'] });
+    },
+    onError: (err: ApiError) => {
+      toast.error(err?.response?.data?.message || 'Verification failed');
     },
   });
 
@@ -374,39 +393,13 @@ type ApiError = { response?: { data?: { message?: string } } };
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-default">Commercial Leads Pipeline & CRM</h2>
+          <h2 className="text-lg font-bold text-default">Commercial Leads & CRM</h2>
           <p className="text-xs text-muted">
             Omnichannel lead generation, stage qualification, fake lead audit gate, and account conversion.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* View Toggle */}
-          <div className="flex items-center bg-surface-sunken p-1 rounded-xl border border-default">
-            <button
-              onClick={() => setViewMode('kanban')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                viewMode === 'kanban'
-                  ? 'bg-surface text-default shadow-xs font-semibold'
-                  : 'text-muted hover:text-default'
-              }`}
-            >
-              <Kanban className="h-3.5 w-3.5" />
-              <span>Pipeline</span>
-            </button>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                viewMode === 'table'
-                  ? 'bg-surface text-default shadow-xs font-semibold'
-                  : 'text-muted hover:text-default'
-              }`}
-            >
-              <TableIcon className="h-3.5 w-3.5" />
-              <span>List View</span>
-            </button>
-          </div>
-
           <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-medium text-white shadow-xs hover:bg-primary-hover transition-colors cursor-pointer"
@@ -484,151 +477,8 @@ type ApiError = { response?: { data?: { message?: string } } };
         </div>
       </div>
 
-      {/* Kanban Board View */}
-      {viewMode === 'kanban' ? (
-        <div className="w-full overflow-x-auto pb-6 pt-1">
-          <div className="flex gap-4 items-start min-w-max">
-            {STAGES.map((stage) => {
-              const stageLeads = filteredLeads.filter((l) => l.status === stage.id);
-              const stageValue = stageLeads.reduce((sum, l) => sum + parseFloat(l.deal_value || '0'), 0);
-
-              return (
-                <div
-                  key={stage.id}
-                  className="flex flex-col rounded-2xl border border-default bg-surface-sunken/50 p-3.5 w-72.5 shrink-0 shadow-2xs transition-all"
-                >
-                  {/* Column Header */}
-                  <div className="flex items-center justify-between pb-3 border-b border-default mb-3">
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className={`size-2 rounded-full ${stage.dotBg}`} />
-                        <h3 className={`text-xs font-bold ${stage.tone}`}>{stage.label}</h3>
-                      </div>
-                      <div className="text-[11px] font-mono font-semibold text-muted mt-0.5">
-                        {formatCurrency(stageValue)}
-                      </div>
-                    </div>
-                    <span className="flex h-5 min-w-5 px-1.5 items-center justify-center rounded-full bg-surface text-[10px] font-bold text-default border border-default shadow-2xs">
-                      {stageLeads.length}
-                    </span>
-                  </div>
-
-                  {/* Cards Container */}
-                  <div className="space-y-3 flex-1 overflow-y-auto max-h-155 pr-0.5">
-                    {stageLeads.length === 0 ? (
-                      <div className="py-10 text-center text-xs text-muted border-2 border-dashed border-default/70 rounded-xl bg-surface/30">
-                        <p className="font-semibold">No leads</p>
-                        <p className="text-[10px] text-muted/70 mt-0.5">Stage is empty</p>
-                      </div>
-                    ) : (
-                      stageLeads.map((lead) => (
-                        <div
-                          key={lead.id}
-                          className={`group rounded-xl border p-3.5 shadow-2xs transition-all space-y-2.5 ${
-                            lead.is_fake
-                              ? 'border-danger/40 bg-danger-subtle/20'
-                              : 'border-default bg-surface hover:border-primary/40'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-1.5">
-                            <div className="min-w-0 flex-1">
-                              <div className="text-xs font-bold text-default leading-tight truncate group-hover:text-primary transition-colors">
-                                {lead.name}
-                              </div>
-                              <div className="text-[10px] font-mono text-muted mt-0.5">
-                                {lead.lead_number || `LD-${lead.id}`}
-                              </div>
-                              {lead.company_name && (
-                                <div className="text-[11px] text-muted flex items-center gap-1 mt-0.5 truncate">
-                                  <Building2 className="h-3 w-3 shrink-0 text-muted" />
-                                  <span className="truncate">{lead.company_name}</span>
-                                </div>
-                              )}
-                            </div>
-
-                            {lead.is_fake ? (
-                              <Badge tone="danger-subtle" className="text-[9px]">
-                                Fake Lead
-                              </Badge>
-                            ) : (
-                              <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-surface-sunken text-muted border border-default font-medium capitalize">
-                                {lead.source.replace('_', ' ')}
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                            {formatCurrency(lead.deal_value || '0')}
-                          </div>
-
-                          {lead.notes && (
-                            <p className="text-[11px] text-muted line-clamp-2 leading-relaxed bg-surface-sunken/50 p-2 rounded-lg border border-default/40">
-                              {lead.notes}
-                            </p>
-                          )}
-
-                          {lead.is_fake && lead.validation_notes && (
-                            <div className="text-[10px] text-danger p-1.5 rounded-lg bg-danger-subtle/40 border border-danger/30">
-                              <span className="font-bold">Audit Reason: </span>
-                              {lead.validation_notes}
-                            </div>
-                          )}
-
-                          <div className="pt-2 border-t border-default/70 flex items-center justify-between text-[10px] text-muted">
-                            <span className="truncate max-w-30 font-medium">{String(lead.assigned_to || 'Unassigned')}</span>
-                            {lead.expected_close_date && (
-                              <span className="font-mono">{lead.expected_close_date}</span>
-                            )}
-                          </div>
-
-                          {/* Quick Action Buttons */}
-                          <div className="pt-1 flex items-center gap-1.5">
-                            <select
-                              value={lead.status}
-                              onChange={(e) =>
-                                updateStageMutation.mutate({ id: lead.id, stage: e.target.value as LeadStatus })
-                              }
-                              className="flex-1 text-[11px] rounded-lg border border-default bg-surface-sunken px-2 py-1 text-default focus:border-primary focus:outline-none cursor-pointer"
-                            >
-                              {STAGES.map((s) => (
-                                <option key={s.id} value={s.id}>
-                                  Move to {s.label}
-                                </option>
-                              ))}
-                            </select>
-
-                            <button
-                              type="button"
-                              onClick={() => handleOpenAuditModal(lead)}
-                              className="p-1 rounded-lg text-muted hover:text-danger hover:bg-danger-subtle border border-default/50 transition-colors"
-                              title="Audit Lead (Mark Fake/Genuine)"
-                            >
-                              <AlertTriangle className="size-3.5" />
-                            </button>
-
-                            {lead.status !== 'won' && !lead.is_fake && (
-                              <button
-                                type="button"
-                                onClick={() => convertMutation.mutate(lead.id)}
-                                className="p-1 rounded-lg text-muted hover:text-primary hover:bg-primary-subtle border border-default/50 transition-colors"
-                                title="Convert Lead to Customer Account"
-                              >
-                                <UserCheck className="size-3.5" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : (
-        /* Table View */
-        <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
+      {/* Table View */}
+      <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs text-default">
               <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
@@ -671,6 +521,19 @@ type ApiError = { response?: { data?: { message?: string } } };
                               </>
                             )}
                           </div>
+                          {l.orders && l.orders.length > 0 && (
+                            <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                              {l.orders.map((o) => (
+                                <span
+                                  key={o.id}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[10px] font-medium text-blue-600 dark:text-blue-400"
+                                >
+                                  <ShoppingCart className="size-2.5" />
+                                  <span>{o.order_number}</span>
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3.5 text-muted font-medium">
                           {l.company_name || '-'}
@@ -692,18 +555,36 @@ type ApiError = { response?: { data?: { message?: string } } };
                           {String(l.assigned_to || 'Unassigned')}
                         </td>
                         <td className="px-4 py-3.5">
-                          {l.is_fake ? (
+                          {l.validated_at ? (
+                            <Badge tone="success-subtle" className="text-[9px]">
+                              Verified Sale
+                            </Badge>
+                          ) : l.is_fake ? (
                             <Badge tone="danger-subtle" className="text-[9px]">
                               Fake Lead
                             </Badge>
                           ) : (
-                            <Badge tone="success-subtle" className="text-[9px]">
-                              Valid
+                            <Badge tone="warning-subtle" className="text-[9px]">
+                              Unverified
                             </Badge>
                           )}
                         </td>
                         <td className="px-4 py-3.5 text-right">
                           <div className="lead-actions-menu-container flex items-center justify-end gap-1.5 relative">
+                            {/* Verify Sale Action (for sales-linked leads) */}
+                            {!isWon && !isFake && (
+                              <button
+                                type="button"
+                                onClick={() => verifySaleMutation.mutate({ id: l.id })}
+                                disabled={verifySaleMutation.isPending}
+                                className="inline-flex items-center gap-1 rounded-xl bg-blue-500/10 border border-blue-500/25 px-2.5 py-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-all cursor-pointer disabled:opacity-50 shadow-2xs"
+                                title="Verify Lead as Genuine Sold Order"
+                              >
+                                <CheckCircle2 className="size-3" />
+                                <span>Verify Sale</span>
+                              </button>
+                            )}
+
                             {/* Primary Quick Convert Action */}
                             {canConvert && (
                               <button
@@ -778,6 +659,21 @@ type ApiError = { response?: { data?: { message?: string } } };
                                     <span>Audit Quality Gate</span>
                                   </button>
 
+                                  {!isWon && !isFake && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        verifySaleMutation.mutate({ id: l.id });
+                                        setActiveMenuLeadId(null);
+                                      }}
+                                      disabled={verifySaleMutation.isPending}
+                                      className="flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition-colors cursor-pointer"
+                                    >
+                                      <CheckCircle2 className="size-3.5 text-blue-500 shrink-0" />
+                                      <span>Verify as Sold Order</span>
+                                    </button>
+                                  )}
+
                                   <div className="my-1 border-t border-default/70" />
 
                                   {/* Change Stage Section */}
@@ -824,7 +720,6 @@ type ApiError = { response?: { data?: { message?: string } } };
             </table>
           </div>
         </div>
-      )}
 
       {/* Fake Lead Audit Modal */}
       {auditModalOpen && activeLeadForAudit && (

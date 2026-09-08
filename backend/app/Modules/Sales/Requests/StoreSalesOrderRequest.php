@@ -21,7 +21,9 @@ final class StoreSalesOrderRequest extends FormRequest
         return [
             'order_date'      => ['required', 'date'],
             'channel'         => ['nullable', 'string', 'in:counter,dealer,phone,field,online'],
-            'party_id'        => ['nullable', 'integer'],
+            'party_id'        => ['nullable'],
+            'lead_id'         => ['nullable', 'integer'],
+            'salesman_id'     => ['nullable', 'integer'],
             'customer_name'   => ['nullable', 'string', 'max:255'],
             'customer_phone'  => ['nullable', 'string', 'max:64'],
             'warehouse_id'    => ['nullable', 'integer'],

@@ -24,7 +24,7 @@ final class StorefrontTableSeeder extends Seeder
         $branch = Branch::first();
         $warehouse = Warehouse::where('type', 'finished_goods')->first() ?? Warehouse::first();
 
-        Storefront::firstOrCreate(
+        $storefront = Storefront::firstOrCreate(
             ['subdomain' => 'slicemart'],
             [
                 'tenant_id' => $tenant->id,
@@ -54,6 +54,28 @@ final class StorefrontTableSeeder extends Seeder
                 'published_at' => now(),
             ]
         );
+
+        // Sync and publish all finished goods to storefront_products table
+        $finishedProducts = \App\Models\Product::where('tenant_id', $tenant->id)
+            ->where('type', 'finished')
+            ->get();
+
+        foreach ($finishedProducts as $index => $prod) {
+            \App\Models\StorefrontProduct::firstOrCreate(
+                [
+                    'tenant_id' => $tenant->id,
+                    'storefront_id' => $storefront->id,
+                    'product_id' => $prod->id,
+                ],
+                [
+                    'uuid' => (string) Str::uuid(),
+                    'seo_slug' => Str::slug($prod->name) . '-' . strtolower($prod->sku),
+                    'is_available' => true,
+                    'is_featured' => true,
+                    'sort_order' => $index + 1,
+                ]
+            );
+        }
 
         // Seed default couriers for tenant #1
         $couriers = [

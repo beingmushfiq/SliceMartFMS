@@ -8,6 +8,7 @@ use App\Core\Tenancy\Concerns\BelongsToTenant;
 use App\Models\Party;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Modules\HR\Models\Employee;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -82,6 +83,8 @@ final class SalesOrder extends Model
         'branch_id',
         'warehouse_id',
         'party_id',
+        'lead_id',
+        'salesman_id',
         'customer_name',
         'customer_phone',
         'pos_session_id',
@@ -174,6 +177,22 @@ final class SalesOrder extends Model
     public function salesperson(): BelongsTo
     {
         return $this->belongsTo(User::class, 'salesperson_id');
+    }
+
+    /**
+     * @return BelongsTo<CrmLead, $this>
+     */
+    public function lead(): BelongsTo
+    {
+        return $this->belongsTo(CrmLead::class, 'lead_id');
+    }
+
+    /**
+     * @return BelongsTo<Employee, $this>
+     */
+    public function salesman(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'salesman_id');
     }
 
     /**

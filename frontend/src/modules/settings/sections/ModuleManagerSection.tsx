@@ -66,10 +66,10 @@ const MODULE_ICONS: Record<string, React.ElementType> = {
 
 const SECTION_ICONS: Record<string, React.ElementType> = {
   overview: Sparkles,
-  crm: Boxes,
-  sales: ShoppingBag,
   supply: Warehouse,
   production: Factory,
+  sales: ShoppingBag,
+  crm: Boxes,
   finance: Coins,
   hr: Users,
   system: Building2,
@@ -93,20 +93,20 @@ const MODULE_DESCRIPTIONS: Record<string, string> = {
 };
 
 const DEFAULT_MODULES: ModuleItem[] = [
-  { module_key: 'production', label: 'Production Chain', enabled: true, plan_allowed: true, config: {} },
   { module_key: 'inventory', label: 'Stock & Inventory', enabled: true, plan_allowed: true, config: {} },
   { module_key: 'purchasing', label: 'Procurement (PO)', enabled: true, plan_allowed: true, config: {} },
+  { module_key: 'delivery', label: 'Logistics & Courier', enabled: true, plan_allowed: true, config: {} },
+  { module_key: 'production', label: 'Production Chain', enabled: true, plan_allowed: true, config: {} },
+  { module_key: 'qc', label: 'Quality Control (QC)', enabled: true, plan_allowed: true, config: {} },
+  { module_key: 'maintenance', label: 'Machine Maintenance', enabled: true, plan_allowed: true, config: {} },
   { module_key: 'sales', label: 'Sales & Invoices', enabled: true, plan_allowed: true, config: {} },
   { module_key: 'pos', label: 'Point of Sale (POS)', enabled: true, plan_allowed: true, config: {} },
   { module_key: 'ecommerce', label: 'Storefront & E-Commerce', enabled: true, plan_allowed: true, config: {} },
-  { module_key: 'delivery', label: 'Logistics & Courier', enabled: true, plan_allowed: true, config: {} },
-  { module_key: 'finance', label: 'Finance & Accounts', enabled: true, plan_allowed: true, config: {} },
-  { module_key: 'assets', label: 'Fixed Assets & Maintenance', enabled: true, plan_allowed: true, config: {} },
-  { module_key: 'hr', label: 'Workforce & HR', enabled: true, plan_allowed: true, config: {} },
-  { module_key: 'qc', label: 'Quality Control (QC)', enabled: true, plan_allowed: true, config: {} },
-  { module_key: 'reports', label: 'Reports & BI (RMS)', enabled: true, plan_allowed: true, config: {} },
   { module_key: 'crm', label: 'CRM & Leads', enabled: true, plan_allowed: true, config: {} },
-  { module_key: 'maintenance', label: 'Machine Maintenance', enabled: true, plan_allowed: true, config: {} },
+  { module_key: 'finance', label: 'Finance & Accounts', enabled: true, plan_allowed: true, config: {} },
+  { module_key: 'assets', label: 'Fixed Assets', enabled: true, plan_allowed: true, config: {} },
+  { module_key: 'hr', label: 'Workforce & HR', enabled: true, plan_allowed: true, config: {} },
+  { module_key: 'reports', label: 'Reports & BI (RMS)', enabled: true, plan_allowed: true, config: {} },
 ];
 
 export const ModuleManagerSection: React.FC = () => {
@@ -118,7 +118,7 @@ export const ModuleManagerSection: React.FC = () => {
   const [filterMode, setFilterMode] = useState<'all' | 'enabled' | 'disabled'>('all');
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     supply: true,
-    crm: true,
+    production: true,
   });
 
   const invalidateManifest = useTenantCapabilityStore((state) => state.invalidate);

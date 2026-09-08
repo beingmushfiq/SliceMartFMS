@@ -29,6 +29,7 @@ import {
   Clock,
   Plus,
   Compass,
+  RefreshCw,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -58,7 +59,7 @@ import { promptPWAInstall, isPWAInstallable } from '../../registerSW';
 import { useAuthStore } from '../../lib/auth/authStore';
 import { useTenantBranding } from '../../lib/theme/useTenantBranding';
 import { useCurrency } from '../../lib/format/currency';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api/client';
 import { cn } from '../../lib/utils';
 import { OnboardingStartupModal } from '../../modules/platform/OnboardingStartupModal';
@@ -82,6 +83,75 @@ export type DashboardRoleView =
   | 'finance'
   | 'workforce';
 type TimeframeType = 'today' | '7days' | '30days' | 'custom';
+
+interface DashboardTrendItem {
+  day?: string;
+  time: string;
+  date?: string;
+  revenue: number;
+  production?: number;
+  produced: number;
+  qcPassed: number;
+  target: number;
+}
+
+interface DashboardMetricsData {
+  commercial: {
+    today_revenue: number;
+    month_revenue: number;
+    active_orders: number;
+    today_orders_count?: number;
+    total_receivable_due: number;
+  };
+  production: {
+    today_output: number;
+    target_output: number;
+    achievement_rate: number;
+    active_batches: number;
+    total_batches?: number;
+  };
+  inventory: {
+    total_valuation: number;
+    low_stock_count: number;
+  };
+  quality: {
+    qc_pass_rate: number;
+    pending_inspections: number;
+    total_inspections?: number;
+  };
+  trends?: {
+    weekly: DashboardTrendItem[];
+    today: DashboardTrendItem[];
+    monthly: DashboardTrendItem[];
+  };
+  recent_batches?: Array<{
+    id: string;
+    product: string;
+    code: string;
+    target: number;
+    produced: number;
+    progress: number;
+    status: string;
+  }>;
+  recent_qc?: Array<{
+    id: string;
+    orderNo: string;
+    product: string;
+    qty: number;
+    status: string;
+    failed?: number;
+    rework?: number;
+  }>;
+  active_workers?: Array<{
+    initials: string;
+    name: string;
+    output: string;
+    rate: number;
+    badge: string;
+    color: string;
+  }>;
+  attention_items?: OrderPOItem[];
+}
 
 interface ProductionStat {
   target: number;
@@ -121,40 +191,33 @@ export const TenantRoleDashboard: React.FC = () => {
   const hasPermission = useAuthStore((state) => state.hasPermission);
   const { companyName, logoUrl } = useTenantBranding();
   const { formatCurrency, currencySymbol } = useCurrency();
+  const queryClient = useQueryClient();
 
-  const { data: metrics } = useQuery({
+  const [isLiveTelemetry, setIsLiveTelemetry] = useState(true);
+
+  const {
+    data: metrics,
+    refetch: refetchMetrics,
+    isFetching: isRefreshingMetrics,
+  } = useQuery({
     queryKey: ['tenant', 'dashboard', 'metrics'],
     queryFn: async () => {
       try {
-        const res = await api.get<{
-          data: {
-            commercial: {
-              today_revenue: number;
-              month_revenue: number;
-              active_orders: number;
-              total_receivable_due: number;
-            };
-            production: {
-              today_output: number;
-              target_output: number;
-              achievement_rate: number;
-              active_batches: number;
-            };
-            inventory: {
-              total_valuation: number;
-              low_stock_count: number;
-            };
-            quality: {
-              qc_pass_rate: number;
-              pending_inspections: number;
-            };
-          };
-        }>('/dashboard/metrics');
-        return res.data.data;
+        const res = await api.get<any>('/dashboard/metrics');
+        const raw = res.data;
+        if (raw && typeof raw === 'object') {
+          if ('commercial' in raw) return raw as DashboardMetricsData;
+          if ('data' in raw && raw.data && typeof raw.data === 'object' && 'commercial' in raw.data) {
+            return raw.data as DashboardMetricsData;
+          }
+        }
+        return (raw as DashboardMetricsData) ?? null;
       } catch {
         return null;
       }
     },
+    refetchInterval: isLiveTelemetry ? 5000 : 30000,
+    staleTime: 4000,
   });
 
   const roleName = user?.role || (user?.is_platform_admin ? 'Super Administrator' : '');
@@ -242,7 +305,6 @@ export const TenantRoleDashboard: React.FC = () => {
   const [isAlertBannerVisible, setIsAlertBannerVisible] = useState(true);
   const [isAlertBannerExpanded, setIsAlertBannerExpanded] = useState(true);
   const [timeframe, setTimeframe] = useState<TimeframeType>('7days');
-  const [isLiveTelemetry, setIsLiveTelemetry] = useState(false);
   const [showBalance, setShowBalance] = useState(true);
   const [salesFilter, setSalesFilter] = useState<'all' | 'DELIVERED' | 'CONFIRMED'>('all');
   const [orderFilter, setOrderFilter] = useState<'all' | 'QC PENDING' | 'COMPLETED' | 'READY'>('all');
@@ -375,38 +437,40 @@ export const TenantRoleDashboard: React.FC = () => {
     achievement: metrics?.production?.achievement_rate ?? 0,
   }), [metrics]);
 
-  // Chart data resolution
+  // Chart data resolution - dynamic from metrics trends
   const chartData = useMemo(() => {
+    if (!metrics?.trends) {
+      switch (timeframe) {
+        case 'today':
+          return EMPTY_TREND_TODAY;
+        case '30days':
+          return EMPTY_TREND_30DAYS;
+        case 'custom':
+        case '7days':
+        default:
+          return EMPTY_TREND_7DAYS;
+      }
+    }
     switch (timeframe) {
       case 'today':
-        return EMPTY_TREND_TODAY;
+        return metrics.trends.today && metrics.trends.today.length > 0 ? metrics.trends.today : EMPTY_TREND_TODAY;
       case '30days':
-        return EMPTY_TREND_30DAYS;
+        return metrics.trends.monthly && metrics.trends.monthly.length > 0 ? metrics.trends.monthly : EMPTY_TREND_30DAYS;
       case 'custom':
-        return EMPTY_TREND_7DAYS;
       case '7days':
       default:
-        return EMPTY_TREND_7DAYS;
+        return metrics.trends.weekly && metrics.trends.weekly.length > 0 ? metrics.trends.weekly : EMPTY_TREND_7DAYS;
     }
-  }, [timeframe]);
+  }, [timeframe, metrics?.trends]);
 
   // Operational Attention Items - query low stock dynamically
   const { data: rawLowStock = [] } = useQuery({
     queryKey: ['inventory', 'low-stock-attention'],
     queryFn: async () => {
       try {
-        const res = await api.get<{
-          data: Array<{
-            id: number;
-            sku: string;
-            name: string;
-            current_stock: number;
-            min_stock_alert: number;
-            unit?: string;
-            warehouse?: { name?: string };
-          }>;
-        }>('/inventory/stock?low_stock=true&per_page=5');
-        return res.data.data;
+        const res = await api.get<any>('/inventory/stock?low_stock=true&per_page=5');
+        const d = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+        return Array.isArray(d) ? d : [];
       } catch {
         return [];
       }
@@ -414,34 +478,32 @@ export const TenantRoleDashboard: React.FC = () => {
   });
 
   const attentionItems: OrderPOItem[] = useMemo(() => {
-    return rawLowStock.map((item) => ({
-      id: String(item.id),
-      name: item.name,
-      sku: item.sku,
-      warehouse: item.warehouse?.name || 'Main Facility',
-      currentStock: item.current_stock ?? 0,
-      minThreshold: item.min_stock_alert ?? 0,
-      unit: item.unit || 'pcs',
-      suggestedQty: Math.max((item.min_stock_alert ?? 0) - (item.current_stock ?? 0), 10),
-    }));
-  }, [rawLowStock]);
+    if (rawLowStock.length > 0) {
+      return rawLowStock.map((item) => ({
+        id: String(item.id),
+        name: item.name,
+        sku: item.sku,
+        warehouse: item.warehouse?.name || 'Main Facility',
+        currentStock: item.current_stock ?? 0,
+        minThreshold: item.min_stock_alert ?? 0,
+        unit: item.unit || 'pcs',
+        suggestedQty: Math.max((item.min_stock_alert ?? 0) - (item.current_stock ?? 0), 10),
+      }));
+    }
+    if (metrics?.attention_items && metrics.attention_items.length > 0) {
+      return metrics.attention_items;
+    }
+    return [];
+  }, [rawLowStock, metrics?.attention_items]);
 
   // Invoices list - query dynamic invoices
   const { data: rawInvoices = [] } = useQuery({
     queryKey: ['sales', 'dashboard-invoices'],
     queryFn: async () => {
       try {
-        const res = await api.get<{
-          data: Array<{
-            id: number;
-            invoice_number: string;
-            total_amount: number;
-            status: string;
-            payment_status: string;
-            customer?: { name?: string };
-          }>;
-        }>('/sales/invoices?per_page=5');
-        return res.data.data;
+        const res = await api.get<any>('/sales/invoices?per_page=5');
+        const d = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+        return Array.isArray(d) ? d : [];
       } catch {
         return [];
       }
@@ -464,7 +526,7 @@ export const TenantRoleDashboard: React.FC = () => {
     return invoices.filter((inv) => inv.status === salesFilter);
   }, [salesFilter, invoices]);
 
-  // Production orders - dynamic or empty array
+  // Production orders - dynamic from live operational metrics
   const productionOrders: Array<{
     id: string;
     product: string;
@@ -473,14 +535,16 @@ export const TenantRoleDashboard: React.FC = () => {
     produced: number;
     progress: number;
     status: string;
-  }> = useMemo(() => [], []);
+  }> = useMemo(() => {
+    return metrics?.recent_batches || [];
+  }, [metrics?.recent_batches]);
 
   const filteredOrders = useMemo(() => {
     if (orderFilter === 'all') return productionOrders;
     return productionOrders.filter((ord) => ord.status === orderFilter);
   }, [orderFilter, productionOrders]);
 
-  // QC Items - dynamic or empty array
+  // QC Items - dynamic from live operational metrics
   const qcList: Array<{
     id: string;
     orderNo: string;
@@ -489,9 +553,11 @@ export const TenantRoleDashboard: React.FC = () => {
     status: string;
     failed?: number;
     rework?: number;
-  }> = useMemo(() => [], []);
+  }> = useMemo(() => {
+    return metrics?.recent_qc || [];
+  }, [metrics?.recent_qc]);
 
-  // Workers - dynamic or empty array
+  // Workers - dynamic from live operational metrics
   const workers: Array<{
     initials: string;
     name: string;
@@ -499,7 +565,9 @@ export const TenantRoleDashboard: React.FC = () => {
     rate: number;
     badge: string;
     color: string;
-  }> = useMemo(() => [], []);
+  }> = useMemo(() => {
+    return metrics?.active_workers || [];
+  }, [metrics?.active_workers]);
 
 
   return (
@@ -521,30 +589,70 @@ export const TenantRoleDashboard: React.FC = () => {
           </div>
         </div>
 
-        {availableViews.length > 1 && (
-          <div className="flex items-center gap-1 overflow-x-auto rounded-xl border border-default bg-surface-sunken p-1 scrollbar-none shrink-0">
-            {availableViews.map((v) => {
-              const Icon = v.icon;
-              const isActive = activeView === v.id;
-              return (
-                <button
-                  key={v.id}
-                  type="button"
-                  onClick={() => setActiveView(v.id)}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap",
-                    isActive
-                      ? "bg-surface text-default shadow-xs border border-default"
-                      : "text-muted hover:text-default hover:bg-surface/50"
-                  )}
-                >
-                  <Icon className={cn("size-3.5", isActive ? "text-primary" : "text-muted")} />
-                  <span>{v.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
+        <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
+          <button
+            type="button"
+            onClick={() => {
+              const next = !isLiveTelemetry;
+              setIsLiveTelemetry(next);
+              toast.info(next ? 'Live telemetry active (auto-updating)' : 'Live telemetry paused');
+            }}
+            className={cn(
+              "flex items-center gap-1.5 rounded-xl border px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer",
+              isLiveTelemetry
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                : "border-default bg-surface-sunken text-muted hover:text-default"
+            )}
+            title="Toggle live telemetry auto-refresh"
+          >
+            <span className={cn("size-2 rounded-full", isLiveTelemetry ? "bg-emerald-500 animate-pulse" : "bg-muted")} />
+            <span className="hidden sm:inline">{isLiveTelemetry ? 'Live Sync' : 'Sync Paused'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={async () => {
+              await Promise.all([
+                refetchMetrics(),
+                queryClient.invalidateQueries({ queryKey: ['tenant', 'dashboard'] }),
+                queryClient.invalidateQueries({ queryKey: ['sales'] }),
+                queryClient.invalidateQueries({ queryKey: ['inventory'] }),
+              ]);
+              toast.success('Dashboard metrics refreshed');
+            }}
+            disabled={isRefreshingMetrics}
+            className="flex items-center gap-1.5 rounded-xl border border-default bg-surface px-2.5 py-1 text-xs font-semibold text-muted hover:text-default hover:bg-surface-sunken transition-all cursor-pointer disabled:opacity-50"
+            title="Refresh dashboard metrics"
+          >
+            <RefreshCw className={cn("size-3.5", isRefreshingMetrics && "animate-spin text-primary")} />
+            <span className="hidden md:inline">Refresh</span>
+          </button>
+
+          {availableViews.length > 1 && (
+            <div className="flex items-center gap-1 overflow-x-auto rounded-xl border border-default bg-surface-sunken p-1 scrollbar-none shrink-0">
+              {availableViews.map((v) => {
+                const Icon = v.icon;
+                const isActive = activeView === v.id;
+                return (
+                  <button
+                    key={v.id}
+                    type="button"
+                    onClick={() => setActiveView(v.id)}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap",
+                      isActive
+                        ? "bg-surface text-default shadow-xs border border-default"
+                        : "text-muted hover:text-default hover:bg-surface/50"
+                    )}
+                  >
+                    <Icon className={cn("size-3.5", isActive ? "text-primary" : "text-muted")} />
+                    <span>{v.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
@@ -644,6 +752,7 @@ export const TenantRoleDashboard: React.FC = () => {
       {activeView === 'executive' && (
         <ExecutiveDashboardView
           onOpenInvoice={setSelectedInvoice}
+          trends={metrics?.trends?.weekly}
         />
       )}
 
@@ -678,6 +787,7 @@ export const TenantRoleDashboard: React.FC = () => {
       {activeView === 'workforce' && (
         <WorkforceDashboardView
           onOpenWorker={setSelectedWorker}
+          workers={workers}
         />
       )}
 

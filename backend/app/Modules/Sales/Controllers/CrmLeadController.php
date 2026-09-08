@@ -24,7 +24,7 @@ final class CrmLeadController extends Controller
     {
         $tenantId = TenantContext::current()->tenantId();
 
-        $query = CrmLead::with(['assignedUser', 'convertedParty', 'validator'])
+        $query = CrmLead::with(['assignedUser', 'convertedParty', 'validator', 'orders'])
             ->where('tenant_id', $tenantId);
 
         if ($request->filled('stage')) {
@@ -197,13 +197,18 @@ final class CrmLeadController extends Controller
             }
 
             if (!$party) {
-                $party = new Party();
+                $customerCode = 'CUST-' . strtoupper(Str::random(6));
+                $party = new Party([
+                    'uuid'        => (string) Str::uuid(),
+                    'code'        => $customerCode,
+                    'name'        => $lead->company_name ? "{$lead->name} ({$lead->company_name})" : ($lead->name ?: 'Customer'),
+                    'phone'       => $lead->phone,
+                    'email'       => $lead->email,
+                    'is_customer' => 1,
+                    'type'        => $lead->company_name ? 'business' : 'individual',
+                    'status'      => 'active',
+                ]);
                 $party->tenant_id = $tenantId;
-                $party->party_type = 'customer';
-                $party->name = $lead->company_name ? "{$lead->name} ({$lead->company_name})" : $lead->name;
-                $party->phone = $lead->phone;
-                $party->email = $lead->email;
-                $party->is_active = true;
                 $party->save();
             }
 
@@ -256,5 +261,98 @@ final class CrmLeadController extends Controller
             'message'  => 'Activity logged successfully',
             'activity' => $activity,
         ], 201);
+    }
+
+    public function verifySale(Request $request, int $id): JsonResponse
+    {
+        $tenantId = TenantContext::current()->tenantId();
+        $lead = CrmLead::with(['orders'])->where('tenant_id', $tenantId)->findOrFail($id);
+
+        $validated = $request->validate([
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $userId = Auth::id() ? (int) Auth::id() : null;
+
+        return DB::transaction(function () use ($lead, $tenantId, $validated, $userId) {
+            $lead->is_fake = false;
+            $lead->stage = 'won';
+            $lead->validated_at = now();
+            $lead->validated_by = $userId;
+            $lead->validation_notes = $validated['notes'] ?? 'Sale verified as genuine.';
+
+            // If not converted to party yet, convert or link party
+            if (!$lead->converted_party_id) {
+                $party = null;
+
+                // Check if any linked order already has a party assigned
+                $firstOrder = $lead->orders()->whereNotNull('party_id')->first();
+                if ($firstOrder && $firstOrder->party_id) {
+                    $party = Party::where('tenant_id', $tenantId)->find($firstOrder->party_id);
+                }
+
+                if (!$party && $lead->phone) {
+                    $party = Party::where('tenant_id', $tenantId)->where('phone', $lead->phone)->first();
+                }
+
+                if (!$party) {
+                    $customerCode = 'CUST-' . strtoupper(Str::random(6));
+                    $party = new Party([
+                        'uuid'        => (string) Str::uuid(),
+                        'code'        => $customerCode,
+                        'name'        => $lead->company_name ? "{$lead->name} ({$lead->company_name})" : ($lead->name ?: 'Customer'),
+                        'phone'       => $lead->phone,
+                        'email'       => $lead->email,
+                        'is_customer' => 1,
+                        'type'        => $lead->company_name ? 'business' : 'individual',
+                        'status'      => 'active',
+                    ]);
+                    $party->tenant_id = $tenantId;
+                    $party->save();
+                }
+
+                $lead->converted_party_id = $party->id;
+                $lead->converted_at = now();
+            }
+
+            $lead->updated_by = $userId;
+            $lead->save();
+
+            // Also confirm any pending orders associated with this lead
+            foreach ($lead->orders as $order) {
+                if (in_array($order->status, ['draft', 'pending'], true)) {
+                    $order->status = 'confirmed';
+                    $order->confirmed_at = now();
+                    $order->confirmed_by = $userId;
+                    $order->save();
+                }
+            }
+
+            // Log activity
+            $activity = new CrmActivity();
+            $activity->tenant_id = $tenantId;
+            $activity->subject_type = 'lead';
+            $activity->subject_id = $lead->id;
+            $activity->type = 'note';
+            $activity->title = 'Lead Verified as Sold';
+            $activity->description = $lead->validation_notes;
+            $activity->assigned_to = $lead->assigned_to;
+            $activity->created_by = $userId;
+            $activity->completed_at = now();
+            $activity->save();
+
+            // Sync salesman targets
+            if ($lead->assigned_to) {
+                $periodMonth = now()->format('Y-m');
+                app(\App\Modules\Sales\Actions\SyncSalesmanAchievementAction::class)
+                    ->execute($tenantId, null, $lead->assigned_to, $periodMonth);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Lead verified as sold successfully.',
+                'lead'    => new CrmLeadResource($lead->load(['assignedUser', 'convertedParty', 'validator', 'orders'])),
+            ]);
+        });
     }
 }

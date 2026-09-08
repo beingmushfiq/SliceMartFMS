@@ -26,7 +26,7 @@ final class SalesOrderController extends Controller
     {
         $tenantId = TenantContext::current()->tenantId();
 
-        $query = SalesOrder::with(['customer', 'warehouse', 'items.product', 'items.unit'])
+        $query = SalesOrder::with(['customer', 'warehouse', 'items.product', 'items.unit', 'lead'])
             ->where('tenant_id', $tenantId);
 
         if ($request->filled('status')) {
@@ -78,7 +78,7 @@ final class SalesOrderController extends Controller
     {
         $tenantId = TenantContext::current()->tenantId();
 
-        $order = SalesOrder::with(['customer', 'warehouse', 'items.product', 'items.unit'])
+        $order = SalesOrder::with(['customer', 'warehouse', 'items.product', 'items.unit', 'lead'])
             ->where('tenant_id', $tenantId)
             ->where('id', $id)
             ->firstOrFail();
@@ -99,7 +99,7 @@ final class SalesOrderController extends Controller
             (int) $request->user()?->id
         );
 
-        return new SalesOrderResource($approved->fresh(['customer', 'warehouse', 'items.product', 'items.unit']));
+        return new SalesOrderResource($approved->fresh(['customer', 'warehouse', 'items.product', 'items.unit', 'lead']));
     }
 
     public function updateStatus(int $id, Request $request): SalesOrderResource
@@ -127,14 +127,31 @@ final class SalesOrderController extends Controller
         }
         $order->save();
 
-        return new SalesOrderResource($order->fresh(['customer', 'warehouse', 'items.product', 'items.unit']));
+        // If status moved to confirmed or delivered, ensure linked lead is verified as sold
+        if (in_array($validated['status'], ['confirmed', 'delivered'], true) && $order->lead_id) {
+            $lead = \App\Modules\Sales\Models\CrmLead::where('tenant_id', $tenantId)->find($order->lead_id);
+            if ($lead && (empty($lead->validated_at) || $lead->stage !== 'won')) {
+                $lead->is_fake = false;
+                $lead->stage = 'won';
+                $lead->validated_at = now();
+                $lead->validated_by = (int) $request->user()?->id;
+                $lead->validation_notes = "Sale verified upon order {$order->order_number} status change to {$validated['status']}.";
+                if ($order->party_id) {
+                    $lead->converted_party_id = $order->party_id;
+                    $lead->converted_at = now();
+                }
+                $lead->save();
+            }
+        }
+
+        return new SalesOrderResource($order->fresh(['customer', 'warehouse', 'items.product', 'items.unit', 'lead']));
     }
 
     public function recordPayment(int $id, Request $request): SalesOrderResource
     {
         $tenantId = TenantContext::current()->tenantId();
         $validated = $request->validate([
-            'payment_status' => 'required|string|in:paid,partially_paid,pending,failed',
+            'payment_status' => 'required|string|in:paid,partially_paid,pending,failed,unpaid',
             'paid_amount'    => 'nullable|numeric',
         ]);
 
@@ -149,6 +166,9 @@ final class SalesOrderController extends Controller
         } elseif ($validated['payment_status'] === 'paid') {
             $order->paid_amount = $order->total_amount;
             $order->due_amount = '0.0000';
+        } elseif ($validated['payment_status'] === 'unpaid') {
+            $order->paid_amount = '0.0000';
+            $order->due_amount = $order->total_amount;
         }
         $order->save();
 

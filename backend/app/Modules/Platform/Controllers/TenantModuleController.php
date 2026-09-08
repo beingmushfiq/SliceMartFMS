@@ -16,24 +16,24 @@ final class TenantModuleController extends Controller
 {
     public const DEFAULT_NAV_ORDER = [
         'sections' => [
-            'overview',
-            'crm',
-            'sales',
-            'supply',
-            'production',
-            'finance',
-            'hr',
-            'system',
+            'overview',   // 1. Dashboard & BI — always first
+            'crm',        // 2. CRM & Sales Force — lead generation BEFORE order capture
+            'sales',      // 3. Sales & Commercials — order capture, invoicing, POS, storefront
+            'supply',     // 4. Inventory & Supply — source materials to fulfil orders
+            'production', // 5. Production & Quality — convert materials → finished goods
+            'finance',    // 6. Finance & Accounts — record revenue, expenses, collections
+            'hr',         // 7. Workforce & HR — people operations
+            'system',     // 8. Intelligence & System — RBAC, audit, settings
         ],
         'items' => [
-            'overview' => ['dashboard', 'reports'],
-            'crm' => ['crm-leads', 'salesmen-directory', 'sales-targets', 'sales-incentives'],
-            'sales' => ['sales', 'pos', 'ecommerce'],
-            'supply' => ['catalogue', 'purchasing', 'inventory', 'delivery'],
-            'production' => ['production', 'qc'],
-            'finance' => ['finance', 'finance-due', 'assets', 'maintenance'],
-            'hr' => ['hr-employees', 'hr-attendance', 'hr-performance', 'hr-payroll', 'hr-departments'],
-            'system' => ['roles', 'audit', 'settings'],
+            'overview'   => ['dashboard', 'reports'],
+            'crm'        => ['crm-leads', 'salesmen-directory', 'sales-targets', 'sales-incentives'],
+            'sales'      => ['sales', 'pos', 'ecommerce'],
+            'supply'     => ['catalogue', 'purchasing', 'inventory', 'delivery'],
+            'production' => ['production', 'qc', 'maintenance'],
+            'finance'    => ['finance', 'finance-due', 'assets'],
+            'hr'         => ['hr-employees', 'hr-attendance', 'hr-performance', 'hr-payroll', 'hr-departments'],
+            'system'     => ['roles', 'audit', 'settings'],
         ],
     ];
 

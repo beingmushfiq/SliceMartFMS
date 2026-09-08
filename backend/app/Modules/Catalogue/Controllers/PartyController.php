@@ -186,10 +186,20 @@ final class PartyController extends Controller
             }
         }
 
-        /** @var Collection<int, array{id: string, label: string}> $items */
+        /** @var Collection<int, array<string, mixed>> $items */
         $items = $query->get()->map(static fn (Party $p) => [
-            'id' => (string) $p->uuid,
-            'label' => ((string) $p->name).' ('.((string) $p->code).')',
+            'id'              => (string) $p->uuid,
+            'party_id'        => $p->id,
+            'code'            => (string) $p->code,
+            'name'            => (string) $p->name,
+            'phone'           => $p->phone,
+            'email'           => $p->email,
+            'type'            => $p->type,
+            'is_dealer'       => (bool) $p->is_dealer,
+            'is_customer'     => (bool) $p->is_customer,
+            'credit_limit'    => (string) $p->credit_limit,
+            'current_balance' => (string) $p->current_balance,
+            'label'           => ((string) $p->name).' ('.((string) $p->code).')',
         ])->values();
 
         return response()->json([
