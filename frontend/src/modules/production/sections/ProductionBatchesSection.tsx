@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Activity,
@@ -14,6 +14,9 @@ import {
   Sparkles,
   Trash2,
   TrendingUp,
+  Download,
+  CheckSquare,
+  X,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
@@ -22,6 +25,7 @@ import { SelectDropdown } from '../../../components/ui/Dropdown';
 import { Badge, StatusBadge } from '../../../components/ui/Badge';
 import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
 import { isApiError } from '../../../lib/api/errors';
+import { cn } from '../../../lib/utils';
 import type { ProductionBatch } from '../../../types/api/production';
 import type { Product, Warehouse } from '../../../types/api/catalog';
 import type { BillOfMaterial } from '../../../types/api/bom';
@@ -243,6 +247,77 @@ export function ProductionBatchesSection() {
   const boms = bomsQuery.data?.data ?? [];
   const warehouses = warehousesQuery.data?.data ?? [];
 
+  // Multi-Record Batch Selection & Floating Toolbar State
+  const [selectedBatchIds, setSelectedBatchIds] = useState<Set<string>>(new Set());
+  const headerCheckboxRef = useRef<HTMLInputElement>(null);
+
+  const isAllSelected = batches.length > 0 && selectedBatchIds.size === batches.length;
+  const isSomeSelected = selectedBatchIds.size > 0 && !isAllSelected;
+
+  useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate = isSomeSelected;
+    }
+  }, [isSomeSelected]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedBatchIds.size > 0) {
+        setSelectedBatchIds(new Set());
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedBatchIds.size]);
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedBatchIds(new Set());
+    } else {
+      setSelectedBatchIds(new Set(batches.map((b) => b.id)));
+    }
+  };
+
+  const toggleSelectBatch = (id: string) => {
+    setSelectedBatchIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedBatchIds(new Set());
+
+  const exportBatchesCsv = (batchesToExport: ProductionBatch[]) => {
+    if (batchesToExport.length === 0) {
+      return;
+    }
+    const headers = ['Batch Number', 'Product', 'SKU', 'BOM', 'Status', 'Target Qty', 'Actual Qty', 'Yield Pct', 'Scheduled Start', 'Scheduled End'];
+    const rows = batchesToExport.map((b) => [
+      `"${(b.batch_number || '').replace(/"/g, '""')}"`,
+      `"${(b.product_name || b.product_id || '').replace(/"/g, '""')}"`,
+      `"${b.product_sku || ''}"`,
+      `"${(b.bom_name || '').replace(/"/g, '""')}"`,
+      `"${b.status}"`,
+      `"${b.target_quantity}"`,
+      `"${b.actual_quantity}"`,
+      `"${b.actual_yield_pct ?? b.yield_percentage ?? ''}"`,
+      `"${b.scheduled_start || ''}"`,
+      `"${b.scheduled_end || ''}"`,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `production_batches_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const getCompletenessBadge = (state: ProductionBatch['context_completeness']) => {
     switch (state) {
       case 'context_complete':
@@ -314,6 +389,65 @@ export function ProductionBatchesSection() {
         </Button>
       </div>
 
+      {/* Selection Summary & Export Actions */}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-muted">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-default">
+            {batches.length} {batches.length === 1 ? 'batch' : 'batches'} listed
+          </span>
+          {selectedBatchIds.size > 0 && (
+            <span className="text-primary font-semibold">
+              ({selectedBatchIds.size} selected)
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {selectedBatchIds.size > 0 ? (
+            <>
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="text-xs text-muted hover:text-default underline cursor-pointer"
+              >
+                Clear Selection
+              </button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  const selected = batches.filter((b) => selectedBatchIds.has(b.id));
+                  exportBatchesCsv(selected);
+                }}
+                className="flex items-center gap-1.5 text-xs text-primary"
+              >
+                <Download className="size-3.5" />
+                <span>Export Selected CSV ({selectedBatchIds.size})</span>
+              </Button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={toggleSelectAll}
+                className="text-xs text-muted hover:text-default underline cursor-pointer"
+              >
+                Select All
+              </button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => exportBatchesCsv(batches)}
+                className="flex items-center gap-1.5 text-xs text-muted hover:text-default"
+                disabled={batches.length === 0}
+              >
+                <Download className="size-3.5 text-muted" />
+                <span>Export All Batches CSV</span>
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* Batches Table with Subtle 1px Outline */}
       <QueryBoundary
         status={batchesQuery.status}
@@ -325,7 +459,17 @@ export function ProductionBatchesSection() {
           <table className="w-full text-left text-xs text-default">
             <thead className="border-b border-default bg-surface-sunken/70 text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
-                <th className="py-3.5 pl-4 pr-3">Batch Number</th>
+                <th className="py-3.5 pl-4 pr-1 w-10">
+                  <input
+                    ref={headerCheckboxRef}
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={toggleSelectAll}
+                    aria-label="Select all batches"
+                    className="size-4 rounded border-default text-primary focus:ring-primary/20 cursor-pointer"
+                  />
+                </th>
+                <th className="py-3.5 pl-2 pr-3">Batch Number</th>
                 <th className="py-3.5 px-3">Product</th>
                 <th className="py-3.5 px-3">Actual / Target (Units)</th>
                 <th className="py-3.5 px-3">Yield Analytics</th>
@@ -337,7 +481,7 @@ export function ProductionBatchesSection() {
             <tbody className="divide-y divide-default">
               {batches.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-muted">
+                  <td colSpan={8} className="py-12 text-center text-muted">
                     <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-surface-sunken mb-2 border border-default">
                       <Factory className="size-5 text-muted" />
                     </div>
@@ -350,9 +494,26 @@ export function ProductionBatchesSection() {
                   </td>
                 </tr>
               ) : (
-                batches.map((batch) => (
-                  <tr key={batch.id} className="hover:bg-surface-sunken/40 transition-colors">
-                    <td className="py-3.5 pl-4 pr-3">
+                batches.map((batch) => {
+                  const isSelected = selectedBatchIds.has(batch.id);
+                  return (
+                    <tr
+                      key={batch.id}
+                      className={cn(
+                        'hover:bg-surface-sunken/40 transition-colors',
+                        isSelected && 'bg-primary/5'
+                      )}
+                    >
+                      <td className="py-3.5 pl-4 pr-1 w-10">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelectBatch(batch.id)}
+                          aria-label={`Select batch ${batch.batch_number}`}
+                          className="size-4 rounded border-default text-primary focus:ring-primary/20 cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-3.5 pl-2 pr-3">
                       <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                         {batch.batch_number}
                       </div>
@@ -558,8 +719,9 @@ export function ProductionBatchesSection() {
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
+                );
+              })
+            )}
             </tbody>
           </table>
         </div>
@@ -1082,6 +1244,43 @@ export function ProductionBatchesSection() {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Floating Bottom Docked Action Toolbar */}
+      {selectedBatchIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3 rounded-2xl bg-surface border border-primary/40 shadow-xl ring-1 ring-primary/20 animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <div className="flex items-center gap-2 pr-3 border-r border-default">
+            <CheckSquare className="size-4 text-primary" />
+            <span className="text-xs font-bold text-default whitespace-nowrap">
+              {selectedBatchIds.size} {selectedBatchIds.size === 1 ? 'batch' : 'batches'} selected
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                const selected = batches.filter((b) => selectedBatchIds.has(b.id));
+                exportBatchesCsv(selected);
+              }}
+              className="flex items-center gap-1.5 text-xs font-semibold shadow-xs"
+            >
+              <Download className="size-3.5" />
+              <span>Export CSV</span>
+            </Button>
+
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="p-1.5 rounded-lg text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+              title="Clear selection (Esc)"
+              aria-label="Clear selection"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

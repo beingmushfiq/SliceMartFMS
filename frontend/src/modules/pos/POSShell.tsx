@@ -921,7 +921,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
                   <button
                     type="button"
                     onClick={() => updateCurrentSlot({ tenderMethod: 'cash' })}
-                    className={`flex flex-col items-center justify-center min-h-[44px] gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer active:scale-95 ${
+                    className={`flex flex-col items-center justify-center min-h-11 gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer active:scale-95 ${
                       tenderMethod === 'cash'
                         ? 'border-primary bg-primary/10 text-primary'
                         : 'border-default bg-surface text-muted hover:bg-surface-sunken hover:text-default'
@@ -933,7 +933,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
                   <button
                     type="button"
                     onClick={() => updateCurrentSlot({ tenderMethod: 'card' })}
-                    className={`flex flex-col items-center justify-center min-h-[44px] gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer active:scale-95 ${
+                    className={`flex flex-col items-center justify-center min-h-11 gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer active:scale-95 ${
                       tenderMethod === 'card'
                         ? 'border-primary bg-primary/10 text-primary'
                         : 'border-default bg-surface text-muted hover:bg-surface-sunken hover:text-default'
@@ -945,7 +945,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
                   <button
                     type="button"
                     onClick={() => updateCurrentSlot({ tenderMethod: 'mobile_banking' })}
-                    className={`flex flex-col items-center justify-center min-h-[44px] gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer active:scale-95 ${
+                    className={`flex flex-col items-center justify-center min-h-11 gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer active:scale-95 ${
                       tenderMethod === 'mobile_banking'
                         ? 'border-primary bg-primary/10 text-primary'
                         : 'border-default bg-surface text-muted hover:bg-surface-sunken hover:text-default'

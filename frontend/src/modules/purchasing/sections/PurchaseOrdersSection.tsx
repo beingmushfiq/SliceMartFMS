@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -20,6 +20,11 @@ import {
   Copy,
   PackageX,
   SearchX,
+  CheckSquare,
+  Square,
+  MinusSquare,
+  X,
+  Download,
 } from 'lucide-react';
 import type { PurchaseOrder } from '../../../types/api/purchasing';
 import { api } from '../../../lib/api/client';
@@ -29,6 +34,7 @@ import { EmptyState, SkeletonLine } from '../../../components/ui/Feedback';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
 import { useCurrency } from '../../../hooks/useCurrency';
+import { cn } from '../../../lib/utils';
 
 interface PoFormItem {
   product_name: string;
@@ -194,6 +200,11 @@ export function PurchaseOrdersSection() {
   const [activeOrder, setActiveOrder] = useState<PurchaseOrder | null>(null);
   const [printOrder, setPrintOrder] = useState<PurchaseOrder | null>(null);
   const { config: businessConfig } = useBusinessConfig();
+
+  // Multi-Record Selection State
+  const [selectedPoIds, setSelectedPoIds] = useState<Set<number>>(new Set());
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const headerCheckboxRef = useRef<HTMLInputElement>(null);
 
   // Form State
   const [formData, setFormData] = useState<{
@@ -531,6 +542,128 @@ export function PurchaseOrdersSection() {
     0
   );
 
+  const isAllSelected = filteredOrders.length > 0 && selectedPoIds.size === filteredOrders.length;
+  const isSomeSelected = selectedPoIds.size > 0 && !isAllSelected;
+
+  useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate = isSomeSelected;
+    }
+  }, [isSomeSelected]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedPoIds.size > 0) {
+        setSelectedPoIds(new Set());
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedPoIds.size]);
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedPoIds(new Set());
+    } else {
+      setSelectedPoIds(new Set(filteredOrders.map((o) => o.id)));
+    }
+  };
+
+  const toggleSelectPo = (id: number) => {
+    setSelectedPoIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedPoIds(new Set());
+
+  const handleBulkApprove = async () => {
+    if (selectedPoIds.size === 0) return;
+    setIsBulkProcessing(true);
+    try {
+      const targets = filteredOrders.filter(
+        (o) => selectedPoIds.has(o.id) && o.status === 'draft'
+      );
+      if (targets.length === 0) {
+        toast.info('None of the selected POs are in draft status.');
+        return;
+      }
+      for (const po of targets) {
+        try {
+          await api.post(`/purchasing/orders/${po.id}/approve`, {});
+        } catch {
+          // ignore
+        }
+      }
+      queryClient.setQueryData<PurchaseOrder[]>(['purchasing', 'orders'], (prev = []) =>
+        prev.map((o) => (selectedPoIds.has(o.id) && o.status === 'draft' ? { ...o, status: 'approved' } : o))
+      );
+      toast.success(`Approved ${targets.length} purchase order(s).`);
+      queryClient.invalidateQueries({ queryKey: ['purchasing', 'orders'] });
+      clearSelection();
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  const handleBulkCancel = async () => {
+    if (selectedPoIds.size === 0) return;
+    setIsBulkProcessing(true);
+    try {
+      const targets = filteredOrders.filter(
+        (o) => selectedPoIds.has(o.id) && o.status !== 'cancelled'
+      );
+      if (targets.length === 0) {
+        toast.info('Selected orders are already cancelled.');
+        return;
+      }
+      for (const po of targets) {
+        try {
+          await api.post(`/purchasing/orders/${po.id}/cancel`, {});
+        } catch {
+          // ignore
+        }
+      }
+      queryClient.setQueryData<PurchaseOrder[]>(['purchasing', 'orders'], (prev = []) =>
+        prev.map((o) => (selectedPoIds.has(o.id) ? { ...o, status: 'cancelled' } : o))
+      );
+      toast.success(`Cancelled ${targets.length} purchase order(s).`);
+      queryClient.invalidateQueries({ queryKey: ['purchasing', 'orders'] });
+      clearSelection();
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  const exportPoCsv = (ordersToExport: PurchaseOrder[]) => {
+    if (ordersToExport.length === 0) {
+      toast.warning('No purchase orders to export.');
+      return;
+    }
+    const headers = ['PO Number', 'Supplier', 'Warehouse', 'Order Date', 'Expected Delivery', 'Amount', 'Status'];
+    const rows = ordersToExport.map((o) => [
+      `"${o.po_number}"`,
+      `"${(o.supplier_name || '').replace(/"/g, '""')}"`,
+      `"${(o.warehouse_name || '').replace(/"/g, '""')}"`,
+      `"${o.order_date}"`,
+      `"${o.expected_delivery_date || ''}"`,
+      `"${o.grand_total}"`,
+      `"${o.status}"`,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `purchase-orders-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${ordersToExport.length} purchase orders to CSV.`);
+  };
+
   const getStatusBadge = (status: PurchaseOrder['status']) => {
     switch (status) {
       case 'draft':
@@ -614,9 +747,111 @@ export function PurchaseOrdersSection() {
         </div>
       </div>
 
-      {/* Action Bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* Discovery & Action Bar */}
+      <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between rounded-2xl border border-default bg-surface p-3 shadow-2xs">
         <div className="flex flex-wrap items-center gap-2">
+          {/* Master Selection Button */}
+          <button
+            type="button"
+            onClick={toggleSelectAll}
+            className={cn(
+              "flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-colors cursor-pointer",
+              selectedPoIds.size > 0
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-default bg-surface-sunken text-default hover:bg-surface"
+            )}
+          >
+            {isAllSelected ? (
+              <CheckSquare className="size-4 text-primary" />
+            ) : isSomeSelected ? (
+              <MinusSquare className="size-4 text-primary" />
+            ) : (
+              <Square className="size-4 text-muted" />
+            )}
+            <span>{selectedPoIds.size > 0 ? `${selectedPoIds.size} Selected` : 'Select All'}</span>
+          </button>
+
+          {selectedPoIds.size > 0 && (
+            <div className="flex items-center gap-1.5 animate-in fade-in">
+              <button
+                type="button"
+                onClick={handleBulkApprove}
+                disabled={isBulkProcessing}
+                className="flex h-9 items-center gap-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                {isBulkProcessing ? <RefreshCw className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" />}
+                Approve ({selectedPoIds.size})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => exportPoCsv(filteredOrders.filter((o) => selectedPoIds.has(o.id)))}
+                className="flex h-9 items-center gap-1.5 rounded-xl bg-surface-sunken border border-default px-3 text-xs font-semibold text-default hover:bg-surface transition-colors cursor-pointer"
+              >
+                <FileSpreadsheet className="size-3.5 text-primary" />
+                Export CSV ({selectedPoIds.size})
+              </button>
+
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="flex h-9 items-center gap-1 rounded-xl border border-default bg-surface-sunken px-2.5 text-xs text-muted hover:text-default transition-colors cursor-pointer"
+                title="Clear selection (Esc)"
+              >
+                <X className="size-3.5" />
+                <span className="hidden sm:inline">Esc</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted" />
+            <input
+              type="text"
+              placeholder="Search PO #, supplier, warehouse..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-9 w-52 sm:w-60 rounded-xl border border-default bg-surface-sunken pl-8 pr-3 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
+            />
+          </div>
+
+          <SelectDropdown
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'draft', label: 'Draft PO', colorDot: 'bg-slate-400' },
+              { value: 'approved', label: 'Approved', colorDot: 'bg-blue-500' },
+              { value: 'partially_received', label: 'Partial GRN', colorDot: 'bg-amber-500' },
+              { value: 'received', label: 'Fulfilled', colorDot: 'bg-emerald-500' },
+              { value: 'cancelled', label: 'Cancelled', colorDot: 'bg-rose-500' },
+            ]}
+            value={statusFilter}
+            onChange={(val) => setStatusFilter(val)}
+            size="sm"
+            aria-label="Filter POs by status"
+          />
+
+          <button
+            type="button"
+            onClick={() => exportPoCsv(filteredOrders)}
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface-sunken px-3 text-xs font-medium text-default hover:bg-surface transition-colors cursor-pointer"
+            title="Export all filtered POs to CSV"
+          >
+            <Download className="size-3.5 text-muted" />
+            <span className="hidden sm:inline">Export All</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface-sunken px-3 text-xs font-medium text-muted hover:bg-surface hover:text-default disabled:opacity-50 transition-colors cursor-pointer"
+            title="Refresh registry"
+          >
+            <RefreshCw className={`size-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+          </button>
+
           <button
             onClick={() => {
               setFormData({
@@ -645,47 +880,11 @@ export function PurchaseOrdersSection() {
               });
               setShowCreateModal(true);
             }}
-            className="flex items-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-fg hover:opacity-90 shadow-xs transition-opacity cursor-pointer"
+            className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-semibold text-primary-fg hover:opacity-90 shadow-xs transition-opacity cursor-pointer"
           >
-            <Plus className="size-4" />
-            <span>Create Purchase Order</span>
+            <Plus className="size-3.5" />
+            <span>Create PO</span>
           </button>
-
-          <button
-            type="button"
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="p-2 text-muted hover:text-default hover:bg-surface-sunken rounded-xl border border-default transition-colors cursor-pointer"
-            title="Refresh"
-          >
-            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
-          </button>
-
-          <SelectDropdown
-            options={[
-              { value: 'all', label: 'All Statuses' },
-              { value: 'draft', label: 'Draft PO', colorDot: 'bg-slate-400' },
-              { value: 'approved', label: 'Approved', colorDot: 'bg-blue-500' },
-              { value: 'partially_received', label: 'Partial GRN', colorDot: 'bg-amber-500' },
-              { value: 'received', label: 'Fulfilled', colorDot: 'bg-emerald-500' },
-              { value: 'cancelled', label: 'Cancelled', colorDot: 'bg-rose-500' },
-            ]}
-            value={statusFilter}
-            onChange={(val) => setStatusFilter(val)}
-            size="sm"
-            aria-label="Filter POs by status"
-          />
-        </div>
-
-        <div className="relative flex-1 sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted" />
-          <input
-            type="text"
-            placeholder="Search PO #, supplier, warehouse..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-xs bg-surface-sunken border border-default rounded-xl text-default placeholder:text-muted focus:outline-none focus:border-primary"
-          />
         </div>
       </div>
 
@@ -695,6 +894,16 @@ export function PurchaseOrdersSection() {
           <table className="w-full text-left text-xs text-default">
             <thead className="bg-surface-sunken text-[11px] font-semibold text-muted uppercase tracking-wider border-b border-default">
               <tr>
+                <th className="w-10 px-3 py-3.5 text-center">
+                  <input
+                    ref={headerCheckboxRef}
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={toggleSelectAll}
+                    className="size-4 rounded border-default text-primary focus:ring-primary cursor-pointer"
+                    title="Select all visible POs"
+                  />
+                </th>
                 <th className="px-4 py-3.5">PO Number</th>
                 <th className="px-4 py-3.5">Vendor / Supplier</th>
                 <th className="px-4 py-3.5">Warehouse</th>
@@ -707,7 +916,7 @@ export function PurchaseOrdersSection() {
             <tbody className="divide-y divide-default">
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-muted">
+                  <td colSpan={8} className="px-4 py-8 text-center text-muted">
                     {isLoading ? (
                       <div className="py-8 space-y-3 flex flex-col items-center justify-center">
                         <SkeletonLine width="75%" height={4} />
@@ -744,7 +953,22 @@ export function PurchaseOrdersSection() {
                 </tr>
               ) : (
                 filteredOrders.map((o) => (
-                  <tr key={o.id} className="hover:bg-surface-sunken/60 transition-colors">
+                  <tr
+                    key={o.id}
+                    className={cn(
+                      "hover:bg-surface-sunken/60 transition-colors",
+                      selectedPoIds.has(o.id) && "bg-primary/5 dark:bg-primary/10"
+                    )}
+                  >
+                    <td className="w-10 px-3 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedPoIds.has(o.id)}
+                        onChange={() => toggleSelectPo(o.id)}
+                        className="size-4 rounded border-default text-primary focus:ring-primary cursor-pointer"
+                        title="Select PO"
+                      />
+                    </td>
                     <td className="px-4 py-3.5 font-mono font-medium text-default">
                       <div className="flex items-center gap-1.5">
                         <FileSpreadsheet className="size-3.5 text-primary" />
@@ -871,6 +1095,62 @@ export function PurchaseOrdersSection() {
           </table>
         </div>
       </div>
+
+      {/* Floating Bottom Docked Action Toolbar */}
+      {selectedPoIds.size > 0 && (
+        <div className="fixed bottom-6 inset-x-0 z-40 flex justify-center pointer-events-none animate-in slide-in-from-bottom-6 duration-200">
+          <div className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-default/80 bg-surface/95 px-5 py-3 shadow-2xl backdrop-blur-xl ring-1 ring-black/5 dark:ring-white/10">
+            <div className="flex items-center gap-2 border-r border-default pr-3">
+              <span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-fg">
+                {selectedPoIds.size}
+              </span>
+              <span className="text-xs font-semibold text-default">
+                PO{selectedPoIds.size > 1 ? 's' : ''} Selected
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleBulkApprove}
+                disabled={isBulkProcessing}
+                className="flex h-8 items-center gap-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                {isBulkProcessing ? <RefreshCw className="size-3 animate-spin" /> : <ShieldCheck className="size-3" />}
+                Approve POs
+              </button>
+
+              <button
+                type="button"
+                onClick={() => exportPoCsv(filteredOrders.filter((o) => selectedPoIds.has(o.id)))}
+                className="flex h-8 items-center gap-1.5 rounded-xl bg-surface-sunken border border-default px-3 text-xs font-semibold text-default hover:bg-surface transition-colors cursor-pointer"
+              >
+                <FileSpreadsheet className="size-3 text-primary" />
+                Export CSV
+              </button>
+
+              <button
+                type="button"
+                onClick={handleBulkCancel}
+                disabled={isBulkProcessing}
+                className="flex h-8 items-center gap-1.5 rounded-xl bg-rose-500/10 border border-rose-500/20 px-3 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                <XCircle className="size-3 text-rose-500" />
+                Cancel POs
+              </button>
+
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="flex size-8 items-center justify-center rounded-xl border border-default bg-surface-sunken text-muted hover:text-default transition-colors cursor-pointer ml-1"
+                title="Deselect all (Esc)"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CREATE PO MODAL */}
       {showCreateModal && (

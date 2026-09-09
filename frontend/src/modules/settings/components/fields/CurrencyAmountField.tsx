@@ -10,7 +10,7 @@ interface CurrencyAmountFieldProps {
   onChange: (val: number) => void;
   currencySymbol?: string;
   currencyCode?: string;
-  description?: string;
+  description?: string | undefined;
   min?: number;
 }
 
@@ -44,11 +44,17 @@ export const CurrencyAmountField: React.FC<CurrencyAmountFieldProps> = ({
       : [500, 1000, 2000, 5000];
 
   return (
-    <div className="p-4 rounded-xl border border-default bg-surface space-y-3">
-      <div>
-        <span className="text-xs font-bold text-default block">{label}</span>
-        <span className="font-mono text-2xs text-muted block">{settingKey}</span>
-        {description && <p className="text-2xs text-muted mt-0.5">{description}</p>}
+    <div className="group rounded-xl border border-default/80 bg-surface p-4 transition-all duration-200 hover:border-default hover:shadow-2xs space-y-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <label
+          htmlFor={`field-${settingKey}`}
+          className="text-xs font-semibold text-default cursor-pointer"
+        >
+          {label}
+        </label>
+        <span className="text-[10px] font-mono font-medium text-muted bg-surface-sunken border border-default/60 px-2 py-0.5 rounded-md select-none shrink-0">
+          {currencyCode}
+        </span>
       </div>
 
       {/* Currency Adorned Input */}
@@ -111,6 +117,10 @@ export const CurrencyAmountField: React.FC<CurrencyAmountFieldProps> = ({
           </button>
         </div>
       </div>
+
+      {description && (
+        <p className="text-[11px] text-muted leading-relaxed">{description}</p>
+      )}
     </div>
   );
 };

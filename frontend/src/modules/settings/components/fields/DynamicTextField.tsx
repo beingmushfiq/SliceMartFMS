@@ -17,7 +17,7 @@ interface DynamicTextFieldProps {
   settingKey: string;
   value: unknown;
   onChange: (val: string) => void;
-  description?: string;
+  description?: string | undefined;
   placeholder?: string;
 }
 
@@ -32,7 +32,12 @@ export const DynamicTextField: React.FC<DynamicTextFieldProps> = ({
   const [copied, setCopied] = useState(false);
   const strVal = typeof value === 'string' ? value : String(value ?? '');
 
-  // Derive contextual icon dynamically
+  const isMono =
+    settingKey.includes('code') ||
+    settingKey.includes('id') ||
+    settingKey.includes('token') ||
+    settingKey.includes('key');
+
   const Icon = settingKey.includes('code')
     ? Hash
     : settingKey.includes('id') || settingKey.includes('tag')
@@ -47,17 +52,6 @@ export const DynamicTextField: React.FC<DynamicTextFieldProps> = ({
     ? Sliders
     : Type;
 
-  // Derive badge tag dynamically
-  const badgeTag = settingKey.includes('code')
-    ? 'GL Account Code'
-    : settingKey.includes('id')
-    ? 'Telemetry / Tracking ID'
-    : settingKey.includes('separator')
-    ? 'Formatting Glyph'
-    : settingKey.includes('sender')
-    ? 'Telecom Sender ID'
-    : 'System Parameter';
-
   const handleCopy = () => {
     if (!strVal) return;
     navigator.clipboard.writeText(strVal);
@@ -66,53 +60,53 @@ export const DynamicTextField: React.FC<DynamicTextFieldProps> = ({
   };
 
   return (
-    <div className="p-4 rounded-xl border border-default bg-surface space-y-3 hover:border-primary/30 transition-all">
-      {/* Top Meta Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-2.5 min-w-0">
-          <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0 mt-0.5">
-            <Icon className="size-4" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold text-default">{label}</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-3xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
-                {badgeTag}
-              </span>
-            </div>
-            {description && (
-              <p className="text-2xs text-muted mt-0.5 line-clamp-1">{description}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Copy Action */}
-        <button
-          type="button"
-          onClick={handleCopy}
-          disabled={!strVal}
-          title="Copy Value"
-          className={cn(
-            'p-1.5 rounded-lg border transition-colors cursor-pointer shrink-0',
-            copied
-              ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
-              : 'text-muted hover:text-default hover:bg-surface-sunken border-default'
-          )}
+    <div className="group rounded-xl border border-default/80 bg-surface p-4 transition-all duration-200 hover:border-default hover:shadow-2xs space-y-2.5">
+      {/* Field Label & Actions */}
+      <div className="flex items-center justify-between gap-2">
+        <label
+          htmlFor={`field-${settingKey}`}
+          className="flex items-center gap-2 text-xs font-semibold text-default cursor-pointer"
         >
-          {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-        </button>
+          <Icon className="size-3.5 text-muted group-hover:text-primary transition-colors shrink-0" />
+          <span>{label}</span>
+        </label>
+
+        {isMono && strVal && (
+          <button
+            type="button"
+            onClick={handleCopy}
+            title="Copy value"
+            className="p-1 rounded-md text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+            aria-label={`Copy ${label}`}
+          >
+            {copied ? (
+              <Check className="size-3.5 text-emerald-500" />
+            ) : (
+              <Copy className="size-3.5" />
+            )}
+          </button>
+        )}
       </div>
 
       {/* Input Field */}
       <div className="relative flex items-center">
         <input
+          id={`field-${settingKey}`}
           type="text"
           value={strVal}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder || `Enter ${label.toLowerCase()}...`}
-          className="w-full bg-surface-sunken border border-default rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-default placeholder:text-muted/60 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+          className={cn(
+            'w-full rounded-lg border border-default bg-surface-sunken/40 px-3 py-2 text-xs text-default placeholder:text-muted/50 transition-all focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15',
+            isMono ? 'font-mono' : 'font-medium'
+          )}
         />
       </div>
+
+      {/* Un-truncated Helpful Context Note */}
+      {description && (
+        <p className="text-[11px] text-muted leading-relaxed">{description}</p>
+      )}
     </div>
   );
 };

@@ -1,20 +1,18 @@
 import React, { useState } from 'react';
 import {
-  MapPin,
   Building,
   Factory,
   Copy,
   Check,
   ExternalLink,
 } from 'lucide-react';
-import { cn } from '../../../../lib/utils';
 
 interface AddressLocationFieldProps {
   label: string;
   settingKey: string;
   value: unknown;
   onChange: (val: string) => void;
-  description?: string;
+  description?: string | undefined;
 }
 
 export const AddressLocationField: React.FC<AddressLocationFieldProps> = ({
@@ -31,8 +29,8 @@ export const AddressLocationField: React.FC<AddressLocationFieldProps> = ({
   const Icon = isFactory ? Factory : Building;
   const tag = isFactory ? 'Manufacturing Facility' : 'Registered Headquarters';
   const defaultHint = isFactory
-    ? 'Physical plant, manufacturing floors, and inbound raw material receiving dock.'
-    : 'Official corporate registered address for statutory filings, VAT challans, and legal service.';
+    ? 'Physical manufacturing plant, production floors, and inbound raw material receiving dock.'
+    : 'Official corporate registered address for statutory filings, VAT challans, and commercial correspondence.';
 
   const handleCopy = () => {
     if (!strVal) return;
@@ -51,70 +49,68 @@ export const AddressLocationField: React.FC<AddressLocationFieldProps> = ({
   };
 
   return (
-    <div className="p-4 rounded-xl border border-default bg-surface space-y-3 hover:border-primary/30 transition-all">
-      {/* Meta Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-2.5 min-w-0">
-          <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0 mt-0.5">
-            <Icon className="size-4" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold text-default">{label}</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-3xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
-                {tag}
-              </span>
-            </div>
-            <p className="text-2xs text-muted mt-0.5 line-clamp-1">
-              {description || defaultHint}
-            </p>
-          </div>
-        </div>
+    <div className="group rounded-xl border border-default/80 bg-surface p-4 transition-all duration-200 hover:border-default hover:shadow-2xs space-y-2.5">
+      {/* Field Label & Actions */}
+      <div className="flex items-center justify-between gap-2">
+        <label
+          htmlFor={`field-${settingKey}`}
+          className="flex items-center gap-2 text-xs font-semibold text-default cursor-pointer"
+        >
+          <Icon className="size-3.5 text-muted group-hover:text-primary transition-colors shrink-0" />
+          <span>{label}</span>
+        </label>
 
-        {/* Action Shortcuts */}
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-medium text-muted bg-surface-sunken border border-default/60 px-2 py-0.5 rounded-md select-none shrink-0">
+            {tag}
+          </span>
           {strVal && (
-            <button
-              type="button"
-              onClick={handleOpenMap}
-              title="Open in Google Maps"
-              className="p-1.5 rounded-lg text-muted hover:text-primary hover:bg-surface-sunken border border-default transition-colors cursor-pointer"
-            >
-              <ExternalLink className="size-3.5" />
-            </button>
+            <div className="flex items-center gap-1 border-l border-default/60 pl-2">
+              <button
+                type="button"
+                onClick={handleOpenMap}
+                title="Open in Google Maps"
+                className="p-1 rounded-md text-muted hover:text-primary hover:bg-surface-sunken transition-colors cursor-pointer"
+                aria-label="Open in Google Maps"
+              >
+                <ExternalLink className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={handleCopy}
+                title="Copy address"
+                className="p-1 rounded-md text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                aria-label="Copy address"
+              >
+                {copied ? (
+                  <Check className="size-3.5 text-emerald-500" />
+                ) : (
+                  <Copy className="size-3.5" />
+                )}
+              </button>
+            </div>
           )}
-          <button
-            type="button"
-            onClick={handleCopy}
-            disabled={!strVal}
-            title="Copy Address"
-            className={cn(
-              'p-1.5 rounded-lg border transition-colors cursor-pointer',
-              copied
-                ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
-                : 'text-muted hover:text-default hover:bg-surface-sunken border-default'
-            )}
-          >
-            {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-          </button>
         </div>
       </div>
 
       {/* Multi-line Address Textarea */}
-      <div className="relative">
-        <textarea
-          rows={2}
-          value={strVal}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Enter street, industrial zone, city, postal code..."
-          className="w-full bg-surface-sunken border border-default rounded-xl p-3 text-xs font-medium text-default placeholder:text-muted/60 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none"
-        />
-        <div className="flex items-center justify-between mt-1 text-3xs text-muted">
-          <span className="flex items-center gap-1">
-            <MapPin className="size-2.5 text-primary" /> Verified Coordinates & Tax Jurisdiction
+      <textarea
+        id={`field-${settingKey}`}
+        rows={2}
+        value={strVal}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Enter street, industrial zone, city, postal code..."
+        className="w-full rounded-lg border border-default bg-surface-sunken/40 p-2.5 text-xs font-medium text-default placeholder:text-muted/50 transition-all focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 resize-none"
+      />
+
+      {/* Un-truncated Helpful Context Note */}
+      <div className="flex items-center justify-between text-[11px] text-muted leading-relaxed">
+        <p>{description || defaultHint}</p>
+        {strVal && (
+          <span className="text-3xs font-mono text-muted/70 shrink-0 ml-2">
+            {strVal.length} chars
           </span>
-          <span className="font-mono">{strVal.length} chars</span>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
-import { Mail, Copy, Check, Send, CheckCircle2, AlertCircle } from 'lucide-react';
-import { cn } from '../../../../lib/utils';
+import { Mail, Copy, Check, Send } from 'lucide-react';
 
 interface ContactEmailFieldProps {
   label: string;
   settingKey: string;
   value: unknown;
   onChange: (val: string) => void;
-  description?: string;
+  description?: string | undefined;
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -24,9 +23,10 @@ export const ContactEmailField: React.FC<ContactEmailFieldProps> = ({
 
   const isValidEmail = EMAIL_REGEX.test(strVal.trim());
   const isNotification = settingKey.includes('notification');
+  const badgeLabel = isNotification ? 'Transactional' : 'Public Support';
   const defaultHint = isNotification
-    ? 'Email address used as sender envelope for transactional order updates and low stock alerts.'
-    : 'Official channel for customer inquiries, automated purchase orders, and system reports.';
+    ? 'Sender address used for automated order confirmations, password resets, and alert dispatches.'
+    : 'Primary email inbox for incoming customer inquiries, RFQs, and commercial communications.';
 
   const handleCopy = () => {
     if (!strVal) return;
@@ -37,86 +37,72 @@ export const ContactEmailField: React.FC<ContactEmailFieldProps> = ({
 
   const handleCompose = () => {
     if (!strVal) return;
-    window.location.href = `mailto:${strVal.trim()}?subject=Test%20ERP%20Connection`;
+    window.location.href = `mailto:${strVal.trim()}`;
   };
 
   return (
-    <div className="p-4 rounded-xl border border-default bg-surface space-y-3 hover:border-primary/30 transition-all">
-      {/* Top Meta Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-2.5 min-w-0">
-          <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0 mt-0.5">
-            <Mail className="size-4" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold text-default">{label}</span>
-              {strVal && (
-                <span
-                  className={cn(
-                    'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-3xs font-bold uppercase tracking-wider border',
-                    isValidEmail
-                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                      : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-                  )}
-                >
-                  {isValidEmail ? (
-                    <>
-                      <CheckCircle2 className="size-2.5" /> Valid RFC Mail
-                    </>
-                  ) : (
-                    <>
-                      <AlertCircle className="size-2.5" /> Incomplete Format
-                    </>
-                  )}
-                </span>
-              )}
-            </div>
-            <p className="text-2xs text-muted mt-0.5 line-clamp-1">
-              {description || defaultHint}
-            </p>
-          </div>
-        </div>
+    <div className="group rounded-xl border border-default/80 bg-surface p-4 transition-all duration-200 hover:border-default hover:shadow-2xs space-y-2.5">
+      {/* Field Label & Actions */}
+      <div className="flex items-center justify-between gap-2">
+        <label
+          htmlFor={`field-${settingKey}`}
+          className="flex items-center gap-2 text-xs font-semibold text-default cursor-pointer"
+        >
+          <Mail className="size-3.5 text-muted group-hover:text-primary transition-colors shrink-0" />
+          <span>{label}</span>
+        </label>
 
-        {/* Action Shortcuts */}
-        <div className="flex items-center gap-1 shrink-0">
-          {strVal && isValidEmail && (
-            <button
-              type="button"
-              onClick={handleCompose}
-              title="Compose Test Email"
-              className="p-1.5 rounded-lg text-muted hover:text-primary hover:bg-surface-sunken border border-default transition-colors cursor-pointer"
-            >
-              <Send className="size-3.5" />
-            </button>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-medium text-muted bg-surface-sunken border border-default/60 px-2 py-0.5 rounded-md select-none shrink-0">
+            {badgeLabel}
+          </span>
+          {strVal && (
+            <div className="flex items-center gap-1 border-l border-default/60 pl-2">
+              {isValidEmail && (
+                <button
+                  type="button"
+                  onClick={handleCompose}
+                  title="Compose email"
+                  className="p-1 rounded-md text-muted hover:text-primary hover:bg-surface-sunken transition-colors cursor-pointer"
+                  aria-label="Compose email"
+                >
+                  <Send className="size-3.5" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleCopy}
+                title="Copy email"
+                className="p-1 rounded-md text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                aria-label="Copy email address"
+              >
+                {copied ? (
+                  <Check className="size-3.5 text-emerald-500" />
+                ) : (
+                  <Copy className="size-3.5" />
+                )}
+              </button>
+            </div>
           )}
-          <button
-            type="button"
-            onClick={handleCopy}
-            disabled={!strVal}
-            title="Copy Email"
-            className={cn(
-              'p-1.5 rounded-lg border transition-colors cursor-pointer',
-              copied
-                ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
-                : 'text-muted hover:text-default hover:bg-surface-sunken border-default'
-            )}
-          >
-            {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-          </button>
         </div>
       </div>
 
       {/* Input Field */}
       <div className="relative flex items-center">
         <input
+          id={`field-${settingKey}`}
           type="email"
           value={strVal}
           onChange={(e) => onChange(e.target.value)}
           placeholder="support@company.com"
-          className="w-full bg-surface-sunken border border-default rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-default placeholder:text-muted/60 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+          className="w-full rounded-lg border border-default bg-surface-sunken/40 px-3 py-2 text-xs font-medium text-default placeholder:text-muted/50 transition-all focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
         />
       </div>
+
+      {/* Un-truncated Helpful Context Note */}
+      <p className="text-[11px] text-muted leading-relaxed">
+        {description || defaultHint}
+      </p>
     </div>
   );
 };

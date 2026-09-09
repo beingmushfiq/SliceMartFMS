@@ -20,7 +20,7 @@ interface BrandAssetFieldProps {
   settingKey: string;
   value: string | unknown;
   onChange: (val: string) => void;
-  description?: string;
+  description?: string | undefined;
 }
 
 export const BrandAssetField: React.FC<BrandAssetFieldProps> = ({

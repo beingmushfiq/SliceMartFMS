@@ -11,7 +11,7 @@ interface DurationStepperFieldProps {
   min?: number;
   max?: number;
   step?: number;
-  description?: string;
+  description?: string | undefined;
 }
 
 export const DurationStepperField: React.FC<DurationStepperFieldProps> = ({
@@ -44,31 +44,33 @@ export const DurationStepperField: React.FC<DurationStepperFieldProps> = ({
       : [7, 14, 30, 60, 90, 365];
 
   return (
-    <div className="p-4 rounded-xl border border-default bg-surface space-y-3">
+    <div className="group rounded-xl border border-default/80 bg-surface p-4 transition-all duration-200 hover:border-default hover:shadow-2xs space-y-2.5">
       <div className="flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          <span className="text-xs font-bold text-default block truncate">{label}</span>
-          <span className="font-mono text-2xs text-muted block truncate">{settingKey}</span>
-          {description && <p className="text-2xs text-muted mt-0.5">{description}</p>}
-        </div>
+        <label
+          htmlFor={`field-${settingKey}`}
+          className="flex items-center gap-2 text-xs font-semibold text-default cursor-pointer"
+        >
+          <Clock className="size-3.5 text-muted group-hover:text-primary transition-colors shrink-0" />
+          <span>{label}</span>
+        </label>
 
         {/* Stepper Control Pill */}
-        <div className="flex items-center gap-1.5 bg-surface-sunken border border-default rounded-xl p-1 shrink-0">
+        <div className="flex items-center gap-1 bg-surface-sunken/60 border border-default rounded-lg p-0.5 shrink-0">
           <button
             type="button"
             onClick={handleDecrement}
             disabled={numericVal <= min}
-            className="size-7 rounded-lg bg-surface border border-default flex items-center justify-center text-muted hover:text-default hover:border-strong disabled:opacity-40 transition-colors cursor-pointer"
+            className="size-7 rounded-md bg-surface border border-default/60 flex items-center justify-center text-muted hover:text-default hover:border-default disabled:opacity-30 transition-colors cursor-pointer"
             aria-label="Decrease value"
           >
             <Minus className="size-3" />
           </button>
 
-          <div className="px-2 text-center min-w-16">
-            <span className="font-mono text-sm font-bold text-default block leading-none">
+          <div className="px-2.5 text-center min-w-14">
+            <span className="font-mono text-xs font-bold text-default">
               {numericVal}
             </span>
-            <span className="text-2xs font-semibold text-primary block mt-0.5 uppercase tracking-wider">
+            <span className="text-[10px] font-medium text-muted ml-1">
               {unit}
             </span>
           </div>
@@ -77,7 +79,7 @@ export const DurationStepperField: React.FC<DurationStepperFieldProps> = ({
             type="button"
             onClick={handleIncrement}
             disabled={numericVal >= max}
-            className="size-7 rounded-lg bg-surface border border-default flex items-center justify-center text-muted hover:text-default hover:border-strong disabled:opacity-40 transition-colors cursor-pointer"
+            className="size-7 rounded-md bg-surface border border-default/60 flex items-center justify-center text-muted hover:text-default hover:border-default disabled:opacity-30 transition-colors cursor-pointer"
             aria-label="Increase value"
           >
             <Plus className="size-3" />
@@ -87,10 +89,7 @@ export const DurationStepperField: React.FC<DurationStepperFieldProps> = ({
 
       {/* Quick Presets */}
       <div className="flex items-center justify-between pt-0.5 text-2xs">
-        <div className="flex items-center gap-1 text-muted">
-          <Clock className="size-3" />
-          <span>Presets:</span>
-        </div>
+        <span className="text-muted text-[11px]">Quick Presets:</span>
         <div className="flex items-center gap-1">
           {presets.map((p) => (
             <button
@@ -98,10 +97,10 @@ export const DurationStepperField: React.FC<DurationStepperFieldProps> = ({
               type="button"
               onClick={() => onChange(p)}
               className={cn(
-                'px-2 py-0.5 rounded-lg border text-2xs font-mono font-semibold transition-colors cursor-pointer',
+                'px-2 py-0.5 rounded-md border text-[10px] font-mono font-medium transition-colors cursor-pointer',
                 numericVal === p
-                  ? 'bg-primary/10 border-primary text-primary'
-                  : 'bg-surface-sunken border-default text-muted hover:border-strong hover:text-default'
+                  ? 'bg-primary/10 border-primary/40 text-primary font-semibold'
+                  : 'bg-surface-sunken/40 border-default text-muted hover:border-default hover:text-default'
               )}
             >
               {p}{unit.charAt(0).toLowerCase()}
@@ -109,6 +108,11 @@ export const DurationStepperField: React.FC<DurationStepperFieldProps> = ({
           ))}
         </div>
       </div>
+
+      {/* Un-truncated Helpful Context Note */}
+      {description && (
+        <p className="text-[11px] text-muted leading-relaxed">{description}</p>
+      )}
     </div>
   );
 };

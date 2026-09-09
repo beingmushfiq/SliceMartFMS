@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '../../../../lib/utils';
-import { Percent } from 'lucide-react';
+import { Percent, Sliders } from 'lucide-react';
 
 interface RangeSliderFieldProps {
   label: string;
@@ -11,7 +11,7 @@ interface RangeSliderFieldProps {
   max?: number;
   step?: number;
   unit?: string;
-  description?: string;
+  description?: string | undefined;
 }
 
 export const RangeSliderField: React.FC<RangeSliderFieldProps> = ({
@@ -31,17 +31,20 @@ export const RangeSliderField: React.FC<RangeSliderFieldProps> = ({
   const presets = max === 100 ? [0, 5, 10, 15, 25, 50, 100] : [min, Math.round(max / 2), max];
 
   return (
-    <div className="p-4 rounded-xl border border-default bg-surface space-y-3">
+    <div className="group rounded-xl border border-default/80 bg-surface p-4 transition-all duration-200 hover:border-default hover:shadow-2xs space-y-2.5">
       <div className="flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          <span className="text-xs font-bold text-default block truncate">{label}</span>
-          <span className="font-mono text-2xs text-muted block truncate">{settingKey}</span>
-          {description && <p className="text-2xs text-muted mt-0.5">{description}</p>}
-        </div>
+        <label
+          htmlFor={`field-${settingKey}`}
+          className="flex items-center gap-2 text-xs font-semibold text-default cursor-pointer"
+        >
+          <Sliders className="size-3.5 text-muted group-hover:text-primary transition-colors shrink-0" />
+          <span>{label}</span>
+        </label>
 
         {/* Numeric Badge with Stepper */}
-        <div className="flex items-center gap-1.5 bg-surface-sunken border border-default rounded-xl px-2.5 py-1 shrink-0">
+        <div className="flex items-center gap-1.5 bg-surface-sunken border border-default rounded-lg px-2.5 py-0.5 shrink-0">
           <input
+            id={`field-${settingKey}`}
             type="number"
             min={min}
             max={max}
@@ -51,7 +54,7 @@ export const RangeSliderField: React.FC<RangeSliderFieldProps> = ({
               const val = e.target.value === '' ? min : Number(e.target.value);
               onChange(Math.min(max, Math.max(min, val)));
             }}
-            className="w-14 bg-transparent font-mono text-xs font-bold text-default text-right focus:outline-none"
+            className="w-12 bg-transparent font-mono text-xs font-bold text-default text-right focus:outline-none"
           />
           <span className="text-2xs font-bold text-primary flex items-center gap-0.5">
             {unit === '%' ? <Percent className="size-3" /> : unit}
@@ -81,7 +84,7 @@ export const RangeSliderField: React.FC<RangeSliderFieldProps> = ({
                 type="button"
                 onClick={() => onChange(p)}
                 className={cn(
-                  'px-1.5 py-0.5 rounded font-mono transition-colors hover:text-primary',
+                  'px-1.5 py-0.5 rounded font-mono transition-colors hover:text-primary cursor-pointer',
                   numericVal === p ? 'bg-primary/10 text-primary font-bold' : 'text-muted'
                 )}
               >
@@ -92,6 +95,11 @@ export const RangeSliderField: React.FC<RangeSliderFieldProps> = ({
           <span>{max}{unit}</span>
         </div>
       </div>
+
+      {/* Un-truncated Helpful Context Note */}
+      {description && (
+        <p className="text-[11px] text-muted leading-relaxed">{description}</p>
+      )}
     </div>
   );
 };

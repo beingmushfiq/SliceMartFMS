@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -15,12 +15,16 @@ import {
   TrendingUp,
   PackageCheck,
   ShieldAlert,
+  FileSpreadsheet,
+  CheckSquare,
+  X,
 } from 'lucide-react';
 import type { StockMovement, StockBalance } from '../../../types/api/inventory';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
+import { cn } from '../../../lib/utils';
 
 export function StockLedgerSection() {
   const queryClient = useQueryClient();
@@ -172,6 +176,75 @@ export function StockLedgerSection() {
     setQuickAdjustData({ direction: 'out', quantity: '', reason: 'CYCLE_COUNT_VARIANCE', notes: '' });
   };
 
+  // Multi-Record Selection State for Balances
+  const [selectedBalanceIds, setSelectedBalanceIds] = useState<Set<number>>(new Set());
+  const headerCheckboxRef = useRef<HTMLInputElement>(null);
+
+  const isAllSelected = filteredBalances.length > 0 && selectedBalanceIds.size === filteredBalances.length;
+  const isSomeSelected = selectedBalanceIds.size > 0 && !isAllSelected;
+
+  useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate = isSomeSelected;
+    }
+  }, [isSomeSelected]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedBalanceIds.size > 0) {
+        setSelectedBalanceIds(new Set());
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedBalanceIds.size]);
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedBalanceIds(new Set());
+    } else {
+      setSelectedBalanceIds(new Set(filteredBalances.map((b) => b.id)));
+    }
+  };
+
+  const toggleSelectBalance = (id: number) => {
+    setSelectedBalanceIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedBalanceIds(new Set());
+
+  const exportBalancesCsv = (balancesToExport: StockBalance[]) => {
+    if (balancesToExport.length === 0) {
+      toast.warning('No balance records to export.');
+      return;
+    }
+    const headers = ['Product', 'SKU', 'Warehouse', 'Lot Code', 'State', 'Quantity', 'Unit Cost', 'Total Value'];
+    const rows = balancesToExport.map((b) => [
+      `"${(b.product_name || '').replace(/"/g, '""')}"`,
+      `"${b.product_sku || ''}"`,
+      `"${(b.warehouse_name || '').replace(/"/g, '""')}"`,
+      `"${b.batch_code || ''}"`,
+      `"${b.stock_state || ''}"`,
+      `"${b.quantity}"`,
+      `"${b.average_cost}"`,
+      `"${b.total_value}"`,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `stock-balances-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${balancesToExport.length} stock balance records to CSV.`);
+  };
+
   return (
     <div className="space-y-6">
       {/* Metric Cards Banner */}
@@ -283,17 +356,71 @@ export function StockLedgerSection() {
           </button>
         </div>
 
-        <div className="relative flex-1 sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted" />
-          <input
-            type="text"
-            placeholder={`Search ${viewMode === 'balances' ? 'SKU, product, lot...' : 'movements, ref...'}`}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3.5 py-2 text-xs bg-surface-sunken border border-default rounded-xl text-default placeholder:text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-2xs"
-          />
+        <div className="flex items-center gap-2">
+          {viewMode === 'balances' && (
+            <button
+              type="button"
+              onClick={() => exportBalancesCsv(selectedBalanceIds.size > 0 ? filteredBalances.filter((b) => selectedBalanceIds.has(b.id)) : filteredBalances)}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-default bg-surface hover:bg-surface-sunken text-default transition-all shadow-2xs cursor-pointer"
+              title="Export visible or selected balances to CSV"
+            >
+              <FileSpreadsheet className="size-3.5 text-primary" />
+              <span>Export {selectedBalanceIds.size > 0 ? `(${selectedBalanceIds.size})` : 'CSV'}</span>
+            </button>
+          )}
+
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted" />
+            <input
+              type="text"
+              placeholder={`Search ${viewMode === 'balances' ? 'SKU, product, lot...' : 'movements, ref...'}`}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-3.5 py-2 text-xs bg-surface-sunken border border-default rounded-xl text-default placeholder:text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-2xs"
+            />
+          </div>
         </div>
       </div>
+
+      {/* Discovery & Action Bar when items exist in balances mode */}
+      {viewMode === 'balances' && filteredBalances.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2.5 px-3.5 py-2 rounded-xl bg-surface-sunken/60 border border-default text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-muted font-medium">
+              Showing <strong className="text-default">{filteredBalances.length}</strong> positions
+            </span>
+            {selectedBalanceIds.size > 0 && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary text-primary-fg">
+                <CheckSquare className="size-3" />
+                {selectedBalanceIds.size} Selected
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleSelectAll}
+              className="text-xs font-medium text-primary hover:underline cursor-pointer"
+            >
+              {isAllSelected ? 'Deselect All' : `Select All (${filteredBalances.length})`}
+            </button>
+
+            {selectedBalanceIds.size > 0 && (
+              <>
+                <span className="text-muted/40">|</span>
+                <button
+                  type="button"
+                  onClick={clearSelection}
+                  className="text-xs font-medium text-muted hover:text-default cursor-pointer"
+                >
+                  Clear Selection
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Modern Data Grid Container */}
       <div className="rounded-2xl border border-default bg-surface shadow-xs overflow-hidden">
@@ -302,6 +429,16 @@ export function StockLedgerSection() {
             <table className="w-full text-left text-xs text-default">
               <thead className="bg-surface-sunken/70 text-[11px] font-semibold text-muted uppercase tracking-wider border-b border-default">
                 <tr>
+                  <th className="w-10 px-4 py-3.5 text-center">
+                    <input
+                      ref={headerCheckboxRef}
+                      type="checkbox"
+                      checked={isAllSelected}
+                      onChange={toggleSelectAll}
+                      className="size-4 rounded border-default text-primary focus:ring-primary cursor-pointer"
+                      title="Select all visible balances"
+                    />
+                  </th>
                   <th className="px-4 py-3.5">Product / SKU</th>
                   <th className="px-4 py-3.5">Warehouse</th>
                   <th className="px-4 py-3.5">Lot / Batch</th>
@@ -315,13 +452,28 @@ export function StockLedgerSection() {
               <tbody className="divide-y divide-default">
                 {filteredBalances.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center text-muted">
+                    <td colSpan={9} className="px-4 py-12 text-center text-muted">
                       {loading ? 'Loading current inventory...' : 'No stock balance records found'}
                     </td>
                   </tr>
                 ) : (
                   filteredBalances.map((b) => (
-                    <tr key={b.id} className="hover:bg-surface-sunken/40 transition-colors">
+                    <tr
+                      key={b.id}
+                      className={cn(
+                        "hover:bg-surface-sunken/40 transition-colors",
+                        selectedBalanceIds.has(b.id) && "bg-primary/5 dark:bg-primary/10"
+                      )}
+                    >
+                      <td className="w-10 px-4 py-3.5 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedBalanceIds.has(b.id)}
+                          onChange={() => toggleSelectBalance(b.id)}
+                          className="size-4 rounded border-default text-primary focus:ring-primary cursor-pointer"
+                          aria-label={`Select ${b.product_name}`}
+                        />
+                      </td>
                       <td className="px-4 py-3.5">
                         <div className="font-semibold text-default">{b.product_name ?? '—'}</div>
                         <div className="text-[11px] font-mono text-muted">
@@ -792,6 +944,62 @@ export function StockLedgerSection() {
           </form>
         )}
       </Modal>
+
+      {/* Floating Bottom Docked Action Toolbar for Balances */}
+      {viewMode === 'balances' && selectedBalanceIds.size > 0 && (
+        <div className="fixed bottom-6 inset-x-0 z-40 flex justify-center pointer-events-none animate-in slide-in-from-bottom-6 duration-200">
+          <div className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-default/80 bg-surface/95 px-5 py-3 shadow-2xl backdrop-blur-xl ring-1 ring-black/5 dark:ring-white/10">
+            <div className="flex items-center gap-2 border-r border-default pr-3">
+              <span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-fg">
+                {selectedBalanceIds.size}
+              </span>
+              <span className="text-xs font-semibold text-default">
+                Position{selectedBalanceIds.size > 1 ? 's' : ''} Selected
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => exportBalancesCsv(filteredBalances.filter((b) => selectedBalanceIds.has(b.id)))}
+                className="flex h-8 items-center gap-1.5 rounded-xl bg-primary text-primary-fg px-3 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
+              >
+                <FileSpreadsheet className="size-3 text-primary-fg" />
+                Export CSV ({selectedBalanceIds.size})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const firstSelected = filteredBalances.find((b) => selectedBalanceIds.has(b.id));
+                  if (firstSelected) {
+                    setQuickTransferItem(firstSelected);
+                    setQuickTransferData({
+                      targetWarehouse: 'Cooker Assembly Line 1 Floor Buffer',
+                      quantity: String(firstSelected.quantity),
+                      notes: `Batch transfer initiated for ${selectedBalanceIds.size} positions`,
+                    });
+                  }
+                }}
+                className="flex h-8 items-center gap-1.5 rounded-xl bg-blue-500/10 border border-blue-500/20 px-3 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-colors cursor-pointer"
+              >
+                <ArrowRightLeft className="size-3" />
+                Transfer Selected
+              </button>
+
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="flex size-8 items-center justify-center rounded-xl border border-default bg-surface-sunken text-muted hover:text-default transition-colors cursor-pointer ml-1"
+                title="Deselect all (Esc)"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

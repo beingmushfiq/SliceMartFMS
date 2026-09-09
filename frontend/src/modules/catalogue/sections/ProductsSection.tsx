@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, type ChangeEvent } from 'react';
+import { useState, useRef, useMemo, useEffect, type ChangeEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -22,7 +22,13 @@ import {
   Sparkles,
   Compass,
   Copy,
+  Download,
+  AlertTriangle,
+  Globe,
+  Activity,
+  CheckCircle2,
 } from 'lucide-react';
+import { cn } from '../../../lib/utils';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
@@ -88,7 +94,11 @@ export function ProductsSection() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
-  const [selectedLabelProduct, setSelectedLabelProduct] = useState<Product | null>(null);
+  const [selectedLabelProducts, setSelectedLabelProducts] = useState<Product[]>([]);
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string | number>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const indeterminateRef = useRef<HTMLInputElement>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [activeFormTab, setActiveFormTab] = useState<
     'general' | 'pricing' | 'media' | 'seo' | 'custom'
@@ -437,7 +447,7 @@ export function ProductsSection() {
     }
   };
 
-  const products = productsQuery.data?.data ?? [];
+  const products = useMemo(() => productsQuery.data?.data ?? [], [productsQuery.data?.data]);
   const units = unitsQuery.data?.data ?? [];
   const categories = categoriesQuery.data?.data ?? [];
   const brands = brandsQuery.data?.data ?? [];
@@ -456,8 +466,208 @@ export function ProductsSection() {
     return map;
   }, [unitsQuery.data?.data]);
 
+  // ── Multi-Row Selection & Bulk Operations ──────────────────────────────────
+  const allSelected = useMemo(
+    () => products.length > 0 && products.every((p) => selectedProductIds.has(p.id)),
+    [products, selectedProductIds]
+  );
+
+  const isIndeterminate = useMemo(
+    () => selectedProductIds.size > 0 && !allSelected,
+    [selectedProductIds, allSelected]
+  );
+
+  useEffect(() => {
+    if (indeterminateRef.current) {
+      indeterminateRef.current.indeterminate = isIndeterminate;
+    }
+  }, [isIndeterminate]);
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedProductIds(new Set());
+    } else {
+      setSelectedProductIds(new Set(products.map((p) => p.id)));
+    }
+  };
+
+  const toggleSelectProduct = (id: string | number) => {
+    setSelectedProductIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedProductIds(new Set());
+  };
+
+  const selectedProducts = useMemo(
+    () => products.filter((p) => selectedProductIds.has(p.id)),
+    [products, selectedProductIds]
+  );
+
+  const catalogStats = useMemo(() => {
+    const total = products.length;
+    const active = products.filter((p) => (p.status || 'active') === 'active').length;
+    const stockTracked = products.filter((p) => p.is_stock_tracked).length;
+    const lowStock = products.filter((p) => {
+      const qty = Number(p.stock_quantity ?? 0);
+      const reorder = Number(p.reorder_level ?? 0);
+      return reorder > 0 && qty <= reorder;
+    }).length;
+    const storefrontLive = products.filter((p) => p.is_online).length;
+    return { total, active, inactive: total - active, stockTracked, lowStock, storefrontLive };
+  }, [products]);
+
+  // Esc key clears selection
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedProductIds.size > 0) {
+        clearSelection();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedProductIds.size]);
+
+  // Bulk Handlers
+  const handleBulkPrintBarcodes = () => {
+    if (selectedProducts.length > 0) {
+      setSelectedLabelProducts(selectedProducts);
+    } else if (products.length > 0) {
+      setSelectedLabelProducts(products.slice(0, 10));
+    } else {
+      notify.warning('No products available to print barcodes.');
+    }
+  };
+
+  const handleBulkStatusChange = async (newStatus: 'active' | 'inactive') => {
+    if (selectedProducts.length === 0) return;
+    setIsBulkUpdating(true);
+    try {
+      const promises = selectedProducts.map((p) =>
+        api.patch(`/products/${p.id}`, { status: newStatus })
+      );
+      await Promise.allSettled(promises);
+      await queryClient.invalidateQueries({ queryKey: ['catalogue', 'products'] });
+      notify.success(`Updated status to ${newStatus} for ${selectedProducts.length} product(s).`);
+      clearSelection();
+    } catch {
+      notify.error('Failed to update product statuses.');
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
+
+  const handleBulkExportCsv = () => {
+    const itemsToExport = selectedProducts.length > 0 ? selectedProducts : products;
+    if (itemsToExport.length === 0) {
+      notify.warning('No products to export.');
+      return;
+    }
+
+    const headers = ['SKU', 'Name', 'Type', 'Standard Cost', 'Sale Price', 'Stock Qty', 'Unit', 'Status', 'Barcode'];
+    const rows = itemsToExport.map((p) => [
+      `"${p.sku}"`,
+      `"${(p.name || '').replace(/"/g, '""')}"`,
+      `"${p.type}"`,
+      `"${p.standard_cost || '0.00'}"`,
+      `"${p.default_sale_price || '0.00'}"`,
+      `"${p.stock_quantity ?? '0'}"`,
+      `"${unitMap.get(String(p.base_unit_id)) || 'PCS'}"`,
+      `"${p.status || 'active'}"`,
+      `"${p.barcode || ''}"`,
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `products_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    notify.success(`Exported ${itemsToExport.length} products to CSV.`);
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    if (selectedProducts.length === 0) return;
+    setIsBulkUpdating(true);
+    try {
+      const promises = selectedProducts.map((p) => api.delete(`/products/${p.id}`));
+      await Promise.allSettled(promises);
+      await queryClient.invalidateQueries({ queryKey: ['catalogue', 'products'] });
+      notify.success(`Successfully deleted ${selectedProducts.length} product(s).`);
+      setIsBulkDeleting(false);
+      clearSelection();
+    } catch {
+      notify.error('Failed to delete some products.');
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Catalog Intelligence KPI Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="p-3.5 rounded-2xl border border-default bg-surface shadow-2xs space-y-1">
+          <div className="flex items-center justify-between text-muted">
+            <span className="text-[11px] font-semibold uppercase tracking-wider">Total Catalog SKUs</span>
+            <Package className="size-4 text-primary" />
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-xl font-black text-default">{catalogStats.total}</span>
+            <span className="text-[10px] text-muted">({catalogStats.active} Active)</span>
+          </div>
+          <p className="text-[10px] text-muted">{catalogStats.inactive} drafts or inactive</p>
+        </div>
+
+        <div className="p-3.5 rounded-2xl border border-default bg-surface shadow-2xs space-y-1">
+          <div className="flex items-center justify-between text-muted">
+            <span className="text-[11px] font-semibold uppercase tracking-wider">Inventory Tracked</span>
+            <Activity className="size-4 text-emerald-500" />
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-xl font-black text-default">{catalogStats.stockTracked}</span>
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Real-time ledger</span>
+          </div>
+          <p className="text-[10px] text-muted">Automated stock movement tracking</p>
+        </div>
+
+        <div className="p-3.5 rounded-2xl border border-default bg-surface shadow-2xs space-y-1">
+          <div className="flex items-center justify-between text-muted">
+            <span className="text-[11px] font-semibold uppercase tracking-wider">Reorder Watchlist</span>
+            <AlertTriangle className={cn('size-4', catalogStats.lowStock > 0 ? 'text-amber-500' : 'text-muted')} />
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className={cn('text-xl font-black', catalogStats.lowStock > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-default')}>
+              {catalogStats.lowStock}
+            </span>
+            <span className="text-[10px] text-muted">Items at/below min</span>
+          </div>
+          <p className="text-[10px] text-muted">Requires manufacturing or PO replenishment</p>
+        </div>
+
+        <div className="p-3.5 rounded-2xl border border-default bg-surface shadow-2xs space-y-1">
+          <div className="flex items-center justify-between text-muted">
+            <span className="text-[11px] font-semibold uppercase tracking-wider">Storefront Live</span>
+            <Globe className="size-4 text-blue-500" />
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-xl font-black text-default">{catalogStats.storefrontLive}</span>
+            <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">E-Commerce</span>
+          </div>
+          <p className="text-[10px] text-muted">Published to public storefront catalog</p>
+        </div>
+      </div>
+
       {/* Top Search & Filter Bar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 items-center gap-3">
@@ -490,50 +700,14 @@ export function ProductsSection() {
 
         <div className="flex items-center gap-2">
           <Button
-            variant="secondary"
-            onClick={() => {
-              if (products.length > 0) {
-                setSelectedLabelProduct(products[0] ?? null);
-              } else {
-                setSelectedLabelProduct({
-                  id: 'sample',
-                  sku: 'FG-IC-2200',
-                  name: 'Infrared Cooker 2200W (SM-IC220)',
-                  type: 'finished',
-                  base_unit_id: '1',
-                  category_id: null,
-                  brand_id: null,
-                  standard_cost: '2100.00',
-                  default_sale_price: '3200.00',
-                  is_stock_tracked: true,
-                  is_online: true,
-                  status: 'active',
-                  description: null,
-                  barcode: '890123456789',
-                  created_at: null,
-                  updated_at: null,
-                  purchase_unit_id: null,
-                  sales_unit_id: null,
-                  is_produced: true,
-                  is_purchased: false,
-                  is_sold: true,
-                  has_variants: false,
-                  tracking_mode: 'batch',
-                  opening_stock: '100',
-                  reorder_level: '10',
-                  reorder_quantity: '50',
-                  tax_profile_id: null,
-                  weight: '0.5',
-                  dimensions: null,
-                  online_slug: null,
-                  online_meta: null,
-                });
-              }
-            }}
+            variant={selectedProductIds.size > 0 ? 'primary' : 'secondary'}
+            onClick={handleBulkPrintBarcodes}
             className="flex items-center gap-1.5 shadow-xs"
           >
             <QrCode className="h-4 w-4 text-primary" />
-            <span>Print Barcodes</span>
+            <span>
+              Print Barcodes{selectedProductIds.size > 0 ? ` (${selectedProductIds.size})` : ''}
+            </span>
           </Button>
 
           <Button
@@ -551,6 +725,85 @@ export function ProductsSection() {
         </div>
       </div>
 
+      {/* Feature Discovery & In-Table Bulk Actions Strip */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 px-4 py-2.5 bg-surface-sunken border border-default rounded-2xl text-xs">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-semibold text-default">
+            {products.length} Products Listed
+          </span>
+          {selectedProductIds.size > 0 ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-bold text-[11px] bg-primary text-primary-fg shadow-xs">
+              <CheckCircle2 className="size-3" />
+              {selectedProductIds.size} Selected
+            </span>
+          ) : (
+            <span className="text-[11px] text-muted hidden md:inline">
+              • Check row boxes to enable batch thermal barcode printing, status updates, or deletion
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {selectedProductIds.size > 0 ? (
+            <>
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="px-2.5 py-1 text-[11px] font-medium text-muted hover:text-default rounded-lg border border-default bg-surface cursor-pointer"
+              >
+                Clear Selection (Esc)
+              </button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleBulkStatusChange('active')}
+                disabled={isBulkUpdating}
+                className="text-[11px] py-1"
+              >
+                Set Active
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleBulkStatusChange('inactive')}
+                disabled={isBulkUpdating}
+                className="text-[11px] py-1"
+              >
+                Set Inactive
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleBulkExportCsv}
+                className="flex items-center gap-1 text-[11px] py-1"
+              >
+                <Download className="size-3" />
+                Export CSV
+              </Button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={handleBulkExportCsv}
+                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-default rounded-lg border border-default bg-surface hover:bg-surface-sunken transition-colors cursor-pointer"
+                title="Export all visible products to CSV"
+              >
+                <Download className="size-3 text-muted" />
+                <span>Export All CSV</span>
+              </button>
+              <button
+                type="button"
+                onClick={toggleSelectAll}
+                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-primary hover:text-primary-hover rounded-lg border border-primary/30 bg-primary-subtle transition-colors cursor-pointer"
+              >
+                <span>Select All Visible</span>
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* Table Data */}
       <QueryBoundary
         status={productsQuery.status}
@@ -562,7 +815,17 @@ export function ProductsSection() {
           <table className="w-full text-left text-xs text-slate-800 dark:text-slate-200 border-collapse">
             <thead className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               <tr>
-                <th className="py-3.5 pl-4 pr-3">Product SKU & Name</th>
+                <th className="py-3.5 pl-4 pr-2 w-10 text-center">
+                  <input
+                    type="checkbox"
+                    ref={indeterminateRef}
+                    checked={allSelected}
+                    onChange={toggleSelectAll}
+                    aria-label="Select all products"
+                    className="size-4 rounded-sm border-slate-300 dark:border-slate-700 text-primary focus:ring-primary/20 accent-primary cursor-pointer transition-colors"
+                  />
+                </th>
+                <th className="py-3.5 pl-2 pr-3">Product SKU & Name</th>
                 <th className="py-3.5 px-3">Type</th>
                 <th className="py-3.5 px-3">Standard Cost</th>
                 <th className="py-3.5 px-3">Sale Price</th>
@@ -574,7 +837,7 @@ export function ProductsSection() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {products.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400">
+                  <td colSpan={8} className="py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Package className="size-8 text-slate-300 dark:text-slate-600" />
                       <p className="font-medium text-slate-700 dark:text-slate-300">
@@ -590,13 +853,28 @@ export function ProductsSection() {
                 products.map((p) => {
                   const pMeta = p.online_meta as { image_url?: string } | null;
                   const thumb = pMeta?.image_url;
+                  const isSelected = selectedProductIds.has(p.id);
 
                   return (
                     <tr
                       key={p.id}
-                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group"
+                      className={cn(
+                        'transition-colors group',
+                        isSelected
+                          ? 'bg-primary/5 dark:bg-primary/10 border-l-2 border-l-primary'
+                          : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/40'
+                      )}
                     >
-                      <td className="py-3 pl-4 pr-3">
+                      <td className="py-3 pl-4 pr-2 w-10 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelectProduct(p.id)}
+                          aria-label={`Select product ${p.name}`}
+                          className="size-4 rounded-sm border-slate-300 dark:border-slate-700 text-primary focus:ring-primary/20 accent-primary cursor-pointer transition-colors"
+                        />
+                      </td>
+                      <td className="py-3 pl-2 pr-3">
                         <div className="flex items-center gap-3">
                           {thumb ? (
                             <img
@@ -733,7 +1011,7 @@ export function ProductsSection() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setSelectedLabelProduct(p)}
+                            onClick={() => setSelectedLabelProducts([p])}
                             className="inline-flex items-center justify-center size-7.5 rounded-xl text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/20 transition-all cursor-pointer border border-transparent shadow-2xs"
                             title="Thermal Barcode Label"
                           >
@@ -2846,24 +3124,144 @@ export function ProductsSection() {
         </Modal>
       )}
 
-      {/* Barcode / Thermal Label Generator Modal */}
-      {selectedLabelProduct && (
+      {/* ═══════════════════════════════════════════════════════════════════════
+          FLOATING DOCKED BULK ACTIONS TOOLBAR
+          ═══════════════════════════════════════════════════════════════════════ */}
+      {selectedProductIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 sm:gap-3 px-4 py-2.5 rounded-2xl bg-slate-900/95 dark:bg-slate-800/95 backdrop-blur-md text-white border border-slate-700/80 shadow-2xl animate-in fade-in slide-in-from-bottom-5 duration-200">
+          <div className="flex items-center gap-2 pr-3 border-r border-slate-700">
+            <span className="flex size-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-fg font-mono">
+              {selectedProductIds.size}
+            </span>
+            <span className="text-xs font-semibold whitespace-nowrap">Selected</span>
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="text-[11px] text-slate-400 hover:text-white underline underline-offset-2 ml-1 cursor-pointer transition-colors"
+              title="Clear selection (Esc)"
+            >
+              Clear
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleBulkPrintBarcodes}
+              className="bg-slate-800 hover:bg-slate-700 text-white border-slate-700 flex items-center gap-1.5"
+            >
+              <QrCode className="size-3.5 text-primary" />
+              <span>Print Barcodes</span>
+            </Button>
+
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => handleBulkStatusChange('active')}
+              disabled={isBulkUpdating}
+              className="bg-slate-800 hover:bg-slate-700 text-emerald-400 border-slate-700 flex items-center gap-1.5"
+            >
+              <ShieldCheck className="size-3.5" />
+              <span>Active</span>
+            </Button>
+
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => handleBulkStatusChange('inactive')}
+              disabled={isBulkUpdating}
+              className="bg-slate-800 hover:bg-slate-700 text-amber-400 border-slate-700 flex items-center gap-1.5"
+            >
+              <span>Inactive</span>
+            </Button>
+
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleBulkExportCsv}
+              className="bg-slate-800 hover:bg-slate-700 text-white border-slate-700 flex items-center gap-1.5"
+            >
+              <Download className="size-3.5" />
+              <span>Export CSV</span>
+            </Button>
+
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={() => setIsBulkDeleting(true)}
+              disabled={isBulkUpdating}
+              className="flex items-center gap-1.5"
+            >
+              <Trash2 className="size-3.5" />
+              <span>Delete</span>
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Modal */}
+      {isBulkDeleting && (
+        <Modal
+          open={isBulkDeleting}
+          onClose={() => setIsBulkDeleting(false)}
+          title="Delete Selected Products"
+          subtitle={`Confirm removal of ${selectedProducts.length} items from catalog`}
+          icon={<Trash2 className="size-4.5 text-rose-500" />}
+          size="sm"
+        >
+          <div className="space-y-4 text-xs">
+            <p className="text-slate-800 dark:text-slate-200 leading-relaxed">
+              Are you sure you want to delete{' '}
+              <strong className="text-rose-600 dark:text-rose-400 font-bold">
+                {selectedProducts.length}
+              </strong>{' '}
+              selected products?
+            </p>
+            <div className="max-h-36 overflow-y-auto space-y-1 p-2 rounded-xl bg-surface-sunken border border-default">
+              {selectedProducts.map((p) => (
+                <div key={p.id} className="flex items-center justify-between text-[11px]">
+                  <span className="font-semibold text-default truncate">{p.name}</span>
+                  <span className="font-mono text-muted shrink-0 ml-2">{p.sku}</span>
+                </div>
+              ))}
+            </div>
+            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-[11px] leading-relaxed">
+              ⚠️ Deleting these products is protected: any historical inventory transactions or production batches retain full audit integrity.
+            </div>
+
+            <div className="flex justify-end gap-2.5 pt-3 border-t border-default">
+              <Button variant="secondary" onClick={() => setIsBulkDeleting(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleConfirmBulkDelete}
+                disabled={isBulkUpdating}
+              >
+                {isBulkUpdating ? 'Deleting...' : `Confirm Delete (${selectedProducts.length})`}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Barcode / Thermal Label Generator Modal (Multi-Product & Batch Supported) */}
+      {selectedLabelProducts.length > 0 && (
         <BarcodeGeneratorModal
-          isOpen={Boolean(selectedLabelProduct)}
-          onClose={() => setSelectedLabelProduct(null)}
-          initialProducts={[
-            {
-              id: selectedLabelProduct.id,
-              name: selectedLabelProduct.name,
-              sku: selectedLabelProduct.sku,
-              barcode: selectedLabelProduct.barcode || selectedLabelProduct.sku,
-              sale_price: selectedLabelProduct.default_sale_price || '0.00',
-              currency: currencySymbol,
-              unit_code: 'PCS',
-              batch_code: 'BAT-2026',
-              quantity: 4,
-            },
-          ]}
+          isOpen={selectedLabelProducts.length > 0}
+          onClose={() => setSelectedLabelProducts([])}
+          initialProducts={selectedLabelProducts.map((p) => ({
+            id: p.id,
+            name: p.name,
+            sku: p.sku,
+            barcode: p.barcode || p.sku,
+            sale_price: p.default_sale_price || '0.00',
+            currency: currencySymbol,
+            unit_code: unitMap.get(String(p.base_unit_id)) || 'PCS',
+            batch_code: 'BAT-2026',
+            quantity: 4,
+          }))}
         />
       )}
     </div>

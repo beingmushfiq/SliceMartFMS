@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   Boxes,
   FileCode,
@@ -12,6 +12,9 @@ import {
   Check,
   Layers,
   Sparkles,
+  Compass,
+  ArrowRight,
+  Zap,
 } from 'lucide-react';
 import { ProductsSection } from './sections/ProductsSection';
 import { UnitsSection } from './sections/UnitsSection';
@@ -23,6 +26,8 @@ import { PartiesSection } from './sections/PartiesSection';
 
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { cn } from '../../lib/utils';
+import { Modal } from '../../components/ui/Modal';
+import { Button } from '../../components/ui/Button';
 
 export type CatalogueTab =
   | 'products'
@@ -52,6 +57,7 @@ interface TabConfig {
   icon: typeof Package;
   badge?: string;
   description: string;
+  highlights: string[];
 }
 
 interface CategoryConfig {
@@ -60,6 +66,8 @@ interface CategoryConfig {
   subtitle: string;
   defaultTab: CatalogueTab;
   badge: string;
+  icon: typeof Package;
+  shortcut: string;
 }
 
 const CATEGORIES: CategoryConfig[] = [
@@ -68,21 +76,27 @@ const CATEGORIES: CategoryConfig[] = [
     label: 'Product & SKU Catalog',
     subtitle: 'Items, Categories, Brands & Units',
     defaultTab: 'products',
-    badge: '4 Views',
+    badge: '4 Capabilities',
+    icon: Package,
+    shortcut: '1',
   },
   {
     id: 'engineering',
     label: 'Engineering & Recipes',
     subtitle: 'BOM & Assembly Structures',
     defaultTab: 'bom',
-    badge: '1 View',
+    badge: '1 Capability',
+    icon: FileCode,
+    shortcut: '2',
   },
   {
     id: 'directories',
     label: 'Facilities & Directory',
     subtitle: 'Warehouses & Stakeholder Directory',
     defaultTab: 'warehouses',
-    badge: '2 Views',
+    badge: '2 Capabilities',
+    icon: Warehouse,
+    shortcut: '3',
   },
 ];
 
@@ -94,6 +108,7 @@ const TABS: TabConfig[] = [
     category: 'products',
     icon: Package,
     description: 'Finished goods, raw materials, parts and catalog items with variants',
+    highlights: ['Multi-type catalog items', 'Thermal barcode printing', 'Storefront SEO & pricing'],
   },
   {
     id: 'categories',
@@ -101,6 +116,7 @@ const TABS: TabConfig[] = [
     category: 'products',
     icon: Tag,
     description: 'Taxonomy hierarchy for product catalog classification',
+    highlights: ['Multi-level tree nesting', 'Category code indexing', 'Storefront navigation'],
   },
   {
     id: 'brands',
@@ -108,6 +124,7 @@ const TABS: TabConfig[] = [
     category: 'products',
     icon: Boxes,
     description: 'Product brand lines, manufacturers and trademark portfolios',
+    highlights: ['Brand portfolio registry', 'Manufacturer logos', 'Trademark management'],
   },
   {
     id: 'units',
@@ -115,6 +132,7 @@ const TABS: TabConfig[] = [
     category: 'products',
     icon: Ruler,
     description: 'Measurement standards, base units and precision conversion ratios',
+    highlights: ['Piece, weight, volume', 'Conversion multipliers', 'Precision decimals'],
   },
 
   // Engineering
@@ -125,6 +143,7 @@ const TABS: TabConfig[] = [
     icon: FileCode,
     badge: 'Formulas',
     description: 'Manufacturing recipes, multi-level BOMs and assembly specifications',
+    highlights: ['Multi-tier assembly trees', 'Scrap yield tolerances', 'Work center routing'],
   },
 
   // Facilities & Directories
@@ -134,6 +153,7 @@ const TABS: TabConfig[] = [
     category: 'directories',
     icon: Warehouse,
     description: 'Storage facilities, distribution centers and location bin maps',
+    highlights: ['Multi-facility tracking', 'Depot zones & bins', 'Stock transfer nodes'],
   },
   {
     id: 'parties',
@@ -142,24 +162,20 @@ const TABS: TabConfig[] = [
     icon: Users,
     badge: 'CRM',
     description: 'Customers, suppliers, distributors, dealers and logistics partners',
+    highlights: ['Suppliers & customers', 'Tax IDs & payment terms', 'Billing & shipping addresses'],
   },
 ];
 
 export default function CatalogueWorkspace() {
   const [activeTab, setActiveTab] = useWorkspaceTab<CatalogueTab>('products', VALID_TABS);
   const [isQuickJumpOpen, setIsQuickJumpOpen] = useState(false);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Derive active category from current active tab
   const currentTabConfig = TABS.find((t) => t.id === activeTab) ?? TABS[0]!;
   const activeCategory = currentTabConfig.category;
-
-  // Active Category tabs
-  const categoryTabs = useMemo(
-    () => TABS.filter((t) => t.category === activeCategory),
-    [activeCategory]
-  );
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -174,7 +190,7 @@ export default function CatalogueWorkspace() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isQuickJumpOpen]);
 
-  const handleCategorySelect = (catId: CatalogueCategory) => {
+  const handleCategorySelect = useCallback((catId: CatalogueCategory) => {
     const targetCat = CATEGORIES.find((c) => c.id === catId);
     if (targetCat) {
       const existingInCat = TABS.find((t) => t.category === catId);
@@ -182,7 +198,7 @@ export default function CatalogueWorkspace() {
         setActiveTab(existingInCat.id);
       }
     }
-  };
+  }, [setActiveTab]);
 
   const filteredTabs = useMemo(() => {
     if (!searchFilter.trim()) return TABS;
@@ -195,6 +211,33 @@ export default function CatalogueWorkspace() {
     );
   }, [searchFilter]);
 
+  // Global hotkeys (1, 2, 3) to switch category pillars when not typing in an input
+  useEffect(() => {
+    function handleGlobalKeyDown(e: KeyboardEvent) {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target as HTMLElement).isContentEditable
+      ) {
+        return;
+      }
+
+      if (e.key === '1') {
+        e.preventDefault();
+        handleCategorySelect('products');
+      } else if (e.key === '2') {
+        e.preventDefault();
+        handleCategorySelect('engineering');
+      } else if (e.key === '3') {
+        e.preventDefault();
+        handleCategorySelect('directories');
+      }
+    }
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [handleCategorySelect]);
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto py-2">
       {/* Workspace Header */}
@@ -205,6 +248,9 @@ export default function CatalogueWorkspace() {
               <Layers className="size-3 text-primary" />
               Master Data & Catalog Registry
             </span>
+            <span className="text-[10px] text-muted font-medium bg-surface-sunken px-2 py-0.5 rounded-full border border-default">
+              7 Sub-Modules Available
+            </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-default flex items-center gap-2.5">
             {currentTabConfig.label}
@@ -214,154 +260,336 @@ export default function CatalogueWorkspace() {
           </p>
         </div>
 
-        {/* All Views Quick Jump Dropdown */}
-        <div className="relative shrink-0" ref={dropdownRef}>
+        {/* Header Action Tools */}
+        <div className="flex items-center gap-2">
+          {/* Capabilities Guide Button */}
           <button
             type="button"
-            onClick={() => {
-              setIsQuickJumpOpen((prev) => !prev);
-              setSearchFilter('');
-            }}
-            className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl border border-default bg-surface hover:bg-surface-sunken text-default transition-all shadow-2xs hover:border-primary/40 cursor-pointer"
+            onClick={() => setIsGuideOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-primary/30 bg-primary-subtle hover:bg-primary/10 text-primary transition-all shadow-2xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            title="Open Catalog Capabilities and System Guide"
           >
-            <Sparkles className="size-3.5 text-primary" />
-            <span>All Catalog Views (7)</span>
-            <ChevronDown className={cn('size-3.5 text-muted transition-transform', isQuickJumpOpen && 'rotate-180')} />
+            <Compass className="size-3.5 text-primary" />
+            <span className="hidden sm:inline">Explore Capabilities</span>
+            <span className="sm:hidden">Guide</span>
           </button>
 
-          {isQuickJumpOpen && (
-            <div className="absolute right-0 top-full mt-2 w-80 rounded-2xl bg-surface border border-default shadow-2xl z-50 p-2 text-default animate-in fade-in-50 zoom-in-95 duration-150">
-              <div className="relative mb-2 px-1">
-                <Search className="absolute left-3.5 top-2.5 size-3.5 text-muted" />
-                <input
-                  type="text"
-                  placeholder="Jump to catalog view..."
-                  value={searchFilter}
-                  onChange={(e) => setSearchFilter(e.target.value)}
-                  autoFocus
-                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-surface-sunken border border-default rounded-xl outline-hidden focus:border-primary text-default placeholder:text-muted"
-                />
-              </div>
+          {/* All Views Quick Jump Dropdown */}
+          <div className="relative shrink-0" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setIsQuickJumpOpen((prev) => !prev);
+                setSearchFilter('');
+              }}
+              className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl border border-default bg-surface hover:bg-surface-sunken text-default transition-all shadow-2xs hover:border-primary/40 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              aria-label="All Catalog Views Jump Menu"
+              aria-expanded={isQuickJumpOpen}
+            >
+              <Sparkles className="size-3.5 text-primary" />
+              <span>All 7 Views</span>
+              <ChevronDown className={cn('size-3.5 text-muted transition-transform', isQuickJumpOpen && 'rotate-180')} />
+            </button>
 
-              <div className="max-h-72 overflow-y-auto space-y-1">
-                {CATEGORIES.map((cat) => {
-                  const catTabs = filteredTabs.filter((t) => t.category === cat.id);
-                  if (catTabs.length === 0) return null;
-                  return (
-                    <div key={cat.id} className="pt-1">
-                      <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted font-mono">
-                        {cat.label}
+            {isQuickJumpOpen && (
+              <div className="absolute right-0 top-full mt-2 w-80 rounded-2xl bg-surface border border-default shadow-2xl z-50 p-2 text-default animate-in fade-in-50 zoom-in-95 duration-150">
+                <div className="relative mb-2 px-1">
+                  <Search className="absolute left-3.5 top-2.5 size-3.5 text-muted" />
+                  <input
+                    type="text"
+                    placeholder="Jump to catalog view..."
+                    value={searchFilter}
+                    onChange={(e) => setSearchFilter(e.target.value)}
+                    autoFocus
+                    className="w-full pl-9 pr-3 py-1.5 text-xs bg-surface-sunken border border-default rounded-xl outline-hidden focus:border-primary text-default placeholder:text-muted"
+                  />
+                </div>
+
+                <div className="max-h-72 overflow-y-auto space-y-1">
+                  {CATEGORIES.map((cat) => {
+                    const catTabs = filteredTabs.filter((t) => t.category === cat.id);
+                    if (catTabs.length === 0) return null;
+                    return (
+                      <div key={cat.id} className="pt-1">
+                        <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted font-mono">
+                          {cat.label}
+                        </div>
+                        {catTabs.map((t) => {
+                          const Icon = t.icon;
+                          const isCurrent = activeTab === t.id;
+                          return (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => {
+                                setActiveTab(t.id);
+                                setIsQuickJumpOpen(false);
+                              }}
+                              className={cn(
+                                'w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer text-left',
+                                isCurrent
+                                  ? 'bg-primary/10 text-primary font-semibold'
+                                  : 'text-default hover:bg-surface-sunken'
+                              )}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Icon className="size-3.5 shrink-0 text-muted" />
+                                <span className="truncate">{t.label}</span>
+                              </div>
+                              {isCurrent && <Check className="size-3.5 text-primary shrink-0 ml-2" />}
+                            </button>
+                          );
+                        })}
                       </div>
-                      {catTabs.map((t) => {
-                        const Icon = t.icon;
-                        const isCurrent = activeTab === t.id;
-                        return (
-                          <button
-                            key={t.id}
-                            type="button"
-                            onClick={() => {
-                              setActiveTab(t.id);
-                              setIsQuickJumpOpen(false);
-                            }}
-                            className={cn(
-                              'w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer text-left',
-                              isCurrent
-                                ? 'bg-primary/10 text-primary font-semibold'
-                                : 'text-default hover:bg-surface-sunken'
-                            )}
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <Icon className="size-3.5 shrink-0 text-muted" />
-                              <span className="truncate">{t.label}</span>
-                            </div>
-                            {isCurrent && <Check className="size-3.5 text-primary shrink-0 ml-2" />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Primary Category Switcher (3 Pillars) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+      {/* Primary 3 Command Pillars (with Visible Embedded Sub-Pills) */}
+      <div
+        role="tablist"
+        aria-label="Catalogue Subsystems"
+        className="grid grid-cols-1 lg:grid-cols-3 gap-3"
+      >
         {CATEGORIES.map((cat) => {
-          const isSelected = activeCategory === cat.id;
+          const isCategorySelected = activeCategory === cat.id;
+          const Icon = cat.icon;
+          const childTabs = TABS.filter((t) => t.category === cat.id);
+
           return (
-            <button
+            <div
               key={cat.id}
-              type="button"
+              role="tab"
+              aria-selected={isCategorySelected}
+              tabIndex={isCategorySelected ? 0 : -1}
               onClick={() => handleCategorySelect(cat.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleCategorySelect(cat.id);
+                }
+              }}
               className={cn(
-                'group relative flex flex-col p-3 rounded-2xl border text-left transition-all duration-200 cursor-pointer shadow-2xs',
-                isSelected
-                  ? 'bg-primary/5 border-primary shadow-sm dark:bg-primary/10'
+                'group relative flex flex-col justify-between p-4 rounded-2xl border text-left transition-all duration-200 cursor-pointer shadow-2xs',
+                isCategorySelected
+                  ? 'bg-surface border-primary shadow-md ring-2 ring-primary/10'
                   : 'bg-surface hover:bg-surface-sunken border-default hover:border-default/80'
               )}
             >
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <span
+              {/* Top Header of the Pillar */}
+              <div className="flex items-start gap-3 w-full">
+                <div
                   className={cn(
-                    'text-xs font-bold transition-colors',
-                    isSelected ? 'text-primary' : 'text-default group-hover:text-default'
+                    'size-10 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 shadow-2xs',
+                    isCategorySelected
+                      ? 'bg-primary text-primary-fg shadow-sm'
+                      : 'bg-surface-sunken border border-default text-muted group-hover:text-default'
                   )}
                 >
-                  {cat.label}
-                </span>
-                <span
-                  className={cn(
-                    'text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold border',
-                    isSelected
-                      ? 'bg-primary text-primary-fg border-primary'
-                      : 'bg-surface-sunken text-muted border-default'
-                  )}
-                >
-                  {cat.badge}
-                </span>
+                  <Icon className={cn('size-5 shrink-0', isCategorySelected ? 'text-primary-fg' : 'text-muted group-hover:text-default')} />
+                </div>
+
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <div className="flex items-center justify-between gap-1.5">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span
+                        className={cn(
+                          'text-xs font-bold transition-colors truncate',
+                          isCategorySelected ? 'text-default' : 'text-default/90 group-hover:text-default'
+                        )}
+                      >
+                        {cat.label}
+                      </span>
+                      <span className="text-[10px] font-mono text-muted/70 font-semibold px-1 py-0.2 rounded bg-surface-sunken border border-default/50 select-none">
+                        [{cat.shortcut}]
+                      </span>
+                    </div>
+
+                    <span
+                      className={cn(
+                        'text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border shrink-0',
+                        isCategorySelected
+                          ? 'bg-primary/10 text-primary border-primary/20'
+                          : 'bg-surface-sunken text-muted border-default'
+                      )}
+                    >
+                      {cat.badge}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted line-clamp-1">{cat.subtitle}</p>
+                </div>
               </div>
-              <p className="text-[11px] text-muted line-clamp-1">{cat.subtitle}</p>
-            </button>
+
+              {/* Embedded Direct Child Tabs (Always Visible for Instant 1-Click Access) */}
+              <div className="mt-3.5 pt-2.5 border-t border-default/60 flex flex-wrap gap-1.5 w-full">
+                {childTabs.map((subTab) => {
+                  const isCurrent = activeTab === subTab.id;
+                  const SubIcon = subTab.icon;
+                  return (
+                    <button
+                      key={subTab.id}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveTab(subTab.id);
+                      }}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer',
+                        isCurrent
+                          ? 'bg-primary text-primary-fg font-semibold shadow-xs ring-1 ring-primary/30'
+                          : 'bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default/60'
+                      )}
+                      title={subTab.description}
+                    >
+                      <SubIcon className={cn('size-3', isCurrent ? 'text-primary-fg' : 'text-muted')} />
+                      <span>{subTab.label}</span>
+                      {isCurrent && <span className="size-1.5 rounded-full bg-white animate-pulse" />}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Active Indicator Bar */}
+              {isCategorySelected && (
+                <div className="absolute bottom-0 left-4 right-4 h-0.5 bg-primary rounded-full" />
+              )}
+            </div>
           );
         })}
       </div>
 
-      {/* Secondary Contextual View Pills */}
-      <div className="flex overflow-x-auto p-1.5 bg-surface-sunken rounded-2xl border border-default shadow-2xs">
-        <nav className="flex gap-1.5 min-w-full sm:min-w-0" aria-label="Catalogue Views">
-          {categoryTabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer',
-                  isActive
-                    ? 'bg-primary text-primary-fg font-semibold shadow-xs border border-primary'
-                    : 'text-muted hover:text-default hover:bg-surface/60 border border-transparent'
-                )}
-              >
-                <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
-                <span>{tab.label}</span>
-                {tab.badge && (
-                  <span
-                    className={cn(
-                      'text-[9px] font-mono px-1.5 py-0.2 rounded-md font-bold uppercase tracking-wider',
-                      isActive ? 'bg-white/20 text-white' : 'bg-surface text-muted border border-default'
-                    )}
-                  >
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+      {/* Unified Grouped Navigation Ribbon Bar (All 7 Sub-Modules Visible Simultaneously) */}
+      <div className="bg-surface-sunken rounded-2xl border border-default p-2 shadow-2xs">
+        <div className="flex items-center justify-between px-2 pb-1.5 mb-1 text-[11px] font-semibold text-muted border-b border-default/50">
+          <div className="flex items-center gap-2">
+            <Zap className="size-3.5 text-primary" />
+            <span>Master Navigation Ribbon</span>
+          </div>
+          <span className="text-[10px] font-mono text-muted/70">
+            Active: <strong className="text-default">{currentTabConfig.label}</strong>
+          </span>
+        </div>
+
+        <nav
+          className="flex flex-wrap items-center gap-2"
+          role="tablist"
+          aria-label="All 7 Catalog Sub-Modules"
+        >
+          {/* Group 1: Catalog */}
+          <div className="flex items-center gap-1.5 bg-surface/60 p-1 rounded-xl border border-default/40">
+            <span className="text-[10px] font-mono uppercase font-bold text-muted px-2 py-0.5 select-none">
+              Catalog:
+            </span>
+            {TABS.filter((t) => t.category === 'products').map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  role="tab"
+                  aria-selected={isActive}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+                    isActive
+                      ? 'bg-primary text-primary-fg shadow-xs'
+                      : 'text-muted hover:text-default hover:bg-surface border border-transparent'
+                  )}
+                >
+                  <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="h-5 w-px bg-default hidden sm:block" />
+
+          {/* Group 2: Manufacturing */}
+          <div className="flex items-center gap-1.5 bg-surface/60 p-1 rounded-xl border border-default/40">
+            <span className="text-[10px] font-mono uppercase font-bold text-muted px-2 py-0.5 select-none">
+              Manufacturing:
+            </span>
+            {TABS.filter((t) => t.category === 'engineering').map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  role="tab"
+                  aria-selected={isActive}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+                    isActive
+                      ? 'bg-primary text-primary-fg shadow-xs'
+                      : 'text-muted hover:text-default hover:bg-surface border border-transparent'
+                  )}
+                >
+                  <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
+                  <span>{tab.label}</span>
+                  {tab.badge && (
+                    <span
+                      className={cn(
+                        'text-[9px] font-mono px-1.5 py-0.2 rounded-md font-bold uppercase tracking-wider',
+                        isActive ? 'bg-white/20 text-white' : 'bg-surface text-muted border border-default'
+                      )}
+                    >
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="h-5 w-px bg-default hidden sm:block" />
+
+          {/* Group 3: Directory & Facilities */}
+          <div className="flex items-center gap-1.5 bg-surface/60 p-1 rounded-xl border border-default/40">
+            <span className="text-[10px] font-mono uppercase font-bold text-muted px-2 py-0.5 select-none">
+              Directory:
+            </span>
+            {TABS.filter((t) => t.category === 'directories').map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  role="tab"
+                  aria-selected={isActive}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+                    isActive
+                      ? 'bg-primary text-primary-fg shadow-xs'
+                      : 'text-muted hover:text-default hover:bg-surface border border-transparent'
+                  )}
+                >
+                  <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
+                  <span>{tab.label}</span>
+                  {tab.badge && (
+                    <span
+                      className={cn(
+                        'text-[9px] font-mono px-1.5 py-0.2 rounded-md font-bold uppercase tracking-wider',
+                        isActive ? 'bg-white/20 text-white' : 'bg-surface text-muted border border-default'
+                      )}
+                    >
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </nav>
       </div>
 
@@ -375,6 +603,94 @@ export default function CatalogueWorkspace() {
         {activeTab === 'warehouses' && <WarehousesSection />}
         {activeTab === 'parties' && <PartiesSection />}
       </div>
+
+      {/* Capabilities & System Guide Modal */}
+      <Modal
+        open={isGuideOpen}
+        onClose={() => setIsGuideOpen(false)}
+        title="Catalogue Workspace Capabilities & Guide"
+        size="xl"
+      >
+        <div className="space-y-5 p-1 text-default">
+          <p className="text-xs text-muted leading-relaxed">
+            The Catalogue & Master Data workspace manages core definitions for the entire platform. Every subsystem—including Sales Orders, Production Runs, Warehousing, and Accounting—relies on these foundational records.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isCurrent = activeTab === tab.id;
+              return (
+                <div
+                  key={tab.id}
+                  className={cn(
+                    'p-3.5 rounded-2xl border transition-all text-left flex flex-col justify-between',
+                    isCurrent
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                      : 'border-default bg-surface hover:bg-surface-sunken'
+                  )}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className="size-7 rounded-lg bg-surface-sunken border border-default flex items-center justify-center text-primary">
+                          <Icon className="size-4" />
+                        </div>
+                        <h4 className="text-xs font-bold text-default">{tab.label}</h4>
+                      </div>
+                      {isCurrent && (
+                        <span className="text-[10px] font-mono font-bold text-primary bg-primary-subtle px-2 py-0.5 rounded-full border border-primary/20">
+                          Current Tab
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted leading-relaxed mb-2.5">
+                      {tab.description}
+                    </p>
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {tab.highlights.map((h, i) => (
+                        <span
+                          key={i}
+                          className="text-[10px] px-2 py-0.5 rounded-md bg-surface-sunken text-muted border border-default/50"
+                        >
+                          ✓ {h}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button
+                    variant={isCurrent ? 'primary' : 'secondary'}
+                    size="sm"
+                    className="w-full flex items-center justify-center gap-1.5"
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      setIsGuideOpen(false);
+                    }}
+                  >
+                    <span>{isCurrent ? 'Viewing Now' : `Open ${tab.label}`}</span>
+                    <ArrowRight className="size-3.5" />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="rounded-2xl border border-default bg-surface-sunken p-3.5 space-y-1.5 text-xs">
+            <h5 className="font-bold text-default flex items-center gap-1.5">
+              <Zap className="size-3.5 text-primary" />
+              Keyboard Shortcuts & Productivity
+            </h5>
+            <ul className="text-[11px] text-muted space-y-1 list-disc list-inside">
+              <li>Press <kbd className="px-1.5 py-0.5 rounded bg-surface border border-default font-mono font-bold text-default">1</kbd> to jump to Product & SKU Catalog</li>
+              <li>Press <kbd className="px-1.5 py-0.5 rounded bg-surface border border-default font-mono font-bold text-default">2</kbd> to jump to Engineering & BOM Recipes</li>
+              <li>Press <kbd className="px-1.5 py-0.5 rounded bg-surface border border-default font-mono font-bold text-default">3</kbd> to jump to Facilities & Stakeholder Directory</li>
+              <li>Press <kbd className="px-1.5 py-0.5 rounded bg-surface border border-default font-mono font-bold text-default">Esc</kbd> when products are selected to clear selection immediately</li>
+            </ul>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
+

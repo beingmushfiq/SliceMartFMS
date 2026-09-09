@@ -15,9 +15,18 @@ import {
   Plus,
   Trash2,
   RotateCcw,
+  FileSpreadsheet,
+  CheckSquare,
+  Compass,
+  Zap,
+  CheckCircle2,
+  ArrowRight,
 } from 'lucide-react';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { useCurrency } from '../../hooks/useCurrency';
+import { Modal } from '../../components/ui/Modal';
+import { Button } from '../../components/ui/Button';
+import { cn } from '../../lib/utils';
 import type {
   ChartOfAccount,
   AccountType,
@@ -38,6 +47,7 @@ interface CategoryConfig {
   id: FinanceCategory;
   label: string;
   tagline: string;
+  shortcut: string;
   icon: typeof BookOpen;
   tabs: FinanceTab[];
   defaultTab: FinanceTab;
@@ -48,6 +58,7 @@ const CATEGORIES: CategoryConfig[] = [
     id: 'accounting',
     label: 'General Ledger & Accounts',
     tagline: 'Double-entry journals, COA & financial statements',
+    shortcut: '1',
     icon: BookOpen,
     tabs: ['journal', 'coa', 'statements'],
     defaultTab: 'journal',
@@ -56,6 +67,7 @@ const CATEGORIES: CategoryConfig[] = [
     id: 'treasury',
     label: 'Treasury & Collections',
     tagline: 'Due aging, receivables & bank accounts',
+    shortcut: '2',
     icon: Landmark,
     tabs: ['due-collection', 'banking'],
     defaultTab: 'due-collection',
@@ -64,9 +76,87 @@ const CATEGORIES: CategoryConfig[] = [
     id: 'costing',
     label: 'Cost Rollup & Expenses',
     tagline: 'Operational disbursements & multi-component costing',
+    shortcut: '3',
     icon: Calculator,
     tabs: ['expenses', 'costing'],
     defaultTab: 'expenses',
+  },
+];
+
+interface FinanceTabConfig {
+  id: FinanceTab;
+  label: string;
+  shortLabel: string;
+  category: FinanceCategory;
+  badge?: string;
+  icon: typeof BookOpen;
+  description: string;
+  highlights: string[];
+}
+
+const FINANCE_TAB_CONFIGS: FinanceTabConfig[] = [
+  {
+    id: 'journal',
+    label: 'General Ledger & Journals',
+    shortLabel: 'Journals',
+    category: 'accounting',
+    icon: BookOpen,
+    description: 'Double-entry general ledger with balanced debit/credit voucher postings, line audits & source trace',
+    highlights: ['Balanced Debits & Credits', 'Voucher Line Inspection', 'Reversal & Duplicate Workflows'],
+  },
+  {
+    id: 'coa',
+    label: 'Chart of Accounts',
+    shortLabel: 'COA',
+    category: 'accounting',
+    icon: Scale,
+    description: 'Hierarchical account structure (Asset, Liability, Equity, Income, Expense) with normal balance rules',
+    highlights: ['Multi-Tier Account Hierarchy', 'Normal Balance Validation', 'Real-time Balance Aggregations'],
+  },
+  {
+    id: 'statements',
+    label: 'Financial Statements & P&L',
+    shortLabel: 'Statements',
+    category: 'accounting',
+    icon: TrendingUp,
+    description: 'Automated Balance Sheet, Income Statement (P&L), and Trial Balance generated from posted journals',
+    highlights: ['Balance Sheet Snapshot', 'Income Statement P&L', 'Full Trial Balance Rec'],
+  },
+  {
+    id: 'due-collection',
+    label: 'Due Collections & Aging',
+    shortLabel: 'Due Aging',
+    category: 'treasury',
+    icon: Coins,
+    description: 'Customer receivable aging analysis (0-30, 31-60, 61-90, 90+ days), credit limits & payment recovery',
+    highlights: ['Aging Bucket Analysis', 'Customer Credit Limits', 'Fast Due Collection Log'],
+  },
+  {
+    id: 'banking',
+    label: 'Banking & Treasury',
+    shortLabel: 'Banking',
+    category: 'treasury',
+    icon: Landmark,
+    description: 'Company bank accounts, cash registers, account balances and bank reconciliation status',
+    highlights: ['Operating Bank Accounts', 'Cash-in-Transit Buffers', 'Reconciliation Audit'],
+  },
+  {
+    id: 'expenses',
+    label: 'Operating Expenses',
+    shortLabel: 'Expenses',
+    category: 'costing',
+    icon: ReceiptText,
+    description: 'Operational expense vouchers with departmental cost centers, payee records and approval logs',
+    highlights: ['Disbursement Vouchers', 'Cost Center Allocations', 'Duplicate Voucher Clone'],
+  },
+  {
+    id: 'costing',
+    label: 'Product Cost Rollup',
+    shortLabel: 'Cost Rollup',
+    category: 'costing',
+    icon: Calculator,
+    description: 'Multi-component production cost rollup (Raw Materials, Direct Labour, Machine Overhead, Energy)',
+    highlights: ['BOM Direct Materials Cost', 'Labour & Machine Overhead', 'Target Margin Pricing'],
   },
 ];
 
@@ -138,6 +228,37 @@ export const FinanceWorkspace: React.FC = () => {
     }
   }, [activeTab]);
 
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [selectedJournalIds, setSelectedJournalIds] = useState<Set<number>>(new Set());
+  const journalHeaderRef = useRef<HTMLInputElement>(null);
+
+  // Global Keyboard Shortcuts (1, 2, 3 to switch domain pillars)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+
+      if (e.key === '1') {
+        e.preventDefault();
+        setActiveTab('journal');
+      } else if (e.key === '2') {
+        e.preventDefault();
+        setActiveTab('due-collection');
+      } else if (e.key === '3') {
+        e.preventDefault();
+        setActiveTab('expenses');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setActiveTab]);
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (quickJumpRef.current && !quickJumpRef.current.contains(event.target as Node)) {
@@ -149,15 +270,6 @@ export const FinanceWorkspace: React.FC = () => {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [quickJumpOpen]);
-
-  const handleSelectCategory = (categoryId: FinanceCategory) => {
-    if (categoryId === activeCategory) return;
-    const targetTab =
-      lastActivePerCategory.current[categoryId] ??
-      CATEGORIES.find((cat) => cat.id === categoryId)?.defaultTab ??
-      'journal';
-    setActiveTab(targetTab);
-  };
 
   // Chart of Accounts State
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([
@@ -330,6 +442,71 @@ export const FinanceWorkspace: React.FC = () => {
       ],
     },
   ]);
+
+  const isAllJournalsSelected = journalEntries.length > 0 && selectedJournalIds.size === journalEntries.length;
+  const isSomeJournalsSelected = selectedJournalIds.size > 0 && !isAllJournalsSelected;
+
+  useEffect(() => {
+    if (journalHeaderRef.current) {
+      journalHeaderRef.current.indeterminate = isSomeJournalsSelected;
+    }
+  }, [isSomeJournalsSelected]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedJournalIds.size > 0) {
+        setSelectedJournalIds(new Set());
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedJournalIds.size]);
+
+  const toggleSelectAllJournals = () => {
+    if (isAllJournalsSelected) {
+      setSelectedJournalIds(new Set());
+    } else {
+      setSelectedJournalIds(new Set(journalEntries.map((j) => j.id)));
+    }
+  };
+
+  const toggleSelectJournal = (id: number) => {
+    setSelectedJournalIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const clearJournalSelection = () => setSelectedJournalIds(new Set());
+
+  const exportJournalsCsv = (journalsToExport: JournalEntry[]) => {
+    if (journalsToExport.length === 0) {
+      notify.warning('No journal entries to export');
+      return;
+    }
+    const headers = ['Entry Number', 'Date', 'Source Module', 'Type', 'Narration', 'Total Debit', 'Total Credit', 'Status'];
+    const rows = journalsToExport.map((j) => [
+      `"${j.entry_number}"`,
+      `"${j.entry_date}"`,
+      `"${j.source_module}"`,
+      `"${j.entry_type}"`,
+      `"${(j.narration || '').replace(/"/g, '""')}"`,
+      `"${j.total_debit}"`,
+      `"${j.total_credit}"`,
+      `"${j.status}"`,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `journal-entries-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    notify.success('Journals Exported', { description: `Exported ${journalsToExport.length} journal entries to CSV.` });
+  };
 
   // Bank Accounts State
   const [bankAccounts] = useState<BankAccount[]>([
@@ -715,7 +892,17 @@ export const FinanceWorkspace: React.FC = () => {
             Production Cost Rollups
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setIsGuideOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl border border-primary/30 bg-primary-subtle hover:bg-primary/10 text-primary transition-all shadow-2xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            title="Open Finance Capabilities and Accounting Architecture Guide"
+          >
+            <Compass className="size-3.5 text-primary" />
+            <span>Explore Capabilities</span>
+          </button>
+
           {activeTab === 'coa' && (
             <button
               onClick={() => {
@@ -781,121 +968,260 @@ export const FinanceWorkspace: React.FC = () => {
         </div>
       </div>
 
-      {/* Intuitive Two-Tier Financial Navigation */}
-      <div className="space-y-3">
-        {/* Tier 1: Category Pillars */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-          {CATEGORIES.map((cat) => {
-            const Icon = cat.icon;
-            const isCatActive = activeCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => handleSelectCategory(cat.id)}
-                className={`relative flex items-start gap-3.5 p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer ${
-                  isCatActive
-                    ? 'bg-surface border-primary/40 shadow-sm ring-1 ring-primary/20'
-                    : 'bg-surface-sunken/40 border-default hover:bg-surface hover:border-default/80 text-muted'
-                }`}
-              >
+      {/* Primary 3 Financial Command Pillars (with Embedded Direct Child Pills) */}
+      <div
+        role="tablist"
+        aria-label="Financial Domains"
+        className="grid grid-cols-1 lg:grid-cols-3 gap-3"
+      >
+        {CATEGORIES.map((cat) => {
+          const isCatActive = activeCategory === cat.id;
+          const Icon = cat.icon;
+          const childTabs = FINANCE_TAB_CONFIGS.filter((t) => t.category === cat.id);
+
+          return (
+            <div
+              key={cat.id}
+              role="tab"
+              aria-selected={isCatActive}
+              tabIndex={isCatActive ? 0 : -1}
+              onClick={() => setActiveTab(cat.defaultTab)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setActiveTab(cat.defaultTab);
+                }
+              }}
+              className={cn(
+                'group relative flex flex-col justify-between p-4 rounded-2xl border text-left transition-all duration-200 cursor-pointer shadow-2xs',
+                isCatActive
+                  ? 'bg-surface border-primary shadow-md ring-2 ring-primary/10'
+                  : 'bg-surface hover:bg-surface-sunken border-default hover:border-default/80'
+              )}
+            >
+              {/* Pillar Top Header */}
+              <div className="flex items-start gap-3 w-full">
                 <div
-                  className={`size-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                  className={cn(
+                    'size-10 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 shadow-2xs',
                     isCatActive
-                      ? 'bg-primary text-primary-fg shadow-2xs'
-                      : 'bg-surface border border-default text-muted group-hover:text-default'
-                  }`}
+                      ? 'bg-primary text-primary-fg shadow-sm'
+                      : 'bg-surface-sunken border border-default text-muted group-hover:text-default'
+                  )}
                 >
-                  <Icon className="size-5" />
+                  <Icon className={cn('size-5 shrink-0', isCatActive ? 'text-primary-fg' : 'text-muted group-hover:text-default')} />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
+
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <div className="flex items-center justify-between gap-1.5">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span
+                        className={cn(
+                          'text-xs font-bold transition-colors truncate',
+                          isCatActive ? 'text-default' : 'text-default/90 group-hover:text-default'
+                        )}
+                      >
+                        {cat.label}
+                      </span>
+                      <span className="text-[10px] font-mono text-muted/70 font-semibold px-1 py-0.2 rounded bg-surface-sunken border border-default/50 select-none">
+                        [{cat.shortcut}]
+                      </span>
+                    </div>
+
                     <span
-                      className={`text-sm font-bold tracking-tight truncate ${
-                        isCatActive ? 'text-default' : 'text-default/80'
-                      }`}
-                    >
-                      {cat.label}
-                    </span>
-                    <span
-                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                      className={cn(
+                        'text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border shrink-0',
                         isCatActive
-                          ? 'bg-primary-subtle text-primary border-primary/20 font-bold'
-                          : 'bg-surface text-muted border-default'
-                      }`}
+                          ? 'bg-primary/10 text-primary border-primary/20'
+                          : 'bg-surface-sunken text-muted border-default'
+                      )}
                     >
-                      {cat.tabs.length} views
+                      {childTabs.length} views
                     </span>
                   </div>
-                  <p className="text-[11px] text-muted truncate mt-0.5">{cat.tagline}</p>
+
+                  <p className="text-[11px] text-muted line-clamp-2 leading-relaxed">
+                    {cat.tagline}
+                  </p>
                 </div>
-                {isCatActive && (
-                  <div className="absolute bottom-0 left-6 right-6 h-0.5 bg-primary rounded-t-full" />
-                )}
-              </button>
-            );
-          })}
+              </div>
+
+              {/* In-Pillar Quick Navigation Pills (100% Zero Concealed Views) */}
+              <div className="mt-3.5 pt-3 border-t border-default/60 flex flex-wrap items-center gap-1.5">
+                {childTabs.map((subTab) => {
+                  const isCurrent = activeTab === subTab.id;
+                  const SubIcon = subTab.icon;
+                  const countMeta = financeTabsList.find((t) => t.id === subTab.id)?.count;
+
+                  return (
+                    <button
+                      key={subTab.id}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveTab(subTab.id);
+                      }}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer',
+                        isCurrent
+                          ? 'bg-primary text-primary-fg font-semibold shadow-xs ring-1 ring-primary'
+                          : 'bg-surface-sunken text-muted hover:text-default hover:bg-surface border border-default/70'
+                      )}
+                      title={`Open ${subTab.label}`}
+                    >
+                      <SubIcon className={cn('size-3', isCurrent ? 'text-primary-fg' : 'text-muted')} />
+                      <span>{subTab.shortLabel}</span>
+                      {countMeta !== undefined && (
+                        <span
+                          className={cn(
+                            'text-[9px] font-mono px-1 rounded',
+                            isCurrent ? 'bg-white/20 text-white' : 'bg-surface text-muted border border-default/50'
+                          )}
+                        >
+                          {countMeta}
+                        </span>
+                      )}
+                      {isCurrent && <span className="size-1.5 rounded-full bg-white animate-pulse" />}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Active Indicator Bar */}
+              {isCatActive && (
+                <div className="absolute bottom-0 left-4 right-4 h-0.5 bg-primary rounded-full" />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Master Continuous Grouped Navigation Ribbon (All 7 Tabs Visible Simultaneously) */}
+      <div className="bg-surface-sunken rounded-2xl border border-default p-2 shadow-2xs">
+        <div className="flex items-center justify-between px-2 pb-1.5 mb-1 text-[11px] font-semibold text-muted border-b border-default/50">
+          <div className="flex items-center gap-2">
+            <Zap className="size-3.5 text-primary" />
+            <span>Master Financial Ribbon (1-Click Reachability)</span>
+          </div>
+          <span className="text-[10px] font-mono text-muted/70">
+            Active: <strong className="text-default">{FINANCE_TAB_CONFIGS.find((t) => t.id === activeTab)?.label}</strong>
+          </span>
         </div>
 
-        {/* Tier 2: Contextual Sub-Tabs Bar & Quick Jump Popover */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-2 bg-surface rounded-2xl border border-default shadow-2xs">
-          {/* Sub-Tabs for Active Category */}
-          <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 px-1 scrollbar-none min-w-0">
-            {financeTabsList
-              .filter((tab) => tab.category === activeCategory)
-              .map((tab) => {
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <nav
+            className="flex flex-wrap items-center gap-2"
+            role="tablist"
+            aria-label="All 7 Financial Views"
+          >
+            {/* Cluster 1: General Ledger & Accounts */}
+            <div className="flex items-center gap-1.5 bg-surface/60 p-1 rounded-xl border border-default/40">
+              <span className="text-[10px] font-mono uppercase font-bold text-muted px-2 py-0.5 select-none">
+                GL:
+              </span>
+              {FINANCE_TAB_CONFIGS.filter((t) => t.category === 'accounting').map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
                 return (
                   <button
                     key={tab.id}
+                    role="tab"
+                    aria-selected={isActive}
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer ${
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
                       isActive
-                        ? 'bg-primary text-primary-fg font-semibold shadow-xs border border-primary'
-                        : 'text-muted hover:text-default hover:bg-surface-sunken border border-transparent'
-                    }`}
+                        ? 'bg-primary text-primary-fg shadow-xs'
+                        : 'text-muted hover:text-default hover:bg-surface border border-transparent'
+                    )}
                   >
-                    <Icon className={`size-3.5 ${isActive ? 'text-primary-fg' : 'text-muted'}`} />
-                    <span>{tab.label}</span>
-                    <span
-                      className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
-                        isActive
-                          ? 'bg-white/20 text-white font-bold'
-                          : 'bg-surface-sunken text-muted'
-                      }`}
-                    >
-                      {tab.count}
-                    </span>
+                    <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
+                    <span>{tab.shortLabel}</span>
                   </button>
                 );
               })}
-          </div>
+            </div>
+
+            <div className="h-4 w-px bg-default/60 hidden sm:block" />
+
+            {/* Cluster 2: Treasury & Collections */}
+            <div className="flex items-center gap-1.5 bg-surface/60 p-1 rounded-xl border border-default/40">
+              <span className="text-[10px] font-mono uppercase font-bold text-muted px-2 py-0.5 select-none">
+                Treasury:
+              </span>
+              {FINANCE_TAB_CONFIGS.filter((t) => t.category === 'treasury').map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    role="tab"
+                    aria-selected={isActive}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+                      isActive
+                        ? 'bg-primary text-primary-fg shadow-xs'
+                        : 'text-muted hover:text-default hover:bg-surface border border-transparent'
+                    )}
+                  >
+                    <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
+                    <span>{tab.shortLabel}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="h-4 w-px bg-default/60 hidden sm:block" />
+
+            {/* Cluster 3: Cost Rollup & Expenses */}
+            <div className="flex items-center gap-1.5 bg-surface/60 p-1 rounded-xl border border-default/40">
+              <span className="text-[10px] font-mono uppercase font-bold text-muted px-2 py-0.5 select-none">
+                Costing:
+              </span>
+              {FINANCE_TAB_CONFIGS.filter((t) => t.category === 'costing').map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    role="tab"
+                    aria-selected={isActive}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+                      isActive
+                        ? 'bg-primary text-primary-fg shadow-xs'
+                        : 'text-muted hover:text-default hover:bg-surface border border-transparent'
+                    )}
+                  >
+                    <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
+                    <span>{tab.shortLabel}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
 
           {/* Quick Jump Dropdown Popover */}
-          <div
-            className="relative shrink-0 sm:border-l sm:border-default sm:pl-3"
-            ref={quickJumpRef}
-          >
+          <div className="relative shrink-0" ref={quickJumpRef}>
             <button
               type="button"
               onClick={() => {
                 setQuickJumpOpen(!quickJumpOpen);
                 setSearchQuery('');
               }}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer w-full sm:w-auto justify-between sm:justify-start ${
-                quickJumpOpen
-                  ? 'bg-surface-sunken text-default border border-default'
-                  : 'text-muted hover:text-default hover:bg-surface-sunken/60 border border-transparent'
-              }`}
+              className={cn(
+                'flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border border-default bg-surface hover:bg-surface-sunken text-default transition-all shadow-2xs cursor-pointer',
+                quickJumpOpen && 'border-primary/40 bg-surface-sunken'
+              )}
               title="Jump directly to any of the 7 finance views"
             >
-              <SlidersHorizontal className="size-3.5 text-muted" />
-              <span>All Views</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-sunken text-muted border border-default">
-                7
-              </span>
+              <SlidersHorizontal className="size-3.5 text-primary" />
+              <span>All 7 Views</span>
             </button>
 
             {quickJumpOpen && (
@@ -943,7 +1269,7 @@ export const FinanceWorkspace: React.FC = () => {
                                   setActiveTab(tab.id);
                                   setQuickJumpOpen(false);
                                 }}
-                                className={`w-full flex items-center justify-between px-2 py-2 rounded-lg text-xs text-left transition cursor-pointer ${
+                                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs text-left transition cursor-pointer ${
                                   isTabActive
                                     ? 'bg-primary text-primary-fg font-semibold'
                                     : 'hover:bg-surface-sunken text-default'
@@ -989,10 +1315,73 @@ export const FinanceWorkspace: React.FC = () => {
       {/* Tab 1: General Ledger & Journals */}
       {activeTab === 'journal' && (
         <div className="space-y-4 pt-1">
+          {/* Discovery & Bulk Actions Toolbar */}
+          <div className="flex flex-wrap items-center justify-between gap-2.5 px-4 py-2.5 rounded-xl bg-surface-sunken/60 border border-default text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-muted font-medium">
+                Showing <strong className="text-default">{journalEntries.length}</strong> journal vouchers
+              </span>
+              {selectedJournalIds.size > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary text-primary-fg">
+                  <CheckSquare className="size-3" />
+                  {selectedJournalIds.size} Selected
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  exportJournalsCsv(
+                    selectedJournalIds.size > 0
+                      ? journalEntries.filter((j) => selectedJournalIds.has(j.id))
+                      : journalEntries
+                  )
+                }
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-default bg-surface hover:bg-surface-sunken text-default transition-all shadow-2xs cursor-pointer"
+              >
+                <FileSpreadsheet className="size-3.5 text-primary" />
+                <span>Export {selectedJournalIds.size > 0 ? `(${selectedJournalIds.size})` : 'All'} CSV</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={toggleSelectAllJournals}
+                className="text-xs font-medium text-primary hover:underline cursor-pointer ml-1"
+              >
+                {isAllJournalsSelected ? 'Deselect All' : `Select All (${journalEntries.length})`}
+              </button>
+
+              {selectedJournalIds.size > 0 && (
+                <>
+                  <span className="text-muted/40">|</span>
+                  <button
+                    type="button"
+                    onClick={clearJournalSelection}
+                    className="text-xs font-medium text-muted hover:text-default cursor-pointer"
+                  >
+                    Clear Selection
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
           <div className="bg-surface rounded-2xl shadow-xs border border-default overflow-hidden">
             <table className="w-full text-left text-xs text-default">
               <thead className="bg-surface-sunken/70 text-muted uppercase text-[11px] font-semibold tracking-wider border-b border-default">
                 <tr>
+                  <th className="w-10 px-4 py-3.5 text-center">
+                    <input
+                      ref={journalHeaderRef}
+                      type="checkbox"
+                      checked={isAllJournalsSelected}
+                      onChange={toggleSelectAllJournals}
+                      className="size-4 rounded border-default text-primary focus:ring-primary cursor-pointer"
+                      title="Select all journal vouchers"
+                    />
+                  </th>
                   <th className="px-5 py-3.5">Entry Number</th>
                   <th className="px-5 py-3.5">Date</th>
                   <th className="px-5 py-3.5">Module / Type</th>
@@ -1005,7 +1394,22 @@ export const FinanceWorkspace: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-default">
                 {journalEntries.map((je) => (
-                  <tr key={je.id} className="hover:bg-surface-sunken/40 transition-colors">
+                  <tr
+                    key={je.id}
+                    className={cn(
+                      'hover:bg-surface-sunken/40 transition-colors',
+                      selectedJournalIds.has(je.id) && 'bg-primary/5 dark:bg-primary/10'
+                    )}
+                  >
+                    <td className="w-10 px-4 py-3.5 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedJournalIds.has(je.id)}
+                        onChange={() => toggleSelectJournal(je.id)}
+                        className="size-4 rounded border-default text-primary focus:ring-primary cursor-pointer"
+                        aria-label={`Select ${je.entry_number}`}
+                      />
+                    </td>
                     <td className="px-5 py-3.5 font-mono font-bold text-primary">
                       <button
                         type="button"
@@ -1068,6 +1472,46 @@ export const FinanceWorkspace: React.FC = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Floating Bottom Docked Action Toolbar for Selected Journals */}
+          {selectedJournalIds.size > 0 && (
+            <div className="fixed bottom-6 inset-x-0 z-40 flex justify-center pointer-events-none animate-in slide-in-from-bottom-6 duration-200">
+              <div className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-default/80 bg-surface/95 px-5 py-3 shadow-2xl backdrop-blur-xl ring-1 ring-black/5 dark:ring-white/10">
+                <div className="flex items-center gap-2 border-r border-default pr-3">
+                  <span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-fg">
+                    {selectedJournalIds.size}
+                  </span>
+                  <span className="text-xs font-semibold text-default">
+                    Voucher{selectedJournalIds.size > 1 ? 's' : ''} Selected
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      exportJournalsCsv(
+                        journalEntries.filter((j) => selectedJournalIds.has(j.id))
+                      )
+                    }
+                    className="flex h-8 items-center gap-1.5 rounded-xl bg-primary text-primary-fg px-3 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
+                  >
+                    <FileSpreadsheet className="size-3 text-primary-fg" />
+                    Export CSV ({selectedJournalIds.size})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={clearJournalSelection}
+                    className="flex size-8 items-center justify-center rounded-xl border border-default bg-surface-sunken text-muted hover:text-default transition-colors cursor-pointer ml-1"
+                    title="Deselect all (Esc)"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -2053,6 +2497,85 @@ export const FinanceWorkspace: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal: Explore Financial Capabilities & Architecture Guide */}
+      <Modal
+        open={isGuideOpen}
+        onClose={() => setIsGuideOpen(false)}
+        title="Finance & General Ledger Architecture Guide"
+        size="xl"
+      >
+        <div className="space-y-6">
+          <div className="rounded-xl bg-primary-subtle/50 border border-primary/20 p-4">
+            <h4 className="text-sm font-bold text-primary flex items-center gap-2 mb-1">
+              <BookOpen className="size-4" />
+              Double-Entry Financial Integrity & Cost Governance
+            </h4>
+            <p className="text-xs text-muted leading-relaxed">
+              SliceMart Finance provides continuous double-entry ledger balancing, audit-trailed journals,
+              hierarchical COA management, real-time trial balance and automated P&L statements, customer aging
+              collection analysis, and multi-component production cost rollups.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {FINANCE_TAB_CONFIGS.map((tab) => {
+              const TabIcon = tab.icon;
+              return (
+                <div
+                  key={tab.id}
+                  className="rounded-xl border border-default bg-surface p-4 flex flex-col justify-between hover:border-primary/40 transition-colors"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                          <TabIcon className="size-4" />
+                        </div>
+                        <h5 className="text-xs font-bold text-default">{tab.label}</h5>
+                      </div>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-surface-sunken text-muted border border-default capitalize">
+                        {tab.category}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted leading-relaxed mb-3">{tab.description}</p>
+                    <div className="space-y-1 mb-4">
+                      {tab.highlights.map((h, idx) => (
+                        <div key={idx} className="flex items-center gap-1.5 text-[11px] text-default/80">
+                          <CheckCircle2 className="size-3 text-emerald-500 shrink-0" />
+                          <span>{h}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    variant={activeTab === tab.id ? 'primary' : 'secondary'}
+                    className="w-full text-xs justify-between cursor-pointer"
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      setIsGuideOpen(false);
+                    }}
+                  >
+                    <span>{activeTab === tab.id ? 'Current View' : `Switch to ${tab.shortLabel}`}</span>
+                    <ArrowRight className="size-3" />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="rounded-xl bg-surface-sunken p-4 border border-default flex items-center justify-between">
+            <div className="text-xs text-muted">
+              Keyboard shortcut: Press <kbd className="px-1.5 py-0.5 bg-surface rounded border border-default font-mono text-[10px] font-bold">1</kbd> for GL & Accounts, <kbd className="px-1.5 py-0.5 bg-surface rounded border border-default font-mono text-[10px] font-bold">2</kbd> for Treasury, <kbd className="px-1.5 py-0.5 bg-surface rounded border border-default font-mono text-[10px] font-bold">3</kbd> for Costing.
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setIsGuideOpen(false)}>
+              Close Guide
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

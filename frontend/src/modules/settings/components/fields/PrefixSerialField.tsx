@@ -6,7 +6,7 @@ interface PrefixSerialFieldProps {
   settingKey: string;
   value: string | unknown;
   onChange: (val: string) => void;
-  description?: string;
+  description?: string | undefined;
 }
 
 export const PrefixSerialField: React.FC<PrefixSerialFieldProps> = ({
@@ -20,32 +20,38 @@ export const PrefixSerialField: React.FC<PrefixSerialFieldProps> = ({
   const sampleSerial = `${prefix.toUpperCase()}00482`;
 
   return (
-    <div className="p-4 rounded-xl border border-default bg-surface space-y-3">
-      <div>
-        <span className="text-xs font-bold text-default block">{label}</span>
-        <span className="font-mono text-2xs text-muted block">{settingKey}</span>
-        {description && <p className="text-2xs text-muted mt-0.5">{description}</p>}
-      </div>
+    <div className="group rounded-xl border border-default/80 bg-surface p-4 transition-all duration-200 hover:border-default hover:shadow-2xs space-y-2.5">
+      {/* Field Label & Live Mock Pill */}
+      <div className="flex items-center justify-between gap-2">
+        <label
+          htmlFor={`field-${settingKey}`}
+          className="flex items-center gap-2 text-xs font-semibold text-default cursor-pointer"
+        >
+          <FileSpreadsheet className="size-3.5 text-muted group-hover:text-primary transition-colors shrink-0" />
+          <span>{label}</span>
+        </label>
 
-      <div className="flex items-center gap-2.5">
-        {/* Prefix Input */}
-        <div className="relative flex-1">
-          <input
-            type="text"
-            value={prefix}
-            onChange={(e) => onChange(e.target.value.toUpperCase())}
-            placeholder="e.g. INV-"
-            maxLength={10}
-            className="w-full bg-surface-sunken border border-default rounded-xl px-3 py-2 text-xs font-mono font-bold text-default uppercase tracking-wider focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-          />
-        </div>
-
-        {/* Live Mock Pill */}
-        <div className="flex items-center gap-1.5 px-3 py-2 bg-primary/10 border border-primary/20 rounded-xl shrink-0">
-          <FileSpreadsheet className="size-3.5 text-primary" />
-          <span className="font-mono text-xs font-bold text-primary">{sampleSerial}</span>
+        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-surface-sunken border border-default/60 rounded-md shrink-0">
+          <span className="text-[10px] text-muted">Example:</span>
+          <span className="font-mono text-xs font-semibold text-primary">{sampleSerial}</span>
         </div>
       </div>
+
+      {/* Prefix Input */}
+      <input
+        id={`field-${settingKey}`}
+        type="text"
+        value={prefix}
+        onChange={(e) => onChange(e.target.value.toUpperCase())}
+        placeholder="e.g. INV-"
+        maxLength={10}
+        className="w-full rounded-lg border border-default bg-surface-sunken/40 px-3 py-2 text-xs font-mono font-bold text-default uppercase tracking-wider transition-all focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+      />
+
+      {/* Un-truncated Helpful Context Note */}
+      {description && (
+        <p className="text-[11px] text-muted leading-relaxed">{description}</p>
+      )}
     </div>
   );
 };

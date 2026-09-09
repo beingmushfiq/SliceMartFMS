@@ -9,6 +9,9 @@ import {
   Search,
   SlidersHorizontal,
   X,
+  Compass,
+  ArrowRight,
+  Zap,
 } from 'lucide-react';
 import { PurchaseOrdersSection } from './sections/PurchaseOrdersSection';
 import { GoodsReceiptsSection } from './sections/GoodsReceiptsSection';
@@ -16,74 +19,153 @@ import { PurchaseRequisitionsSection } from './sections/PurchaseRequisitionsSect
 import { PurchaseBillsSection } from './sections/PurchaseBillsSection';
 import { PurchaseReturnsSection } from './sections/PurchaseReturnsSection';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
+import { Modal } from '../../components/ui/Modal';
+import { Button } from '../../components/ui/Button';
+import { cn } from '../../lib/utils';
 
 export type PurchasingTab = 'requisitions' | 'orders' | 'receipts' | 'bills' | 'returns';
+export type PurchasingCategory = 'sourcing' | 'fulfillment' | 'returns';
 
 const VALID_TABS: readonly PurchasingTab[] = ['requisitions', 'orders', 'receipts', 'bills', 'returns'];
 
 interface TabConfig {
   id: PurchasingTab;
+  category: PurchasingCategory;
   label: string;
   shortLabel: string;
   step?: number;
   badge?: string;
   icon: typeof ShoppingCart;
   description: string;
+  highlights: string[];
 }
+
+interface CategoryConfig {
+  id: PurchasingCategory;
+  label: string;
+  shortcut: string;
+  icon: typeof ShoppingCart;
+  description: string;
+  defaultTab: PurchasingTab;
+}
+
+const CATEGORIES: CategoryConfig[] = [
+  {
+    id: 'sourcing',
+    label: 'Upstream Sourcing & POs',
+    shortcut: '1',
+    icon: ShoppingCart,
+    description: 'Internal demand requisitions, supplier RFQ quotes and official purchase order commitments',
+    defaultTab: 'orders',
+  },
+  {
+    id: 'fulfillment',
+    label: 'Inbound Gate & Settlement',
+    shortcut: '2',
+    icon: PackageCheck,
+    description: 'Warehouse GRN intake, 3-way matching, batch tagging and accounts payable supplier bills',
+    defaultTab: 'receipts',
+  },
+  {
+    id: 'returns',
+    label: 'Reversals & Debit Notes',
+    shortcut: '3',
+    icon: Undo2,
+    description: 'Non-conforming material rejection, debit note generation and supplier credit tracking',
+    defaultTab: 'returns',
+  },
+];
 
 const tabs: TabConfig[] = [
   {
     id: 'requisitions',
+    category: 'sourcing',
     label: 'Purchase Requisitions',
     shortLabel: 'Requisitions',
     step: 1,
     icon: FileSpreadsheet,
-    description: 'Internal shopfloor & departmental supply requests with approval workflows',
+    description: 'Internal shopfloor & departmental supply requests with multi-tier approval workflows',
+    highlights: ['Department Requests', 'Budget Validation', 'Multi-tier Approval'],
   },
   {
     id: 'orders',
+    category: 'sourcing',
     label: 'Purchase Orders',
     shortLabel: 'Orders',
     step: 2,
     icon: ShoppingCart,
-    description: 'Supplier contract commitments, multi-currency purchasing & status tracking',
+    description: 'Official supplier contracts, multi-currency purchasing commitments & delivery schedules',
+    highlights: ['Vendor Commitments', 'Multi-Currency', 'Thermal PO Slips'],
   },
   {
     id: 'receipts',
+    category: 'fulfillment',
     label: 'Goods Receipts (GRN)',
     shortLabel: 'Goods Receipts',
     step: 3,
     icon: PackageCheck,
-    description:
-      'Warehouse gate receiving, 3-way match, lot assignment & instant inventory posting',
+    description: 'Warehouse gate receiving, 3-way line matching, lot assignment & instant inventory posting',
+    highlights: ['Gate Inwarding', '3-Way Matching', 'Batch/Lot Assignment'],
   },
   {
     id: 'bills',
+    category: 'fulfillment',
     label: 'Purchase Bills (AP)',
     shortLabel: 'Bills & Invoices',
     step: 4,
     icon: Receipt,
-    description:
-      'Supplier invoice verification, payment due tracking & accounts payable settlement',
+    description: 'Supplier invoice verification, payment due tracking & accounts payable settlement',
+    highlights: ['AP Aging & Due', 'Tax Matching', 'Payment Settlement'],
   },
   {
     id: 'returns',
+    category: 'returns',
     label: 'Purchase Returns',
     shortLabel: 'Returns',
     badge: 'Debit Notes',
     icon: Undo2,
-    description:
-      'Debit notes and rejected goods return to supplier with automatic inventory deduction',
+    description: 'Debit notes and rejected goods return to supplier with automatic inventory deduction',
+    highlights: ['Vendor Debit Notes', 'Scrap/Defect Reversal', 'Ledger Adjustment'],
   },
 ];
 
 export default function PurchasingWorkspace() {
   const [activeTab, setActiveTab] = useWorkspaceTab<PurchasingTab>('orders', VALID_TABS);
   const [quickJumpOpen, setQuickJumpOpen] = useState(false);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const quickJumpRef = useRef<HTMLDivElement>(null);
 
   const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[1]!;
+  const activeCategory = currentTab.category;
+
+  // Global Keyboard Shortcuts (1, 2, 3 to switch domain pillars)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Avoid hotkeys when typing in form inputs
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+
+      if (e.key === '1') {
+        e.preventDefault();
+        setActiveTab('orders');
+      } else if (e.key === '2') {
+        e.preventDefault();
+        setActiveTab('receipts');
+      } else if (e.key === '3') {
+        e.preventDefault();
+        setActiveTab('returns');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setActiveTab]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -130,164 +212,456 @@ export default function PurchasingWorkspace() {
             {currentTab.description}
           </p>
         </div>
+
+        {/* Quick External Actions & Guides */}
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setIsGuideOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl border border-primary/30 bg-primary-subtle hover:bg-primary/10 text-primary transition-all shadow-2xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            title="Open Procurement Capabilities and P2P Workflow Guide"
+          >
+            <Compass className="size-3.5 text-primary" />
+            <span>Explore Capabilities</span>
+          </button>
+
+          {/* Quick Jump Dropdown */}
+          <div className="relative shrink-0" ref={quickJumpRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setQuickJumpOpen(!quickJumpOpen);
+                setSearchQuery('');
+              }}
+              className={cn(
+                'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border border-default bg-surface hover:bg-surface-sunken text-default transition-all shadow-2xs cursor-pointer',
+                quickJumpOpen && 'border-primary/40 bg-surface-sunken'
+              )}
+              title="Jump directly to any of the 5 purchasing views"
+            >
+              <SlidersHorizontal className="size-3.5 text-primary" />
+              <span>All 5 Views</span>
+            </button>
+
+            {quickJumpOpen && (
+              <div className="absolute right-0 top-full mt-2 w-80 max-w-[90vw] bg-surface rounded-2xl border border-default shadow-lg p-2.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="relative mb-2">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search purchasing views..."
+                    autoFocus
+                    className="w-full pl-8 pr-7 py-1.5 text-xs bg-surface-sunken rounded-lg border border-default focus:border-primary focus:outline-none text-default"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-default"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="max-h-72 overflow-y-auto space-y-0.5 pr-1">
+                  {filteredTabs.map((tab) => {
+                    const TabIcon = tab.icon;
+                    const isTabActive = activeTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveTab(tab.id);
+                          setQuickJumpOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs text-left transition cursor-pointer ${
+                          isTabActive
+                            ? 'bg-primary text-primary-fg font-semibold'
+                            : 'hover:bg-surface-sunken text-default'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <TabIcon
+                            className={`size-3.5 shrink-0 ${
+                              isTabActive ? 'text-primary-fg' : 'text-muted'
+                            }`}
+                          />
+                          <span className="truncate">{tab.label}</span>
+                        </div>
+                        {tab.step && (
+                          <span
+                            className={`text-[9px] px-1.5 py-0.5 rounded font-mono shrink-0 ${
+                              isTabActive
+                                ? 'bg-primary-fg/20 text-primary-fg'
+                                : 'bg-surface-sunken text-muted'
+                            }`}
+                          >
+                            Step {tab.step}
+                          </span>
+                        )}
+                        {tab.badge && (
+                          <span
+                            className={`text-[9px] px-1.5 py-0.5 rounded font-mono shrink-0 ${
+                              isTabActive
+                                ? 'bg-primary-fg/20 text-primary-fg'
+                                : 'bg-surface-sunken text-muted'
+                            }`}
+                          >
+                            {tab.badge}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+
+                  {filteredTabs.length === 0 && (
+                    <div className="py-6 text-center text-xs text-muted">
+                      No purchasing views found matching &quot;{searchQuery}&quot;
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Procure-to-Pay (P2P) Sequential Workflow Navigation Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-2 bg-surface rounded-2xl border border-default shadow-2xs">
-        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 px-1 scrollbar-none min-w-0">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            const isWorkflowStep = tab.step !== undefined;
-            const isReturns = tab.id === 'returns';
+      {/* Primary 3 Command Pillars (with Embedded Direct Child Pills) */}
+      <div
+        role="tablist"
+        aria-label="Procurement Operational Domains"
+        className="grid grid-cols-1 lg:grid-cols-3 gap-3"
+      >
+        {CATEGORIES.map((cat) => {
+          const isCatActive = activeCategory === cat.id;
+          const Icon = cat.icon;
+          const childTabs = tabs.filter((t) => t.category === cat.id);
 
-            return (
-              <div key={tab.id} className="flex items-center gap-1.5 shrink-0">
-                {/* Pipeline Arrow between Steps */}
-                {isWorkflowStep && tab.step && tab.step > 1 && (
-                  <ChevronRight className="size-3.5 text-muted/40 shrink-0 hidden md:block" />
-                )}
+          return (
+            <div
+              key={cat.id}
+              role="tab"
+              aria-selected={isCatActive}
+              tabIndex={isCatActive ? 0 : -1}
+              onClick={() => setActiveTab(cat.defaultTab)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setActiveTab(cat.defaultTab);
+                }
+              }}
+              className={cn(
+                'group relative flex flex-col justify-between p-4 rounded-2xl border text-left transition-all duration-200 cursor-pointer shadow-2xs',
+                isCatActive
+                  ? 'bg-surface border-primary shadow-md ring-2 ring-primary/10'
+                  : 'bg-surface hover:bg-surface-sunken border-default hover:border-default/80'
+              )}
+            >
+              {/* Pillar Top Header */}
+              <div className="flex items-start gap-3 w-full">
+                <div
+                  className={cn(
+                    'size-10 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 shadow-2xs',
+                    isCatActive
+                      ? 'bg-primary text-primary-fg shadow-sm'
+                      : 'bg-surface-sunken border border-default text-muted group-hover:text-default'
+                  )}
+                >
+                  <Icon className={cn('size-5 shrink-0', isCatActive ? 'text-primary-fg' : 'text-muted group-hover:text-default')} />
+                </div>
 
-                {/* Separator before Returns */}
-                {isReturns && <div className="h-4 w-px bg-default mx-1 hidden sm:block" />}
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <div className="flex items-center justify-between gap-1.5">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span
+                        className={cn(
+                          'text-xs font-bold transition-colors truncate',
+                          isCatActive ? 'text-default' : 'text-default/90 group-hover:text-default'
+                        )}
+                      >
+                        {cat.label}
+                      </span>
+                      <span className="text-[10px] font-mono text-muted/70 font-semibold px-1 py-0.2 rounded bg-surface-sunken border border-default/50 select-none">
+                        [{cat.shortcut}]
+                      </span>
+                    </div>
 
+                    <span
+                      className={cn(
+                        'text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border shrink-0',
+                        isCatActive
+                          ? 'bg-primary/10 text-primary border-primary/20'
+                          : 'bg-surface-sunken text-muted border-default'
+                      )}
+                    >
+                      {childTabs.length} {childTabs.length === 1 ? 'view' : 'views'}
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-muted line-clamp-2 leading-relaxed">
+                    {cat.description}
+                  </p>
+                </div>
+              </div>
+
+              {/* In-Pillar Quick Navigation Pills (100% Zero Concealed Views) */}
+              <div className="mt-3.5 pt-3 border-t border-default/60 flex flex-wrap items-center gap-1.5">
+                {childTabs.map((subTab) => {
+                  const isCurrent = activeTab === subTab.id;
+                  const SubIcon = subTab.icon;
+                  return (
+                    <button
+                      key={subTab.id}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveTab(subTab.id);
+                      }}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer',
+                        isCurrent
+                          ? 'bg-primary text-primary-fg font-semibold shadow-xs ring-1 ring-primary'
+                          : 'bg-surface-sunken text-muted hover:text-default hover:bg-surface border border-default/70'
+                      )}
+                      title={`Open ${subTab.label}`}
+                    >
+                      {subTab.step && (
+                        <span className={cn('text-[9px] font-mono font-bold', isCurrent ? 'text-primary-fg' : 'text-primary')}>
+                          #{subTab.step}
+                        </span>
+                      )}
+                      <SubIcon className={cn('size-3', isCurrent ? 'text-primary-fg' : 'text-muted')} />
+                      <span>{subTab.shortLabel}</span>
+                      {isCurrent && <span className="size-1.5 rounded-full bg-white animate-pulse" />}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Active Indicator Bar */}
+              {isCatActive && (
+                <div className="absolute bottom-0 left-4 right-4 h-0.5 bg-primary rounded-full" />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Master Sequential Navigation Ribbon (All 5 Stages Visible Simultaneously) */}
+      <div className="bg-surface-sunken rounded-2xl border border-default p-2 shadow-2xs">
+        <div className="flex items-center justify-between px-2 pb-1.5 mb-1 text-[11px] font-semibold text-muted border-b border-default/50">
+          <div className="flex items-center gap-2">
+            <Zap className="size-3.5 text-primary" />
+            <span>Procure-to-Pay (P2P) Sequential Ribbon</span>
+          </div>
+          <span className="text-[10px] font-mono text-muted/70">
+            Active: <strong className="text-default">{currentTab?.label}</strong>
+          </span>
+        </div>
+
+        <nav
+          className="flex flex-wrap items-center gap-2"
+          role="tablist"
+          aria-label="All 5 Procurement Stages"
+        >
+          {/* Cluster 1: Upstream Sourcing */}
+          <div className="flex items-center gap-1.5 bg-surface/60 p-1 rounded-xl border border-default/40">
+            <span className="text-[10px] font-mono uppercase font-bold text-muted px-2 py-0.5 select-none">
+              Sourcing:
+            </span>
+            {tabs.filter((t) => t.category === 'sourcing').map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
                 <button
+                  key={tab.id}
+                  role="tab"
+                  aria-selected={isActive}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer ${
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
                     isActive
-                      ? 'bg-primary text-primary-fg font-semibold shadow-xs border border-primary'
-                      : 'text-muted hover:text-default hover:bg-surface-sunken border border-transparent'
-                  }`}
+                      ? 'bg-primary text-primary-fg shadow-xs'
+                      : 'text-muted hover:text-default hover:bg-surface border border-transparent'
+                  )}
                 >
-                  {isWorkflowStep && tab.step && (
-                    <span
-                      className={`size-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                        isActive ? 'bg-primary-fg/20 text-primary-fg' : 'bg-surface-sunken text-muted'
-                      }`}
-                    >
+                  {tab.step && (
+                    <span className={cn('text-[10px] font-mono font-bold px-1 rounded', isActive ? 'bg-primary-fg/20 text-primary-fg' : 'bg-surface text-muted')}>
                       {tab.step}
                     </span>
                   )}
-                  <Icon className={`size-3.5 ${isActive ? 'text-primary-fg' : 'text-muted'}`} />
-                  <span>{tab.label}</span>
-                  {tab.badge && !isActive && (
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-surface-sunken text-muted font-mono">
+                  <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
+                  <span>{tab.shortLabel}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <ChevronRight className="size-3.5 text-muted/40 shrink-0 hidden sm:block" />
+
+          {/* Cluster 2: Inbound Gate & AP Settlement */}
+          <div className="flex items-center gap-1.5 bg-surface/60 p-1 rounded-xl border border-default/40">
+            <span className="text-[10px] font-mono uppercase font-bold text-muted px-2 py-0.5 select-none">
+              Settlement:
+            </span>
+            {tabs.filter((t) => t.category === 'fulfillment').map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  role="tab"
+                  aria-selected={isActive}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+                    isActive
+                      ? 'bg-primary text-primary-fg shadow-xs'
+                      : 'text-muted hover:text-default hover:bg-surface border border-transparent'
+                  )}
+                >
+                  {tab.step && (
+                    <span className={cn('text-[10px] font-mono font-bold px-1 rounded', isActive ? 'bg-primary-fg/20 text-primary-fg' : 'bg-surface text-muted')}>
+                      {tab.step}
+                    </span>
+                  )}
+                  <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
+                  <span>{tab.shortLabel}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="h-5 w-px bg-default hidden sm:block" />
+
+          {/* Cluster 3: Reversals & Debit Notes */}
+          <div className="flex items-center gap-1.5 bg-surface/60 p-1 rounded-xl border border-default/40">
+            <span className="text-[10px] font-mono uppercase font-bold text-muted px-2 py-0.5 select-none">
+              Claims:
+            </span>
+            {tabs.filter((t) => t.category === 'returns').map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  role="tab"
+                  aria-selected={isActive}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+                    isActive
+                      ? 'bg-primary text-primary-fg shadow-xs'
+                      : 'text-muted hover:text-default hover:bg-surface border border-transparent'
+                  )}
+                >
+                  <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
+                  <span>{tab.shortLabel}</span>
+                  {tab.badge && (
+                    <span className={cn('text-[9px] font-mono px-1 rounded', isActive ? 'bg-primary-fg/20 text-primary-fg' : 'bg-surface-sunken text-muted')}>
                       {tab.badge}
                     </span>
                   )}
                 </button>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Quick Jump Dropdown */}
-        <div className="relative shrink-0 sm:border-l sm:border-default sm:pl-3" ref={quickJumpRef}>
-          <button
-            type="button"
-            onClick={() => {
-              setQuickJumpOpen(!quickJumpOpen);
-              setSearchQuery('');
-            }}
-            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer w-full sm:w-auto justify-between sm:justify-start ${
-              quickJumpOpen
-                ? 'bg-surface-sunken text-default border border-default'
-                : 'text-muted hover:text-default hover:bg-surface-sunken/60 border border-transparent'
-            }`}
-            title="Jump directly to any of the 5 purchasing views"
-          >
-            <SlidersHorizontal className="size-3.5 text-muted" />
-            <span>All Views</span>
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-sunken text-muted border border-default">
-              5
-            </span>
-          </button>
-
-          {quickJumpOpen && (
-            <div className="absolute right-0 top-full mt-2 w-80 max-w-[90vw] bg-surface rounded-2xl border border-default shadow-lg p-2.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-              <div className="relative mb-2">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search purchasing views..."
-                  autoFocus
-                  className="w-full pl-8 pr-7 py-1.5 text-xs bg-surface-sunken rounded-lg border border-default focus:border-primary focus:outline-none text-default"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-default"
-                  >
-                    <X className="size-3" />
-                  </button>
-                )}
-              </div>
-
-              <div className="max-h-72 overflow-y-auto space-y-0.5 pr-1">
-                {filteredTabs.map((tab) => {
-                  const TabIcon = tab.icon;
-                  const isTabActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => {
-                        setActiveTab(tab.id);
-                        setQuickJumpOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs text-left transition cursor-pointer ${
-                        isTabActive
-                          ? 'bg-primary text-primary-fg font-semibold'
-                          : 'hover:bg-surface-sunken text-default'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <TabIcon
-                          className={`size-3.5 shrink-0 ${
-                            isTabActive ? 'text-primary-fg' : 'text-muted'
-                          }`}
-                        />
-                        <span className="truncate">{tab.label}</span>
-                      </div>
-                      {tab.step && (
-                        <span
-                          className={`text-[9px] px-1.5 py-0.5 rounded font-mono shrink-0 ${
-                            isTabActive
-                              ? 'bg-primary-fg/20 text-primary-fg'
-                              : 'bg-surface-sunken text-muted'
-                          }`}
-                        >
-                          Step {tab.step}
-                        </span>
-                      )}
-                      {tab.badge && (
-                        <span
-                          className={`text-[9px] px-1.5 py-0.5 rounded font-mono shrink-0 ${
-                            isTabActive
-                              ? 'bg-primary-fg/20 text-primary-fg'
-                              : 'bg-surface-sunken text-muted'
-                          }`}
-                        >
-                          {tab.badge}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-
-                {filteredTabs.length === 0 && (
-                  <div className="py-6 text-center text-xs text-muted">
-                    No purchasing views found matching &quot;{searchQuery}&quot;
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+              );
+            })}
+          </div>
+        </nav>
       </div>
+
+      {/* Capabilities & P2P Guide Modal */}
+      <Modal
+        open={isGuideOpen}
+        onClose={() => setIsGuideOpen(false)}
+        title="Procure-to-Pay (P2P) Lifecycle Guide"
+        size="xl"
+      >
+        <div className="space-y-5 p-1 text-default">
+          <p className="text-xs text-muted leading-relaxed">
+            The Procurement Hub manages the entire vendor commitment and inventory replenishment pipeline: from departmental requisition requests to purchase order contracts, warehouse gate inspections (GRN), 3-way accounts payable matching, and vendor return debit notes.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 max-h-96 overflow-y-auto pr-1">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isCurrent = activeTab === tab.id;
+              return (
+                <div
+                  key={tab.id}
+                  className={cn(
+                    'p-3.5 rounded-2xl border transition-all text-left flex flex-col justify-between',
+                    isCurrent
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                      : 'border-default bg-surface hover:bg-surface-sunken'
+                  )}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className="size-7 rounded-lg bg-surface-sunken border border-default flex items-center justify-center text-primary">
+                          <Icon className="size-4" />
+                        </div>
+                        <h4 className="text-xs font-bold text-default">
+                          {tab.step ? `Step ${tab.step}: ${tab.label}` : tab.label}
+                        </h4>
+                      </div>
+                      {isCurrent && (
+                        <span className="text-[10px] font-mono font-bold text-primary bg-primary-subtle px-2 py-0.5 rounded-full border border-primary/20">
+                          Current Tab
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted leading-relaxed mb-2.5">
+                      {tab.description}
+                    </p>
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {tab.highlights.map((h, i) => (
+                        <span
+                          key={i}
+                          className="text-[10px] px-2 py-0.5 rounded-md bg-surface-sunken text-muted border border-default/50"
+                        >
+                          ✓ {h}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button
+                    variant={isCurrent ? 'primary' : 'secondary'}
+                    size="sm"
+                    className="w-full flex items-center justify-center gap-1.5"
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      setIsGuideOpen(false);
+                    }}
+                  >
+                    <span>{isCurrent ? 'Viewing Now' : `Open ${tab.label}`}</span>
+                    <ArrowRight className="size-3.5" />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="rounded-2xl border border-default bg-surface-sunken p-3.5 space-y-1.5 text-xs">
+            <h5 className="font-bold text-default flex items-center gap-1.5">
+              <Zap className="size-3.5 text-primary" />
+              Keyboard Shortcuts & Sequential Flow
+            </h5>
+            <ul className="text-[11px] text-muted space-y-1 list-disc list-inside">
+              <li>Press <kbd className="px-1.5 py-0.5 rounded bg-surface border border-default font-mono font-bold text-default">1</kbd> to jump to Upstream Sourcing (Requisitions & Purchase Orders)</li>
+              <li>Press <kbd className="px-1.5 py-0.5 rounded bg-surface border border-default font-mono font-bold text-default">2</kbd> to jump to Inbound Gate & Settlement (Goods Receipts & Bills)</li>
+              <li>Press <kbd className="px-1.5 py-0.5 rounded bg-surface border border-default font-mono font-bold text-default">3</kbd> to jump to Quality Reversals (Purchase Returns & Debit Notes)</li>
+            </ul>
+          </div>
+        </div>
+      </Modal>
 
       {/* Tab Content */}
       <div className="pt-1">
@@ -300,4 +674,3 @@ export default function PurchasingWorkspace() {
     </div>
   );
 }
-

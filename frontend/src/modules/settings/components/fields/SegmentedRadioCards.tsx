@@ -15,7 +15,7 @@ interface SegmentedRadioCardsProps {
   value: string | unknown;
   options: RadioOption[];
   onChange: (val: string) => void;
-  description?: string;
+  description?: string | undefined;
 }
 
 export const SegmentedRadioCards: React.FC<SegmentedRadioCardsProps> = ({
@@ -29,17 +29,21 @@ export const SegmentedRadioCards: React.FC<SegmentedRadioCardsProps> = ({
   const currentVal = String(value ?? '');
 
   return (
-    <div className="p-4 rounded-xl border border-default bg-surface space-y-3 md:col-span-2">
+    <div
+      data-setting-key={settingKey}
+      className="group rounded-xl border border-default/80 bg-surface p-4 transition-all duration-200 hover:border-default hover:shadow-2xs space-y-3"
+    >
       <div>
-        <span className="text-xs font-bold text-default block">{label}</span>
-        <span className="font-mono text-2xs text-muted block">{settingKey}</span>
-        {description && <p className="text-2xs text-muted mt-0.5">{description}</p>}
+        <label className="text-xs font-semibold text-default block">{label}</label>
+        {description && <p className="text-[11px] text-muted leading-relaxed mt-0.5">{description}</p>}
       </div>
 
-      <div className={cn(
-        'grid gap-2.5',
-        options.length === 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-3'
-      )}>
+      <div
+        className={cn(
+          'grid gap-2.5',
+          options.length === 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-3'
+        )}
+      >
         {options.map((opt) => {
           const isSelected = currentVal === opt.value;
           const Icon = opt.icon;
@@ -50,34 +54,36 @@ export const SegmentedRadioCards: React.FC<SegmentedRadioCardsProps> = ({
               type="button"
               onClick={() => onChange(opt.value)}
               className={cn(
-                'p-3 rounded-xl border text-left transition-all flex items-start gap-3 cursor-pointer relative overflow-hidden',
+                'p-3 rounded-xl border text-left transition-all flex items-start gap-2.5 cursor-pointer relative overflow-hidden',
                 isSelected
-                  ? 'bg-primary/5 border-primary shadow-xs ring-1 ring-primary'
-                  : 'bg-surface-sunken border-default hover:border-strong hover:bg-surface'
+                  ? 'bg-primary/5 border-primary shadow-xs ring-1 ring-primary/30'
+                  : 'bg-surface-sunken/40 border-default hover:border-default hover:bg-surface'
               )}
             >
               {Icon && (
                 <div
                   className={cn(
-                    'size-8 rounded-lg flex items-center justify-center shrink-0 transition-colors',
-                    isSelected ? 'bg-primary text-primary-fg' : 'bg-surface border border-default text-muted'
+                    'size-7 rounded-lg flex items-center justify-center shrink-0 transition-colors mt-0.5',
+                    isSelected
+                      ? 'bg-primary text-primary-contrast'
+                      : 'bg-surface border border-default text-muted'
                   )}
                 >
-                  <Icon className="size-4" />
+                  <Icon className="size-3.5" />
                 </div>
               )}
 
-              <div className="space-y-0.5 flex-1 min-w-0 pr-5">
+              <div className="space-y-0.5 flex-1 min-w-0 pr-4">
                 <span
                   className={cn(
-                    'text-xs font-bold block truncate',
+                    'text-xs font-bold block leading-snug',
                     isSelected ? 'text-primary' : 'text-default'
                   )}
                 >
                   {opt.label}
                 </span>
                 {opt.description && (
-                  <span className="text-2xs text-muted block leading-relaxed line-clamp-2">
+                  <span className="text-[11px] text-muted block leading-relaxed">
                     {opt.description}
                   </span>
                 )}
@@ -85,7 +91,7 @@ export const SegmentedRadioCards: React.FC<SegmentedRadioCardsProps> = ({
 
               {/* Selection Checkmark Indicator */}
               {isSelected && (
-                <div className="absolute top-3 right-3 size-4 rounded-full bg-primary text-primary-fg flex items-center justify-center">
+                <div className="absolute top-2.5 right-2.5 size-4 rounded-full bg-primary text-primary-contrast flex items-center justify-center shadow-xs">
                   <Check className="size-2.5 stroke-3" />
                 </div>
               )}

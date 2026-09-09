@@ -77,12 +77,9 @@ import { SeoDiscoverabilityWorkspace } from '../../pages/settings/SeoDiscoverabi
 import { SettingsOverviewHub } from './components/SettingsOverviewHub';
 import { SettingsOmniSearch } from './components/SettingsOmniSearch';
 import { SettingFieldDispatcher } from './components/SettingFieldDispatcher';
-import {
-  BrandingPreview,
-  CurrencyFormatPreview,
-  DocumentPrefixPreview,
-} from './components/SettingsLivePreviews';
+import { SettingsPreviewDispatcher } from './components/SettingsPreviewDispatcher';
 import { SETTINGS_SUBGROUPS, type SubgroupDefinition } from './config/settingsSubgroups';
+import { SEGMENTED_OPTIONS } from './config/segmentedOptions';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import type {
   SettingsSchemaDictionary,
@@ -834,22 +831,8 @@ export const SettingsCenterWorkspace: React.FC = () => {
                 </div>
               ) : activeGroup === 'seo' ? (
                 /* SEO & Search Engine Discoverability Embedded */
-                <div className="bg-surface rounded-(--card-radius) border border-default p-6 space-y-6 shadow-xs">
-                  <div className="flex items-center justify-between pb-4 border-b border-default">
-                    <div className="flex items-center gap-2.5">
-                      <Globe className="size-5 text-primary" />
-                      <div>
-                        <h2 className="text-sm font-bold text-default">Storefront SEO & Google Discoverability</h2>
-                        <p className="text-2xs text-muted">
-                          Rich Schema markup, Google IndexNow, and XML sitemaps.
-                        </p>
-                      </div>
-                    </div>
-                    <Button variant="secondary" size="sm" onClick={() => setActiveGroup('overview')}>
-                      Back to Hub
-                    </Button>
-                  </div>
-                  <SeoDiscoverabilityWorkspace />
+                <div className="space-y-6">
+                  <SeoDiscoverabilityWorkspace onBackToHub={() => setActiveGroup('overview')} />
                 </div>
               ) : activeGroup === 'modules' ? (
                 /* Dynamic Module Activation */
@@ -1222,34 +1205,10 @@ export const SettingsCenterWorkspace: React.FC = () => {
                             </div>
 
                             {/* Live Simulator Previews */}
-                            {subgroup.previewType === 'branding' && (
-                              <BrandingPreview
-                                logoUrl={formValues['brand_logo_url'] as string}
-                                faviconUrl={formValues['brand_favicon_url'] as string}
-                                companyName={formValues['company_legal_name'] as string}
-                              />
-                            )}
-
-                            {subgroup.previewType === 'currency' && (
-                              <CurrencyFormatPreview
-                                currencyCode={formValues['currency_code'] as string}
-                                currencySymbol={formValues['currency_symbol'] as string}
-                                decimalPlaces={formValues['decimal_places'] as number}
-                                thousandSeparator={formValues['thousand_separator'] as string}
-                                dateFormat={formValues['date_format'] as string}
-                                timeFormat={formValues['time_format'] as string}
-                                timezone={formValues['system_timezone'] as string}
-                              />
-                            )}
-
-                            {subgroup.previewType === 'prefixes' && (
-                              <DocumentPrefixPreview
-                                invoicePrefix={formValues['invoice_prefix'] as string}
-                                poPrefix={formValues['purchase_order_prefix'] as string}
-                                batchPrefix={formValues['batch_prefix'] as string}
-                                challanPrefix={formValues['challan_prefix'] as string}
-                                quotationPrefix={formValues['quotation_prefix'] as string}
-                                receiptPrefix={formValues['receipt_prefix'] as string}
+                            {subgroup.previewType && (
+                              <SettingsPreviewDispatcher
+                                previewType={subgroup.previewType}
+                                formValues={formValues}
                               />
                             )}
 
@@ -1259,11 +1218,27 @@ export const SettingsCenterWorkspace: React.FC = () => {
                                 const meta = activeGroupMeta?.settings[key];
                                 if (!meta) return null;
 
+                                const isWideField =
+                                  SEGMENTED_OPTIONS[key] !== undefined ||
+                                  meta.type === 'json' ||
+                                  key.endsWith('_channels') ||
+                                  key === 'allowed_payment_methods' ||
+                                  key === 'brand_logo_url' ||
+                                  key === 'brand_favicon_url' ||
+                                  (key.endsWith('_url') && !key.includes('api')) ||
+                                  key.includes('address') ||
+                                  key.includes('note') ||
+                                  key.includes('tagline') ||
+                                  key.includes('message');
+
                                 return (
                                   <div
                                     key={key}
                                     id={`setting-field-${key}`}
-                                    className="transition-all"
+                                    className={cn(
+                                      'transition-all',
+                                      isWideField ? 'col-span-1 md:col-span-2' : 'col-span-1'
+                                    )}
                                   >
                                     <SettingFieldDispatcher
                                       settingKey={key}
@@ -1290,11 +1265,27 @@ export const SettingsCenterWorkspace: React.FC = () => {
                         const meta = activeGroupMeta?.settings[key];
                         if (!meta) return null;
 
+                        const isWideField =
+                          SEGMENTED_OPTIONS[key] !== undefined ||
+                          meta.type === 'json' ||
+                          key.endsWith('_channels') ||
+                          key === 'allowed_payment_methods' ||
+                          key === 'brand_logo_url' ||
+                          key === 'brand_favicon_url' ||
+                          (key.endsWith('_url') && !key.includes('api')) ||
+                          key.includes('address') ||
+                          key.includes('note') ||
+                          key.includes('tagline') ||
+                          key.includes('message');
+
                         return (
                           <div
                             key={key}
                             id={`setting-field-${key}`}
-                            className="transition-all"
+                            className={cn(
+                              'transition-all',
+                              isWideField ? 'col-span-1 md:col-span-2' : 'col-span-1'
+                            )}
                           >
                             <SettingFieldDispatcher
                               settingKey={key}

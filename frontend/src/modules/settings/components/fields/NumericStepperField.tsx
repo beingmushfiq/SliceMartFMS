@@ -10,7 +10,7 @@ interface NumericStepperFieldProps {
   max?: number;
   step?: number;
   unit?: string;
-  description?: string;
+  description?: string | undefined;
 }
 
 export const NumericStepperField: React.FC<NumericStepperFieldProps> = ({
@@ -46,7 +46,7 @@ export const NumericStepperField: React.FC<NumericStepperFieldProps> = ({
       : settingKey.includes('per_page')
       ? 'Items'
       : settingKey.includes('multiplier')
-      ? '× Multiplier'
+      ? 'Multiplier'
       : 'Units');
 
   const handleStep = (direction: 'up' | 'down') => {
@@ -58,32 +58,20 @@ export const NumericStepperField: React.FC<NumericStepperFieldProps> = ({
   };
 
   return (
-    <div className="p-4 rounded-xl border border-default bg-surface space-y-3 hover:border-primary/30 transition-all">
-      {/* Top Meta Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-2.5 min-w-0">
-          <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0 mt-0.5">
-            <Hash className="size-4" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold text-default">{label}</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-3xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
-                {resolvedUnit}
-              </span>
-            </div>
-            {description && (
-              <p className="text-2xs text-muted mt-0.5 line-clamp-1">{description}</p>
-            )}
-          </div>
-        </div>
+    <div className="group rounded-xl border border-default/80 bg-surface p-4 transition-all duration-200 hover:border-default hover:shadow-2xs space-y-2.5">
+      {/* Field Label & Unit Badge */}
+      <div className="flex items-center justify-between gap-2">
+        <label
+          htmlFor={`field-${settingKey}`}
+          className="flex items-center gap-2 text-xs font-semibold text-default cursor-pointer"
+        >
+          <Hash className="size-3.5 text-muted group-hover:text-primary transition-colors shrink-0" />
+          <span>{label}</span>
+        </label>
 
-        {/* Current Value Display Pill */}
-        <div className="px-2.5 py-1 bg-surface-sunken border border-default rounded-lg shrink-0">
-          <span className="font-mono text-xs font-bold text-primary">
-            {numericVal} <span className="text-3xs text-muted font-normal">{resolvedUnit}</span>
-          </span>
-        </div>
+        <span className="text-[10px] font-mono font-medium text-muted bg-surface-sunken border border-default/60 px-2 py-0.5 rounded-md select-none shrink-0">
+          {resolvedUnit}
+        </span>
       </div>
 
       {/* Stepper Controls & Manual Input */}
@@ -92,23 +80,27 @@ export const NumericStepperField: React.FC<NumericStepperFieldProps> = ({
           type="button"
           onClick={() => handleStep('down')}
           disabled={numericVal <= min}
-          className="size-9 rounded-xl bg-surface-sunken border border-default hover:border-primary hover:text-primary flex items-center justify-center text-default disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer shrink-0"
+          className="size-8 rounded-lg bg-surface-sunken border border-default hover:border-default hover:bg-surface flex items-center justify-center text-default disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer shrink-0"
+          aria-label="Decrease value"
         >
           <Minus className="size-3.5" />
         </button>
 
         <div className="relative flex-1">
           <input
+            id={`field-${settingKey}`}
             type="number"
             min={min}
             max={max}
             step={step}
             value={numericVal}
             onChange={(e) => {
-              const val = e.target.value === '' ? min : Number(e.target.value);
-              onChange(Math.min(max, Math.max(min, val)));
+              const val = Number(e.target.value);
+              if (!isNaN(val)) {
+                onChange(Math.max(min, Math.min(max, val)));
+              }
             }}
-            className="w-full bg-surface-sunken border border-default rounded-xl px-3 py-2 text-center text-xs font-mono font-bold text-default focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+            className="w-full rounded-lg border border-default bg-surface-sunken/40 px-3 py-1.5 text-xs font-mono font-semibold text-center text-default transition-all focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
           />
         </div>
 
@@ -116,11 +108,17 @@ export const NumericStepperField: React.FC<NumericStepperFieldProps> = ({
           type="button"
           onClick={() => handleStep('up')}
           disabled={numericVal >= max}
-          className="size-9 rounded-xl bg-surface-sunken border border-default hover:border-primary hover:text-primary flex items-center justify-center text-default disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer shrink-0"
+          className="size-8 rounded-lg bg-surface-sunken border border-default hover:border-default hover:bg-surface flex items-center justify-center text-default disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer shrink-0"
+          aria-label="Increase value"
         >
           <Plus className="size-3.5" />
         </button>
       </div>
+
+      {/* Un-truncated Helpful Context Note */}
+      {description && (
+        <p className="text-[11px] text-muted leading-relaxed">{description}</p>
+      )}
     </div>
   );
 };

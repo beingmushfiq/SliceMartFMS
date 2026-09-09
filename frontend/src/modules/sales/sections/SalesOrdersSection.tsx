@@ -1,6 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Clock, Plus, RefreshCw, Search, XCircle, ShoppingCart, SlidersHorizontal, Trash2, Eye, Sparkles, ChevronDown, Check, Copy } from 'lucide-react';
+import {
+  CheckCircle2,
+  Clock,
+  Plus,
+  RefreshCw,
+  Search,
+  XCircle,
+  ShoppingCart,
+  SlidersHorizontal,
+  Trash2,
+  Eye,
+  Sparkles,
+  ChevronDown,
+  Check,
+  Copy,
+  Download,
+  CheckSquare,
+  Square,
+  MinusSquare,
+  X,
+  FileSpreadsheet,
+  TrendingUp,
+} from 'lucide-react';
 import type { SalesOrder, SalesOrderStatus, SalesOrderPaymentStatus } from '../../../types/api/sales';
 import type { Product } from '../../../types/api/catalog';
 import { api } from '../../../lib/api/client';
@@ -69,6 +91,11 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
   const [orderToDelete, setOrderToDelete] = useState<SalesOrder | null>(null);
   const [activeStatusMenuId, setActiveStatusMenuId] = useState<number | null>(null);
   const [activePaymentMenuId, setActivePaymentMenuId] = useState<number | null>(null);
+
+  // Multi-Record Selection State
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(new Set());
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const headerCheckboxRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -354,6 +381,144 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
     return matchesSearch && matchesChannel;
   });
 
+  const orderStats = useMemo(() => {
+    let pending = 0;
+    let confirmed = 0;
+    let totalAmt = 0;
+    for (const o of filteredOrders) {
+      if (o.status === 'pending' || o.status === 'draft') pending++;
+      else if (o.status === 'confirmed' || o.status === 'allocated' || o.status === 'picking' || o.status === 'packed') confirmed++;
+      totalAmt += parseFloat(String(o.total_amount || 0));
+    }
+    return {
+      total: filteredOrders.length,
+      pending,
+      confirmed,
+      totalAmount: totalAmt,
+    };
+  }, [filteredOrders]);
+
+  const isAllSelected = filteredOrders.length > 0 && selectedOrderIds.size === filteredOrders.length;
+  const isSomeSelected = selectedOrderIds.size > 0 && !isAllSelected;
+
+  useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate = isSomeSelected;
+    }
+  }, [isSomeSelected]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedOrderIds.size > 0) {
+        setSelectedOrderIds(new Set());
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedOrderIds.size]);
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedOrderIds(new Set());
+    } else {
+      setSelectedOrderIds(new Set(filteredOrders.map((o) => o.id)));
+    }
+  };
+
+  const toggleSelectOrder = (id: number) => {
+    setSelectedOrderIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedOrderIds(new Set());
+
+  const handleBulkConfirm = async () => {
+    if (selectedOrderIds.size === 0) return;
+    setIsBulkProcessing(true);
+    try {
+      const targets = filteredOrders.filter(
+        (o) => selectedOrderIds.has(o.id) && (o.status === 'draft' || o.status === 'pending')
+      );
+      if (targets.length === 0) {
+        notify.info('None of the selected orders are currently in draft or pending status.');
+        return;
+      }
+      let successCount = 0;
+      for (const order of targets) {
+        try {
+          await api.post(`/sales/orders/${order.id}/approve`, {});
+          successCount++;
+        } catch {
+          // ignore failures on single items
+        }
+      }
+      notify.success(`Successfully confirmed ${successCount} sales order(s).`);
+      queryClient.invalidateQueries({ queryKey: ['sales', 'orders'] });
+      queryClient.invalidateQueries({ queryKey: ['crm', 'leads'] });
+      clearSelection();
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  const handleBulkCancel = async () => {
+    if (selectedOrderIds.size === 0) return;
+    setIsBulkProcessing(true);
+    try {
+      const targets = filteredOrders.filter(
+        (o) => selectedOrderIds.has(o.id) && o.status !== 'cancelled'
+      );
+      if (targets.length === 0) {
+        notify.info('Selected orders are already cancelled.');
+        return;
+      }
+      let count = 0;
+      for (const order of targets) {
+        try {
+          await api.patch(`/sales/orders/${order.id}/status`, { status: 'cancelled' });
+          count++;
+        } catch {
+          // ignore
+        }
+      }
+      notify.success(`Cancelled ${count} sales order(s).`);
+      queryClient.invalidateQueries({ queryKey: ['sales', 'orders'] });
+      clearSelection();
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  const exportOrdersCsv = (ordersToExport: SalesOrder[]) => {
+    if (ordersToExport.length === 0) {
+      notify.warning('No orders available to export.');
+      return;
+    }
+    const headers = ['Order Number', 'Date', 'Channel', 'Customer', 'Amount', 'Status', 'Payment Status'];
+    const rows = ordersToExport.map((o) => [
+      `"${o.order_number}"`,
+      `"${o.order_date}"`,
+      `"${o.channel}"`,
+      `"${(o.customer_name || 'Walk-in / Direct').replace(/"/g, '""')}"`,
+      `"${o.total_amount}"`,
+      `"${o.status}"`,
+      `"${o.payment_status || 'unpaid'}"`,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `sales-orders-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    notify.success(`Exported ${ordersToExport.length} orders to CSV.`);
+  };
+
   const getStatusBadge = (status: SalesOrder['status']) => {
     switch (status) {
       case 'draft':
@@ -423,8 +588,104 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
 
   return (
     <div className="space-y-4">
-      {/* Controls */}
-      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+      {/* 4-Card Operational Intelligence KPI Strip */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-default bg-surface p-3.5 shadow-2xs">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+            <ShoppingCart className="size-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-[11px] font-medium text-muted uppercase tracking-wider">Filtered Orders</div>
+            <div className="text-lg font-bold text-default">{orderStats.total}</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl border border-default bg-surface p-3.5 shadow-2xs">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 shrink-0">
+            <Clock className="size-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-[11px] font-medium text-muted uppercase tracking-wider">Pending Review</div>
+            <div className="text-lg font-bold text-amber-500">{orderStats.pending}</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl border border-default bg-surface p-3.5 shadow-2xs">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 shrink-0">
+            <TrendingUp className="size-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-[11px] font-medium text-muted uppercase tracking-wider">Confirmed / Active</div>
+            <div className="text-lg font-bold text-blue-500">{orderStats.confirmed}</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl border border-default bg-surface p-3.5 shadow-2xs">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500 shrink-0">
+            <Sparkles className="size-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-[11px] font-medium text-muted uppercase tracking-wider">Gross Value</div>
+            <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400 truncate">{formatCurrency(orderStats.totalAmount)}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Discovery & Action Bar */}
+      <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between rounded-2xl border border-default bg-surface p-3 shadow-2xs">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Selection Indicator & Fast Select */}
+          <button
+            type="button"
+            onClick={toggleSelectAll}
+            className={cn(
+              "flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-colors cursor-pointer",
+              selectedOrderIds.size > 0
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-default bg-surface-sunken text-default hover:bg-surface"
+            )}
+          >
+            {isAllSelected ? (
+              <CheckSquare className="size-4 text-primary" />
+            ) : isSomeSelected ? (
+              <MinusSquare className="size-4 text-primary" />
+            ) : (
+              <Square className="size-4 text-muted" />
+            )}
+            <span>{selectedOrderIds.size > 0 ? `${selectedOrderIds.size} Selected` : 'Select All'}</span>
+          </button>
+
+          {selectedOrderIds.size > 0 && (
+            <div className="flex items-center gap-1.5 animate-in fade-in">
+              {canApproveOrder && (
+                <button
+                  type="button"
+                  onClick={handleBulkConfirm}
+                  disabled={isBulkProcessing}
+                  className="flex h-9 items-center gap-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50 transition-colors cursor-pointer"
+                >
+                  {isBulkProcessing ? <RefreshCw className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" />}
+                  Confirm Selected
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => exportOrdersCsv(filteredOrders.filter((o) => selectedOrderIds.has(o.id)))}
+                className="flex h-9 items-center gap-1.5 rounded-xl bg-surface-sunken border border-default px-3 text-xs font-semibold text-default hover:bg-surface transition-colors cursor-pointer"
+              >
+                <FileSpreadsheet className="size-3.5 text-primary" />
+                Export CSV ({selectedOrderIds.size})
+              </button>
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="flex h-9 items-center gap-1 rounded-xl border border-default bg-surface-sunken px-2.5 text-xs text-muted hover:text-default transition-colors cursor-pointer"
+                title="Clear selection (Esc)"
+              >
+                <X className="size-3.5" />
+                <span className="hidden sm:inline">Esc</span>
+              </button>
+            </div>
+          )}
+        </div>
+
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
@@ -433,7 +694,7 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
               placeholder="Search by order #, customer..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-9 w-64 rounded-xl border border-default bg-surface-sunken pl-8 pr-3 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
+              className="h-9 w-52 sm:w-60 rounded-xl border border-default bg-surface-sunken pl-8 pr-3 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
             />
           </div>
 
@@ -453,24 +714,34 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
           />
 
           <button
+            type="button"
+            onClick={() => exportOrdersCsv(filteredOrders)}
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface-sunken px-3 text-xs font-medium text-default hover:bg-surface transition-colors cursor-pointer"
+            title="Export all filtered orders to CSV"
+          >
+            <Download className="size-3.5 text-muted" />
+            <span className="hidden sm:inline">Export All</span>
+          </button>
+
+          <button
             onClick={() => refetch()}
             disabled={isFetching}
             className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface-sunken px-3 text-xs font-medium text-muted hover:bg-surface hover:text-default disabled:opacity-50 transition-colors cursor-pointer"
+            title="Refresh order registry"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />
-            Refresh
           </button>
-        </div>
 
-        {canCreateOrder && (
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            New Order
-          </button>
-        )}
+          {canCreateOrder && (
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              New Order
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Orders Table */}
@@ -479,6 +750,16 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
           <table className="w-full text-left text-xs text-default">
             <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
+                <th className="w-10 px-3 py-3.5 text-center">
+                  <input
+                    ref={headerCheckboxRef}
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={toggleSelectAll}
+                    className="size-4 rounded border-default text-primary focus:ring-primary cursor-pointer"
+                    title="Select all visible orders"
+                  />
+                </th>
                 <th className="px-4 py-3.5">Order Number</th>
                 <th className="px-4 py-3.5">Date</th>
                 <th className="px-4 py-3.5">Channel</th>
@@ -492,7 +773,7 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
             <tbody className="divide-y divide-default">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-muted">
+                  <td colSpan={9} className="px-4 py-12 text-center text-muted">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <RefreshCw className="size-5 animate-spin text-primary" />
                       <span>Loading sales orders...</span>
@@ -501,7 +782,7 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
                 </tr>
               ) : filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-muted">
+                  <td colSpan={9} className="px-4 py-12 text-center text-muted">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <ShoppingCart className="size-8 text-muted/50" />
                       <span className="font-medium">No sales orders found.</span>
@@ -513,9 +794,21 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
                   <tr
                     key={order.id}
                     onClick={() => setSelectedOrder(order)}
-                    className="hover:bg-surface-sunken/70 transition-colors cursor-pointer group"
+                    className={cn(
+                      "hover:bg-surface-sunken/70 transition-colors cursor-pointer group",
+                      selectedOrderIds.has(order.id) && "bg-primary/5 dark:bg-primary/10"
+                    )}
                     title="Click row to view and process order"
                   >
+                    <td className="w-10 px-3 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedOrderIds.has(order.id)}
+                        onChange={() => toggleSelectOrder(order.id)}
+                        className="size-4 rounded border-default text-primary focus:ring-primary cursor-pointer"
+                        title="Select order"
+                      />
+                    </td>
                     <td className="px-4 py-3.5 font-mono font-medium text-emerald-600 dark:text-emerald-400 group-hover:underline">
                       {order.order_number}
                     </td>
@@ -781,6 +1074,64 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
           </table>
         </div>
       </div>
+
+      {/* Floating Bottom Docked Action Toolbar */}
+      {selectedOrderIds.size > 0 && (
+        <div className="fixed bottom-6 inset-x-0 z-40 flex justify-center pointer-events-none animate-in slide-in-from-bottom-6 duration-200">
+          <div className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-default/80 bg-surface/95 px-5 py-3 shadow-2xl backdrop-blur-xl ring-1 ring-black/5 dark:ring-white/10">
+            <div className="flex items-center gap-2 border-r border-default pr-3">
+              <span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-fg">
+                {selectedOrderIds.size}
+              </span>
+              <span className="text-xs font-semibold text-default">
+                Order{selectedOrderIds.size > 1 ? 's' : ''} Selected
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {canApproveOrder && (
+                <button
+                  type="button"
+                  onClick={handleBulkConfirm}
+                  disabled={isBulkProcessing}
+                  className="flex h-8 items-center gap-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50 transition-colors cursor-pointer"
+                >
+                  {isBulkProcessing ? <RefreshCw className="size-3 animate-spin" /> : <CheckCircle2 className="size-3" />}
+                  Confirm
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => exportOrdersCsv(filteredOrders.filter((o) => selectedOrderIds.has(o.id)))}
+                className="flex h-8 items-center gap-1.5 rounded-xl bg-surface-sunken border border-default px-3 text-xs font-semibold text-default hover:bg-surface transition-colors cursor-pointer"
+              >
+                <FileSpreadsheet className="size-3 text-primary" />
+                Export CSV
+              </button>
+
+              <button
+                type="button"
+                onClick={handleBulkCancel}
+                disabled={isBulkProcessing}
+                className="flex h-8 items-center gap-1.5 rounded-xl bg-rose-500/10 border border-rose-500/20 px-3 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                <XCircle className="size-3 text-rose-500" />
+                Cancel Orders
+              </button>
+
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="flex size-8 items-center justify-center rounded-xl border border-default bg-surface-sunken text-muted hover:text-default transition-colors cursor-pointer ml-1"
+                title="Deselect all (Esc)"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quick Create Modal */}
       {showCreateModal && (

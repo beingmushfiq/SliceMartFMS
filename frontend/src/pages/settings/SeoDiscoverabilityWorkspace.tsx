@@ -15,12 +15,17 @@ import {
   Radio,
   FileCode,
   ArrowRight,
+  Check,
+  RotateCcw,
+  ChevronLeft,
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
+import { Button } from '../../components/ui/Button';
 import { SelectDropdown } from '../../components/ui/Dropdown';
 import { SerpPreviewCard } from '../../components/seo/SerpPreviewCard';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { notify } from '../../components/ui/Toast';
+import { cn } from '../../lib/utils';
 
 interface SeoSettingsState {
   default_title_template: string;
@@ -67,23 +72,43 @@ interface NotFoundLogItem {
 }
 
 interface AuditCheck {
-  name: string;
+  key?: string;
+  name?: string;
+  title?: string;
+  category?: string;
   passed: boolean;
-  message: string;
+  importance?: string;
+  message?: string;
+  details?: string;
+  weight?: number;
 }
 
 interface SeoAuditResult {
   score: number;
-  checks: AuditCheck[];
+  grade?: string;
+  summary?: {
+    total_checks: number;
+    passed_checks: number;
+    failed_checks: number;
+    online_products_count: number;
+  };
+  checks?: AuditCheck[];
+  checklist?: AuditCheck[];
 }
 
 type SeoTab = 'metadata' | 'nap' | 'redirects' | '404s' | 'indexnow' | 'audit';
 
-export const SeoDiscoverabilityWorkspace: React.FC = () => {
+interface SeoDiscoverabilityWorkspaceProps {
+  onBackToHub?: () => void;
+}
+
+export const SeoDiscoverabilityWorkspace: React.FC<SeoDiscoverabilityWorkspaceProps> = ({
+  onBackToHub,
+}) => {
   const [activeTab, setActiveTab] = useWorkspaceTab<SeoTab>(
     'metadata',
     ['metadata', 'nap', 'redirects', '404s', 'indexnow', 'audit'] as const,
-    'tab'
+    'seo_tab'
   );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -101,7 +126,7 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
     city: '',
     state: '',
     postal_code: '',
-    country: '',
+    country: 'BD',
     latitude: '',
     longitude: '',
     telephone: '',
@@ -114,18 +139,17 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
     last_indexnow_ping_at: null,
   });
 
-  // Redirects and 404 Logs
+  // Redirects & 404 States
   const [redirects, setRedirects] = useState<RedirectItem[]>([]);
+  const [newSource, setNewSource] = useState('');
+  const [newTarget, setNewTarget] = useState('');
+  const [newStatusCode, setNewStatusCode] = useState<number>(301);
+  const [creatingRedirect, setCreatingRedirect] = useState(false);
+
   const [notFoundLogs, setNotFoundLogs] = useState<NotFoundLogItem[]>([]);
   const [auditResult, setAuditResult] = useState<SeoAuditResult | null>(null);
 
-  // New Redirect Modal/State
-  const [newSource, setNewSource] = useState('');
-  const [newTarget, setNewTarget] = useState('');
-  const [newStatusCode, setNewStatusCode] = useState(301);
-  const [creatingRedirect, setCreatingRedirect] = useState(false);
-
-  // IndexNow Ping state
+  // IndexNow Broadcast URL list
   const [pingUrls, setPingUrls] = useState('');
   const [pinging, setPinging] = useState(false);
   const [pingStatus, setPingStatus] = useState<string | null>(null);
@@ -141,7 +165,7 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
       ]);
 
       if (settingsRes.status === 'fulfilled' && settingsRes.value.data.data) {
-        setSettings(settingsRes.value.data.data);
+        setSettings((prev) => ({ ...prev, ...settingsRes.value.data.data }));
       }
       if (redirectsRes.status === 'fulfilled') {
         setRedirects(redirectsRes.value.data.data || []);
@@ -244,22 +268,29 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
   };
 
   const handleIndexNowPing = async () => {
+    const urlList = pingUrls
+      .split('\n')
+      .map((u) => u.trim())
+      .filter(Boolean);
+
+    if (urlList.length === 0) {
+      notify.warning('Please enter at least one full URL to broadcast (e.g. https://yourdomain.com/products/item-1).');
+      return;
+    }
+
     setPinging(true);
     setPingStatus(null);
     try {
-      const urlList = pingUrls
-        .split('\n')
-        .map((u) => u.trim())
-        .filter(Boolean);
-
       const res = await api.post<{ message: string; submitted_urls: string[] }>('/storefront/seo/indexnow/ping', {
-        urls: urlList.length > 0 ? urlList : undefined,
+        urls: urlList,
       });
 
       setPingStatus(`Successfully submitted ${res.data.submitted_urls.length} URLs to IndexNow search engine nodes.`);
+      notify.success(`Broadcasted ${res.data.submitted_urls.length} URLs to IndexNow`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Network error';
       setPingStatus(`IndexNow ping failed: ${msg}`);
+      notify.error('IndexNow ping failed', { description: msg });
     } finally {
       setPinging(false);
     }
@@ -270,49 +301,139 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
       <div className="flex h-96 items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <span className="text-xs font-semibold text-zinc-500">Loading Discoverability Architecture...</span>
+          <span className="text-xs font-semibold text-muted">Loading Discoverability Architecture...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+    <div className="space-y-6 max-w-7xl mx-auto pb-8">
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-linear-to-r from-teal-900/40 via-zinc-900 to-zinc-950 p-6 sm:p-8 shadow-md">
-        <div className="flex flex-wrap items-center justify-between gap-4 relative z-10">
-          <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 rounded-full border border-teal-500/30 bg-teal-500/10 px-3 py-1 text-xs font-semibold text-teal-400">
-              <Compass className="size-3.5" />
-              <span>Multi-Engine Discoverability • SEO / GEO / AEO Platform</span>
+      <div className="relative overflow-hidden rounded-2xl border border-default bg-surface p-5 sm:p-6 shadow-xs">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex size-12 sm:size-14 items-center justify-center rounded-2xl bg-linear-to-br from-teal-600 to-primary text-white font-bold shadow-md ring-4 ring-primary/15 shrink-0">
+              <Compass className="size-6 sm:size-7" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">
-              SEO, AI Search & Discoverability Engine
-            </h1>
-            <p className="text-xs text-zinc-300 max-w-2xl">
-              Enterprise search discoverability control plane. Manage structured data, local entity graphs,
-              AI crawler access, 301 redirects, and IndexNow instant publishing.
-            </p>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-lg sm:text-xl font-bold text-default tracking-tight">
+                  SEO, AI Search & Discoverability Engine
+                </h1>
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-3xs font-bold uppercase tracking-wider text-primary border border-primary/20">
+                  <Sparkles className="size-3" />
+                  SEO / GEO / AEO Platform
+                </span>
+              </div>
+              <p className="text-xs text-muted max-w-2xl leading-relaxed">
+                Enterprise search discoverability control plane. Manage structured data, local entity graphs,
+                AI crawler access, 301 redirects, and IndexNow instant publishing.
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {auditResult && (
-              <div className="flex items-center gap-2 rounded-2xl bg-zinc-900/80 border border-zinc-800 p-3 px-4 shadow-sm">
-                <div className="text-right">
-                  <span className="text-[10px] uppercase font-bold text-zinc-400 block">Health Score</span>
-                  <span className="text-lg font-mono font-extrabold text-emerald-400">{auditResult.score}/100</span>
-                </div>
-                <div className="size-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400">
-                  <Sparkles className="size-4" />
-                </div>
-              </div>
+          <div className="flex items-center gap-3 shrink-0">
+            {onBackToHub && (
+              <Button variant="secondary" size="sm" onClick={onBackToHub}>
+                <ChevronLeft className="size-3.5 mr-1" />
+                Back to Hub
+              </Button>
             )}
           </div>
         </div>
       </div>
 
+      {/* KPI Overview Metrics */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <button
+          type="button"
+          onClick={() => setActiveTab('audit')}
+          className="text-left rounded-2xl border border-default bg-surface p-4 space-y-1 shadow-2xs hover:border-primary/40 hover:bg-surface-sunken/40 transition-all cursor-pointer group"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-muted uppercase tracking-wider group-hover:text-primary transition-colors">
+              Health Score
+            </span>
+            <ShieldCheck className="size-3 text-muted group-hover:text-primary transition-colors" />
+          </div>
+          <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
+            {auditResult ? `${auditResult.score}%` : '—'}
+          </div>
+          <span className="text-[11px] text-muted block">Audited search readiness</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('nap')}
+          className="text-left rounded-2xl border border-default bg-surface p-4 space-y-1 shadow-2xs hover:border-primary/40 hover:bg-surface-sunken/40 transition-all cursor-pointer group"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-muted uppercase tracking-wider group-hover:text-primary transition-colors">
+              Schema Entity
+            </span>
+            <Globe className="size-3 text-muted group-hover:text-primary transition-colors" />
+          </div>
+          <div className="text-base font-extrabold text-default truncate mt-1">
+            {settings.business_type}
+          </div>
+          <span className="text-[11px] text-muted block">JSON-LD structured NAP</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('redirects')}
+          className="text-left rounded-2xl border border-default bg-surface p-4 space-y-1 shadow-2xs hover:border-primary/40 hover:bg-surface-sunken/40 transition-all cursor-pointer group"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-muted uppercase tracking-wider group-hover:text-primary transition-colors">
+              URL Redirects
+            </span>
+            <ArrowRight className="size-3 text-muted group-hover:text-primary transition-colors" />
+          </div>
+          <div className="text-2xl font-extrabold text-default font-mono">
+            {redirects.length}
+          </div>
+          <span className="text-[11px] text-muted block">Active 301 / 302 rules</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('404s')}
+          className="text-left rounded-2xl border border-default bg-surface p-4 space-y-1 shadow-2xs hover:border-primary/40 hover:bg-surface-sunken/40 transition-all cursor-pointer group"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-muted uppercase tracking-wider group-hover:text-primary transition-colors">
+              404 Error Log
+            </span>
+            <AlertTriangle className="size-3 text-muted group-hover:text-primary transition-colors" />
+          </div>
+          <div className="text-2xl font-extrabold text-default font-mono">
+            {notFoundLogs.length}
+          </div>
+          <span className="text-[11px] text-muted block">Missing link traces</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('metadata')}
+          className="text-left rounded-2xl border border-default bg-surface p-4 space-y-1 shadow-2xs hover:border-primary/40 hover:bg-surface-sunken/40 transition-all cursor-pointer group"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-muted uppercase tracking-wider group-hover:text-primary transition-colors">
+              AI Crawlers
+            </span>
+            <Compass className="size-3 text-muted group-hover:text-primary transition-colors" />
+          </div>
+          <div className="text-base font-extrabold text-primary truncate mt-1">
+            {settings.allow_ai_crawlers ? 'Active' : 'Blocked'}
+          </div>
+          <span className="text-[11px] text-muted block">AEO generative discovery</span>
+        </button>
+      </div>
+
       {/* Workspace Tabs Navigation */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+      <div className="flex flex-wrap items-center gap-2 border-b border-default pb-3">
         {([
           { id: 'metadata', label: 'Meta & Canonical', icon: Sliders },
           { id: 'nap', label: 'Local Business & Entity (NAP)', icon: Globe },
@@ -328,11 +449,12 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              className={cn(
+                'inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer',
                 isActive
-                  ? 'bg-primary text-white shadow-xs font-bold'
-                  : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
-              }`}
+                  ? 'bg-primary text-primary-fg shadow-xs font-bold'
+                  : 'bg-surface border border-default text-muted hover:text-default hover:bg-surface-sunken'
+              )}
             >
               <Icon className="size-3.5" />
               <span>{tab.label}</span>
@@ -345,90 +467,201 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
       {activeTab === 'metadata' && (
         <form onSubmit={handleSaveSettings} className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 p-6 shadow-xs">
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                <Sliders className="size-4 text-primary" />
-                <span>Global Metadata & Template Defaults</span>
-              </h3>
+            <div className="lg:col-span-2 space-y-5 rounded-2xl border border-default bg-surface p-6 shadow-xs">
+              <div className="flex items-center justify-between pb-3 border-b border-default">
+                <div className="flex items-center gap-2">
+                  <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <Sliders className="size-4" />
+                  </div>
+                  <h3 className="text-sm font-bold text-default">
+                    Global Metadata & Template Defaults
+                  </h3>
+                </div>
+                <span className="text-[10px] font-medium text-muted bg-surface-sunken border border-default px-2 py-0.5 rounded-md select-none">
+                  Core SEO Directives
+                </span>
+              </div>
 
-              <div className="space-y-4 text-xs">
-                <div>
-                  <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Default Title Pattern Template
-                  </label>
+              <div className="space-y-4">
+                {/* Field 1: Title Pattern Template */}
+                <div className="group rounded-xl border border-default bg-surface p-4 transition-all duration-200 hover:border-default hover:shadow-2xs space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <label
+                      htmlFor="field-title-template"
+                      className="flex items-center gap-2 text-xs font-semibold text-default cursor-pointer"
+                    >
+                      <Sliders className="size-3.5 text-muted group-hover:text-primary transition-colors shrink-0" />
+                      <span>Default Title Pattern Template</span>
+                    </label>
+                    <span className="text-[10px] font-medium text-muted bg-surface-sunken border border-default/60 px-2 py-0.5 rounded-md select-none shrink-0">
+                      SERP Title
+                    </span>
+                  </div>
+
                   <input
+                    id="field-title-template"
                     type="text"
                     value={settings.default_title_template}
                     onChange={(e) => setSettings({ ...settings, default_title_template: e.target.value })}
                     placeholder="{title} | {brand}"
-                    className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3.5 py-2.5 font-mono text-zinc-900 dark:text-white"
+                    className="w-full rounded-lg border border-default bg-surface-sunken/40 px-3 py-2 text-xs font-mono font-medium text-default placeholder:text-muted/50 transition-all focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
                   />
-                  <span className="text-[11px] text-zinc-500 mt-1 block">
-                    Supported tags: <code className="text-primary">{'{title}'}</code>, <code className="text-primary">{'{brand}'}</code>.
-                  </span>
+
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted flex-wrap">
+                    <span>Click variable to append:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!settings.default_title_template.includes('{title}')) {
+                          setSettings({
+                            ...settings,
+                            default_title_template: `${settings.default_title_template} {title}`.trim(),
+                          });
+                        }
+                      }}
+                      className="px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 text-3xs font-mono font-semibold hover:bg-primary/20 transition-colors cursor-pointer"
+                    >
+                      {'{title}'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!settings.default_title_template.includes('{brand}')) {
+                          setSettings({
+                            ...settings,
+                            default_title_template: `${settings.default_title_template} | {brand}`.trim(),
+                          });
+                        }
+                      }}
+                      className="px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 text-3xs font-mono font-semibold hover:bg-primary/20 transition-colors cursor-pointer"
+                    >
+                      {'{brand}'}
+                    </button>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Storefront Fallback Meta Description
-                  </label>
+                {/* Field 2: Meta Description */}
+                <div className="group rounded-xl border border-default bg-surface p-4 transition-all duration-200 hover:border-default hover:shadow-2xs space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <label
+                      htmlFor="field-meta-desc"
+                      className="flex items-center gap-2 text-xs font-semibold text-default cursor-pointer"
+                    >
+                      <Globe className="size-3.5 text-muted group-hover:text-primary transition-colors shrink-0" />
+                      <span>Storefront Fallback Meta Description</span>
+                    </label>
+                    <span
+                      className={cn(
+                        'text-[10px] font-mono font-medium px-2 py-0.5 rounded-md border select-none shrink-0',
+                        settings.default_meta_description?.length >= 120 &&
+                          settings.default_meta_description?.length <= 160
+                          ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                          : 'text-muted bg-surface-sunken border-default/60'
+                      )}
+                    >
+                      {settings.default_meta_description?.length || 0} / 160 chars
+                    </span>
+                  </div>
+
                   <textarea
+                    id="field-meta-desc"
                     rows={3}
                     value={settings.default_meta_description}
                     onChange={(e) => setSettings({ ...settings, default_meta_description: e.target.value })}
                     placeholder="Describe your factory and direct catalog value proposition..."
-                    className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 p-3 text-zinc-900 dark:text-white leading-relaxed"
+                    className="w-full rounded-lg border border-default bg-surface-sunken/40 p-2.5 text-xs font-medium text-default placeholder:text-muted/50 transition-all focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 resize-none leading-relaxed"
                   />
-                  <span className="text-[11px] text-zinc-500 mt-1 block">
-                    Optimal length is between 120 and 160 characters. Current: {settings.default_meta_description?.length || 0} chars.
-                  </span>
+
+                  <p className="text-[11px] text-muted leading-relaxed">
+                    Optimal length is between 120 and 160 characters. Displayed on Google, Bing, and AI search results when specific product description is absent.
+                  </p>
                 </div>
 
-                <div>
-                  <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Canonical Domain Override (Optional)
-                  </label>
+                {/* Field 3: Canonical Base URL */}
+                <div className="group rounded-xl border border-default bg-surface p-4 transition-all duration-200 hover:border-default hover:shadow-2xs space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <label
+                      htmlFor="field-canonical-url"
+                      className="flex items-center gap-2 text-xs font-semibold text-default cursor-pointer"
+                    >
+                      <Globe className="size-3.5 text-muted group-hover:text-primary transition-colors shrink-0" />
+                      <span>Canonical Domain Override (Optional)</span>
+                    </label>
+                    <span className="text-[10px] font-medium text-muted bg-surface-sunken border border-default/60 px-2 py-0.5 rounded-md select-none shrink-0">
+                      Canonical Link
+                    </span>
+                  </div>
+
                   <input
+                    id="field-canonical-url"
                     type="text"
                     value={settings.canonical_base_url}
                     onChange={(e) => setSettings({ ...settings, canonical_base_url: e.target.value })}
                     placeholder="https://yourcustomdomain.com"
-                    className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3.5 py-2.5 font-mono text-zinc-900 dark:text-white"
+                    className="w-full rounded-lg border border-default bg-surface-sunken/40 px-3 py-2 text-xs font-mono font-medium text-default placeholder:text-muted/50 transition-all focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
                   />
-                  <span className="text-[11px] text-zinc-500 mt-1 block">
+
+                  <p className="text-[11px] text-muted leading-relaxed">
                     If configured with a custom domain, leave blank to auto-detect verified primary domain.
-                  </span>
+                  </p>
                 </div>
 
-                <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                  <div>
-                    <span className="font-semibold text-zinc-800 dark:text-zinc-200 block">
-                      AI Search Engines & Crawler Indexing
-                    </span>
-                    <span className="text-[11px] text-zinc-500 block">
-                      Allow GPTBot, PerplexityBot, ClaudeBot and CCBot to discover and cite your product specifications.
+                {/* Field 4: AI Search Engines & Crawler Indexing */}
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={settings.allow_ai_crawlers}
+                  onClick={() => setSettings({ ...settings, allow_ai_crawlers: !settings.allow_ai_crawlers })}
+                  className={cn(
+                    'w-full text-left rounded-xl border p-4 transition-all duration-200 cursor-pointer flex items-center justify-between gap-4',
+                    settings.allow_ai_crawlers
+                      ? 'border-primary/40 bg-primary/5 hover:border-primary/60'
+                      : 'border-default bg-surface hover:border-default hover:bg-surface-sunken/30'
+                  )}
+                >
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Compass className="size-4 text-primary shrink-0" />
+                      <span className="text-xs font-semibold text-default">
+                        AI Search Engines & Crawler Indexing
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted leading-relaxed">
+                      Allow GPTBot, PerplexityBot, ClaudeBot and CCBot to discover and cite your product specifications in AI answer engines.
+                    </p>
+                  </div>
+
+                  <div
+                    className={cn(
+                      'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out',
+                      settings.allow_ai_crawlers ? 'bg-primary' : 'bg-surface-sunken border border-default'
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'pointer-events-none flex size-4 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out items-center justify-center',
+                        settings.allow_ai_crawlers ? 'translate-x-6' : 'translate-x-1'
+                      )}
+                    >
+                      {settings.allow_ai_crawlers && <Check className="size-2.5 text-primary" />}
                     </span>
                   </div>
-                  <input
-                    type="checkbox"
-                    checked={settings.allow_ai_crawlers}
-                    onChange={(e) => setSettings({ ...settings, allow_ai_crawlers: e.target.checked })}
-                    className="size-5 rounded text-primary focus:ring-primary cursor-pointer"
-                  />
-                </div>
+                </button>
               </div>
 
-              <div className="pt-4 flex items-center justify-between">
-                <button
+              {/* Action Buttons */}
+              <div className="pt-2 flex items-center justify-between">
+                <Button
                   type="submit"
-                  disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-white hover:bg-primary/90 transition-all shadow-xs cursor-pointer"
+                  variant="primary"
+                  size="md"
+                  loading={saving}
                 >
-                  <Save className="size-4" />
-                  <span>{saving ? 'Saving...' : 'Save Meta Configuration'}</span>
-                </button>
+                  <Save className="size-3.5 mr-1.5" />
+                  Save Meta Configuration
+                </Button>
                 {saveSuccess && (
-                  <span className="text-xs font-semibold text-emerald-500 flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                     <CheckCircle2 className="size-4" />
                     <span>Settings Saved Successfully</span>
                   </span>
@@ -439,7 +672,9 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
             {/* Right: Live Preview */}
             <div className="space-y-4">
               <SerpPreviewCard
-                title={settings.default_title_template.replace('{title}', 'Homepage Direct Factory').replace('{brand}', 'Slice Mart')}
+                title={settings.default_title_template
+                  .replace('{title}', 'Homepage Direct Factory')
+                  .replace('{brand}', 'Slice Mart')}
                 description={settings.default_meta_description}
                 urlPath="/"
               />
@@ -451,18 +686,28 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
       {/* Tab 2: NAP & Entity */}
       {activeTab === 'nap' && (
         <form onSubmit={handleSaveSettings} className="space-y-6">
-          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 p-6 shadow-xs space-y-5">
-            <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-              <Globe className="size-4 text-primary" />
-              <span>Local Business (NAP) & Physical Facility Entity Data</span>
-            </h3>
-            <p className="text-xs text-zinc-500">
+          <div className="rounded-2xl border border-default bg-surface p-6 shadow-xs space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-default">
+              <div className="flex items-center gap-2">
+                <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <Globe className="size-4" />
+                </div>
+                <h3 className="text-sm font-bold text-default">
+                  Local Business (NAP) & Physical Facility Entity Data
+                </h3>
+              </div>
+              <span className="text-[10px] font-medium text-muted bg-surface-sunken border border-default px-2 py-0.5 rounded-md select-none">
+                Schema.org JSON-LD
+              </span>
+            </div>
+
+            <p className="text-xs text-muted">
               This entity schema grounds search engines and AI agents with precise corporate and factory location facts.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-              <div>
-                <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+              <div className="space-y-1.5">
+                <label className="font-semibold text-default block">
                   Schema Business Type
                 </label>
                 <SelectDropdown
@@ -481,106 +726,107 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">Street Address</label>
+              <div className="space-y-1.5">
+                <label className="font-semibold text-default block">Street Address</label>
                 <input
                   type="text"
                   value={settings.street_address}
                   onChange={(e) => setSettings({ ...settings, street_address: e.target.value })}
                   placeholder="Plot 42, Industrial Zone"
-                  className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2.5 text-zinc-900 dark:text-white"
+                  className="w-full rounded-xl border border-default bg-surface-sunken/40 px-3 py-2 text-xs font-medium text-default focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 transition-all"
                 />
               </div>
 
-              <div>
-                <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">City / Division</label>
+              <div className="space-y-1.5">
+                <label className="font-semibold text-default block">City / Division</label>
                 <input
                   type="text"
                   value={settings.city}
                   onChange={(e) => setSettings({ ...settings, city: e.target.value })}
                   placeholder="Dhaka"
-                  className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2.5 text-zinc-900 dark:text-white"
+                  className="w-full rounded-xl border border-default bg-surface-sunken/40 px-3 py-2 text-xs font-medium text-default focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 transition-all"
                 />
               </div>
 
-              <div>
-                <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">State / Region</label>
+              <div className="space-y-1.5">
+                <label className="font-semibold text-default block">State / Region</label>
                 <input
                   type="text"
                   value={settings.state}
                   onChange={(e) => setSettings({ ...settings, state: e.target.value })}
                   placeholder="Dhaka"
-                  className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2.5 text-zinc-900 dark:text-white"
+                  className="w-full rounded-xl border border-default bg-surface-sunken/40 px-3 py-2 text-xs font-medium text-default focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 transition-all"
                 />
               </div>
 
-              <div>
-                <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">Postal Code</label>
+              <div className="space-y-1.5">
+                <label className="font-semibold text-default block">Postal Code</label>
                 <input
                   type="text"
                   value={settings.postal_code}
                   onChange={(e) => setSettings({ ...settings, postal_code: e.target.value })}
                   placeholder="1212"
-                  className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2.5 text-zinc-900 dark:text-white"
+                  className="w-full rounded-xl border border-default bg-surface-sunken/40 px-3 py-2 text-xs font-mono font-medium text-default focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 transition-all"
                 />
               </div>
 
-              <div>
-                <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">Country Code</label>
+              <div className="space-y-1.5">
+                <label className="font-semibold text-default block">Country Code</label>
                 <input
                   type="text"
                   value={settings.country}
                   onChange={(e) => setSettings({ ...settings, country: e.target.value })}
                   placeholder="BD"
-                  className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2.5 text-zinc-900 dark:text-white"
+                  className="w-full rounded-xl border border-default bg-surface-sunken/40 px-3 py-2 text-xs font-mono font-medium text-default focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 transition-all"
                 />
               </div>
 
-              <div>
-                <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">Official Telephone</label>
+              <div className="space-y-1.5">
+                <label className="font-semibold text-default block">Official Telephone</label>
                 <input
                   type="text"
                   value={settings.telephone}
                   onChange={(e) => setSettings({ ...settings, telephone: e.target.value })}
                   placeholder="+8801700000000"
-                  className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2.5 text-zinc-900 dark:text-white"
+                  className="w-full rounded-xl border border-default bg-surface-sunken/40 px-3 py-2 text-xs font-mono font-medium text-default focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 transition-all"
                 />
               </div>
 
-              <div>
-                <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">Contact Email</label>
+              <div className="space-y-1.5">
+                <label className="font-semibold text-default block">Contact Email</label>
                 <input
                   type="email"
                   value={settings.email}
                   onChange={(e) => setSettings({ ...settings, email: e.target.value })}
                   placeholder="support@slicemart.tech"
-                  className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2.5 text-zinc-900 dark:text-white"
+                  className="w-full rounded-xl border border-default bg-surface-sunken/40 px-3 py-2 text-xs font-medium text-default focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 transition-all"
                 />
               </div>
 
-              <div>
-                <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">Opening Hours (ISO format)</label>
+              <div className="space-y-1.5">
+                <label className="font-semibold text-default block">Opening Hours (ISO format)</label>
                 <input
                   type="text"
                   value={settings.opening_hours}
                   onChange={(e) => setSettings({ ...settings, opening_hours: e.target.value })}
                   placeholder="Mo-Sa 09:00-18:00"
-                  className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2.5 text-zinc-900 dark:text-white"
+                  className="w-full rounded-xl border border-default bg-surface-sunken/40 px-3 py-2 text-xs font-medium text-default focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 transition-all"
                 />
               </div>
             </div>
 
-            <div className="pt-4 flex items-center justify-between">
-              <button
+            <div className="pt-2 flex items-center justify-between">
+              <Button
                 type="submit"
-                disabled={saving}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-white hover:bg-primary/90 transition-all shadow-xs cursor-pointer"
+                variant="primary"
+                size="md"
+                loading={saving}
               >
-                <Save className="size-4" />
-                <span>{saving ? 'Saving...' : 'Save Entity Information'}</span>
-              </button>
+                <Save className="size-3.5 mr-1.5" />
+                Save Entity Information
+              </Button>
               {saveSuccess && (
-                <span className="text-xs font-semibold text-emerald-500 flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                   <CheckCircle2 className="size-4" />
                   <span>Entity Data Updated</span>
                 </span>
@@ -596,40 +842,42 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
           {/* Create Redirect Card */}
           <form
             onSubmit={handleCreateRedirect}
-            className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 p-5 shadow-xs space-y-4"
+            className="rounded-2xl border border-default bg-surface p-5 shadow-xs space-y-4"
           >
-            <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+            <div className="flex items-center gap-2 pb-2 border-b border-default">
               <Plus className="size-4 text-primary" />
-              <span>Add Permanent (301) / Temporary (302) URL Redirect</span>
-            </h3>
+              <h3 className="text-sm font-bold text-default">
+                Add Permanent (301) / Temporary (302) URL Redirect
+              </h3>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 text-xs">
-              <div className="sm:col-span-4">
-                <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">Source Path (Old URL)</label>
+              <div className="sm:col-span-4 space-y-1">
+                <label className="font-semibold text-default block">Source Path (Old URL)</label>
                 <input
                   type="text"
                   value={newSource}
                   onChange={(e) => setNewSource(e.target.value)}
                   placeholder="/old-product-slug"
                   required
-                  className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2 font-mono text-zinc-900 dark:text-white"
+                  className="w-full rounded-xl border border-default bg-surface-sunken/40 px-3 py-2 font-mono text-default focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 transition-all"
                 />
               </div>
 
-              <div className="sm:col-span-4">
-                <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">Target Path (New URL)</label>
+              <div className="sm:col-span-4 space-y-1">
+                <label className="font-semibold text-default block">Target Path (New URL)</label>
                 <input
                   type="text"
                   value={newTarget}
                   onChange={(e) => setNewTarget(e.target.value)}
                   placeholder="/products/new-canonical-slug"
                   required
-                  className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2 font-mono text-zinc-900 dark:text-white"
+                  className="w-full rounded-xl border border-default bg-surface-sunken/40 px-3 py-2 font-mono text-default focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 transition-all"
                 />
               </div>
 
-              <div className="sm:col-span-2">
-                <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">Status Code</label>
+              <div className="sm:col-span-2 space-y-1">
+                <label className="font-semibold text-default block">Status Code</label>
                 <SelectDropdown
                   options={[
                     { value: 301, label: '301 Permanent' },
@@ -644,63 +892,66 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
               </div>
 
               <div className="sm:col-span-2 flex flex-col justify-end">
-                <button
+                <Button
                   type="submit"
-                  disabled={creatingRedirect}
-                  className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-white hover:bg-primary/90 transition-all shadow-xs cursor-pointer"
+                  variant="primary"
+                  size="md"
+                  loading={creatingRedirect}
+                  className="w-full justify-center"
                 >
-                  <Plus className="size-3.5" />
-                  <span>{creatingRedirect ? 'Saving...' : 'Add'}</span>
-                </button>
+                  <Plus className="size-3.5 mr-1" />
+                  <span>Add Rule</span>
+                </Button>
               </div>
             </div>
           </form>
 
           {/* Existing Redirects Table */}
-          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 overflow-hidden shadow-xs">
-            <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-              <h3 className="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-wider">
+          <div className="rounded-2xl border border-default bg-surface overflow-hidden shadow-xs">
+            <div className="p-4 border-b border-default flex items-center justify-between">
+              <h3 className="text-xs font-bold text-default uppercase tracking-wider">
                 Configured URL Redirects ({redirects.length})
               </h3>
             </div>
 
             {redirects.length === 0 ? (
-              <div className="p-8 text-center text-xs text-zinc-500">
+              <div className="p-8 text-center text-xs text-muted">
                 No custom URL redirects created yet.
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50 text-zinc-500">
+                  <thead className="border-b border-default bg-surface-sunken text-muted">
                     <tr>
-                      <th className="py-3 px-4">Source Path</th>
-                      <th className="py-3 px-4">Target Path</th>
-                      <th className="py-3 px-4">Status</th>
-                      <th className="py-3 px-4">Hits Count</th>
-                      <th className="py-3 px-4 text-right">Actions</th>
+                      <th className="py-3 px-4 font-semibold">Source Path</th>
+                      <th className="py-3 px-4 font-semibold">Target Path</th>
+                      <th className="py-3 px-4 font-semibold">Status</th>
+                      <th className="py-3 px-4 font-semibold">Hits Count</th>
+                      <th className="py-3 px-4 text-right font-semibold">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                  <tbody className="divide-y divide-default">
                     {redirects.map((r) => (
-                      <tr key={r.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40">
-                        <td className="py-3 px-4 font-mono font-medium text-zinc-900 dark:text-zinc-200">
+                      <tr key={r.id} className="hover:bg-surface-sunken/40 transition-colors">
+                        <td className="py-3 px-4 font-mono font-medium text-default">
                           {r.source_path}
                         </td>
-                        <td className="py-3 px-4 font-mono text-emerald-600 dark:text-emerald-400">
+                        <td className="py-3 px-4 font-mono text-emerald-600 dark:text-emerald-400 font-medium">
                           {r.target_path}
                         </td>
                         <td className="py-3 px-4">
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-surface-sunken border border-default text-default">
                             {r.status_code}
                           </span>
                         </td>
-                        <td className="py-3 px-4 font-mono text-zinc-500">{r.hits_count}</td>
+                        <td className="py-3 px-4 font-mono text-muted">{r.hits_count}</td>
                         <td className="py-3 px-4 text-right">
                           <button
                             type="button"
                             onClick={() => handleDeleteRedirect(r.id)}
-                            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg text-danger hover:bg-danger/10 transition-colors cursor-pointer"
                             title="Delete redirect"
+                            aria-label={`Delete redirect ${r.source_path}`}
                           >
                             <Trash2 className="size-3.5" />
                           </button>
@@ -717,59 +968,57 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
 
       {/* Tab 4: 404 Logs */}
       {activeTab === '404s' && (
-        <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 overflow-hidden shadow-xs">
-          <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-            <div>
-              <h3 className="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-wider">
-                Unresolved 404 Page Not Found Logs ({notFoundLogs.length})
-              </h3>
-              <p className="text-[11px] text-zinc-500">
-                Instantly convert broken links into 301 redirects to preserve link equity and crawler trust.
-              </p>
-            </div>
+        <div className="rounded-2xl border border-default bg-surface overflow-hidden shadow-xs">
+          <div className="p-4 border-b border-default">
+            <h3 className="text-xs font-bold text-default uppercase tracking-wider">
+              Unresolved 404 Page Not Found Logs ({notFoundLogs.length})
+            </h3>
+            <p className="text-[11px] text-muted mt-0.5">
+              Instantly convert broken links into 301 redirects to preserve link equity and search crawler authority.
+            </p>
           </div>
 
           {notFoundLogs.length === 0 ? (
-            <div className="p-8 text-center text-xs text-zinc-500">
+            <div className="p-8 text-center text-xs text-muted">
               No recent 404 not found errors logged. Storefront links are healthy!
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50 text-zinc-500">
+                <thead className="border-b border-default bg-surface-sunken text-muted">
                   <tr>
-                    <th className="py-3 px-4">Missing Path</th>
-                    <th className="py-3 px-4">Hits Count</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4 text-right">Auto-Fix Action</th>
+                    <th className="py-3 px-4 font-semibold">Missing Path</th>
+                    <th className="py-3 px-4 font-semibold">Hits Count</th>
+                    <th className="py-3 px-4 font-semibold">Status</th>
+                    <th className="py-3 px-4 text-right font-semibold">Auto-Fix Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                <tbody className="divide-y divide-default">
                   {notFoundLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40">
-                      <td className="py-3 px-4 font-mono font-bold text-rose-500">{log.path}</td>
-                      <td className="py-3 px-4 font-mono text-zinc-500">{log.hits_count}</td>
+                    <tr key={log.id} className="hover:bg-surface-sunken/40 transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-danger">{log.path}</td>
+                      <td className="py-3 px-4 font-mono text-muted">{log.hits_count}</td>
                       <td className="py-3 px-4">
                         {log.resolved ? (
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500">
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                             Resolved
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-500">
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                             Broken Link
                           </span>
                         )}
                       </td>
                       <td className="py-3 px-4 text-right">
                         {!log.resolved && (
-                          <button
-                            type="button"
+                          <Button
+                            size="sm"
+                            variant="secondary"
                             onClick={() => handleFixNotFound(log)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold rounded-lg bg-primary text-white hover:bg-primary/90 transition-all cursor-pointer"
                           >
-                            <ArrowRight className="size-3" />
+                            <ArrowRight className="size-3 mr-1" />
                             <span>Create 301 Redirect</span>
-                          </button>
+                          </Button>
                         )}
                       </td>
                     </tr>
@@ -785,18 +1034,20 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
       {activeTab === 'indexnow' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* IndexNow Ping */}
-          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 p-6 shadow-xs space-y-4">
-            <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+          <div className="rounded-2xl border border-default bg-surface p-6 shadow-xs space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-default">
               <Radio className="size-4 text-primary" />
-              <span>IndexNow Instant Search Engine Publishing</span>
-            </h3>
-            <p className="text-xs text-zinc-500 leading-relaxed">
+              <h3 className="text-sm font-bold text-default">
+                IndexNow Instant Search Engine Publishing
+              </h3>
+            </div>
+            <p className="text-xs text-muted leading-relaxed">
               Instantly notify Microsoft Bing, Yandex, Seznam, and participating AI search engines whenever you add new products or update catalog content.
             </p>
 
             <div className="space-y-3 text-xs">
-              <div>
-                <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+              <div className="space-y-1">
+                <label className="font-semibold text-default block">
                   Specific URLs to Broadcast (One per line, optional)
                 </label>
                 <textarea
@@ -804,22 +1055,23 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
                   value={pingUrls}
                   onChange={(e) => setPingUrls(e.target.value)}
                   placeholder="https://slicemart.tech/products/new-item-123&#10;https://slicemart.tech/products/new-item-456"
-                  className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 p-3 font-mono text-zinc-900 dark:text-white"
+                  className="w-full rounded-xl border border-default bg-surface-sunken/40 p-3 font-mono text-default focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 transition-all"
                 />
               </div>
 
-              <button
+              <Button
                 type="button"
+                variant="primary"
+                size="md"
                 onClick={handleIndexNowPing}
-                disabled={pinging}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-5 py-2.5 text-xs font-bold text-white transition-all shadow-xs cursor-pointer"
+                loading={pinging}
               >
-                <Send className="size-3.5" />
-                <span>{pinging ? 'Broadcasting to IndexNow...' : 'Broadcast to IndexNow Network'}</span>
-              </button>
+                <Send className="size-3.5 mr-1.5" />
+                <span>Broadcast to IndexNow Network</span>
+              </Button>
 
               {pingStatus && (
-                <div className="p-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs font-medium text-zinc-800 dark:text-zinc-200">
+                <div className="p-3 rounded-xl bg-surface-sunken border border-default text-xs font-medium text-default">
                   {pingStatus}
                 </div>
               )}
@@ -827,12 +1079,14 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
           </div>
 
           {/* Sitemaps Direct Links */}
-          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 p-6 shadow-xs space-y-4">
-            <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+          <div className="rounded-2xl border border-default bg-surface p-6 shadow-xs space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-default">
               <FileCode className="size-4 text-primary" />
-              <span>Automated XML Sitemaps</span>
-            </h3>
-            <p className="text-xs text-zinc-500 leading-relaxed">
+              <h3 className="text-sm font-bold text-default">
+                Automated XML Sitemaps
+              </h3>
+            </div>
+            <p className="text-xs text-muted leading-relaxed">
               Standard XML sitemaps partitioned for optimal crawl performance with Google Search Console and Bing Webmaster Tools.
             </p>
 
@@ -844,10 +1098,10 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
                 { title: 'CMS Pages Sitemap', path: '/sitemap-pages.xml', desc: 'Custom storefront and legal pages' },
                 { title: 'Robots.txt Directive', path: '/robots.txt', desc: 'Dynamic crawler whitelist & sitemap link' },
               ].map((s, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800">
+                <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-surface-sunken/50 border border-default">
                   <div>
-                    <span className="font-bold text-zinc-900 dark:text-white block">{s.title}</span>
-                    <span className="text-[11px] font-mono text-zinc-400">{s.path}</span>
+                    <span className="font-bold text-default block">{s.title}</span>
+                    <span className="text-[11px] font-mono text-muted">{s.path}</span>
                   </div>
                   <a
                     href={s.path}
@@ -866,48 +1120,98 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
       )}
 
       {/* Tab 6: Audit */}
-      {activeTab === 'audit' && auditResult && (
+      {activeTab === 'audit' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
-              <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 p-6 shadow-xs space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
-                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+              <div className="rounded-2xl border border-default bg-surface p-6 shadow-xs space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-default flex-wrap gap-2">
+                  <h3 className="text-sm font-bold text-default flex items-center gap-2">
                     <ShieldCheck className="size-4 text-emerald-500" />
                     <span>Live Discoverability Audit Report</span>
                   </h3>
-                  <span className="text-xs font-mono font-bold text-emerald-500">
-                    Health Score: {auditResult.score}/100
-                  </span>
+                  <div className="flex items-center gap-3">
+                    {auditResult && (
+                      <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        Score: {auditResult.score}/100 {auditResult.grade ? `(${auditResult.grade})` : ''}
+                      </span>
+                    )}
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const res = await api.get<{ data: SeoAuditResult }>('/storefront/seo/audit');
+                          setAuditResult(res.data.data);
+                          notify.success('Audit report updated');
+                        } catch (err: unknown) {
+                          const msg = err instanceof Error ? err.message : 'Failed to refresh audit';
+                          notify.error('Failed to run audit', { description: msg });
+                        }
+                      }}
+                    >
+                      <RotateCcw className="size-3 mr-1" />
+                      <span>Re-run Audit</span>
+                    </Button>
+                  </div>
                 </div>
 
-                <div className="space-y-3">
-                  {auditResult.checks?.map((check: AuditCheck, idx: number) => (
-                    <div
-                      key={idx}
-                      className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 flex items-start gap-3 text-xs"
-                    >
-                      {check.passed ? (
-                        <CheckCircle2 className="size-4 text-emerald-500 shrink-0 mt-0.5" />
-                      ) : (
-                        <AlertTriangle className="size-4 text-amber-500 shrink-0 mt-0.5" />
-                      )}
-                      <div>
-                        <span className="font-bold text-zinc-900 dark:text-white block">{check.name}</span>
-                        <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{check.message}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                {(!auditResult || ((auditResult.checklist?.length ?? 0) === 0 && (auditResult.checks?.length ?? 0) === 0)) ? (
+                  <div className="p-8 text-center text-xs text-muted">
+                    No audit records loaded yet. Click "Re-run Audit" above to run an instant analysis.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {(auditResult.checklist || auditResult.checks || []).map((check: AuditCheck, idx: number) => {
+                      const title = check.title || check.name || 'Discoverability Directive';
+                      const details = check.details || check.message || '';
+                      return (
+                        <div
+                          key={check.key || idx}
+                          className="p-3.5 rounded-xl bg-surface-sunken/50 border border-default flex items-start gap-3 text-xs"
+                        >
+                          {check.passed ? (
+                            <CheckCircle2 className="size-4 text-emerald-500 shrink-0 mt-0.5" />
+                          ) : (
+                            <AlertTriangle className="size-4 text-amber-500 shrink-0 mt-0.5" />
+                          )}
+                          <div className="space-y-0.5 min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-default">{title}</span>
+                              {check.category && (
+                                <span className="text-[10px] text-muted bg-surface border border-default px-1.5 py-0.5 rounded font-medium">
+                                  {check.category}
+                                </span>
+                              )}
+                              {check.importance && (
+                                <span
+                                  className={cn(
+                                    'text-[10px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wider',
+                                    check.importance === 'high'
+                                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                                      : 'bg-surface border border-default text-muted'
+                                  )}
+                                >
+                                  {check.importance}
+                                </span>
+                              )}
+                            </div>
+                            {details && <p className="text-[11px] text-muted leading-relaxed">{details}</p>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="space-y-4">
-              <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 p-5 shadow-xs space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-900 dark:text-white">
+              <div className="rounded-2xl border border-default bg-surface p-5 shadow-xs space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-default">
                   Discoverability Best Practices
                 </h4>
-                <ul className="space-y-2 text-xs text-zinc-600 dark:text-zinc-400 list-disc list-inside">
+                <ul className="space-y-2 text-xs text-muted list-disc list-inside leading-relaxed">
                   <li>Configure NAP street address and telephone to trigger rich local map packs.</li>
                   <li>Ensure all product images include descriptive alt attributes.</li>
                   <li>Keep title lengths under 60 characters to prevent SERP truncation.</li>

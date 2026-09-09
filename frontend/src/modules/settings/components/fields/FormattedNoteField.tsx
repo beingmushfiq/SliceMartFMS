@@ -7,7 +7,7 @@ interface FormattedNoteFieldProps {
   settingKey: string;
   value: unknown;
   onChange: (val: string) => void;
-  description?: string;
+  description?: string | undefined;
   rows?: number;
 }
 

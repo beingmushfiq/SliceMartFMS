@@ -22,13 +22,35 @@ import {
   Cpu,
 } from 'lucide-react';
 
+export type SettingPreviewType =
+  | 'identity'
+  | 'facilities_contacts'
+  | 'branding'
+  | 'currency'
+  | 'prefixes'
+  | 'payment_gateways'
+  | 'messaging'
+  | 'courier_apis'
+  | 'delivery'
+  | 'storefront'
+  | 'production'
+  | 'inventory'
+  | 'procurement'
+  | 'commercial'
+  | 'pos_receipt'
+  | 'qc_standards'
+  | 'payroll'
+  | 'finance'
+  | 'security'
+  | 'reports';
+
 export interface SubgroupDefinition {
   id: string;
   title: string;
   description?: string;
   icon: React.ElementType;
   keys: string[];
-  previewType?: 'branding' | 'currency' | 'prefixes' | 'payment_gateways' | 'courier_apis';
+  previewType?: SettingPreviewType;
   testTrigger?: 'payment' | 'steadfast' | 'pathao' | 'redx';
 }
 
@@ -39,6 +61,7 @@ export const SETTINGS_SUBGROUPS: Record<string, SubgroupDefinition[]> = {
       title: 'Company Identity & Legal Registration',
       description: 'Official corporate registration numbers, legal entity name, and statutory regulatory licenses.',
       icon: Building2,
+      previewType: 'identity',
       keys: [
         'company_legal_name',
         'trade_license_no',
@@ -53,6 +76,7 @@ export const SETTINGS_SUBGROUPS: Record<string, SubgroupDefinition[]> = {
       title: 'Corporate Headquarters, Plant & Direct Lines',
       description: 'Official registered address, physical manufacturing facility, 24/7 operations hotline, and support email.',
       icon: Factory,
+      previewType: 'facilities_contacts',
       keys: [
         'registered_address',
         'factory_address',
@@ -127,6 +151,7 @@ export const SETTINGS_SUBGROUPS: Record<string, SubgroupDefinition[]> = {
       title: 'SMS Gateways & WhatsApp Cloud Messaging',
       description: 'Transactional SMS notification gateways (Greenweb, Twilio) and official Meta WhatsApp Cloud API.',
       icon: Bell,
+      previewType: 'messaging',
       keys: [
         'sms_provider',
         'sms_api_key',
@@ -150,6 +175,7 @@ export const SETTINGS_SUBGROUPS: Record<string, SubgroupDefinition[]> = {
       title: 'Logistics Dispatch Policy & Cash on Delivery',
       description: 'Automated consignment creation rules and default carrier selection for shipping orders.',
       icon: Truck,
+      previewType: 'delivery',
       keys: [
         'default_courier_provider',
         'auto_book_courier_on_order_approval',
@@ -188,6 +214,7 @@ export const SETTINGS_SUBGROUPS: Record<string, SubgroupDefinition[]> = {
       title: 'Storefront Availability & Checkout Rules',
       description: 'Public visibility, guest checkout permission, payment modes, and basket minimums.',
       icon: ShoppingBag,
+      previewType: 'storefront',
       keys: [
         'storefront_enabled',
         'guest_checkout_allowed',
@@ -229,6 +256,7 @@ export const SETTINGS_SUBGROUPS: Record<string, SubgroupDefinition[]> = {
       title: 'Work Order & Batch Scheduling Policy',
       description: 'Industrial batch sequence policies, material allocation logic, and BOM release triggers.',
       icon: Factory,
+      previewType: 'production',
       keys: [
         'scheduling_mode',
         'material_allocation_policy',
@@ -255,6 +283,7 @@ export const SETTINGS_SUBGROUPS: Record<string, SubgroupDefinition[]> = {
       title: 'Inventory Valuation & Reorder Points',
       description: 'Cost accounting method (FIFO/AVCO), safety stock alert thresholds, and negative dispatch rules.',
       icon: Package,
+      previewType: 'inventory',
       keys: [
         'valuation_method',
         'low_stock_threshold_default',
@@ -280,6 +309,7 @@ export const SETTINGS_SUBGROUPS: Record<string, SubgroupDefinition[]> = {
       title: 'Purchase Order Approval & Replenishment',
       description: 'Executive PO signature thresholds, automated low-stock reorder generation, and 3-way matching.',
       icon: ShoppingCart,
+      previewType: 'procurement',
       keys: [
         'po_approval_threshold_amount',
         'auto_generate_po_on_reorder_level',
@@ -296,6 +326,7 @@ export const SETTINGS_SUBGROUPS: Record<string, SubgroupDefinition[]> = {
       title: 'Commercial Terms & Credit Limits',
       description: 'Payment terms, discount caps, overdue grace periods, and credit limit breach actions.',
       icon: BadgePercent,
+      previewType: 'commercial',
       keys: [
         'default_payment_terms',
         'credit_limit_action',
@@ -334,6 +365,7 @@ export const SETTINGS_SUBGROUPS: Record<string, SubgroupDefinition[]> = {
       title: 'Thermal Receipt Printing & Notes',
       description: 'Thermal receipt paper width (80mm/58mm), header greetings, and exchange policy footers.',
       icon: FileSpreadsheet,
+      previewType: 'pos_receipt',
       keys: [
         'receipt_printer_template',
         'receipt_header_note',
@@ -359,6 +391,7 @@ export const SETTINGS_SUBGROUPS: Record<string, SubgroupDefinition[]> = {
       title: 'Inspection Tolerances & Sampling Standard',
       description: 'AQL sampling standard, batch sampling rates, critical defect rules, and rework signoff policies.',
       icon: CheckSquare,
+      previewType: 'qc_standards',
       keys: [
         'sampling_aql_standard',
         'sampling_percentage',
@@ -375,6 +408,7 @@ export const SETTINGS_SUBGROUPS: Record<string, SubgroupDefinition[]> = {
       title: 'Working Hours & Shift Attendance',
       description: 'Standard working schedule, daily hours, overtime multiplier, and attendance grace windows.',
       icon: Users,
+      previewType: 'payroll',
       keys: [
         'standard_working_days_per_week',
         'daily_standard_work_hours',
@@ -416,6 +450,7 @@ export const SETTINGS_SUBGROUPS: Record<string, SubgroupDefinition[]> = {
       title: 'Taxation & Fiscal Period Governance',
       description: 'Default VAT/tax percentages, auto-journal voucher postings, historical depreciation lock, and rounding accounts.',
       icon: Landmark,
+      previewType: 'finance',
       keys: [
         'default_vat_rate_percent',
         'auto_post_gl_vouchers',
@@ -449,6 +484,7 @@ export const SETTINGS_SUBGROUPS: Record<string, SubgroupDefinition[]> = {
       title: 'Session Inactivity & Access Hardening',
       description: 'Idle timeout windows, admin 2FA enforcement, lockout thresholds, password complexity, and maintenance mode.',
       icon: ShieldCheck,
+      previewType: 'security',
       keys: [
         'session_timeout_minutes',
         'password_min_length',
@@ -468,6 +504,7 @@ export const SETTINGS_SUBGROUPS: Record<string, SubgroupDefinition[]> = {
       title: 'Report Layouts & Automated Exports',
       description: 'Default document export format (PDF/Excel), page sizes, orientations, letterhead banner, and timestamp footer.',
       icon: FileSpreadsheet,
+      previewType: 'reports',
       keys: [
         'default_export_format',
         'default_paper_size',

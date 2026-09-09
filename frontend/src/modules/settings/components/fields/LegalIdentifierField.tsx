@@ -9,7 +9,6 @@ import {
   FileBadge,
   Copy,
   Check,
-  CheckCircle2,
 } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
 
@@ -18,7 +17,7 @@ interface LegalIdentifierFieldProps {
   settingKey: string;
   value: unknown;
   onChange: (val: string) => void;
-  description?: string;
+  description?: string | undefined;
 }
 
 const FIELD_CONFIG: Record<
@@ -34,37 +33,37 @@ const FIELD_CONFIG: Record<
     icon: Building2,
     authorityTag: 'Primary Legal Entity',
     placeholder: 'e.g. SliceMart Industries Ltd.',
-    contextHint: 'Appears on commercial invoices, challans, and customer receipts.',
+    contextHint: 'Official name printed on commercial invoices, delivery challans, and statutory tax filings.',
   },
   trade_license_no: {
     icon: ShieldCheck,
-    authorityTag: 'City Corporation Registry',
+    authorityTag: 'City Corporation Permit',
     placeholder: 'e.g. TRAD/DNCC/019283/2024',
-    contextHint: 'Municipal trade license permit authorized for industrial operations.',
+    contextHint: 'Municipal trade license permit authorizing commercial and industrial enterprise operations.',
   },
   tax_identification_number: {
     icon: FileCheck2,
-    authorityTag: 'NBR VAT 6.3 Validated',
+    authorityTag: 'NBR VAT 6.3 Registered',
     placeholder: 'e.g. BIN-99210029381',
-    contextHint: 'National Board of Revenue 13-digit Business Identification Number.',
+    contextHint: 'National Board of Revenue 13-digit Business Identification Number (BIN) / VAT registration.',
   },
   rjsc_registration_no: {
     icon: Landmark,
-    authorityTag: 'Govt. Joint Stock Reg.',
+    authorityTag: 'RJSC Incorporation',
     placeholder: 'e.g. C-184920/2023',
-    contextHint: 'Registrar of Joint Stock Companies and Firms incorporation number.',
+    contextHint: 'Registrar of Joint Stock Companies & Firms official entity incorporation number.',
   },
   factory_license_no: {
     icon: Factory,
-    authorityTag: 'DIFE Safety Certified',
+    authorityTag: 'DIFE Safety Compliance',
     placeholder: 'e.g. DIFE/DHK/IND-04829',
-    contextHint: 'Department of Inspection for Factories & Establishments compliance id.',
+    contextHint: 'Department of Inspection for Factories & Establishments manufacturing license number.',
   },
   bin_branch_code: {
     icon: Hash,
     authorityTag: 'Tax Jurisdiction Unit',
     placeholder: 'e.g. 0001 (Tejgaon Central Plant)',
-    contextHint: 'NBR registered 4-digit manufacturing plant or warehouse branch code.',
+    contextHint: 'Four-digit NBR branch code designating this specific manufacturing plant or warehouse unit.',
   },
 };
 
@@ -79,12 +78,13 @@ export const LegalIdentifierField: React.FC<LegalIdentifierFieldProps> = ({
   const strVal = typeof value === 'string' ? value : String(value ?? '');
   const config = FIELD_CONFIG[settingKey] || {
     icon: FileBadge,
-    authorityTag: 'Official Registration',
+    authorityTag: 'Statutory Registry',
     placeholder: 'Enter registration identifier...',
-    contextHint: 'Official enterprise registration parameter.',
+    contextHint: 'Official enterprise statutory parameter.',
   };
 
   const Icon = config.icon;
+  const isNameField = settingKey === 'company_legal_name';
 
   const handleCopy = () => {
     if (!strVal) return;
@@ -94,62 +94,59 @@ export const LegalIdentifierField: React.FC<LegalIdentifierFieldProps> = ({
   };
 
   return (
-    <div className="p-4 rounded-xl border border-default bg-surface space-y-3 hover:border-primary/30 transition-all">
-      {/* Top Meta Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-2.5 min-w-0">
-          <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0 mt-0.5">
-            <Icon className="size-4" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold text-default">{label}</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-3xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
-                {config.authorityTag}
-              </span>
-            </div>
-            <p className="text-2xs text-muted mt-0.5 line-clamp-1">
-              {description || config.contextHint}
-            </p>
-          </div>
-        </div>
-
-        {/* Verification Status Indicator */}
-        {strVal ? (
-          <span className="inline-flex items-center gap-1 text-3xs font-semibold text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full shrink-0">
-            <CheckCircle2 className="size-3" /> Active
-          </span>
-        ) : (
-          <span className="inline-flex items-center text-3xs font-semibold text-amber-600 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full shrink-0">
-            Not Set
+    <div className="group rounded-xl border border-default/80 bg-surface p-4 transition-all duration-200 hover:border-default hover:shadow-2xs space-y-2.5">
+      {/* Field Label & Authority Tag */}
+      <div className="flex items-center justify-between gap-2">
+        <label
+          htmlFor={`field-${settingKey}`}
+          className="flex items-center gap-2 text-xs font-semibold text-default cursor-pointer"
+        >
+          <Icon className="size-3.5 text-muted group-hover:text-primary transition-colors shrink-0" />
+          <span>{label}</span>
+        </label>
+        {config.authorityTag && (
+          <span className="text-[10px] font-medium text-muted bg-surface-sunken border border-default/60 px-2 py-0.5 rounded-md select-none shrink-0">
+            {config.authorityTag}
           </span>
         )}
       </div>
 
-      {/* Interactive Input with Copy Action */}
+      {/* Input Field with Sleek Inline Copy */}
       <div className="relative flex items-center">
         <input
+          id={`field-${settingKey}`}
           type="text"
           value={strVal}
           onChange={(e) => onChange(e.target.value)}
           placeholder={config.placeholder}
-          className="w-full bg-surface-sunken border border-default rounded-xl pl-3 pr-10 py-2.5 text-xs font-mono font-bold text-default placeholder:text-muted/60 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-        />
-        <button
-          type="button"
-          onClick={handleCopy}
-          disabled={!strVal}
-          title="Copy Identifier"
           className={cn(
-            'absolute right-2.5 p-1.5 rounded-lg transition-colors cursor-pointer',
-            copied
-              ? 'text-emerald-500 bg-emerald-500/10'
-              : 'text-muted hover:text-default hover:bg-surface border border-transparent hover:border-default'
+            'w-full rounded-lg border border-default bg-surface-sunken/40 py-2 text-xs text-default placeholder:text-muted/50 transition-all focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15',
+            isNameField
+              ? 'font-medium text-sm px-3'
+              : 'font-mono font-medium px-3 pr-9 tracking-tight'
           )}
-        >
-          {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-        </button>
+        />
+        {!isNameField && strVal && (
+          <button
+            type="button"
+            onClick={handleCopy}
+            title="Copy identifier"
+            className="absolute right-2 p-1 rounded-md text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+            aria-label={`Copy ${label}`}
+          >
+            {copied ? (
+              <Check className="size-3.5 text-emerald-500" />
+            ) : (
+              <Copy className="size-3.5" />
+            )}
+          </button>
+        )}
       </div>
+
+      {/* Un-truncated Helpful Context Note */}
+      <p className="text-[11px] text-muted leading-relaxed">
+        {description || config.contextHint}
+      </p>
     </div>
   );
 };

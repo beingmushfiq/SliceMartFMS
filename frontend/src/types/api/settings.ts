@@ -13,6 +13,7 @@ export interface SettingFieldSchema {
   default: SettingValue;
   sensitive: boolean;
   options?: Array<{ label: string; value: SettingValue }>;
+  description?: string;
 }
 
 export interface SettingGroupSchema {

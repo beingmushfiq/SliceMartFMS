@@ -9,6 +9,10 @@ import {
   SlidersHorizontal,
   X,
   Warehouse,
+  Compass,
+  Zap,
+  CheckCircle2,
+  ArrowRight,
 } from 'lucide-react';
 import { StockLedgerSection } from './sections/StockLedgerSection';
 import { StockTransfersSection } from './sections/StockTransfersSection';
@@ -16,19 +20,21 @@ import { StockAdjustmentsSection } from './sections/StockAdjustmentsSection';
 import { StockCountsSection } from './sections/StockCountsSection';
 import { StockThresholdsSection } from './sections/StockThresholdsSection';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
+import { Modal } from '../../components/ui/Modal';
+import { Button } from '../../components/ui/Button';
+import { cn } from '../../lib/utils';
 
 export type InventoryTab = 'ledger' | 'transfers' | 'adjustments' | 'counts' | 'thresholds';
+export type InventoryCategory = 'visibility' | 'operations';
 
 const VALID_TABS: readonly InventoryTab[] = ['ledger', 'transfers', 'adjustments', 'counts', 'thresholds'];
-
-export type InventoryCategory = 'visibility' | 'operations';
 
 interface CategoryConfig {
   id: InventoryCategory;
   label: string;
   tagline: string;
+  shortcut: string;
   icon: typeof Boxes;
-  tabs: InventoryTab[];
   defaultTab: InventoryTab;
 }
 
@@ -36,17 +42,17 @@ const CATEGORIES: CategoryConfig[] = [
   {
     id: 'visibility',
     label: 'Stock Visibility & Controls',
-    tagline: 'Ledger balances, lot audit trails & replenishment thresholds',
+    tagline: 'Multi-warehouse valuation, live balances, lot audit trails & safety stock reorder buffers',
+    shortcut: '1',
     icon: Boxes,
-    tabs: ['ledger', 'thresholds'],
     defaultTab: 'ledger',
   },
   {
     id: 'operations',
     label: 'Warehouse Movements & Audits',
-    tagline: 'Inter-warehouse transfers, waste adjustments & cycle counts',
+    tagline: 'Inter-warehouse transit logistics, wastage/damage adjustments & physical cycle count audits',
+    shortcut: '2',
     icon: Warehouse,
-    tabs: ['transfers', 'adjustments', 'counts'],
     defaultTab: 'transfers',
   },
 ];
@@ -59,6 +65,7 @@ interface TabConfig {
   badge?: string;
   icon: typeof Boxes;
   description: string;
+  highlights: string[];
 }
 
 const tabs: TabConfig[] = [
@@ -70,7 +77,8 @@ const tabs: TabConfig[] = [
     badge: 'Live Stock',
     icon: Boxes,
     description:
-      'Real-time multi-warehouse inventory levels and append-only stock movement audit ledger',
+      'Real-time multi-warehouse inventory levels, SKU batch allocations and append-only stock movement audit ledger',
+    highlights: ['Multi-Warehouse Balances', 'Lot & Batch Traceability', 'Append-Only Ledger Trail'],
   },
   {
     id: 'thresholds',
@@ -80,7 +88,8 @@ const tabs: TabConfig[] = [
     badge: 'Safety Stock',
     icon: AlertTriangle,
     description:
-      'Warehouse reorder thresholds, safety stock buffers and real-time replenishment alerts',
+      'Warehouse reorder thresholds, safety stock buffers, stockout warnings and proactive replenishment suggestions',
+    highlights: ['Reorder Point Triggers', 'Safety Stock Buffers', 'Critical Stockout Alerts'],
   },
   {
     id: 'transfers',
@@ -90,7 +99,8 @@ const tabs: TabConfig[] = [
     badge: 'Transit',
     icon: ArrowRightLeft,
     description:
-      'Inter-warehouse logistics, transit tracking & two-step dispatch/receive verification',
+      'Inter-warehouse logistics, transit tracking & two-step dispatch/receive verification across facilities',
+    highlights: ['Inter-Facility Logistics', 'In-Transit Custody', 'Two-Step Receiving Verification'],
   },
   {
     id: 'adjustments',
@@ -100,7 +110,8 @@ const tabs: TabConfig[] = [
     badge: 'Discrepancy',
     icon: Scale,
     description:
-      'Wastage, damage write-offs, gain/loss corrections with mandatory reason codes & approval gate',
+      'Wastage, damage write-offs, gain/loss corrections with mandatory reason codes and manager approval gate',
+    highlights: ['Damage & Loss Write-Offs', 'Mandatory Reason Codes', 'Two-Tier Approval Gate'],
   },
   {
     id: 'counts',
@@ -110,30 +121,44 @@ const tabs: TabConfig[] = [
     badge: 'Audit & Rec',
     icon: ClipboardCheck,
     description:
-      'Periodic cycle & full physical audits with snapshotting and automated variance reconciliation',
+      'Periodic cycle and full physical audits with snapshotting, blind counts and automated variance reconciliation',
+    highlights: ['Freeze Snapshot Audits', 'Blind Counting Sheets', 'Automated Variance Reconciliation'],
   },
 ];
 
 export default function InventoryWorkspace() {
   const [activeTab, setActiveTab] = useWorkspaceTab<InventoryTab>('ledger', VALID_TABS);
   const [quickJumpOpen, setQuickJumpOpen] = useState(false);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const quickJumpRef = useRef<HTMLDivElement>(null);
 
-  const activeCategory = CATEGORIES.find((cat) => cat.tabs.includes(activeTab))?.id ?? 'visibility';
   const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[0]!;
+  const activeCategory = currentTab.category;
 
-  const lastActivePerCategory = useRef<Record<InventoryCategory, InventoryTab>>({
-    visibility: 'ledger',
-    operations: 'transfers',
-  });
-
+  // Global Keyboard Shortcuts (1, 2 to switch domain pillars)
   useEffect(() => {
-    const cat = CATEGORIES.find((c) => c.tabs.includes(activeTab))?.id;
-    if (cat) {
-      lastActivePerCategory.current[cat] = activeTab;
-    }
-  }, [activeTab]);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+
+      if (e.key === '1') {
+        e.preventDefault();
+        setActiveTab('ledger');
+      } else if (e.key === '2') {
+        e.preventDefault();
+        setActiveTab('transfers');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setActiveTab]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -146,17 +171,6 @@ export default function InventoryWorkspace() {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [quickJumpOpen]);
-
-  const handleSelectCategory = (categoryId: InventoryCategory) => {
-    if (categoryId === activeCategory) return;
-    const targetTab =
-      lastActivePerCategory.current[categoryId] ??
-      CATEGORIES.find((cat) => cat.id === categoryId)?.defaultTab ??
-      'ledger';
-    setActiveTab(targetTab);
-  };
-
-  const currentCategoryTabs = tabs.filter((t) => t.category === activeCategory);
 
   const filteredTabs = searchQuery.trim()
     ? tabs.filter(
@@ -174,7 +188,7 @@ export default function InventoryWorkspace() {
         <div>
           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-primary bg-primary-subtle px-2.5 py-0.5 rounded-full border border-primary/20">
-              Inventory & Warehouse
+              Inventory & Warehouse Management
             </span>
             <span className="text-muted/50 text-xs">/</span>
             <span className="text-[11px] font-semibold text-default">{currentTab.label}</span>
@@ -191,120 +205,35 @@ export default function InventoryWorkspace() {
             {currentTab.description}
           </p>
         </div>
-      </div>
 
-      {/* Two-Tier Inventory Navigation */}
-      <div className="space-y-3">
-        {/* Tier 1: Category Pillars */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          {CATEGORIES.map((cat) => {
-            const Icon = cat.icon;
-            const isCatActive = activeCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => handleSelectCategory(cat.id)}
-                className={`relative flex items-start gap-3.5 p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer ${
-                  isCatActive
-                    ? 'bg-surface border-primary/40 shadow-sm ring-1 ring-primary/20'
-                    : 'bg-surface-sunken/40 border-default hover:bg-surface hover:border-default/80 text-muted'
-                }`}
-              >
-                <div
-                  className={`size-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                    isCatActive
-                      ? 'bg-primary text-primary-fg shadow-2xs'
-                      : 'bg-surface border border-default text-muted group-hover:text-default'
-                  }`}
-                >
-                  <Icon className="size-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      className={`text-sm font-bold tracking-tight truncate ${
-                        isCatActive ? 'text-default' : 'text-default/80'
-                      }`}
-                    >
-                      {cat.label}
-                    </span>
-                    <span
-                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
-                        isCatActive
-                          ? 'bg-primary-subtle text-primary border-primary/20 font-bold'
-                          : 'bg-surface text-muted border-default'
-                      }`}
-                    >
-                      {cat.tabs.length} views
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-muted truncate mt-0.5">{cat.tagline}</p>
-                </div>
-                {isCatActive && (
-                  <div className="absolute bottom-0 left-6 right-6 h-0.5 bg-primary rounded-t-full" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Tier 2: Contextual Sub-Navigation Bar & Quick Jump Popover */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-2 bg-surface rounded-2xl border border-default shadow-2xs">
-          {/* Sub-Tabs for Active Category */}
-          <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 px-1 scrollbar-none min-w-0">
-            {currentCategoryTabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer ${
-                    isActive
-                      ? 'bg-primary text-primary-fg font-semibold shadow-xs border border-primary'
-                      : 'text-muted hover:text-default hover:bg-surface-sunken border border-transparent'
-                  }`}
-                >
-                  <Icon className={`size-3.5 ${isActive ? 'text-primary-fg' : 'text-muted'}`} />
-                  <span>{tab.label}</span>
-                  {tab.badge && (
-                    <span
-                      className={`text-[9px] px-1.5 py-0.2 rounded font-mono ${
-                        isActive
-                          ? 'bg-primary-fg/20 text-primary-fg'
-                          : 'bg-surface-sunken text-muted'
-                      }`}
-                    >
-                      {tab.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+        {/* Quick External Actions & Guides */}
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setIsGuideOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl border border-primary/30 bg-primary-subtle hover:bg-primary/10 text-primary transition-all shadow-2xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            title="Open Inventory Architecture & Operations Guide"
+          >
+            <Compass className="size-3.5 text-primary" />
+            <span>Explore Capabilities</span>
+          </button>
 
           {/* Quick Jump Dropdown Popover */}
-          <div className="relative shrink-0 sm:border-l sm:border-default sm:pl-3" ref={quickJumpRef}>
+          <div className="relative shrink-0" ref={quickJumpRef}>
             <button
               type="button"
               onClick={() => {
                 setQuickJumpOpen(!quickJumpOpen);
                 setSearchQuery('');
               }}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer w-full sm:w-auto justify-between sm:justify-start ${
-                quickJumpOpen
-                  ? 'bg-surface-sunken text-default border border-default'
-                  : 'text-muted hover:text-default hover:bg-surface-sunken/60 border border-transparent'
-              }`}
+              className={cn(
+                'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border border-default bg-surface hover:bg-surface-sunken text-default transition-all shadow-2xs cursor-pointer',
+                quickJumpOpen && 'border-primary/40 bg-surface-sunken'
+              )}
               title="Jump directly to any of the 5 inventory views"
             >
-              <SlidersHorizontal className="size-3.5 text-muted" />
-              <span>All Views</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-sunken text-muted border border-default">
-                5
-              </span>
+              <SlidersHorizontal className="size-3.5 text-primary" />
+              <span>All 5 Views</span>
             </button>
 
             {quickJumpOpen && (
@@ -397,6 +326,226 @@ export default function InventoryWorkspace() {
         </div>
       </div>
 
+      {/* Primary 2 Command Pillars (with Embedded Direct Child Pills) */}
+      <div
+        role="tablist"
+        aria-label="Inventory Operational Domains"
+        className="grid grid-cols-1 md:grid-cols-2 gap-3"
+      >
+        {CATEGORIES.map((cat) => {
+          const isCatActive = activeCategory === cat.id;
+          const Icon = cat.icon;
+          const childTabs = tabs.filter((t) => t.category === cat.id);
+
+          return (
+            <div
+              key={cat.id}
+              role="tab"
+              aria-selected={isCatActive}
+              tabIndex={isCatActive ? 0 : -1}
+              onClick={() => setActiveTab(cat.defaultTab)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setActiveTab(cat.defaultTab);
+                }
+              }}
+              className={cn(
+                'group relative flex flex-col justify-between p-4.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer shadow-2xs',
+                isCatActive
+                  ? 'bg-surface border-primary shadow-md ring-2 ring-primary/10'
+                  : 'bg-surface hover:bg-surface-sunken border-default hover:border-default/80'
+              )}
+            >
+              {/* Pillar Top Header */}
+              <div className="flex items-start gap-3.5 w-full">
+                <div
+                  className={cn(
+                    'size-11 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 shadow-2xs',
+                    isCatActive
+                      ? 'bg-primary text-primary-fg shadow-sm'
+                      : 'bg-surface-sunken border border-default text-muted group-hover:text-default'
+                  )}
+                >
+                  <Icon className={cn('size-5 shrink-0', isCatActive ? 'text-primary-fg' : 'text-muted group-hover:text-default')} />
+                </div>
+
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <div className="flex items-center justify-between gap-1.5">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span
+                        className={cn(
+                          'text-sm font-bold transition-colors truncate',
+                          isCatActive ? 'text-default' : 'text-default/90 group-hover:text-default'
+                        )}
+                      >
+                        {cat.label}
+                      </span>
+                      <span className="text-[10px] font-mono text-muted/70 font-semibold px-1 py-0.2 rounded bg-surface-sunken border border-default/50 select-none">
+                        [{cat.shortcut}]
+                      </span>
+                    </div>
+
+                    <span
+                      className={cn(
+                        'text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border shrink-0',
+                        isCatActive
+                          ? 'bg-primary/10 text-primary border-primary/20'
+                          : 'bg-surface-sunken text-muted border-default'
+                      )}
+                    >
+                      {childTabs.length} {childTabs.length === 1 ? 'view' : 'views'}
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-muted line-clamp-2 leading-relaxed">
+                    {cat.tagline}
+                  </p>
+                </div>
+              </div>
+
+              {/* In-Pillar Quick Navigation Pills (100% Zero Concealed Views) */}
+              <div className="mt-4 pt-3 border-t border-default/60 flex flex-wrap items-center gap-1.5">
+                {childTabs.map((subTab) => {
+                  const isCurrent = activeTab === subTab.id;
+                  const SubIcon = subTab.icon;
+                  return (
+                    <button
+                      key={subTab.id}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveTab(subTab.id);
+                      }}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer',
+                        isCurrent
+                          ? 'bg-primary text-primary-fg font-semibold shadow-xs ring-1 ring-primary'
+                          : 'bg-surface-sunken text-muted hover:text-default hover:bg-surface border border-default/70'
+                      )}
+                      title={`Open ${subTab.label}`}
+                    >
+                      <SubIcon className={cn('size-3.5', isCurrent ? 'text-primary-fg' : 'text-muted')} />
+                      <span>{subTab.shortLabel}</span>
+                      {subTab.badge && !isCurrent && (
+                        <span className="text-[9px] font-mono text-muted/80 bg-surface px-1.5 py-0.2 rounded border border-default/60">
+                          {subTab.badge}
+                        </span>
+                      )}
+                      {isCurrent && <span className="size-1.5 rounded-full bg-white animate-pulse" />}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Active Indicator Bar */}
+              {isCatActive && (
+                <div className="absolute bottom-0 left-6 right-6 h-0.5 bg-primary rounded-t-full" />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Master Grouped Navigation Ribbon (All 5 Tabs Visible Simultaneously) */}
+      <div className="bg-surface-sunken rounded-2xl border border-default p-2 shadow-2xs">
+        <div className="flex items-center justify-between px-2 pb-1.5 mb-1 text-[11px] font-semibold text-muted border-b border-default/50">
+          <div className="flex items-center gap-2">
+            <Zap className="size-3.5 text-primary" />
+            <span>Master Inventory Ribbon (1-Click Reachability)</span>
+          </div>
+          <span className="text-[10px] font-mono text-muted/70">
+            Active: <strong className="text-default">{currentTab?.label}</strong>
+          </span>
+        </div>
+
+        <nav
+          className="flex flex-wrap items-center gap-2"
+          role="tablist"
+          aria-label="All 5 Inventory Views"
+        >
+          {/* Cluster 1: Stock Visibility & Controls */}
+          <div className="flex items-center gap-1.5 bg-surface/60 p-1 rounded-xl border border-default/40">
+            <span className="text-[10px] font-mono uppercase font-bold text-muted px-2 py-0.5 select-none">
+              Controls:
+            </span>
+            {tabs.filter((t) => t.category === 'visibility').map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  role="tab"
+                  aria-selected={isActive}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+                    isActive
+                      ? 'bg-primary text-primary-fg shadow-xs'
+                      : 'text-muted hover:text-default hover:bg-surface border border-transparent'
+                  )}
+                >
+                  <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
+                  <span>{tab.shortLabel}</span>
+                  {tab.badge && (
+                    <span
+                      className={cn(
+                        'text-[9px] px-1.5 py-0.2 rounded font-mono',
+                        isActive ? 'bg-primary-fg/20 text-primary-fg' : 'bg-surface-sunken text-muted'
+                      )}
+                    >
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="h-4 w-px bg-default/60 hidden sm:block" />
+
+          {/* Cluster 2: Warehouse Movements & Audits */}
+          <div className="flex items-center gap-1.5 bg-surface/60 p-1 rounded-xl border border-default/40 flex-wrap">
+            <span className="text-[10px] font-mono uppercase font-bold text-muted px-2 py-0.5 select-none">
+              Movements:
+            </span>
+            {tabs.filter((t) => t.category === 'operations').map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  role="tab"
+                  aria-selected={isActive}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+                    isActive
+                      ? 'bg-primary text-primary-fg shadow-xs'
+                      : 'text-muted hover:text-default hover:bg-surface border border-transparent'
+                  )}
+                >
+                  <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
+                  <span>{tab.shortLabel}</span>
+                  {tab.badge && (
+                    <span
+                      className={cn(
+                        'text-[9px] px-1.5 py-0.2 rounded font-mono',
+                        isActive ? 'bg-primary-fg/20 text-primary-fg' : 'bg-surface-sunken text-muted'
+                      )}
+                    >
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      </div>
+
       {/* Tab Content Section */}
       <div className="pt-1">
         {activeTab === 'ledger' && <StockLedgerSection />}
@@ -405,7 +554,86 @@ export default function InventoryWorkspace() {
         {activeTab === 'adjustments' && <StockAdjustmentsSection />}
         {activeTab === 'counts' && <StockCountsSection />}
       </div>
+
+      {/* Modal: Explore Capabilities & Architecture Guide */}
+      <Modal
+        open={isGuideOpen}
+        onClose={() => setIsGuideOpen(false)}
+        title="Inventory & Warehouse Operations Architecture Guide"
+        size="xl"
+      >
+        <div className="space-y-6">
+          <div className="rounded-xl bg-primary-subtle/50 border border-primary/20 p-4">
+            <h4 className="text-sm font-bold text-primary flex items-center gap-2 mb-1">
+              <Boxes className="size-4" />
+              Unified Multi-Facility Warehouse Management
+            </h4>
+            <p className="text-xs text-muted leading-relaxed">
+              SliceMart Inventory provides double-entry physical stock integrity, append-only lot traceability,
+              two-step inter-warehouse transit logistics, and strict scrap and discrepancy reconciliation.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {tabs.map((tab) => {
+              const TabIcon = tab.icon;
+              return (
+                <div
+                  key={tab.id}
+                  className="rounded-xl border border-default bg-surface p-4 flex flex-col justify-between hover:border-primary/40 transition-colors"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                          <TabIcon className="size-4" />
+                        </div>
+                        <h5 className="text-xs font-bold text-default">{tab.label}</h5>
+                      </div>
+                      {tab.badge && (
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-surface-sunken text-muted border border-default">
+                          {tab.badge}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted leading-relaxed mb-3">{tab.description}</p>
+                    <div className="space-y-1 mb-4">
+                      {tab.highlights.map((h, idx) => (
+                        <div key={idx} className="flex items-center gap-1.5 text-[11px] text-default/80">
+                          <CheckCircle2 className="size-3 text-emerald-500 shrink-0" />
+                          <span>{h}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    variant={activeTab === tab.id ? 'primary' : 'secondary'}
+                    className="w-full text-xs justify-between cursor-pointer"
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      setIsGuideOpen(false);
+                    }}
+                  >
+                    <span>{activeTab === tab.id ? 'Current View' : `Switch to ${tab.shortLabel}`}</span>
+                    <ArrowRight className="size-3" />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="rounded-xl bg-surface-sunken p-4 border border-default flex items-center justify-between">
+            <div className="text-xs text-muted">
+              Keyboard shortcut: Press <kbd className="px-1.5 py-0.5 bg-surface rounded border border-default font-mono text-[10px] font-bold">1</kbd> for Stock Controls, <kbd className="px-1.5 py-0.5 bg-surface rounded border border-default font-mono text-[10px] font-bold">2</kbd> for Movements.
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setIsGuideOpen(false)}>
+              Close Guide
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
-

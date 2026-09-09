@@ -1,22 +1,21 @@
 import React from 'react';
+import { cn } from '../../../../lib/utils';
 import {
   Bell,
   Mail,
   MessageSquare,
-  Phone,
-  CreditCard,
-  Banknote,
   Smartphone,
+  CreditCard,
+  Building,
   Check,
 } from 'lucide-react';
-import { cn } from '../../../../lib/utils';
 
 interface MultiChannelChipSelectProps {
   label: string;
   settingKey: string;
-  value: string[] | unknown;
+  value: unknown;
   onChange: (val: string[]) => void;
-  description?: string;
+  description?: string | undefined;
 }
 
 interface ChannelOption {
@@ -27,34 +26,31 @@ interface ChannelOption {
 }
 
 const NOTIFICATION_CHANNELS: ChannelOption[] = [
-  { id: 'in_app', label: 'In-App Banner', icon: Bell, tone: 'text-sky-500' },
-  { id: 'email', label: 'Email Digest', icon: Mail, tone: 'text-amber-500' },
-  { id: 'sms', label: 'Instant SMS', icon: MessageSquare, tone: 'text-emerald-500' },
-  { id: 'whatsapp', label: 'WhatsApp Alert', icon: Phone, tone: 'text-green-500' },
+  { id: 'in_app', label: 'In-App Bell', icon: Bell, tone: 'text-primary' },
+  { id: 'email', label: 'Email Dispatch', icon: Mail, tone: 'text-sky-500' },
+  { id: 'sms', label: 'SMS Carrier', icon: Smartphone, tone: 'text-amber-500' },
+  { id: 'whatsapp', label: 'WhatsApp Cloud', icon: MessageSquare, tone: 'text-emerald-500' },
 ];
 
-const PAYMENT_METHODS: ChannelOption[] = [
-  { id: 'cash', label: 'Cash Drawer', icon: Banknote, tone: 'text-emerald-500' },
-  { id: 'card', label: 'Credit/Debit Card', icon: CreditCard, tone: 'text-indigo-500' },
+const PAYMENT_METHOD_OPTIONS: ChannelOption[] = [
+  { id: 'cash', label: 'Cash Drawer', icon: Building, tone: 'text-emerald-500' },
+  { id: 'card', label: 'POS Terminal Card', icon: CreditCard, tone: 'text-primary' },
   { id: 'bkash', label: 'bKash MFS', icon: Smartphone, tone: 'text-pink-500' },
-  { id: 'nagad', label: 'Nagad MFS', icon: Smartphone, tone: 'text-orange-500' },
+  { id: 'nagad', label: 'Nagad Wallet', icon: Smartphone, tone: 'text-orange-500' },
+  { id: 'bank_transfer', label: 'Bank Direct Wire', icon: Building, tone: 'text-blue-500' },
 ];
 
 export const MultiChannelChipSelect: React.FC<MultiChannelChipSelectProps> = ({
   label,
-  settingKey,
+  settingKey: _settingKey,
   value,
   onChange,
   description,
 }) => {
-  const currentArray: string[] = Array.isArray(value)
-    ? value.map(String)
-    : typeof value === 'string'
-    ? value.split(',').map((s) => s.trim()).filter(Boolean)
-    : [];
+  const currentArray = Array.isArray(value) ? (value as string[]) : [];
 
-  const isPaymentKey = settingKey.includes('payment_methods');
-  const options = isPaymentKey ? PAYMENT_METHODS : NOTIFICATION_CHANNELS;
+  const isPaymentMethod = _settingKey === 'allowed_payment_methods';
+  const options = isPaymentMethod ? PAYMENT_METHOD_OPTIONS : NOTIFICATION_CHANNELS;
 
   const toggleOption = (id: string) => {
     if (currentArray.includes(id)) {
@@ -73,12 +69,11 @@ export const MultiChannelChipSelect: React.FC<MultiChannelChipSelectProps> = ({
   };
 
   return (
-    <div className="p-4 rounded-xl border border-default bg-surface space-y-3">
+    <div className="group rounded-xl border border-default/80 bg-surface p-4 transition-all duration-200 hover:border-default hover:shadow-2xs space-y-2.5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <span className="text-xs font-bold text-default block">{label}</span>
-          <span className="font-mono text-2xs text-muted block">{settingKey}</span>
-          {description && <p className="text-2xs text-muted mt-0.5">{description}</p>}
+          <label className="text-xs font-semibold text-default block">{label}</label>
+          {description && <p className="text-[11px] text-muted leading-relaxed mt-0.5">{description}</p>}
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-center">
@@ -111,19 +106,19 @@ export const MultiChannelChipSelect: React.FC<MultiChannelChipSelectProps> = ({
               type="button"
               onClick={() => toggleOption(opt.id)}
               className={cn(
-                'inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all border cursor-pointer select-none',
+                'inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border cursor-pointer select-none',
                 isSelected
                   ? 'bg-primary/10 border-primary text-primary shadow-2xs'
-                  : 'bg-surface-sunken border-default text-muted hover:border-strong hover:text-default'
+                  : 'bg-surface-sunken/40 border-default text-muted hover:border-default hover:text-default hover:bg-surface'
               )}
             >
               <div
                 className={cn(
-                  'size-4 rounded-full flex items-center justify-center transition-colors',
-                  isSelected ? 'bg-primary text-primary-fg' : 'border border-default'
+                  'size-3.5 rounded-full flex items-center justify-center transition-colors',
+                  isSelected ? 'bg-primary text-primary-contrast' : 'border border-default'
                 )}
               >
-                {isSelected ? <Check className="size-2.5 stroke-3" /> : null}
+                {isSelected ? <Check className="size-2 stroke-3" /> : null}
               </div>
               <Icon className={cn('size-3.5 shrink-0', isSelected ? opt.tone : 'text-muted')} />
               <span>{opt.label}</span>
