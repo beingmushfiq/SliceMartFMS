@@ -18,11 +18,14 @@ import {
   Printer,
   ShoppingBag,
   Copy,
+  PackageX,
+  SearchX,
 } from 'lucide-react';
 import type { PurchaseOrder } from '../../../types/api/purchasing';
 import { api } from '../../../lib/api/client';
 import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { PurchaseOrderDocument } from '../../../components/print/documents/PurchaseOrderDocument';
+import { EmptyState, SkeletonLine } from '../../../components/ui/Feedback';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
 import { useCurrency } from '../../../hooks/useCurrency';
@@ -181,6 +184,7 @@ export function PurchaseOrdersSection() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -376,6 +380,8 @@ export function PurchaseOrdersSection() {
       created_at: new Date().toISOString(),
     };
 
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     api.post('/purchasing/orders', {
       ...newPo,
       order_discount_type: formData.order_discount_type || 'flat',
@@ -390,7 +396,11 @@ export function PurchaseOrdersSection() {
         discount_amount: String(it.discount_amount || '0'),
         tax_rate: it.tax_rate,
       })),
-    }).catch(() => {});
+    })
+      .catch(() => {})
+      .finally(() => {
+        setIsSubmitting(false);
+      });
     queryClient.setQueryData<PurchaseOrder[]>(['purchasing', 'orders'], (prev = []) => [newPo, ...prev]);
     toast.success('Purchase order created.');
     setShowCreateModal(false);
@@ -697,8 +707,39 @@ export function PurchaseOrdersSection() {
             <tbody className="divide-y divide-default">
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-muted">
-                    {isLoading ? 'Loading purchase orders...' : 'No purchase orders found matching your criteria.'}
+                  <td colSpan={7} className="px-4 py-8 text-center text-muted">
+                    {isLoading ? (
+                      <div className="py-8 space-y-3 flex flex-col items-center justify-center">
+                        <SkeletonLine width="75%" height={4} />
+                        <SkeletonLine width="50%" height={4} />
+                        <SkeletonLine width="65%" height={4} />
+                      </div>
+                    ) : (search || statusFilter !== 'all') ? (
+                      <EmptyState
+                        compact
+                        icon={<SearchX className="size-8 text-muted" />}
+                        title="No purchase orders match your filters"
+                        description="Try adjusting your search query or reset the active status filters."
+                        action={{
+                          label: 'Reset Filters',
+                          onClick: () => {
+                            setSearch('');
+                            setStatusFilter('all');
+                          },
+                        }}
+                      />
+                    ) : (
+                      <EmptyState
+                        compact
+                        icon={<PackageX className="size-8 text-muted" />}
+                        title="No purchase orders found"
+                        description="There are currently no purchase orders recorded in the system. Issue your first vendor contract to begin procurement."
+                        action={{
+                          label: 'Create Purchase Order',
+                          onClick: () => setShowCreateModal(true),
+                        }}
+                      />
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -1087,9 +1128,11 @@ export function PurchaseOrdersSection() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-primary text-primary-fg font-semibold hover:opacity-90 cursor-pointer"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 rounded-xl bg-primary text-primary-fg font-semibold hover:opacity-90 disabled:opacity-50 disabled:pointer-events-none cursor-pointer flex items-center gap-2"
                 >
-                  Issue Purchase Order
+                  {isSubmitting && <RefreshCw className="size-3.5 animate-spin" />}
+                  <span>{isSubmitting ? 'Issuing PO...' : 'Issue Purchase Order'}</span>
                 </button>
               </div>
             </form>
