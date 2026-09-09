@@ -1820,14 +1820,37 @@ appended in one sequential step after w1+w2, never by the build agents in parall
 - **Backend Test Suite Total**: **11 passed / 11 tests (63 assertions)**.
 - **Frontend Typecheck**: `npx tsc --noEmit` **[OK] 0 errors**.
 
+---
 
+## 12. Master System Hardening, Route Splitting & Bundle Budget Gate
 
+**Status**: Complete ✅
 
+### 12.1 Delivered Architecture & Capabilities
+1. **Dynamic Route Code-Splitting**:
+   - Implemented design-token-compliant `RouteLoadingFallback.tsx` with smooth indeterminate progress indicator and layout skeletons.
+   - Wrapped `<Outlet />` in `AppShell.tsx`, `PlatformShell.tsx`, and `StorefrontShell.tsx` inside `<Suspense>`.
+   - Converted all 25+ workspace and storefront routes in `frontend/src/routes/index.tsx` to `React.lazy()` dynamic imports.
+   - Initial JS payload reduced from **951.7 kB down to 192.2 kB** gzipped (79.8% reduction; well under the 250 kB binding ceiling and 200 kB UI_SYSTEM §16 target).
+2. **Bundle Budget Optimization (`npm run budget`)**:
+   - Isolated `recharts` (84.7 kB) and D3 calculation libraries (`chart-math`, 19.1 kB) via Rollup `manualChunks`.
+   - Isolated BWIPP PostScript barcode renderer into `print-engine` chunk per ARCHITECTURE.md § 6.10 ("Charts, PDF/print rendering, the invoice builder and the storefront are all separately code-split").
+   - Reduced `TenantRoleDashboard` chunk size from **131.5 kB down to 30.6 kB** gzipped.
+   - All 25+ workspace and storefront route chunks measure **≤ 51.8 kB** (well below the 120 kB ceiling).
+   - `npm run budget` passes with **`✓ Within budget.`** (0 errors, 0 warnings).
+3. **Zero-Warning ESLint & Accessibility Elimination**:
+   - Enforced `--max-warnings 0`: fixed all 39 problems down to **0 errors, 0 warnings**.
+   - Made `Dropdown.tsx` fully accessible with keyboard handlers (`Enter`, `Space`, `ArrowDown`, `ArrowUp`) and semantic `<button>` elements.
+   - Stabilized hook dependencies in `ProductsSection.tsx`, `FinanceWorkspace.tsx`, and `BrandAssetField.tsx`.
+4. **Domain-Wide Dashboard Typing**:
+   - Created `frontend/src/types/api/dashboard.ts` with strict models (`DashboardMetricsData`, `DashboardTrendItem`, `DashboardInvoiceItem`, `DashboardStockItem`).
+   - Strongly typed all 6 dashboard views (`Executive`, `Finance`, `Inventory`, `Qc`, `Sales`, `Workforce`).
+   - Eliminated `any` casts in `TenantRoleDashboard.tsx` and `useOnboardingProgress.ts`.
 
-
-
-
-
-
-
-
+### 12.2 Automated Test Verification
+- **Frontend ESLint**: `npm run lint` **PASS [0 errors, 0 warnings with `--max-warnings 0`]**.
+- **Frontend TypeScript**: `npm run typecheck` **PASS [0 errors]**.
+- **Frontend Production Build**: `npm run build` **PASS [built in ~2.1s]**.
+- **Frontend Bundle Budget Gate**: `npm run budget` **PASS [`✓ Within budget.`]**.
+- **Frontend Vitest Suite**: `npm run test` **165 passed / 165 total (13 test suites)**.
+- **Backend PHPUnit Suite**: `php ./vendor/bin/phpunit --testdox` **745 passed / 745 total (4,341 assertions)**.
