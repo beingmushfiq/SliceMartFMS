@@ -1,7 +1,9 @@
-import { ClipboardList, Factory, Users, ArrowRight } from 'lucide-react';
+import { useState } from 'react';
+import { ClipboardList, Factory, Users, ArrowRight, Monitor } from 'lucide-react';
 import { ProductionPlansSection } from './sections/ProductionPlansSection';
 import { ProductionBatchesSection } from './sections/ProductionBatchesSection';
 import { WorkerProductionSection } from './sections/WorkerProductionSection';
+import { ProductionFloorKioskView } from './components/ProductionFloorKioskView';
 
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { cn } from '../../lib/utils';
@@ -48,13 +50,18 @@ const VALID_TABS: readonly ProductionTab[] = ['plans', 'batches', 'worker-entrie
 
 export default function ProductionWorkspace() {
   const [activeTab, setActiveTab] = useWorkspaceTab<ProductionTab>('batches', VALID_TABS);
+  const [isKioskOpen, setIsKioskOpen] = useState(false);
 
   const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[1]!;
+
+  if (isKioskOpen) {
+    return <ProductionFloorKioskView onExit={() => setIsKioskOpen(false)} />;
+  }
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto py-2">
       {/* Workspace Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-default pb-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-default pb-5">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-primary bg-primary-subtle px-2.5 py-0.5 rounded-full border border-primary/20 flex items-center gap-1">
@@ -71,6 +78,19 @@ export default function ProductionWorkspace() {
           <p className="mt-1 text-xs text-muted max-w-2xl leading-relaxed">
             {currentTab.description}
           </p>
+        </div>
+
+        {/* Kiosk Mode Launcher */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsKioskOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-surface-raised hover:bg-surface text-default border border-default shadow-2xs hover:border-primary/50 transition-all cursor-pointer"
+            title="Launch full-screen high-contrast display for wall-mounted TVs on the shop floor"
+          >
+            <Monitor className="size-4 text-primary" />
+            <span>Floor Kiosk Mode</span>
+          </button>
         </div>
       </div>
 
