@@ -100,6 +100,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const customerNameInputRef = useRef<HTMLInputElement>(null);
   const cashTenderedInputRef = useRef<HTMLInputElement>(null);
+  const orderDiscountInputRef = useRef<HTMLInputElement>(null);
 
   const updateCurrentSlot = useCallback((updater: Partial<CartSlot> | ((prev: CartSlot) => CartSlot)) => {
     setSlots((prev) =>
@@ -151,6 +152,10 @@ export function POSShell({ session, onExit }: POSShellProps) {
       } else if (e.key === 'F4') {
         e.preventDefault();
         customerNameInputRef.current?.focus();
+      } else if (e.key === 'F8') {
+        e.preventDefault();
+        orderDiscountInputRef.current?.focus();
+        orderDiscountInputRef.current?.select();
       } else if (e.key === 'F9') {
         e.preventDefault();
         const methods: readonly PosPaymentMethod[] = ['cash', 'card', 'mobile_banking', 'credit_adjustment'];
@@ -794,9 +799,9 @@ export function POSShell({ session, onExit }: POSShellProps) {
                           <button
                             type="button"
                             onClick={() => updateQuantity(item.product.id, -1)}
-                            className="flex h-6 w-5 shrink-0 items-center justify-center rounded border border-default bg-surface text-default hover:bg-surface-sunken cursor-pointer transition-colors"
+                            className="flex h-7 w-6 shrink-0 items-center justify-center rounded border border-default bg-surface text-default hover:bg-surface-sunken cursor-pointer transition-colors active:scale-95"
                           >
-                            <Minus className="h-2.5 w-2.5" />
+                            <Minus className="h-3 w-3" />
                           </button>
                           <input
                             type="number"
@@ -804,14 +809,14 @@ export function POSShell({ session, onExit }: POSShellProps) {
                             step="any"
                             value={item.quantity}
                             onChange={(e) => updateItemQuantity(item.product.id, parseFloat(e.target.value) || 0)}
-                            className="h-6 w-full rounded border border-default bg-surface px-1 text-center font-mono font-bold text-xs text-default focus:border-primary focus:outline-none"
+                            className="h-7 w-full rounded border border-default bg-surface px-1 text-center font-mono font-bold text-xs text-default focus:border-primary focus:outline-none"
                           />
                           <button
                             type="button"
                             onClick={() => updateQuantity(item.product.id, 1)}
-                            className="flex h-6 w-5 shrink-0 items-center justify-center rounded border border-default bg-surface text-default hover:bg-surface-sunken cursor-pointer transition-colors"
+                            className="flex h-7 w-6 shrink-0 items-center justify-center rounded border border-default bg-surface text-default hover:bg-surface-sunken cursor-pointer transition-colors active:scale-95"
                           >
-                            <Plus className="h-2.5 w-2.5" />
+                            <Plus className="h-3 w-3" />
                           </button>
                         </div>
                       </div>
@@ -825,7 +830,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
                           step="any"
                           value={item.unit_price}
                           onChange={(e) => updateItemPrice(item.product.id, parseFloat(e.target.value) || 0)}
-                          className="h-6 w-full rounded border border-default bg-surface px-1 text-right font-mono font-bold text-xs text-default focus:border-primary focus:outline-none"
+                          className="h-7 w-full rounded border border-default bg-surface px-1 text-right font-mono font-bold text-xs text-default focus:border-primary focus:outline-none"
                         />
                       </div>
 
@@ -842,12 +847,12 @@ export function POSShell({ session, onExit }: POSShellProps) {
                             placeholder="0"
                             value={item.discount === 0 ? '' : item.discount}
                             onChange={(e) => updateItemDiscount(item.product.id, Math.max(0, parseFloat(e.target.value) || 0))}
-                            className="h-6 w-full rounded-l border border-default bg-surface px-1 text-right font-mono font-bold text-xs text-rose-600 dark:text-rose-400 focus:border-primary focus:outline-none"
+                            className="h-7 w-full rounded-l border border-default bg-surface px-1 text-right font-mono font-bold text-xs text-rose-600 dark:text-rose-400 focus:border-primary focus:outline-none"
                           />
                           <button
                             type="button"
                             onClick={() => toggleItemDiscountType(item.product.id)}
-                            className="flex h-6 w-5 shrink-0 items-center justify-center rounded-r border border-l-0 border-default bg-surface-sunken hover:bg-surface font-bold text-[10px] text-muted hover:text-default cursor-pointer transition-colors"
+                            className="flex h-7 w-6 shrink-0 items-center justify-center rounded-r border border-l-0 border-default bg-surface-sunken hover:bg-surface font-bold text-[10px] text-muted hover:text-default cursor-pointer transition-colors"
                             title="Toggle Flat (৳) or Percentage (%)"
                           >
                             {item.discount_type === 'percentage' ? '%' : '৳'}
@@ -919,37 +924,37 @@ export function POSShell({ session, onExit }: POSShellProps) {
                   <button
                     type="button"
                     onClick={() => updateCurrentSlot({ tenderMethod: 'cash' })}
-                    className={`flex flex-col items-center gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer ${
+                    className={`flex flex-col items-center justify-center min-h-[44px] gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer active:scale-95 ${
                       tenderMethod === 'cash'
                         ? 'border-primary bg-primary/10 text-primary'
                         : 'border-default bg-surface text-muted hover:bg-surface-sunken hover:text-default'
                     }`}
                   >
-                    <DollarSign className="h-3.5 w-3.5" />
+                    <DollarSign className="h-4 w-4" />
                     Cash (F10)
                   </button>
                   <button
                     type="button"
                     onClick={() => updateCurrentSlot({ tenderMethod: 'card' })}
-                    className={`flex flex-col items-center gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer ${
+                    className={`flex flex-col items-center justify-center min-h-[44px] gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer active:scale-95 ${
                       tenderMethod === 'card'
                         ? 'border-primary bg-primary/10 text-primary'
                         : 'border-default bg-surface text-muted hover:bg-surface-sunken hover:text-default'
                     }`}
                   >
-                    <CreditCard className="h-3.5 w-3.5" />
+                    <CreditCard className="h-4 w-4" />
                     Card
                   </button>
                   <button
                     type="button"
                     onClick={() => updateCurrentSlot({ tenderMethod: 'mobile_banking' })}
-                    className={`flex flex-col items-center gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer ${
+                    className={`flex flex-col items-center justify-center min-h-[44px] gap-1 rounded-xl border py-2 text-[10px] font-semibold uppercase transition-all cursor-pointer active:scale-95 ${
                       tenderMethod === 'mobile_banking'
                         ? 'border-primary bg-primary/10 text-primary'
                         : 'border-default bg-surface text-muted hover:bg-surface-sunken hover:text-default'
                     }`}
                   >
-                    <Smartphone className="h-3.5 w-3.5" />
+                    <Smartphone className="h-4 w-4" />
                     bKash/Nagad
                   </button>
                 </div>
@@ -983,15 +988,15 @@ export function POSShell({ session, onExit }: POSShellProps) {
                         <select
                           value={payment.method}
                           onChange={(e) => {
-                            const newMethod = e.target.value as PosPaymentMethod;
+                            const val = e.target.value as PosPaymentMethod;
                             updateCurrentSlot((prev) => ({
                               ...prev,
                               splitPayments: (prev.splitPayments ?? []).map((p) =>
-                                p.id === payment.id ? { ...p, method: newMethod } : p
+                                p.id === payment.id ? { ...p, method: val } : p
                               ),
                             }));
                           }}
-                          className="h-7 rounded-lg border border-default bg-surface-sunken px-2 text-xs font-semibold text-default focus:border-primary focus:outline-none cursor-pointer flex-1"
+                          className="h-7 flex-1 rounded-lg border border-default bg-surface-sunken px-1.5 text-xs font-medium text-default focus:border-primary focus:outline-none"
                         >
                           <option value="cash">Cash</option>
                           <option value="card">Card / POS</option>
@@ -1122,9 +1127,10 @@ export function POSShell({ session, onExit }: POSShellProps) {
               )}
               {/* Order Discount Row with Dual-Mode Toggle */}
               <div className="flex items-center justify-between gap-2 py-0.5">
-                <span className="font-medium text-default font-sans">Order Discount:</span>
+                <span className="font-medium text-default font-sans">Order Discount (F8):</span>
                 <div className="flex items-center">
                   <input
+                    ref={orderDiscountInputRef}
                     type="number"
                     min="0"
                     step="any"
@@ -1188,7 +1194,8 @@ export function POSShell({ session, onExit }: POSShellProps) {
             <div className="flex items-center justify-between text-[10px] text-muted pt-1 font-mono">
               <span>[F2] Search</span>
               <span>[F4] Customer</span>
-              <span>[F9] Pay Method</span>
+              <span>[F8] Disc</span>
+              <span>[F9] Pay</span>
               <span>[F10] Cash</span>
             </div>
           </div>

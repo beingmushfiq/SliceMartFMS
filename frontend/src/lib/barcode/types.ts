@@ -10,7 +10,7 @@ export type BarcodeFormat =
   | 'upca'
   | 'code39';
 
-export type PhysicalLabelPreset = 'small_35x25' | 'standard_50x35' | 'custom';
+export type PhysicalLabelPreset = 'small_35x25' | 'standard_50x35' | 'thermal_50x30' | 'thermal_100x150' | 'custom';
 
 export interface LabelDimensions {
   widthMm: number;
@@ -37,6 +37,22 @@ export const PRESET_LABEL_DIMENSIONS: Record<Exclude<PhysicalLabelPreset, 'custo
     marginRightMm: 1.5,
     marginBottomMm: 1.5,
     marginLeftMm: 1.5,
+  },
+  thermal_50x30: {
+    widthMm: 50,
+    heightMm: 30,
+    marginTopMm: 1,
+    marginRightMm: 1,
+    marginBottomMm: 1,
+    marginLeftMm: 1,
+  },
+  thermal_100x150: {
+    widthMm: 100,
+    heightMm: 150,
+    marginTopMm: 2,
+    marginRightMm: 2,
+    marginBottomMm: 2,
+    marginLeftMm: 2,
   },
 };
 

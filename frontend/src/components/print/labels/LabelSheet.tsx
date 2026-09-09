@@ -26,13 +26,18 @@ export function LabelSheet({
   businessName = 'SliceMart',
 }: LabelSheetProps) {
   const isSmall = preset === 'small_35x25';
-  const labelDim = isSmall ? PRESET_LABEL_DIMENSIONS.small_35x25 : PRESET_LABEL_DIMENSIONS.standard_50x35;
+  const isLarge = preset === 'thermal_100x150';
+  const isRoll = preset === 'thermal_50x30' || gridConfig.paperSize === 'roll';
+  const labelDim =
+    preset !== 'custom' && preset in PRESET_LABEL_DIMENSIONS
+      ? PRESET_LABEL_DIMENSIONS[preset as keyof typeof PRESET_LABEL_DIMENSIONS]
+      : PRESET_LABEL_DIMENSIONS.standard_50x35;
 
-  // Defaults for A4 Sheet
-  const columns = gridConfig.columns ?? (isSmall ? 5 : 4);
-  const rows = gridConfig.rows ?? (isSmall ? 10 : 7);
+  // Defaults for A4 Sheet or continuous Thermal Roll
+  const columns = gridConfig.columns ?? (isRoll ? 1 : isSmall ? 5 : isLarge ? 2 : 4);
+  const rows = gridConfig.rows ?? (isRoll ? 1 : isSmall ? 10 : isLarge ? 2 : 7);
   const labelsPerPage = columns * rows;
-  const startOffset = gridConfig.startPosition ?? 0;
+  const startOffset = isRoll ? 0 : (gridConfig.startPosition ?? 0);
 
   // Expand all items based on their requested quantity
   const expandedProducts: LabelProductItem[] = [];
@@ -64,9 +69,9 @@ export function LabelSheet({
         <div
           key={pageIdx}
           style={{
-            width: '210mm',
-            minHeight: '297mm',
-            padding: `${gridConfig.pageMarginTopMm ?? 10}mm ${gridConfig.pageMarginLeftMm ?? 8}mm`,
+            width: isRoll ? `${labelDim.widthMm + 2}mm` : '210mm',
+            minHeight: isRoll ? `${labelDim.heightMm + 2}mm` : '297mm',
+            padding: isRoll ? '1mm' : `${gridConfig.pageMarginTopMm ?? 10}mm ${gridConfig.pageMarginLeftMm ?? 8}mm`,
             boxSizing: 'border-box',
           }}
           className={`bg-white text-black print-page-label-sheet ${

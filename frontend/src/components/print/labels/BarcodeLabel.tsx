@@ -41,7 +41,11 @@ export function BarcodeLabel({
   };
 
   const isSmall = preset === 'small_35x25';
-  const dimensions = isSmall ? PRESET_LABEL_DIMENSIONS.small_35x25 : PRESET_LABEL_DIMENSIONS.standard_50x35;
+  const isLarge = preset === 'thermal_100x150';
+  const dimensions =
+    preset !== 'custom' && preset in PRESET_LABEL_DIMENSIONS
+      ? PRESET_LABEL_DIMENSIONS[preset as keyof typeof PRESET_LABEL_DIMENSIONS]
+      : PRESET_LABEL_DIMENSIONS.standard_50x35;
 
   const barcodeValue = product.barcode || product.sku;
 
@@ -50,12 +54,12 @@ export function BarcodeLabel({
     return generateBarcodeSvg({
       bcid: isQr ? 'qrcode' : format,
       text: barcodeValue,
-      scale: isSmall ? 1.5 : 2,
-      height: isSmall ? 6 : 9,
+      scale: isSmall ? 1.5 : isLarge ? 3 : 2,
+      height: isSmall ? 6 : isLarge ? 22 : 9,
       includeText: showFields.showBarcodeText && !isQr,
       textxalign: 'center',
     });
-  }, [barcodeValue, format, isSmall, showFields.showBarcodeText, showFields.showQrCode]);
+  }, [barcodeValue, format, isSmall, isLarge, showFields.showBarcodeText, showFields.showQrCode]);
 
   return (
     <div
@@ -71,7 +75,7 @@ export function BarcodeLabel({
       <div className="flex items-center justify-between border-b border-black/20 pb-0.5">
         {showFields.showBusinessName && (
           <span
-            style={{ fontSize: isSmall ? '5pt' : '6.5pt' }}
+            style={{ fontSize: isSmall ? '5pt' : isLarge ? '9pt' : '6.5pt' }}
             className="font-bold uppercase tracking-wider truncate max-w-[65%]"
           >
             {businessName}
@@ -79,7 +83,7 @@ export function BarcodeLabel({
         )}
         {showFields.showSku && (
           <span
-            style={{ fontSize: isSmall ? '5pt' : '6pt' }}
+            style={{ fontSize: isSmall ? '5pt' : isLarge ? '8.5pt' : '6pt' }}
             className="font-mono font-bold text-black/80 truncate text-right ml-auto"
           >
             {product.sku}
@@ -90,7 +94,7 @@ export function BarcodeLabel({
       {/* Product Name */}
       {showFields.showProductName && (
         <div
-          style={{ fontSize: isSmall ? '6pt' : '7.5pt', lineHeight: '1.15' }}
+          style={{ fontSize: isSmall ? '6pt' : isLarge ? '11pt' : '7.5pt', lineHeight: '1.15' }}
           className="font-bold text-black text-center line-clamp-1 py-0.5"
         >
           {product.name}
@@ -107,7 +111,7 @@ export function BarcodeLabel({
       <div className="space-y-0.5 border-t border-black/20 pt-0.5">
         {(showFields.showBatchCode || showFields.showMfgDate || showFields.showExpDate) && (
           <div
-            style={{ fontSize: isSmall ? '4.5pt' : '5.5pt' }}
+            style={{ fontSize: isSmall ? '4.5pt' : isLarge ? '8pt' : '5.5pt' }}
             className="flex items-center justify-between font-mono text-black/70"
           >
             {showFields.showBatchCode && product.batch_code && (
@@ -124,16 +128,16 @@ export function BarcodeLabel({
 
         {showFields.showPrice && (
           <div className="flex items-baseline justify-between font-bold">
-            <span style={{ fontSize: isSmall ? '5pt' : '6pt' }} className="text-black/60 uppercase">
+            <span style={{ fontSize: isSmall ? '5pt' : isLarge ? '8pt' : '6pt' }} className="text-black/60 uppercase">
               MRP (Incl. VAT)
             </span>
             <span
-              style={{ fontSize: isSmall ? '7pt' : '9pt' }}
+              style={{ fontSize: isSmall ? '7pt' : isLarge ? '14pt' : '9pt' }}
               className="font-mono font-black text-black"
             >
               {formatCurrency(product.sale_price, product.currency || '')}
               {showFields.showUnit && product.unit_code && (
-                <span style={{ fontSize: isSmall ? '4.5pt' : '5.5pt' }} className="font-normal text-black/70 ml-0.5">
+                <span style={{ fontSize: isSmall ? '4.5pt' : isLarge ? '8pt' : '5.5pt' }} className="font-normal text-black/70 ml-0.5">
                   /{product.unit_code}
                 </span>
               )}

@@ -172,8 +172,10 @@ export function BarcodeGeneratorModal({
                     onChange={(e) => setPreset(e.target.value as PhysicalLabelPreset)}
                     className="w-full rounded-lg border border-default bg-surface px-2.5 py-1.5 text-xs text-default focus:border-primary focus:outline-none cursor-pointer"
                   >
-                    <option value="standard_50x35">Standard (50 × 35 mm)</option>
-                    <option value="small_35x25">Compact (35 × 25 mm)</option>
+                    <option value="standard_50x35">Standard Price Tag (50 × 35 mm)</option>
+                    <option value="small_35x25">Compact / Jewelry (35 × 25 mm)</option>
+                    <option value="thermal_50x30">Direct Thermal Roll (50 × 30 mm)</option>
+                    <option value="thermal_100x150">Shipping / Carton (100 × 150 mm)</option>
                   </select>
                 </div>
 
