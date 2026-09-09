@@ -69,14 +69,14 @@ export const StorefrontOrderTrackingPage: React.FC = () => {
       const params: Record<string, string> = { order_number: orderNumber.trim() };
       if (phone.trim()) params.phone = phone.trim();
 
-      const response = await api.get<{ data: TrackedOrderDetails }>('/storefront/orders/track', {
+      const response = await api.get<TrackedOrderDetails>('/storefront/orders/track', {
         headers: {
           'X-Storefront-Subdomain': subdomain,
         },
         params,
       });
 
-      setOrder(response.data.data ?? (response.data as unknown as TrackedOrderDetails));
+      setOrder(response.data);
       setSearchParams(params);
     } catch (err: unknown) {
       setOrder(null);

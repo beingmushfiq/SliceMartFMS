@@ -114,6 +114,8 @@ export interface Invoice {
   party_id?: number | null;
   customer_name?: string | null;
   branch_id?: number | null;
+  branch_name?: string | null;
+  payment_terms?: string | null;
   invoice_date: string;
   due_date?: string | null;
   subtotal: string;

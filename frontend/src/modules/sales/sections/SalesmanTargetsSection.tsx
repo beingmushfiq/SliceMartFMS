@@ -195,8 +195,12 @@ export function SalesmanTargetsSection() {
     }
 
     const empId = parseInt(selectedEmployeeId, 10);
+    if (isNaN(empId)) {
+      toast.error('Invalid employee selection');
+      return;
+    }
     createTargetMutation.mutate({
-      employee_id: !isNaN(empId) ? empId : (selectedEmployeeId as unknown as number),
+      employee_id: empId,
       period_month: selectedMonth,
       target_amount: amt,
       target_name: targetName || `Monthly Target - ${selectedMonth}`,

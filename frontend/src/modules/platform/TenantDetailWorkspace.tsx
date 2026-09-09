@@ -250,7 +250,7 @@ export const TenantDetailWorkspace: React.FC = () => {
         impersonator: { id: number; name: string; email: string };
       }>(`/platform/tenants/${tenant.id}/impersonate`);
 
-      const payload = (res.data as unknown as { data?: typeof res.data })?.data ?? res.data;
+      const payload = res.data;
       const token = payload?.token;
       const targetTenant = payload?.tenant;
       const targetUser = payload?.user;

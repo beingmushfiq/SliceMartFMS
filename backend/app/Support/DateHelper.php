@@ -29,12 +29,12 @@ final class DateHelper
         $year = $dt->year;
 
         if ($dt->month < $startMonth) {
-            $startDate = Carbon::create($year - 1, $startMonth, 1)->startOfDay();
-            $endDate = Carbon::create($year, $startMonth, 1)->subDay()->endOfDay();
+            $startDate = Carbon::createFromDate($year - 1, $startMonth, 1)->startOfDay();
+            $endDate = Carbon::createFromDate($year, $startMonth, 1)->subDay()->endOfDay();
             $label = sprintf('FY %d-%d', $year - 1, $year);
         } else {
-            $startDate = Carbon::create($year, $startMonth, 1)->startOfDay();
-            $endDate = Carbon::create($year + 1, $startMonth, 1)->subDay()->endOfDay();
+            $startDate = Carbon::createFromDate($year, $startMonth, 1)->startOfDay();
+            $endDate = Carbon::createFromDate($year + 1, $startMonth, 1)->subDay()->endOfDay();
             $label = sprintf('FY %d-%d', $year, $year + 1);
         }
 

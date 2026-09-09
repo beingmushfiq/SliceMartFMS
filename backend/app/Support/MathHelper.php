@@ -17,9 +17,12 @@ final class MathHelper
 
     /**
      * Format a numeric value to a strict 4-decimal string representation.
+     *
+     * @return numeric-string
      */
     public static function format(string|float|int $value, int $decimals = self::DEFAULT_PRECISION): string
     {
+        /** @var numeric-string */
         return number_format((float) $value, $decimals, '.', '');
     }
 

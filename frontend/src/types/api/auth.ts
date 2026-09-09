@@ -28,6 +28,7 @@ export interface TenantInfo {
   subdomain?: string;
   status: string;
   currency_code: string;
+  currency_symbol?: string;
   timezone: string;
   logo_url?: string;
 }

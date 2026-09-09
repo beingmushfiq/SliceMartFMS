@@ -47,7 +47,7 @@ export function useBusinessConfig(): { config: BusinessConfig; loading: boolean 
   const tenant = useAuthStore((state) => state.tenant);
   const tenantCurrencyCode = (tenant?.currency_code || 'BDT').toUpperCase();
   const tenantCurrencySymbol =
-    (tenant as unknown as { currency_symbol?: string })?.currency_symbol ||
+    tenant?.currency_symbol ||
     DEFAULT_CURRENCY_SYMBOLS[tenantCurrencyCode] ||
     '৳';
 

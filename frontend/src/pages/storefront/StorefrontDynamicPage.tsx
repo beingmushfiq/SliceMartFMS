@@ -47,12 +47,12 @@ export const StorefrontDynamicPage: React.FC = () => {
       if (!slug) return;
       setLoading(true);
       try {
-        const response = await api.get<{ data: PublicCmsPageData }>(`/storefront/pages/${slug}`, {
+        const response = await api.get<PublicCmsPageData>(`/storefront/pages/${slug}`, {
           headers: {
             'X-Storefront-Subdomain': subdomain,
           },
         });
-        setPage(response.data.data ?? (response.data as unknown as PublicCmsPageData));
+        setPage(response.data);
       } catch {
         // If not found in backend DB, keep null to trigger default rich fallback templates below
         setPage(null);

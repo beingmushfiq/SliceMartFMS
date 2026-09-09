@@ -97,7 +97,7 @@ export const TenantRegistrationWizard: React.FC = () => {
         owner: { name: string; email: string };
       }>('/platform/tenants', payload);
 
-      const unwrapped = ((response.data as unknown as { data?: typeof response.data })?.data ?? response.data);
+      const unwrapped = response.data;
       setProvisionedData(unwrapped);
       setStep(4);
     } catch (err: unknown) {

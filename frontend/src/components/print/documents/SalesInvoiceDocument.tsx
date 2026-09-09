@@ -153,7 +153,7 @@ export function SalesInvoiceDocument({
           </div>
           <div className="text-slate-600 mt-0.5 space-y-0.5">
             <p>Client ID: <span className="font-mono font-semibold text-slate-800">CUST-{invoice.party_id || 'RETAIL'}</span></p>
-            <p>Facility / Station: <span className="font-medium text-slate-800">{(invoice as unknown as { branch_name?: string })?.branch_name || 'Primary Operations'}</span></p>
+            <p>Facility / Station: <span className="font-medium text-slate-800">{invoice.branch_name || 'Primary Operations'}</span></p>
           </div>
         </div>
 
@@ -183,7 +183,7 @@ export function SalesInvoiceDocument({
             </div>
             <div>
               <span className="text-slate-500">Payment Mode:</span>{' '}
-              <span className="font-medium text-slate-900">{(invoice as unknown as { payment_terms?: string })?.payment_terms || 'Standard Settlement'}</span>
+              <span className="font-medium text-slate-900">{invoice.payment_terms || 'Standard Settlement'}</span>
             </div>
             <div>
               <span className="text-slate-500">Distribution:</span>{' '}

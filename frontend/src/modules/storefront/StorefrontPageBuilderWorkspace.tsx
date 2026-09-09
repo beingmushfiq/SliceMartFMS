@@ -53,8 +53,8 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
   const loadPages = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get<{ data: CmsPage[] }>('/storefront/cms/pages');
-      const list = res.data.data ?? (res.data as unknown as CmsPage[]) ?? [];
+      const res = await api.get<CmsPage[]>('/storefront/cms/pages');
+      const list = res.data ?? [];
       setPages(list);
       setSelectedPage((prev) => {
         if (!prev) return list[0] ?? null;
@@ -140,7 +140,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
     }
 
     try {
-      const res = await api.post<{ data: CmsPage }>('/storefront/cms/pages', {
+      const res = await api.post<CmsPage>('/storefront/cms/pages', {
         title,
         slug,
         page_type: templateType,
@@ -148,7 +148,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
         blocks,
       });
 
-      const newPage = res.data.data ?? (res.data as unknown as CmsPage);
+      const newPage = res.data;
       setPages([...pages, newPage]);
       setSelectedPage(newPage);
       notify.success(`Created page "${title}"`);
@@ -163,7 +163,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
     setSaving(true);
     try {
       const statusToSave = publishStatus ?? selectedPage.status;
-      const res = await api.put<{ data: CmsPage }>(`/storefront/cms/pages/${selectedPage.id}`, {
+      const res = await api.put<CmsPage>(`/storefront/cms/pages/${selectedPage.id}`, {
         title: selectedPage.title,
         slug: selectedPage.slug,
         meta_title: selectedPage.meta_title,
@@ -172,7 +172,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
         blocks: selectedPage.blocks,
       });
 
-      const updated = res.data.data ?? (res.data as unknown as CmsPage);
+      const updated = res.data;
       setSelectedPage(updated);
       setPages(pages.map((p) => (p.id === updated.id ? updated : p)));
       notify.success(`Page "${updated.title}" saved`, {

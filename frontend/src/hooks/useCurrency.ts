@@ -25,7 +25,7 @@ export function useCurrency() {
 
   const currencySymbol = useMemo(() => {
     return (
-      (tenant as unknown as { currency_symbol?: string })?.currency_symbol ||
+      tenant?.currency_symbol ||
       DEFAULT_CURRENCY_SYMBOLS[currencyCode] ||
       currencyCode
     );

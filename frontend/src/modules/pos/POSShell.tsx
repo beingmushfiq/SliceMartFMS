@@ -375,11 +375,8 @@ export function POSShell({ session, onExit }: POSShellProps) {
     };
 
     try {
-      const res = await api.post<PosCheckoutResult | { data: PosCheckoutResult }>('/pos/checkout', payload);
-      const checkoutResult: PosCheckoutResult | undefined =
-        res.data && 'order' in res.data
-          ? (res.data as PosCheckoutResult)
-          : (res.data as unknown as { data?: PosCheckoutResult })?.data;
+      const res = await api.post<PosCheckoutResult>('/pos/checkout', payload);
+      const checkoutResult = res.data;
 
       if (!checkoutResult || !checkoutResult.order) {
         throw new Error('Invalid checkout response received from server');

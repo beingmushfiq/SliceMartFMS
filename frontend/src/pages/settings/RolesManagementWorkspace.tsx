@@ -97,19 +97,12 @@ export const RolesManagementWorkspace: React.FC = () => {
     ])
       .then(([rolesRes, permsRes]) => {
         if (!ignore) {
-          const rolesData = Array.isArray(rolesRes.data)
-            ? rolesRes.data
-            : ((rolesRes.data as unknown as { data?: RoleData[] })?.data ?? []);
+          const rolesData = Array.isArray(rolesRes.data) ? rolesRes.data : [];
           setRoles(rolesData);
 
-          const permsPayload = permsRes.data as unknown as {
-            raw?: PermissionItem[];
-            grouped?: ModuleGroup[];
-            data?: { raw?: PermissionItem[]; grouped?: ModuleGroup[] };
-          };
-
-          const rawList = permsPayload.raw ?? permsPayload.data?.raw ?? [];
-          const groupedList = permsPayload.grouped ?? permsPayload.data?.grouped ?? [];
+          const permsPayload = permsRes.data;
+          const rawList = permsPayload?.raw ?? [];
+          const groupedList = permsPayload?.grouped ?? [];
 
           setAllPermissions(rawList);
           setModulesList(groupedList);
