@@ -19,6 +19,7 @@ final class ProductResource extends JsonResource
             'type' => $this->type, 'category_id' => $this->category?->uuid, 'brand_id' => $this->brand?->uuid,
             'base_unit_id' => $this->baseUnit->uuid, 'unit_id' => $this->base_unit_id, 'purchase_unit_id' => $this->purchaseUnit?->uuid, 'sales_unit_id' => $this->salesUnit?->uuid,
             'is_produced' => $this->is_produced, 'is_purchased' => $this->is_purchased, 'is_sold' => $this->is_sold, 'is_stock_tracked' => $this->is_stock_tracked, 'has_variants' => $this->has_variants,
+            'stock_quantity' => $this->is_stock_tracked ? (float) ($this->stock_quantity ?? ($this->relationLoaded('stockBalances') ? $this->stockBalances->where('stock_state', 'available')->sum('quantity') : $this->stockBalances()->where('stock_state', 'available')->sum('quantity'))) : null,
             'tracking_mode' => $this->tracking_mode, 'shelf_life_days' => $this->shelf_life_days, 'reorder_level' => $this->reorder_level, 'reorder_quantity' => $this->reorder_quantity,
             'standard_cost' => $this->standard_cost, 'default_sale_price' => $this->default_sale_price, 'tax_profile_id' => $this->taxProfile?->uuid, 'weight' => $this->weight,
             'dimensions' => $this->dimensions, 'is_online' => $this->is_online, 'online_slug' => $this->online_slug, 'online_meta' => $this->online_meta, 'status' => $this->status,

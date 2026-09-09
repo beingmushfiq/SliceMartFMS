@@ -20,7 +20,8 @@ final class StockThresholdController extends Controller
         $tenantId = TenantContext::current()->tenantId();
 
         $products = Product::where('tenant_id', $tenantId)
-            ->where('is_active', true)
+            ->where('status', 'active')
+            ->where('is_stock_tracked', true)
             ->with(['category:id,name', 'baseUnit:id,name,code'])
             ->get();
 
@@ -37,7 +38,7 @@ final class StockThresholdController extends Controller
         // Sum current stock by product and warehouse
         $balances = StockBalance::where('tenant_id', $tenantId)
             ->where('stock_state', 'available')
-            ->selectRaw('product_id, warehouse_id, SUM(quantity - reserved_quantity) as available_qty')
+            ->selectRaw('product_id, warehouse_id, SUM(quantity) as available_qty')
             ->groupBy('product_id', 'warehouse_id')
             ->get();
 
@@ -52,8 +53,8 @@ final class StockThresholdController extends Controller
                 $key = $p->id . '_' . $w->id;
                 $threshold = $thresholdMap[$key] ?? null;
                 $currentStock = $balanceMap[$key] ?? 0.0;
-                $minAlert = $threshold ? (float) $threshold->min_stock_alert : 10.0;
-                $reorderQty = $threshold ? (float) $threshold->reorder_quantity : 50.0;
+                $minAlert = $threshold ? (float) $threshold->min_stock_alert : (float) ($p->reorder_level ?? 10.0);
+                $reorderQty = $threshold ? (float) $threshold->reorder_quantity : (float) ($p->reorder_quantity ?? 50.0);
                 $maxLevel = $threshold ? (float) $threshold->max_stock_level : 500.0;
 
                 $items[] = [
@@ -129,7 +130,7 @@ final class StockThresholdController extends Controller
                 ->where('product_id', $t->product_id)
                 ->where('warehouse_id', $t->warehouse_id)
                 ->where('stock_state', 'available')
-                ->sum(StockBalance::raw('quantity - reserved_quantity'));
+                ->sum('quantity');
 
             $min = (float) $t->min_stock_alert;
             if ($stock <= $min) {

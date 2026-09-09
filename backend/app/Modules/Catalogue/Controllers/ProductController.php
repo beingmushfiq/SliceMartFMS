@@ -62,6 +62,12 @@ final class ProductController extends Controller
             }
         }
         $query->orderBy('id');
+        $query->withSum([
+            'stockBalances as stock_quantity' => function ($subquery) use ($tenantId): void {
+                $subquery->where('tenant_id', $tenantId)
+                    ->where('stock_state', 'available');
+            },
+        ], 'quantity');
         $include = $request->input('include');
         if (is_string($include)) {
             $relations = array_intersect(explode(',', $include), ['category', 'brand', 'baseUnit', 'purchaseUnit', 'salesUnit', 'taxProfile']);
@@ -105,6 +111,13 @@ final class ProductController extends Controller
                 $product->load(array_values($relations));
             }
         }
+        $tenantId = TenantContext::isBound() ? TenantContext::current()->tenantId() : $product->tenant_id;
+        $product->loadSum([
+            'stockBalances as stock_quantity' => function ($subquery) use ($tenantId): void {
+                $subquery->where('tenant_id', $tenantId)
+                    ->where('stock_state', 'available');
+            },
+        ], 'quantity');
 
         return response()->json(['success' => true, 'data' => new ProductResource($product), 'meta' => ['correlation_id' => (string) $request->header('X-Correlation-Id', '')]]);
     }

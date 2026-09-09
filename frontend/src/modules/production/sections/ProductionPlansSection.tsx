@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ClipboardList, Plus, Search, Trash2, Rocket } from 'lucide-react';
+import { ClipboardList, Plus, Search, Trash2, Rocket, Copy } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
@@ -372,6 +372,41 @@ export function ProductionPlansSection() {
                           title="View Plan Details"
                         >
                           View
+                        </Button>
+
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            setDraft({
+                              plan_number: `PLN-${Date.now().toString().slice(-6)}`,
+                              title: `${plan.title} (Copy)`,
+                              start_date: new Date().toISOString().slice(0, 10),
+                              end_date: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
+                              notes: plan.notes ? `Copy of ${plan.plan_number} - ${plan.notes}` : `Copy of ${plan.plan_number}`,
+                              items: plan.items && plan.items.length > 0
+                                ? plan.items.map((it) => ({
+                                    product_id: it.product_id,
+                                    bom_id: it.bom_id || '',
+                                    planned_quantity: it.planned_quantity || '100.0000',
+                                    notes: it.notes || '',
+                                  }))
+                                : [
+                                    {
+                                      product_id: products[0]?.id || '',
+                                      bom_id: '',
+                                      planned_quantity: '100.0000',
+                                    },
+                                  ],
+                            });
+                            setErrorMsg(null);
+                            setIsCreateOpen(true);
+                          }}
+                          className="text-xs text-amber-600 dark:text-amber-400 min-h-8 flex items-center gap-1"
+                          title="Duplicate Production Plan"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          <span>Duplicate</span>
                         </Button>
 
                         {(plan.status === 'draft' || plan.status === 'cancelled') && (

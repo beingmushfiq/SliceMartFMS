@@ -40,6 +40,7 @@ export interface Product extends CatalogTimestamped {
   is_purchased: boolean;
   is_sold: boolean;
   is_stock_tracked: boolean;
+  stock_quantity?: number | null;
   has_variants: boolean;
   tracking_mode: string;
   opening_stock?: string | number | null;

@@ -1,4 +1,4 @@
-import { useState, useRef, type ChangeEvent } from 'react';
+import { useState, useRef, useMemo, type ChangeEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -21,6 +21,7 @@ import {
   FileCode,
   Sparkles,
   Compass,
+  Copy,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
@@ -365,6 +366,39 @@ export function ProductsSection() {
     setEditingProduct(p);
   };
 
+  const handleDuplicate = (p: Product) => {
+    setErrorMsg(null);
+    setActiveFormTab('general');
+    const onlineMeta = p.online_meta as { image_url?: string; meta_title?: string; meta_description?: string; canonical_url?: string } | null;
+    setDraft({
+      sku: `${p.sku}-COPY`,
+      name: `${p.name} (Copy)`,
+      type: p.type || 'finished',
+      base_unit_id: String(p.base_unit_id || ''),
+      category_id: p.category_id ? String(p.category_id) : null,
+      brand_id: p.brand_id ? String(p.brand_id) : null,
+      standard_cost: p.standard_cost || '0.0000',
+      default_sale_price: p.default_sale_price || '0.0000',
+      is_stock_tracked: p.is_stock_tracked ?? true,
+      is_online: false,
+      status: 'active',
+      description: p.description || '',
+      barcode: '',
+      image_url: onlineMeta?.image_url || '',
+      reorder_level: p.reorder_level || '10',
+      reorder_quantity: p.reorder_quantity || '50',
+      weight: p.weight || '1',
+      opening_stock: '0',
+      warehouse_id: '',
+      tracking_mode: p.tracking_mode || 'batch',
+      online_slug: '',
+      online_meta: onlineMeta ? { ...onlineMeta, meta_title: `${onlineMeta.meta_title || p.name} (Copy)` } : null,
+    });
+    setEditingProduct(null);
+    setIsCreateOpen(true);
+    notify.info(`Duplicating "${p.name}". Review specifications, modify SKU, and save.`);
+  };
+
   // Image File Upload Handler
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -391,6 +425,14 @@ export function ProductsSection() {
     : Array.isArray(warehousesQuery.data)
     ? (warehousesQuery.data as WarehouseOption[])
     : [];
+
+  const unitMap = useMemo(() => {
+    const map = new Map<string, string>();
+    units.forEach((u) => {
+      map.set(String(u.id), u.code || u.name);
+    });
+    return map;
+  }, [units]);
 
   return (
     <div className="space-y-6">
@@ -502,7 +544,7 @@ export function ProductsSection() {
                 <th className="py-3.5 px-3">Type</th>
                 <th className="py-3.5 px-3">Standard Cost</th>
                 <th className="py-3.5 px-3">Sale Price</th>
-                <th className="py-3.5 px-3">Stock Tracked</th>
+                <th className="py-3.5 px-3">Stock / Qty</th>
                 <th className="py-3.5 px-3">Status</th>
                 <th className="py-3.5 pr-4 pl-3 text-right">Actions</th>
               </tr>
@@ -564,16 +606,47 @@ export function ProductsSection() {
                         {formatCurrency(p.default_sale_price)}
                       </td>
                       <td className="py-3 px-3">
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className={`inline-block size-2 rounded-full ${
-                              p.is_stock_tracked ? 'bg-emerald-500 shadow-xs shadow-emerald-500/50' : 'bg-slate-400'
-                            }`}
-                          />
-                          <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">
-                            {p.is_stock_tracked ? 'Tracked' : 'Non-stock'}
+                        {p.is_stock_tracked ? (
+                          (() => {
+                            const qty = Number(p.stock_quantity ?? 0);
+                            const reorderLevel = Number(p.reorder_level || 0);
+                            const unitCode = unitMap.get(String(p.base_unit_id)) || 'PCS';
+                            const isOutOfStock = qty <= 0;
+                            const isLowStock = !isOutOfStock && qty <= reorderLevel;
+
+                            return (
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-1 font-mono font-bold text-slate-900 dark:text-white text-xs">
+                                  <span>{qty.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
+                                  <span className="text-[10px] font-normal uppercase text-slate-400">{unitCode}</span>
+                                </div>
+                                <div>
+                                  <span
+                                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.2 text-[9px] font-semibold tracking-wide uppercase ${
+                                      isOutOfStock
+                                        ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                                        : isLowStock
+                                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                                        : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                    }`}
+                                  >
+                                    <span
+                                      className={`size-1.5 rounded-full ${
+                                        isOutOfStock ? 'bg-rose-500' : isLowStock ? 'bg-amber-500' : 'bg-emerald-500'
+                                      }`}
+                                    />
+                                    {isOutOfStock ? 'Out of Stock' : isLowStock ? 'Low Stock' : 'In Stock'}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })()
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                            <span className="size-1.5 rounded-full bg-slate-400" />
+                            Non-stock
                           </span>
-                        </div>
+                        )}
                       </td>
                       <td className="py-3 px-3">
                         <span
@@ -595,6 +668,14 @@ export function ProductsSection() {
                             title="View Specs & Details"
                           >
                             <Eye className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDuplicate(p)}
+                            className="inline-flex items-center justify-center size-7.5 rounded-xl text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/20 transition-all cursor-pointer border border-transparent shadow-2xs"
+                            title="Duplicate Product & Specs"
+                          >
+                            <Copy className="size-3.5" />
                           </button>
                           <button
                             type="button"
@@ -2346,6 +2427,73 @@ export function ProductsSection() {
                   </span>
                 </div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">{viewingProduct.name}</h3>
+              </div>
+            </div>
+
+            {/* Live Stock & Inventory Availability */}
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Package className="size-4 text-primary" />
+                  <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                    Inventory & Stock Availability
+                  </span>
+                </div>
+                {viewingProduct.is_stock_tracked ? (
+                  (() => {
+                    const qty = Number(viewingProduct.stock_quantity ?? 0);
+                    const reorderLevel = Number(viewingProduct.reorder_level || 0);
+                    const isOutOfStock = qty <= 0;
+                    const isLowStock = !isOutOfStock && qty <= reorderLevel;
+                    return (
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                          isOutOfStock
+                            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                            : isLowStock
+                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                        }`}
+                      >
+                        <span className={`size-1.5 rounded-full ${isOutOfStock ? 'bg-rose-500' : isLowStock ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                        {isOutOfStock ? 'Out of Stock' : isLowStock ? 'Low Stock Warning' : 'In Stock'}
+                      </span>
+                    );
+                  })()
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-slate-400 font-medium">
+                    <span className="size-1.5 rounded-full bg-slate-400" />
+                    Non-stock / Untracked
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Live Available Stock</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white text-base mt-0.5 block">
+                    {viewingProduct.is_stock_tracked
+                      ? `${Number(viewingProduct.stock_quantity ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${unitMap.get(String(viewingProduct.base_unit_id)) || 'Units'}`
+                      : 'Not Tracked'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Reorder Minimum</span>
+                  <span className="font-mono font-medium text-slate-700 dark:text-slate-300 text-sm mt-0.5 block">
+                    {viewingProduct.reorder_level || '10'} {unitMap.get(String(viewingProduct.base_unit_id)) || 'Units'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Reorder Batch Lot</span>
+                  <span className="font-mono font-medium text-slate-700 dark:text-slate-300 text-sm mt-0.5 block">
+                    {viewingProduct.reorder_quantity || '50'} {unitMap.get(String(viewingProduct.base_unit_id)) || 'Units'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Stock Tracking Mode</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300 text-sm mt-0.5 block capitalize">
+                    {viewingProduct.tracking_mode || 'Batch'}
+                  </span>
+                </div>
               </div>
             </div>
 

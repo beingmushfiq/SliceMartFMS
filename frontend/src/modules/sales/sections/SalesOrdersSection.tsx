@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Clock, Plus, RefreshCw, Search, XCircle, ShoppingCart, SlidersHorizontal, Trash2, Eye, Sparkles, ChevronDown, Check } from 'lucide-react';
+import { CheckCircle2, Clock, Plus, RefreshCw, Search, XCircle, ShoppingCart, SlidersHorizontal, Trash2, Eye, Sparkles, ChevronDown, Check, Copy } from 'lucide-react';
 import type { SalesOrder, SalesOrderStatus, SalesOrderPaymentStatus } from '../../../types/api/sales';
 import type { Product } from '../../../types/api/catalog';
 import { api } from '../../../lib/api/client';
@@ -181,6 +181,43 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
 
   const removeItem = (index: number) => {
     setItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDuplicateOrder = (order: SalesOrder) => {
+    setChannel(order.channel || 'dealer');
+    setSelectedPartyId(order.party_id ?? null);
+    setCustomerName(order.customer_name || '');
+    setCustomerPhone(order.customer_phone || '');
+    setOrderDate(new Date().toISOString().slice(0, 10));
+    setNotes(`Repeat of order #${order.order_number}${order.notes ? ' - ' + order.notes : ''}`);
+    setOrderDiscountType('flat');
+    setOrderDiscountValue(order.discount_amount ? String(order.discount_amount) : '');
+
+    const clonedItems: SoFormItem[] = (order.items && order.items.length > 0)
+      ? order.items.map((it) => ({
+          product_id: Number(it.product_id),
+          product_name: it.product_name || `Product #${it.product_id}`,
+          quantity: String(it.quantity),
+          unit_id: Number(it.unit_id),
+          unit_price: String(it.unit_price),
+          discount_type: (it.discount_percentage && parseFloat(it.discount_percentage) > 0) ? ('percentage' as const) : ('flat' as const),
+          discount_amount: it.discount_amount ? String(it.discount_amount) : '0.00',
+        }))
+      : [
+          {
+            product_id: 1,
+            product_name: 'Standard Catalog Item',
+            quantity: '1',
+            unit_id: 1,
+            unit_price: '100.00',
+            discount_type: 'flat' as const,
+            discount_amount: '0.00',
+          },
+        ];
+
+    setItems(clonedItems);
+    setShowCreateModal(true);
+    notify.info(`Duplicating order #${order.order_number}. Review line items and submit.`);
   };
 
   const { data: orders = [], isLoading, isFetching, refetch } = useQuery<SalesOrder[]>({
@@ -714,6 +751,15 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
                             <span>View</span>
                           </button>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => handleDuplicateOrder(order)}
+                          className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 cursor-pointer transition-colors flex items-center gap-1"
+                          title="Duplicate this order into a new draft"
+                        >
+                          <Copy className="size-3" />
+                          <span>Duplicate</span>
+                        </button>
                         {canDeleteOrder && (
                           <button
                             type="button"

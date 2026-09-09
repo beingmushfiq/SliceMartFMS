@@ -224,6 +224,16 @@ final class Product extends Model
     }
 
     /**
+     * Stock balances tracked across warehouses.
+     *
+     * @return HasMany<\App\Modules\Inventory\Models\StockBalance, $this>
+     */
+    public function stockBalances(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Inventory\Models\StockBalance::class, 'product_id');
+    }
+
+    /**
      * User who created the row.
      *
      * @return BelongsTo<User, $this>

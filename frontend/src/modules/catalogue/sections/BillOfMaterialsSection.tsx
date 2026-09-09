@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileCode, Plus, Search, Calculator, Sparkles, Eye, Edit2, Trash2 } from 'lucide-react';
+import { FileCode, Plus, Search, Calculator, Sparkles, Eye, Edit2, Trash2, Copy } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
@@ -261,6 +261,28 @@ export function BillOfMaterialsSection() {
     setEditingBOM(b);
   };
 
+  const handleDuplicateBOM = (b: BillOfMaterial) => {
+    setErrorMsg(null);
+    setDraft({
+      product_id: b.product_id,
+      code: `${b.code}-COPY`,
+      name: `${b.name} (Copy)`,
+      version: Number(b.version || 1) + 1,
+      output_quantity: b.output_quantity,
+      output_unit_id: b.output_unit_id,
+      is_default: false,
+      is_active: true,
+      items: (b.items || []).map((it) => ({
+        product_id: it.product_id,
+        quantity: String(it.quantity),
+        unit_id: it.unit_id,
+      })),
+    });
+    setEditingBOM(null);
+    setIsCreateOpen(true);
+    notify.info(`Duplicating BOM "${b.name}". Review materials, update version/code, and save.`);
+  };
+
   const boms = useMemo(() => bomsQuery.data?.data ?? [], [bomsQuery.data?.data]);
   const products = useMemo(() => productsQuery.data?.data ?? [], [productsQuery.data?.data]);
   const rawMaterials = useMemo(() => rawMaterialsQuery.data?.data ?? [], [rawMaterialsQuery.data?.data]);
@@ -393,6 +415,14 @@ export function BillOfMaterialsSection() {
                           title="View BOM Structure"
                         >
                           <Eye className="size-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDuplicateBOM(b)}
+                          className="inline-flex items-center justify-center size-7 rounded-lg text-muted hover:text-amber-600 dark:hover:text-amber-400 hover:bg-surface-sunken transition-colors cursor-pointer"
+                          title="Duplicate / Clone BOM"
+                        >
+                          <Copy className="size-3.5" />
                         </button>
                         <button
                           type="button"

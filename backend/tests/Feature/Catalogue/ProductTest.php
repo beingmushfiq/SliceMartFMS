@@ -50,6 +50,63 @@ final class ProductTest extends TestCase
         self::assertSame('12.3400', $response->json('data.standard_cost'));
     }
 
+    public function test_product_includes_stock_quantity_from_available_balances(): void
+    {
+        $unit = $this->createUnit();
+        $product = $this->createProduct(['sku' => 'STOCK-TEST-1', 'base_unit_id' => $unit->id, 'is_stock_tracked' => true]);
+
+        // Insert warehouse and stock balance
+        $whUuid = (string) Str::uuid();
+        $whId = DB::table('warehouses')->insertGetId([
+            'tenant_id' => $this->tenant->id,
+            'uuid' => $whUuid,
+            'code' => 'WH-TEST',
+            'name' => 'Main Warehouse',
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('stock_balances')->insert([
+            'tenant_id' => $this->tenant->id,
+            'uuid' => (string) Str::uuid(),
+            'product_id' => $product->id,
+            'warehouse_id' => $whId,
+            'stock_state' => 'available',
+            'quantity' => 125.5000,
+            'average_cost' => 10.0000,
+            'total_value' => 1255.0000,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Reserved stock should not be included in available stock_quantity
+        DB::table('stock_balances')->insert([
+            'tenant_id' => $this->tenant->id,
+            'uuid' => (string) Str::uuid(),
+            'product_id' => $product->id,
+            'warehouse_id' => $whId,
+            'stock_state' => 'reserved',
+            'quantity' => 20.0000,
+            'average_cost' => 10.0000,
+            'total_value' => 200.0000,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Test in list endpoint (index)
+        $listRes = $this->json('GET', route('tenant.products.index'), [], $this->headers());
+        $listRes->assertOk();
+        $matched = collect($listRes->json('data'))->firstWhere('sku', 'STOCK-TEST-1');
+        self::assertNotNull($matched);
+        self::assertEquals(125.5, $matched['stock_quantity']);
+
+        // Test in single item endpoint (show)
+        $showRes = $this->json('GET', route('tenant.products.show', ['product' => $product->uuid]), [], $this->headers());
+        $showRes->assertOk();
+        self::assertEquals(125.5, $showRes->json('data.stock_quantity'));
+    }
+
     public function test_duplicate_sku_including_trashed_returns_conflict(): void
     {
         $unit = $this->createUnit();

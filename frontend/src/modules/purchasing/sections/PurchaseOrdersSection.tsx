@@ -17,6 +17,7 @@ import {
   DollarSign,
   Printer,
   ShoppingBag,
+  Copy,
 } from 'lucide-react';
 import type { PurchaseOrder } from '../../../types/api/purchasing';
 import { api } from '../../../lib/api/client';
@@ -728,6 +729,40 @@ export function PurchaseOrdersSection() {
                           title="View PO Details"
                         >
                           <Eye className="size-3.5" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData({
+                              po_number: '',
+                              supplier_name: o.supplier_name || '',
+                              warehouse_name: o.warehouse_name || '',
+                              order_date: new Date().toISOString().slice(0, 10),
+                              expected_delivery_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+                              currency_code: o.currency_code || currencyCode,
+                              terms_and_conditions: o.terms_and_conditions || 'Net 30 Days upon inspection pass.',
+                              notes: `Repeat of PO #${o.po_number}${o.notes ? ' - ' + o.notes : ''}`,
+                              order_discount_type: 'flat',
+                              order_discount_value: o.discount_amount || '0.00',
+                              items: o.items?.map((it) => ({
+                                product_name: it.product_name || '',
+                                product_sku: it.product_sku || '',
+                                quantity: it.quantity,
+                                unit_code: it.unit_code || 'PCS',
+                                unit_price: it.unit_price,
+                                discount_type: 'flat' as const,
+                                discount_amount: it.discount_amount || '0.00',
+                                tax_rate: it.tax_rate || '0.00',
+                              })) || [],
+                            });
+                            setShowCreateModal(true);
+                            toast.info(`Duplicating PO #${o.po_number}. Review line items and submit.`);
+                          }}
+                          className="p-1.5 text-muted hover:text-amber-600 dark:hover:text-amber-400 hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                          title="Duplicate / Reorder PO"
+                        >
+                          <Copy className="size-3.5" />
                         </button>
 
                         {o.status === 'draft' && (

@@ -10,11 +10,18 @@ import {
   Search,
   SlidersHorizontal,
   X,
+  Copy,
+  Eye,
+  Plus,
+  Trash2,
+  RotateCcw,
 } from 'lucide-react';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { useCurrency } from '../../hooks/useCurrency';
 import type {
   ChartOfAccount,
+  AccountType,
+  NormalBalance,
   JournalEntry,
   BankAccount,
   Expense,
@@ -147,7 +154,7 @@ export const FinanceWorkspace: React.FC = () => {
   };
 
   // Chart of Accounts State
-  const [accounts] = useState<ChartOfAccount[]>([
+  const [accounts, setAccounts] = useState<ChartOfAccount[]>([
     {
       id: 101,
       uuid: 'coa-101',
@@ -353,7 +360,7 @@ export const FinanceWorkspace: React.FC = () => {
   ]);
 
   // Expenses State
-  const [expenses] = useState<Expense[]>([
+  const [expenses, setExpenses] = useState<Expense[]>([
     {
       id: 1,
       uuid: 'exp-01',
@@ -430,9 +437,83 @@ export const FinanceWorkspace: React.FC = () => {
     },
   ]);
 
+  // Account Modal State
+  const [showNewAccountModal, setShowNewAccountModal] = useState(false);
+  const [viewingAccount, setViewingAccount] = useState<ChartOfAccount | null>(null);
+  const [newAccountCode, setNewAccountCode] = useState('');
+  const [newAccountName, setNewAccountName] = useState('');
+  const [newAccountType, setNewAccountType] = useState<AccountType>('asset');
+  const [newAccountSubtype, setNewAccountSubtype] = useState('');
+  const [newNormalBalance, setNewNormalBalance] = useState<NormalBalance>('debit');
+  const [newOpeningBalance, setNewOpeningBalance] = useState('0.00');
+
+  const resetAccountForm = () => {
+    const numericCodes = accounts
+      .map((a) => parseInt(a.account_code, 10))
+      .filter((n) => !isNaN(n));
+    const maxCode = numericCodes.length > 0 ? Math.max(...numericCodes) : 1000;
+    setNewAccountCode(String(maxCode + 10));
+    setNewAccountName('');
+    setNewAccountType('asset');
+    setNewAccountSubtype('cash');
+    setNewNormalBalance('debit');
+    setNewOpeningBalance('0.00');
+  };
+
+  const handleDuplicateAccount = (acc: ChartOfAccount) => {
+    const num = parseInt(acc.account_code, 10);
+    const nextCode = !isNaN(num) ? String(num + 1) : `${acc.account_code}-01`;
+    setNewAccountCode(nextCode);
+    setNewAccountName(`${acc.name} (Copy)`);
+    setNewAccountType(acc.account_type);
+    setNewAccountSubtype(acc.account_subtype || '');
+    setNewNormalBalance(acc.normal_balance);
+    setNewOpeningBalance('0.00');
+    setShowNewAccountModal(true);
+    notify.info('Account Duplicated', {
+      description: `Cloned parameters from ${acc.account_code} - ${acc.name}. Ready to save.`,
+    });
+  };
+
+  const handleAccountTypeChange = (type: AccountType) => {
+    setNewAccountType(type);
+    if (type === 'asset' || type === 'expense') {
+      setNewNormalBalance('debit');
+    } else {
+      setNewNormalBalance('credit');
+    }
+  };
+
+  const handleSaveAccount = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAccountCode.trim() || !newAccountName.trim()) {
+      notify.warning('Validation Error', { description: 'Account code and name are required.' });
+      return;
+    }
+
+    const createdAccount: ChartOfAccount = {
+      id: Date.now(),
+      uuid: `coa-${Date.now()}`,
+      account_code: newAccountCode.trim(),
+      name: newAccountName.trim(),
+      account_type: newAccountType,
+      account_subtype: newAccountSubtype.trim() || undefined,
+      normal_balance: newNormalBalance,
+      is_active: true,
+      current_balance: parseFloat(newOpeningBalance || '0').toFixed(4),
+    };
+
+    setAccounts([...accounts, createdAccount]);
+    setShowNewAccountModal(false);
+    notify.success('Account Created', {
+      description: `Account ${createdAccount.account_code} - ${createdAccount.name} added to chart of accounts.`,
+    });
+  };
+
   // New Journal Entry Modal State
   const [showNewJournalModal, setShowNewJournalModal] = useState(false);
   const [newNarration, setNewNarration] = useState('');
+  const [viewingEntry, setViewingEntry] = useState<JournalEntry | null>(null);
   const [newLines, setNewLines] = useState<
     Array<{ account_id: number; debit: string; credit: string; narration: string }>
   >([
@@ -443,6 +524,74 @@ export const FinanceWorkspace: React.FC = () => {
   const totalNewDebit = newLines.reduce((acc, l) => acc + (parseFloat(l.debit) || 0), 0);
   const totalNewCredit = newLines.reduce((acc, l) => acc + (parseFloat(l.credit) || 0), 0);
   const isJournalBalanced = Math.abs(totalNewDebit - totalNewCredit) < 0.001 && totalNewDebit > 0;
+
+  const handleAddLine = () => {
+    setNewLines((prev) => [
+      ...prev,
+      { account_id: accounts[0]?.id ?? 101, debit: '0.00', credit: '0.00', narration: '' },
+    ]);
+  };
+
+  const handleRemoveLine = (index: number) => {
+    if (newLines.length <= 2) {
+      notify.warning('Minimum 2 Lines Required', {
+        description: 'Double-entry accounting requires at least one debit and one credit line.',
+      });
+      return;
+    }
+    setNewLines((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleDuplicateJournal = (je: JournalEntry) => {
+    setNewNarration(`Repeat of ${je.entry_number}: ${je.narration}`);
+    if (je.lines && je.lines.length > 0) {
+      setNewLines(
+        je.lines.map((l) => ({
+          account_id: l.account_id,
+          debit: parseFloat(String(l.debit_amount || '0')).toFixed(2),
+          credit: parseFloat(String(l.credit_amount || '0')).toFixed(2),
+          narration: l.narration || '',
+        }))
+      );
+    }
+    setShowNewJournalModal(true);
+    notify.info('Journal Entry Duplicated', {
+      description: `Pre-filled voucher from ${je.entry_number}. Verify amounts and post.`,
+    });
+  };
+
+  const handleReverseJournal = (je: JournalEntry) => {
+    setNewNarration(`Reversal of ${je.entry_number}: ${je.narration}`);
+    if (je.lines && je.lines.length > 0) {
+      setNewLines(
+        je.lines.map((l) => ({
+          account_id: l.account_id,
+          debit: parseFloat(String(l.credit_amount || '0')).toFixed(2),
+          credit: parseFloat(String(l.debit_amount || '0')).toFixed(2),
+          narration: `Reversal of ${je.entry_number}`,
+        }))
+      );
+    }
+    setShowNewJournalModal(true);
+    notify.info('Reversal Entry Prepared', {
+      description: `Debits and credits inverted for ${je.entry_number}. Review and post to reverse.`,
+    });
+  };
+
+  const handleDuplicateExpense = (exp: Expense) => {
+    const clonedExpense: Expense = {
+      ...exp,
+      id: expenses.length + 1,
+      uuid: `exp-clone-${Date.now()}`,
+      expense_date: new Date().toISOString().slice(0, 10),
+      description: `Repeat of ${exp.description}`,
+      status: 'approved',
+    };
+    setExpenses([clonedExpense, ...expenses]);
+    notify.success('Expense Duplicated', {
+      description: `Cloned expense voucher for ${exp.payee_name || exp.category?.name || 'Operational Disbursement'}.`,
+    });
+  };
 
   const handlePostJournal = (e: React.FormEvent) => {
     e.preventDefault();
@@ -516,6 +665,17 @@ export const FinanceWorkspace: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {activeTab === 'coa' && (
+            <button
+              onClick={() => {
+                resetAccountForm();
+                setShowNewAccountModal(true);
+              }}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+            >
+              <span>+</span> New Account
+            </button>
+          )}
           <button
             onClick={() => setShowNewJournalModal(true)}
             className="px-4 py-2 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs cursor-pointer"
@@ -782,13 +942,21 @@ export const FinanceWorkspace: React.FC = () => {
                   <th className="px-5 py-3.5 text-right">Debit (BDT)</th>
                   <th className="px-5 py-3.5 text-right">Credit (BDT)</th>
                   <th className="px-5 py-3.5 text-center">Status</th>
+                  <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-default">
                 {journalEntries.map((je) => (
                   <tr key={je.id} className="hover:bg-surface-sunken/40 transition-colors">
                     <td className="px-5 py-3.5 font-mono font-bold text-primary">
-                      {je.entry_number}
+                      <button
+                        type="button"
+                        onClick={() => setViewingEntry(je)}
+                        className="hover:underline cursor-pointer text-left font-mono font-bold text-primary"
+                        title="Click to view breakdown"
+                      >
+                        {je.entry_number}
+                      </button>
                     </td>
                     <td className="px-5 py-3.5 font-mono text-muted">{je.entry_date}</td>
                     <td className="px-5 py-3.5">
@@ -808,6 +976,35 @@ export const FinanceWorkspace: React.FC = () => {
                         {je.status.toUpperCase()}
                       </span>
                     </td>
+                    <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setViewingEntry(je)}
+                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                          title="View Ledger Lines"
+                        >
+                          <Eye className="size-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDuplicateJournal(je)}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-primary hover:bg-primary/10 rounded-lg transition cursor-pointer"
+                          title="Duplicate / Re-post Journal Entry"
+                        >
+                          <Copy className="size-3.5" />
+                          <span>Duplicate</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleReverseJournal(je)}
+                          className="p-1.5 text-amber-600 hover:text-amber-700 hover:bg-amber-500/10 rounded-lg transition-colors cursor-pointer"
+                          title="Reverse Journal Entry (Invert Debits/Credits)"
+                        >
+                          <RotateCcw className="size-3.5" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -818,61 +1015,94 @@ export const FinanceWorkspace: React.FC = () => {
 
       {/* Tab 2: Chart of Accounts */}
       {activeTab === 'coa' && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <table className="w-full text-left text-sm text-gray-600 dark:text-gray-300">
-            <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-700 dark:text-gray-200 uppercase text-xs">
-              <tr>
-                <th className="px-6 py-3">Code</th>
-                <th className="px-6 py-3">Account Name</th>
-                <th className="px-6 py-3">Type</th>
-                <th className="px-6 py-3">Subtype</th>
-                <th className="px-6 py-3">Normal Balance</th>
-                <th className="px-6 py-3 text-right">Current Balance (BDT)</th>
-                <th className="px-6 py-3 text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {accounts.map((acc) => (
-                <tr key={acc.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                  <td className="px-6 py-4 font-mono font-bold text-gray-900 dark:text-gray-100">
-                    {acc.account_code}
-                  </td>
-                  <td className="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
-                    {acc.name}
-                  </td>
-                  <td className="px-6 py-4 capitalize">
-                    <span
-                      className={`px-2 py-0.5 text-xs rounded font-medium ${
-                        acc.account_type === 'asset'
-                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
-                          : acc.account_type === 'liability'
-                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
-                            : acc.account_type === 'income'
-                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
-                              : 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300'
-                      }`}
-                    >
-                      {acc.account_type}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 capitalize text-gray-500">
-                    {acc.account_subtype || '—'}
-                  </td>
-                  <td className="px-6 py-4 uppercase text-xs font-semibold text-gray-500">
-                    {acc.normal_balance}
-                  </td>
-                  <td className="px-6 py-4 text-right font-mono font-semibold text-gray-900 dark:text-gray-100">
-                    {formatCurrency(acc.current_balance || '0')}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
-                      ACTIVE
-                    </span>
-                  </td>
+        <div className="space-y-4 pt-1">
+          <div className="bg-surface rounded-2xl shadow-xs border border-default overflow-hidden">
+            <table className="w-full text-left text-xs text-default">
+              <thead className="bg-surface-sunken/70 text-muted uppercase text-[11px] font-semibold tracking-wider border-b border-default">
+                <tr>
+                  <th className="px-5 py-3.5">Code</th>
+                  <th className="px-5 py-3.5">Account Name</th>
+                  <th className="px-5 py-3.5">Type</th>
+                  <th className="px-5 py-3.5">Subtype</th>
+                  <th className="px-5 py-3.5">Normal Balance</th>
+                  <th className="px-5 py-3.5 text-right">Current Balance (BDT)</th>
+                  <th className="px-5 py-3.5 text-center">Status</th>
+                  <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-default">
+                {accounts.map((acc) => (
+                  <tr key={acc.id} className="hover:bg-surface-sunken/40 transition-colors">
+                    <td className="px-5 py-3.5 font-mono font-bold text-primary">
+                      <button
+                        type="button"
+                        onClick={() => setViewingAccount(acc)}
+                        className="hover:underline cursor-pointer text-left font-mono font-bold text-primary"
+                        title="Click to view account transactions"
+                      >
+                        {acc.account_code}
+                      </button>
+                    </td>
+                    <td className="px-5 py-3.5 font-semibold text-default">
+                      {acc.name}
+                    </td>
+                    <td className="px-5 py-3.5 capitalize">
+                      <span
+                        className={`px-2.5 py-0.5 text-[10px] font-semibold rounded-full border ${
+                          acc.account_type === 'asset'
+                            ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30'
+                            : acc.account_type === 'liability'
+                              ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                              : acc.account_type === 'income'
+                                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                                : acc.account_type === 'expense'
+                                  ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
+                                  : 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30'
+                        }`}
+                      >
+                        {acc.account_type}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 capitalize text-muted">
+                      {acc.account_subtype || '—'}
+                    </td>
+                    <td className="px-5 py-3.5 uppercase font-mono text-[11px] font-semibold text-muted">
+                      {acc.normal_balance}
+                    </td>
+                    <td className="px-5 py-3.5 text-right font-mono font-bold text-default">
+                      {formatCurrency(acc.current_balance || '0')}
+                    </td>
+                    <td className="px-5 py-3.5 text-center">
+                      <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                        ACTIVE
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setViewingAccount(acc)}
+                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                          title="View Account Profile & Ledger"
+                        >
+                          <Eye className="size-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDuplicateAccount(acc)}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-primary hover:bg-primary/10 rounded-lg transition cursor-pointer"
+                          title="Duplicate / Clone Account Head"
+                        >
+                          <Copy className="size-3.5" />
+                          <span>Duplicate</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -941,6 +1171,7 @@ export const FinanceWorkspace: React.FC = () => {
                 <th className="px-6 py-3">Payment Method</th>
                 <th className="px-6 py-3 text-right">Amount (BDT)</th>
                 <th className="px-6 py-3 text-center">Status</th>
+                <th className="px-6 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -962,6 +1193,17 @@ export const FinanceWorkspace: React.FC = () => {
                     <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
                       {exp.status.toUpperCase()}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 text-right whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => handleDuplicateExpense(exp)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/10 rounded-lg transition cursor-pointer"
+                      title="Duplicate Expense Voucher"
+                    >
+                      <Copy className="size-3.5" />
+                      <span>Duplicate</span>
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -1142,41 +1384,57 @@ export const FinanceWorkspace: React.FC = () => {
 
       {/* Post Journal Entry Modal */}
       {showNewJournalModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-6">
-            <div className="flex items-center justify-between border-b pb-4 dark:border-gray-700">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                Post Double-Entry Journal Voucher
-              </h3>
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-surface border border-default rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between border-b border-default pb-4">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-default flex items-center gap-2">
+                  <BookOpen className="size-5 text-primary" />
+                  <span>Post Double-Entry Journal Voucher</span>
+                </h3>
+                <p className="text-xs text-muted mt-0.5">
+                  Record balanced debit and credit allocations into the general ledger
+                </p>
+              </div>
               <button
                 onClick={() => setShowNewJournalModal(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                className="text-muted hover:text-default p-1 rounded-lg transition"
               >
-                ✕
+                <X className="size-5" />
               </button>
             </div>
 
             <form onSubmit={handlePostJournal} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase mb-1">
+                <label className="block text-xs font-semibold text-default uppercase mb-1">
                   Narration / Description
                 </label>
                 <input
                   type="text"
                   value={newNarration}
                   onChange={(e) => setNewNarration(e.target.value)}
-                  placeholder="e.g. Counter cash sales deposit"
+                  placeholder="e.g. Counter cash sales deposit or monthly rent allocation"
                   required
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700 text-sm"
+                  className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-xs sm:text-sm focus:border-primary focus:outline-none"
                 />
               </div>
 
               <div className="space-y-3">
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">
-                  Journal Lines (Debit = Credit)
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-default uppercase">
+                    Journal Lines (Debit = Credit)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAddLine}
+                    className="text-xs text-primary hover:text-primary-hover font-semibold flex items-center gap-1 cursor-pointer transition"
+                  >
+                    <Plus className="size-3.5" />
+                    <span>Add Line</span>
+                  </button>
+                </div>
                 {newLines.map((line, idx) => (
-                  <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+                  <div key={idx} className="flex items-center gap-2">
                     <select
                       value={line.account_id}
                       onChange={(e) => {
@@ -1187,7 +1445,7 @@ export const FinanceWorkspace: React.FC = () => {
                           setNewLines(updated);
                         }
                       }}
-                      className="col-span-6 px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700 text-sm"
+                      className="flex-1 px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-xs sm:text-sm focus:border-primary focus:outline-none"
                     >
                       {accounts.map((a) => (
                         <option key={a.id} value={a.id}>
@@ -1196,47 +1454,68 @@ export const FinanceWorkspace: React.FC = () => {
                       ))}
                     </select>
 
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="Debit"
-                      value={line.debit}
-                      onChange={(e) => {
-                        const updated = [...newLines];
-                        const target = updated[idx];
-                        if (target) {
-                          target.debit = e.target.value;
-                          setNewLines(updated);
-                        }
-                      }}
-                      className="col-span-3 px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700 text-sm text-right font-mono"
-                    />
+                    <div className="relative w-28 sm:w-32 shrink-0">
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Debit"
+                        value={line.debit}
+                        onChange={(e) => {
+                          const updated = [...newLines];
+                          const target = updated[idx];
+                          if (target) {
+                            target.debit = e.target.value;
+                            setNewLines(updated);
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-xs sm:text-sm text-right font-mono focus:border-primary focus:outline-none"
+                      />
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted uppercase font-bold pointer-events-none">
+                        Dr
+                      </span>
+                    </div>
 
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="Credit"
-                      value={line.credit}
-                      onChange={(e) => {
-                        const updated = [...newLines];
-                        const target = updated[idx];
-                        if (target) {
-                          target.credit = e.target.value;
-                          setNewLines(updated);
-                        }
-                      }}
-                      className="col-span-3 px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700 text-sm text-right font-mono"
-                    />
+                    <div className="relative w-28 sm:w-32 shrink-0">
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Credit"
+                        value={line.credit}
+                        onChange={(e) => {
+                          const updated = [...newLines];
+                          const target = updated[idx];
+                          if (target) {
+                            target.credit = e.target.value;
+                            setNewLines(updated);
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-xs sm:text-sm text-right font-mono focus:border-primary focus:outline-none"
+                      />
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted uppercase font-bold pointer-events-none">
+                        Cr
+                      </span>
+                    </div>
+
+                    {newLines.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveLine(idx)}
+                        className="p-2 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition cursor-pointer"
+                        title="Remove line"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
 
               {/* Balance Verification Bar */}
               <div
-                className={`p-4 rounded-lg flex items-center justify-between text-sm ${
+                className={`p-4 rounded-xl flex items-center justify-between text-xs sm:text-sm border ${
                   isJournalBalanced
-                    ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
-                    : 'bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                    : 'bg-rose-50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800'
                 }`}
               >
                 <div>
@@ -1250,20 +1529,399 @@ export const FinanceWorkspace: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
+              <div className="flex justify-end gap-3 pt-4 border-t border-default">
                 <button
                   type="button"
                   onClick={() => setShowNewJournalModal(false)}
-                  className="px-4 py-2 text-sm border rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50"
+                  className="px-4 py-2 text-xs font-medium border border-default rounded-xl text-muted hover:text-default hover:bg-surface-sunken transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!isJournalBalanced}
-                  className="px-5 py-2 text-sm bg-indigo-600 disabled:opacity-50 hover:bg-indigo-700 text-white font-medium rounded-lg shadow"
+                  className="px-5 py-2 text-xs bg-primary disabled:opacity-50 hover:bg-primary-hover text-white font-semibold rounded-xl shadow-xs transition cursor-pointer"
                 >
                   Confirm & Post to General Ledger
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Journal Entry Modal */}
+      {viewingEntry && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-surface border border-default rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b border-default flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="size-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <BookOpen className="size-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-default font-mono">
+                      {viewingEntry.entry_number}
+                    </h3>
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                      {viewingEntry.status.toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted mt-0.5">{viewingEntry.narration}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingEntry(null)}
+                className="p-1 text-muted hover:text-default rounded-lg transition"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface-sunken/60 p-3.5 rounded-xl border border-default text-xs">
+                <div>
+                  <div className="text-muted text-[10px] uppercase font-semibold">Date</div>
+                  <div className="font-mono font-medium text-default mt-0.5">{viewingEntry.entry_date}</div>
+                </div>
+                <div>
+                  <div className="text-muted text-[10px] uppercase font-semibold">Source Module</div>
+                  <div className="capitalize text-default mt-0.5">{viewingEntry.source_module}</div>
+                </div>
+                <div>
+                  <div className="text-muted text-[10px] uppercase font-semibold">Total Debit</div>
+                  <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                    {formatCurrency(viewingEntry.total_debit)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted text-[10px] uppercase font-semibold">Total Credit</div>
+                  <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                    {formatCurrency(viewingEntry.total_credit)}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted mb-2">
+                  Double-Entry Ledger Lines
+                </h4>
+                <div className="rounded-xl border border-default overflow-hidden">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-surface-sunken/80 border-b border-default text-muted uppercase text-[10px] font-semibold">
+                      <tr>
+                        <th className="px-4 py-2.5">Account</th>
+                        <th className="px-4 py-2.5">Line Narration</th>
+                        <th className="px-4 py-2.5 text-right">Debit (BDT)</th>
+                        <th className="px-4 py-2.5 text-right">Credit (BDT)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-default">
+                      {viewingEntry.lines?.map((l) => (
+                        <tr key={l.id} className="hover:bg-surface-sunken/30">
+                          <td className="px-4 py-2.5">
+                            <div className="font-mono font-bold text-default">
+                              {l.account?.account_code ?? l.account_id}
+                            </div>
+                            <div className="text-muted text-[11px]">{l.account?.name ?? 'Account'}</div>
+                          </td>
+                          <td className="px-4 py-2.5 text-muted">{l.narration || '—'}</td>
+                          <td className="px-4 py-2.5 text-right font-mono font-semibold text-default">
+                            {parseFloat(String(l.debit_amount)) > 0 ? formatCurrency(String(l.debit_amount)) : '—'}
+                          </td>
+                          <td className="px-4 py-2.5 text-right font-mono font-semibold text-default">
+                            {parseFloat(String(l.credit_amount)) > 0 ? formatCurrency(String(l.credit_amount)) : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-surface-sunken/50 border-t border-default font-bold text-xs">
+                      <tr>
+                        <td colSpan={2} className="px-4 py-2.5 text-right uppercase text-muted">
+                          Total
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-mono text-emerald-600 dark:text-emerald-400">
+                          {formatCurrency(viewingEntry.total_debit)}
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-mono text-emerald-600 dark:text-emerald-400">
+                          {formatCurrency(viewingEntry.total_credit)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-3.5 border-t border-default bg-surface-sunken/30 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  const entry = viewingEntry;
+                  setViewingEntry(null);
+                  handleDuplicateJournal(entry);
+                }}
+                className="px-3.5 py-2 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+              >
+                <Copy className="size-3.5" />
+                <span>Duplicate this Entry</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewingEntry(null)}
+                className="px-4 py-2 text-xs font-medium text-default hover:bg-surface-sunken border border-default rounded-xl transition cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Chart of Accounts Head Modal */}
+      {viewingAccount && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-surface border border-default rounded-2xl max-w-xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b border-default flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="size-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <Scale className="size-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-default font-mono">
+                      {viewingAccount.account_code} - {viewingAccount.name}
+                    </h3>
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                      ACTIVE
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted mt-0.5 capitalize">
+                    {viewingAccount.account_type} {viewingAccount.account_subtype ? `(${viewingAccount.account_subtype})` : ''} • Normal {viewingAccount.normal_balance}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingAccount(null)}
+                className="p-1 text-muted hover:text-default rounded-lg transition cursor-pointer"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4">
+              <div className="grid grid-cols-2 gap-3 bg-surface-sunken/60 p-4 rounded-xl border border-default text-xs">
+                <div>
+                  <div className="text-muted text-[10px] uppercase font-semibold">Account Classification</div>
+                  <div className="font-semibold text-default capitalize mt-1">
+                    {viewingAccount.account_type} ({viewingAccount.account_subtype || 'Standard'})
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted text-[10px] uppercase font-semibold">Current Balance</div>
+                  <div className="font-mono text-base font-extrabold text-default mt-0.5">
+                    {formatCurrency(viewingAccount.current_balance || '0')}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted mb-2">
+                  Recent Journal Allocations
+                </h4>
+                <div className="rounded-xl border border-default overflow-hidden">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-surface-sunken/80 border-b border-default text-muted uppercase text-[10px] font-semibold">
+                      <tr>
+                        <th className="px-4 py-2.5">Entry #</th>
+                        <th className="px-4 py-2.5">Date</th>
+                        <th className="px-4 py-2.5 text-right">Debit</th>
+                        <th className="px-4 py-2.5 text-right">Credit</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-default">
+                      {journalEntries
+                        .filter((je) => je.lines?.some((l) => l.account_id === viewingAccount.id || l.account?.account_code === viewingAccount.account_code))
+                        .map((je) => {
+                          const relevantLine = je.lines?.find((l) => l.account_id === viewingAccount.id || l.account?.account_code === viewingAccount.account_code);
+                          return (
+                            <tr key={je.id} className="hover:bg-surface-sunken/30">
+                              <td className="px-4 py-2.5 font-mono font-bold text-primary">{je.entry_number}</td>
+                              <td className="px-4 py-2.5 text-muted">{je.entry_date}</td>
+                              <td className="px-4 py-2.5 text-right font-mono font-semibold text-default">
+                                {relevantLine && parseFloat(String(relevantLine.debit_amount)) > 0 ? formatCurrency(String(relevantLine.debit_amount)) : '—'}
+                              </td>
+                              <td className="px-4 py-2.5 text-right font-mono font-semibold text-default">
+                                {relevantLine && parseFloat(String(relevantLine.credit_amount)) > 0 ? formatCurrency(String(relevantLine.credit_amount)) : '—'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      {!journalEntries.some((je) => je.lines?.some((l) => l.account_id === viewingAccount.id || l.account?.account_code === viewingAccount.account_code)) && (
+                        <tr>
+                          <td colSpan={4} className="px-4 py-6 text-center text-muted">
+                            No ledger transactions recorded for this account head yet.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-3.5 border-t border-default bg-surface-sunken/30 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  const acc = viewingAccount;
+                  setViewingAccount(null);
+                  handleDuplicateAccount(acc);
+                }}
+                className="px-3.5 py-2 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+              >
+                <Copy className="size-3.5" />
+                <span>Duplicate Account</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewingAccount(null)}
+                className="px-4 py-2 text-xs font-medium text-default hover:bg-surface-sunken border border-default rounded-xl transition cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create / Duplicate Chart of Accounts Head Modal */}
+      {showNewAccountModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-surface border border-default rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-default pb-4">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-default flex items-center gap-2">
+                  <Scale className="size-5 text-primary" />
+                  <span>{newAccountName.includes('(Copy)') ? 'Duplicate Account Head' : 'New Account Head'}</span>
+                </h3>
+                <p className="text-xs text-muted mt-0.5">
+                  Configure Chart of Accounts general ledger head with classification and normal balance
+                </p>
+              </div>
+              <button
+                onClick={() => setShowNewAccountModal(false)}
+                className="text-muted hover:text-default p-1 rounded-lg transition cursor-pointer"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAccount} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-default uppercase mb-1">
+                    Account Code
+                  </label>
+                  <input
+                    type="text"
+                    value={newAccountCode}
+                    onChange={(e) => setNewAccountCode(e.target.value)}
+                    placeholder="e.g. 1021"
+                    required
+                    className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-xs sm:text-sm font-mono focus:border-primary focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-default uppercase mb-1">
+                    Normal Balance
+                  </label>
+                  <select
+                    value={newNormalBalance}
+                    onChange={(e) => setNewNormalBalance(e.target.value as NormalBalance)}
+                    className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-xs sm:text-sm focus:border-primary focus:outline-none"
+                  >
+                    <option value="debit">DEBIT</option>
+                    <option value="credit">CREDIT</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-default uppercase mb-1">
+                  Account Name
+                </label>
+                <input
+                  type="text"
+                  value={newAccountName}
+                  onChange={(e) => setNewAccountName(e.target.value)}
+                  placeholder="e.g. City Bank Operating A/C"
+                  required
+                  className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-xs sm:text-sm focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-default uppercase mb-1">
+                    Account Type
+                  </label>
+                  <select
+                    value={newAccountType}
+                    onChange={(e) => handleAccountTypeChange(e.target.value as AccountType)}
+                    className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-xs sm:text-sm capitalize focus:border-primary focus:outline-none"
+                  >
+                    <option value="asset">Asset</option>
+                    <option value="liability">Liability</option>
+                    <option value="equity">Equity</option>
+                    <option value="income">Income</option>
+                    <option value="expense">Expense</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-default uppercase mb-1">
+                    Subtype / Group
+                  </label>
+                  <input
+                    type="text"
+                    value={newAccountSubtype}
+                    onChange={(e) => setNewAccountSubtype(e.target.value)}
+                    placeholder="e.g. bank, cash, cogs"
+                    className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-xs sm:text-sm focus:border-primary focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-default uppercase mb-1">
+                  Opening Balance (BDT)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={newOpeningBalance}
+                  onChange={(e) => setNewOpeningBalance(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-xs sm:text-sm font-mono focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-default">
+                <button
+                  type="button"
+                  onClick={() => setShowNewAccountModal(false)}
+                  className="px-4 py-2 text-xs font-medium border border-default rounded-xl text-muted hover:text-default hover:bg-surface-sunken transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl shadow-xs transition cursor-pointer"
+                >
+                  Save Account Head
                 </button>
               </div>
             </form>
