@@ -84,13 +84,16 @@ final class ReasonCodeController extends Controller
             $query->where('context', $context);
         }
 
-        $items = $query->orderBy('name')->get()->map(static fn (ReasonCode $rc) => [
-            'id' => (string) $rc->uuid,
-            'label' => $rc->code.' - '.$rc->name,
-            'code' => $rc->code,
-            'name' => $rc->name,
-            'context' => $rc->context,
-        ])->values();
+        $items = $query->orderBy('name')
+            ->limit(500)
+            ->get(['uuid', 'code', 'name', 'context'])
+            ->map(static fn (ReasonCode $rc) => [
+                'id' => (string) $rc->uuid,
+                'label' => $rc->code.' - '.$rc->name,
+                'code' => $rc->code,
+                'name' => $rc->name,
+                'context' => $rc->context,
+            ])->values();
 
         /** @var Collection<int, array{id: string, label: string, code: string, name: string, context: string}> $items */
         return response()->json([

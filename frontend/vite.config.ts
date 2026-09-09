@@ -40,7 +40,7 @@ export default defineConfig({
     modulePreload: {
       resolveDependencies(_filename, deps, { hostType }) {
         if (hostType === 'html') {
-          return deps.filter((dep) => !dep.includes('recharts') && !dep.includes('print-engine'));
+          return deps.filter((dep) => !dep.includes('recharts') && !dep.includes('print-engine') && !dep.includes('chart-math'));
         }
         return deps;
       },

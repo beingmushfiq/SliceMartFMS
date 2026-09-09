@@ -93,7 +93,13 @@ final class PriceListController extends Controller
 
     public function options(Request $request): JsonResponse
     {
-        $items = PriceList::query()->where('is_active', true)->orderBy('name')->get()->map(static fn (PriceList $priceList) => ['id' => (string) $priceList->uuid, 'label' => $priceList->name.' ('.$priceList->code.')'])->values();
+        $items = PriceList::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->limit(500)
+            ->get(['uuid', 'name', 'code'])
+            ->map(static fn (PriceList $priceList) => ['id' => (string) $priceList->uuid, 'label' => $priceList->name.' ('.$priceList->code.')'])
+            ->values();
 
         /** @var Collection<int, array{id: string, label: string}> $items */
         return response()->json(['success' => true, 'data' => $items->all(), 'meta' => ['correlation_id' => (string) $request->header('X-Correlation-Id', '')]]);

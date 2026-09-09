@@ -9,6 +9,7 @@ use App\Core\Tenancy\TenantContext;
 use Closure;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
@@ -71,32 +72,39 @@ final class ResolveTenant
         // Check for a disagreeing body tenant_id (security event).
         $this->detectBodyTenantMismatch($request, $tenantId);
 
-        // Load the tenant row.
-        $tenant = DB::table('tenants')->where('id', $tenantId)->first();
+        // Load the tenant row with caching (5 min TTL).
+        $tenantCacheKey = "t{$tenantId}:tenant:profile";
+        $tenantData = Cache::remember($tenantCacheKey, 300, static function () use ($tenantId): ?array {
+            $row = DB::table('tenants')->where('id', $tenantId)->first();
+            return $row !== null ? (array) $row : null;
+        });
 
-        if ($tenant === null) {
+        if ($tenantData === null) {
+            Cache::forget($tenantCacheKey);
             throw new AuthenticationException(
                 "Unauthenticated — tenant [{$tenantId}] from JWT claim was not found."
             );
         }
 
-        // Load the user's scope rows for this tenant. Empty = whole-tenant access.
+        // Load the user's scope rows for this tenant with caching (5 min TTL). Empty = whole-tenant access.
         $rawUserId = $user->getAttribute('id');
         $userId = is_int($rawUserId) ? $rawUserId : null;
 
         /** @var array<int, array<string, mixed>> $scopes */
         $scopes = $userId !== null
-            ? DB::table('user_scopes')
-                ->where('tenant_id', $tenantId)
-                ->where('user_id', $userId)
-                ->get()
-                ->map(static fn (object $row): array => (array) $row)
-                ->all()
+            ? Cache::remember("t{$tenantId}:user:{$userId}:scopes", 300, static function () use ($tenantId, $userId): array {
+                return DB::table('user_scopes')
+                    ->where('tenant_id', $tenantId)
+                    ->where('user_id', $userId)
+                    ->get()
+                    ->map(static fn (object $row): array => (array) $row)
+                    ->all();
+            })
             : [];
 
         // Bind the context. TenantContext::bind() stores it statically so
         // downstream code can call TenantContext::current() without DI.
-        TenantContext::bind((array) $tenant, $scopes);
+        TenantContext::bind($tenantData, $scopes);
 
         return $next($request);
     }

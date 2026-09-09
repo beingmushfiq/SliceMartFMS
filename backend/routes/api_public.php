@@ -30,16 +30,20 @@ Route::prefix('v1')
     ->name('public.')
     ->group(static function (): void {
         Route::prefix('auth')->name('auth.')->group(static function (): void {
-            Route::post('login', [App\Modules\Auth\Controllers\AuthController::class, 'login'])->name('login');
+            Route::post('login', [App\Modules\Auth\Controllers\AuthController::class, 'login'])
+                ->middleware('throttle:login')
+                ->name('login');
             Route::post('refresh', [App\Modules\Auth\Controllers\AuthController::class, 'refresh'])->name('refresh');
             Route::post('select-tenant', [App\Modules\Auth\Controllers\AuthController::class, 'selectTenant'])->name('select-tenant');
             Route::post('logout', [App\Modules\Auth\Controllers\AuthController::class, 'logout'])->name('logout');
-            Route::post('forgot-password', [App\Modules\Auth\Controllers\AuthController::class, 'forgotPassword'])->name('forgot-password');
+            Route::post('forgot-password', [App\Modules\Auth\Controllers\AuthController::class, 'forgotPassword'])
+                ->middleware('throttle:login')
+                ->name('forgot-password');
             Route::post('reset-password', [App\Modules\Auth\Controllers\AuthController::class, 'resetPassword'])->name('reset-password');
             Route::get('branding', [App\Modules\Auth\Controllers\AuthController::class, 'branding'])->name('branding');
         });
 
-        Route::prefix('webhooks')->name('webhooks.')->group(static function (): void {
+        Route::prefix('webhooks')->middleware('throttle:webhooks')->name('webhooks.')->group(static function (): void {
             Route::post('couriers/{providerCode}', [App\Modules\Delivery\Controllers\CourierWebhookController::class, 'handle'])->name('couriers.handle');
         });
 
@@ -48,10 +52,45 @@ Route::prefix('v1')
         Route::get('business-types', [\App\Modules\Platform\Controllers\IndustryProfileController::class, 'businessTypes'])->name('business-types.index');
 
         Route::match(['get', 'head'], 'health', function () {
+            $dbStart = microtime(true);
+            $dbStatus = 'ok';
+            try {
+                \Illuminate\Support\Facades\DB::connection()->getPdo();
+            } catch (\Throwable $e) {
+                $dbStatus = 'unreachable';
+            }
+            $dbLatencyMs = round((microtime(true) - $dbStart) * 1000, 2);
+
+            $cacheStart = microtime(true);
+            $cacheStatus = 'ok';
+            try {
+                \Illuminate\Support\Facades\Cache::put('health_check_ping', 1, 10);
+                $val = \Illuminate\Support\Facades\Cache::get('health_check_ping');
+                if ($val !== 1) {
+                    $cacheStatus = 'degraded';
+                }
+            } catch (\Throwable $e) {
+                $cacheStatus = 'unreachable';
+            }
+            $cacheLatencyMs = round((microtime(true) - $cacheStart) * 1000, 2);
+
+            $isHealthy = $dbStatus === 'ok' && $cacheStatus === 'ok';
+
             return response()->json([
-                'status' => 'ok',
+                'status' => $isHealthy ? 'ok' : 'degraded',
                 'timestamp' => now()->toIso8601String(),
                 'version' => '1.0.0',
-            ]);
+                'services' => [
+                    'database' => [
+                        'status' => $dbStatus,
+                        'latency_ms' => $dbLatencyMs,
+                    ],
+                    'cache' => [
+                        'status' => $cacheStatus,
+                        'latency_ms' => $cacheLatencyMs,
+                    ],
+                ],
+                'memory_usage_mb' => round(memory_get_usage(true) / (1024 * 1024), 2),
+            ], $isHealthy ? 200 : 503);
         })->name('health');
     });

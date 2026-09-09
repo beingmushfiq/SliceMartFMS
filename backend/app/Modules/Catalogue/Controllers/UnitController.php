@@ -163,7 +163,7 @@ final class UnitController extends Controller
         }
 
         /** @var Collection<int, array{id: string, label: string}> $items */
-        $items = $query->get()->map(static fn (Unit $u) => [
+        $items = $query->limit(500)->get(['uuid', 'name', 'code'])->map(static fn (Unit $u) => [
             'id' => (string) $u->uuid,
             'label' => ((string) $u->name).' ('.((string) $u->code).')',
         ])->values();

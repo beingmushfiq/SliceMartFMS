@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api, getAccessToken, refreshOnce, setAccessToken } from '../api/client';
+import { useTenantCapabilityStore } from '../capabilities/tenantCapabilityStore';
 import type {
   BranchInfo,
   LoginResponseData,
@@ -78,9 +79,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
 
       // Trigger capability manifest fetch
-      import('../capabilities/tenantCapabilityStore').then(({ useTenantCapabilityStore }) => {
+      try {
         useTenantCapabilityStore.getState().bootstrap();
-      }).catch(() => {});
+      } catch {
+        // Ignore background bootstrap failure
+      }
 
       // Trigger bootstrap in background to refresh latest branches / permissions
       get().bootstrap().catch(() => {});
@@ -166,9 +169,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
 
       // Trigger capability manifest fetch
-      import('../capabilities/tenantCapabilityStore').then(({ useTenantCapabilityStore }) => {
+      try {
         useTenantCapabilityStore.getState().bootstrap();
-      }).catch(() => {});
+      } catch {
+        // Ignore background bootstrap failure
+      }
     } catch (err: unknown) {
       // If token is explicitly rejected (401/403) or no cached user exists, cleanly transition to unauthenticated
       const isUnauth =

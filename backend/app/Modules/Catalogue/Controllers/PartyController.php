@@ -187,7 +187,7 @@ final class PartyController extends Controller
         }
 
         /** @var Collection<int, array<string, mixed>> $items */
-        $items = $query->get()->map(static fn (Party $p) => [
+        $items = $query->limit(500)->get(['uuid', 'id', 'code', 'name', 'phone', 'email', 'type', 'is_dealer', 'is_customer', 'credit_limit', 'current_balance'])->map(static fn (Party $p) => [
             'id'              => (string) $p->uuid,
             'party_id'        => $p->id,
             'code'            => (string) $p->code,

@@ -11,7 +11,7 @@ test.describe('Platform Super Admin Portal Flow', () => {
     // Inputs for platform admin
     const emailInput = page.getByLabel(/Email/i);
     const passwordInput = page.getByLabel(/Password/i);
-    const loginButton = page.getByRole('button', { name: /login|sign in/i });
+    const loginButton = page.getByRole('button', { name: /login|sign in|authenticate/i });
 
     await expect(emailInput).toBeVisible();
     await expect(passwordInput).toBeVisible();

@@ -78,7 +78,13 @@ final class WarehouseController extends Controller
 
     public function options(Request $request): JsonResponse
     {
-        $items = Warehouse::query()->where('is_active', true)->orderBy('name')->get()->map(static fn (Warehouse $warehouse) => ['id' => (string) $warehouse->uuid, 'label' => $warehouse->name.' ('.$warehouse->code.')'])->values();
+        $items = Warehouse::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->limit(500)
+            ->get(['uuid', 'name', 'code'])
+            ->map(static fn (Warehouse $warehouse) => ['id' => (string) $warehouse->uuid, 'label' => $warehouse->name.' ('.$warehouse->code.')'])
+            ->values();
 
         return response()->json(['success' => true, 'data' => $items->all(), 'meta' => ['correlation_id' => (string) $request->header('X-Correlation-Id', '')]]);
     }

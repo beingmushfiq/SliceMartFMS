@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\Warehouse;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -43,8 +44,12 @@ final class CheckTenantQuota
         }
 
         $context = TenantContext::current();
+        $tenantId = $context->tenantId();
+
         /** @var Tenant|null $tenant */
-        $tenant = Tenant::with('plan')->find($context->tenantId());
+        $tenant = Cache::remember("t{$tenantId}:quota:tenant_plan", 120, static function () use ($tenantId): ?Tenant {
+            return Tenant::with('plan')->find($tenantId);
+        });
 
         if (! $tenant) {
             return $next($request);
@@ -104,7 +109,14 @@ final class CheckTenantQuota
             );
         }
 
-        return $next($request);
+        $response = $next($request);
+
+        // If creation was successful, immediately invalidate resource count cache
+        if ($response->isSuccessful()) {
+            Cache::forget("t{$tenantId}:quota:{$resource}");
+        }
+
+        return $response;
     }
 
     /**
@@ -112,11 +124,13 @@ final class CheckTenantQuota
      */
     private function getCurrentResourceCount(string $resource, int $tenantId): int
     {
-        return match ($resource) {
-            'products' => Product::where('tenant_id', $tenantId)->count(),
-            'users' => User::where('tenant_id', $tenantId)->where('is_platform_user', false)->count(),
-            'warehouses' => Warehouse::where('tenant_id', $tenantId)->count(),
-            default => 0,
-        };
+        return Cache::remember("t{$tenantId}:quota:{$resource}", 60, static function () use ($resource, $tenantId): int {
+            return match ($resource) {
+                'products' => Product::where('tenant_id', $tenantId)->count(),
+                'users' => User::where('tenant_id', $tenantId)->where('is_platform_user', false)->count(),
+                'warehouses' => Warehouse::where('tenant_id', $tenantId)->count(),
+                default => 0,
+            };
+        });
     }
 }

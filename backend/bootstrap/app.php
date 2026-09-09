@@ -41,7 +41,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->prefix('api')
                 ->group(base_path('routes/api_public.php'));
 
-            Illuminate\Support\Facades\Route::middleware(['api', 'correlation.id', 'storefront.tenant'])
+            Illuminate\Support\Facades\Route::middleware(['api', 'correlation.id', 'storefront.tenant', 'throttle:storefront'])
                 ->prefix('api')
                 ->group(base_path('routes/api_storefront.php'));
         },
@@ -255,6 +255,22 @@ return Application::configure(basePath: dirname(__DIR__))
                 retryable: false,
                 details: $e->details(),
             );
+        });
+
+        // 429 RATE_LIMITED — rate limit exceeded (API_CONTRACT §10).
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException $e, Request $request) {
+            $response = ErrorResponse::make(
+                request: $request,
+                code: 'RATE_LIMITED',
+                message: 'Too many requests. Please slow down and try again later.',
+                httpStatus: 429,
+                retryable: true,
+                details: [
+                    'retry_after' => $e->getHeaders()['Retry-After'] ?? null,
+                ],
+            );
+
+            return $response->withHeaders($e->getHeaders());
         });
 
         // 500 INTERNAL_ERROR — catch-all for any unhandled exception.

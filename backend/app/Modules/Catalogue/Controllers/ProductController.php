@@ -124,7 +124,13 @@ final class ProductController extends Controller
 
     public function options(Request $request): JsonResponse
     {
-        $items = Product::query()->where('status', 'active')->orderBy('name')->get()->map(static fn (Product $product) => ['id' => (string) $product->uuid, 'label' => $product->name.' ('.$product->sku.')'])->values();
+        $items = Product::query()
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->limit(500)
+            ->get(['uuid', 'name', 'sku'])
+            ->map(static fn (Product $product) => ['id' => (string) $product->uuid, 'label' => $product->name.' ('.$product->sku.')'])
+            ->values();
 
         return response()->json(['success' => true, 'data' => $items->all(), 'meta' => ['correlation_id' => (string) $request->header('X-Correlation-Id', '')]]);
     }

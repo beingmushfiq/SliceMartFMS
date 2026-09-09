@@ -2,10 +2,10 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Storefront Customer Browsing Flow', () => {
   test('renders storefront homepage and navigation links', async ({ page }) => {
-    await page.goto('/storefront');
+    await page.goto('/store');
 
     // Page title and header
-    await expect(page).toHaveTitle(/SliceMart|Store/i);
+    await expect(page).toHaveTitle(/SliceMart|Store|Operations Platform/i);
 
     // Verify presence of navigation elements
     const catalogLink = page.getByRole('link', { name: /catalog|products|shop/i }).first();
@@ -18,10 +18,10 @@ test.describe('Storefront Customer Browsing Flow', () => {
   });
 
   test('navigates to catalog and displays search/filters', async ({ page }) => {
-    await page.goto('/storefront/catalog');
+    await page.goto('/store/products');
 
     // Catalog page loads
-    await expect(page).toHaveURL(/\/storefront\/catalog/);
+    await expect(page).toHaveURL(/\/store\/products/);
 
     // Search bar or category list
     const searchInput = page.getByPlaceholder(/search/i).first();

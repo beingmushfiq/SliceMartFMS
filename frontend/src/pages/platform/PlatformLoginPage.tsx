@@ -57,12 +57,13 @@ export const PlatformLoginPage: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 font-mono">
+              <label htmlFor="platform-email" className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 font-mono">
                 Super Admin Email
               </label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
+                  id="platform-email"
                   type="email"
                   required
                   value={email}
@@ -74,12 +75,13 @@ export const PlatformLoginPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 font-mono">
+              <label htmlFor="platform-password" className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 font-mono">
                 Master Password
               </label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
+                  id="platform-password"
                   type="password"
                   required
                   value={password}

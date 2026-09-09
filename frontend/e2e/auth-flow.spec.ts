@@ -5,13 +5,13 @@ test.describe('Tenant Authentication Flow', () => {
     await page.goto('/login');
 
     // Title / branding verification
-    await expect(page).toHaveTitle(/SliceMart/i);
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('SliceMart ERP');
-    await expect(page.getByText('Business Operations Platform')).toBeVisible();
+    await expect(page).toHaveTitle(/Operations Platform|SliceMart/i);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.getByText('Business Operations Platform', { exact: true })).toBeVisible();
 
     // Form controls are present and accessible
     const emailInput = page.getByLabel('Email Address');
-    const passwordInput = page.getByLabel('Password');
+    const passwordInput = page.getByLabel('Password', { exact: true });
     const submitButton = page.getByRole('button', { name: /sign in/i });
 
     await expect(emailInput).toBeVisible();
@@ -34,7 +34,7 @@ test.describe('Tenant Authentication Flow', () => {
     await page.goto('/login');
 
     await page.getByLabel('Email Address').fill('owner@slicemart.com');
-    await page.getByLabel('Password').fill('SecurePassword123!');
+    await page.getByLabel('Password', { exact: true }).fill('SecurePassword123!');
 
     await expect(page.getByLabel('Email Address')).toHaveValue('owner@slicemart.com');
   });

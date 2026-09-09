@@ -82,7 +82,13 @@ final class BrandController extends Controller
 
     public function options(Request $request): JsonResponse
     {
-        $items = Brand::query()->where('is_active', true)->orderBy('name')->get()->map(static fn (Brand $brand) => ['id' => (string) $brand->uuid, 'label' => $brand->name.' ('.$brand->code.')'])->values();
+        $items = Brand::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->limit(500)
+            ->get(['uuid', 'name', 'code'])
+            ->map(static fn (Brand $brand) => ['id' => (string) $brand->uuid, 'label' => $brand->name.' ('.$brand->code.')'])
+            ->values();
 
         /** @var Collection<int, array{id: string, label: string}> $items */
         return response()->json(['success' => true, 'data' => $items->all(), 'meta' => ['correlation_id' => (string) $request->header('X-Correlation-Id', '')]]);

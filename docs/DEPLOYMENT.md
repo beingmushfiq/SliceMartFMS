@@ -175,3 +175,34 @@ server {
     }
 }
 ```
+
+---
+
+## 6. Containerized Deployment Architecture (Docker Compose)
+
+For multi-tenant containerized hosting, SliceMart FMS provides production-grade orchestration:
+
+### 6.1 Container Topology & Services
+- **`web`**: Nginx ingress serving compiled React 19 SPA (`/dist`), enforcing static immutable caching (`/assets/*` -> 1 year) and routing `/api/*` to the PHP backend pool.
+- **`app`**: PHP 8.5-FPM running with tracing JIT and pre-compiled OpCache (`validate_timestamps=0`).
+- **`db`**: PostgreSQL 16 (or MySQL 8) with persistent data volumes.
+- **`queue-worker`**: Isolated background worker running `php artisan queue:work --tries=3 --max-time=3600`.
+- **`scheduler`**: Automated periodic task runner executing `php artisan schedule:work` (hourly idempotency purge, cache pruning).
+
+### 6.2 Running the Stack
+```bash
+# 1. Copy and configure production environment
+cp .env.production.example backend/.env
+
+# 2. Build and launch all container services
+docker compose up -d --build
+
+# 3. Execute database migrations and seeders inside container
+docker compose exec app php artisan migrate --force
+docker compose exec app php artisan config:cache
+docker compose exec app php artisan route:cache
+
+# 4. Verify deployment health probe
+curl -f http://localhost/api/v1/health
+```
+

@@ -106,7 +106,13 @@ final class CategoryController extends Controller
 
     public function options(Request $request): JsonResponse
     {
-        $items = Category::query()->where('is_active', true)->orderBy('name')->get()->map(static fn (Category $category) => ['id' => (string) $category->uuid, 'label' => (string) $category->path])->values();
+        $items = Category::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->limit(500)
+            ->get(['uuid', 'path', 'name'])
+            ->map(static fn (Category $category) => ['id' => (string) $category->uuid, 'label' => (string) $category->path])
+            ->values();
 
         /** @var Collection<int, array{id: string, label: string}> $items */
         return response()->json(['success' => true, 'data' => $items->all(), 'meta' => ['correlation_id' => (string) $request->header('X-Correlation-Id', '')]]);
