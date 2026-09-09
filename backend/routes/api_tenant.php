@@ -103,7 +103,7 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             Route::get('/', [App\Modules\Catalogue\Controllers\ProductController::class, 'index'])
                 ->middleware('permission:catalog.product.view')->name('index');
             Route::post('/', [App\Modules\Catalogue\Controllers\ProductController::class, 'store'])
-                ->middleware('permission:catalog.product.create')->name('store');
+                ->middleware(['permission:catalog.product.create', 'tenant.quota:products'])->name('store');
             Route::get('{product:uuid}', [App\Modules\Catalogue\Controllers\ProductController::class, 'show'])
                 ->middleware('permission:catalog.product.view')->name('show');
             Route::patch('{product:uuid}', [App\Modules\Catalogue\Controllers\ProductController::class, 'update'])
@@ -144,7 +144,7 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             Route::get('/', [App\Modules\Catalogue\Controllers\WarehouseController::class, 'index'])
                 ->middleware('permission:inventory.warehouse.view')->name('index');
             Route::post('/', [App\Modules\Catalogue\Controllers\WarehouseController::class, 'store'])
-                ->middleware('permission:inventory.warehouse.create')->name('store');
+                ->middleware(['permission:inventory.warehouse.create', 'tenant.quota:warehouses'])->name('store');
             Route::get('{warehouse:uuid}', [App\Modules\Catalogue\Controllers\WarehouseController::class, 'show'])
                 ->middleware('permission:inventory.warehouse.view')->name('show');
             Route::patch('{warehouse:uuid}', [App\Modules\Catalogue\Controllers\WarehouseController::class, 'update'])

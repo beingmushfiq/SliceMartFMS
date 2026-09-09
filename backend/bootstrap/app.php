@@ -56,6 +56,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => App\Core\Http\Middleware\AuthorizePermission::class,
             'platform.admin' => App\Core\Http\Middleware\EnsurePlatformAdmin::class,
             'storefront.tenant' => App\Core\Http\Middleware\ResolveStorefrontTenant::class,
+            'tenant.quota' => App\Core\Http\Middleware\CheckTenantQuota::class,
         ]);
 
         // Middleware order in the api group (ARCHITECTURE §5.1):

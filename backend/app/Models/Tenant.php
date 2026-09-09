@@ -26,6 +26,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string $locale
  * @property string|null $logo_path
  * @property array<string, mixed>|null $branding
+ * @property array<string, mixed>|null $settings
  * @property CarbonInterface|null $trial_ends_at
  * @property CarbonInterface|null $grace_period_ends_at
  * @property CarbonInterface|null $suspended_at
@@ -33,6 +34,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property CarbonInterface|null $updated_at
  * @property CarbonInterface|null $deleted_at
  * @property-read Collection<int, User> $users
+ * @property-read Plan|null $plan
  */
 class Tenant extends Model
 {
