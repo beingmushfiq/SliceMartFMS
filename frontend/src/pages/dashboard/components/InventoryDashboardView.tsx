@@ -14,6 +14,7 @@ import {
 import type { OrderPOItem } from './DashboardModals';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../lib/format/currency';
+import type { DashboardMetricsData } from '../../../types/api/dashboard';
 
 interface InventoryDashboardViewProps {
   attentionItems: OrderPOItem[];
@@ -28,19 +29,26 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
 }) => {
   const { formatCurrency } = useCurrency();
 
-  const { data: metrics } = useQuery({
+  const { data: metrics } = useQuery<DashboardMetricsData | null>({
     queryKey: ['tenant', 'dashboard', 'metrics'],
     queryFn: async () => {
       try {
-        const res = await api.get<any>('/dashboard/metrics');
+        const res = await api.get<DashboardMetricsData | { data: DashboardMetricsData }>(
+          '/dashboard/metrics'
+        );
         const raw = res.data;
         if (raw && typeof raw === 'object') {
-          if ('inventory' in raw) return raw;
-          if ('data' in raw && raw.data && typeof raw.data === 'object' && 'inventory' in raw.data) {
-            return raw.data;
+          if ('inventory' in raw) return raw as DashboardMetricsData;
+          if (
+            'data' in raw &&
+            raw.data &&
+            typeof raw.data === 'object' &&
+            'inventory' in raw.data
+          ) {
+            return raw.data as DashboardMetricsData;
           }
         }
-        return raw ?? null;
+        return null;
       } catch {
         return null;
       }
@@ -114,9 +122,7 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
               {metrics?.inventory?.total_valuation ? 'Live Catalog' : '0 SKUs'}
             </div>
-            <span className="text-[10px] font-semibold text-muted">
-              Active Facility
-            </span>
+            <span className="text-[10px] font-semibold text-muted">Active Facility</span>
           </div>
         </div>
 
@@ -154,9 +160,7 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-red-500">
               {metrics?.inventory?.low_stock_count ?? 0} Items
             </div>
-            <span className="text-[10px] font-semibold text-red-500">
-              Immediate Reorder
-            </span>
+            <span className="text-[10px] font-semibold text-red-500">Immediate Reorder</span>
           </div>
         </div>
 
@@ -194,9 +198,7 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
               0 Shipments
             </div>
-            <span className="text-[10px] font-semibold text-muted">
-              Inbound Receiving
-            </span>
+            <span className="text-[10px] font-semibold text-muted">Inbound Receiving</span>
           </div>
         </div>
 
@@ -214,9 +216,7 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
               0 Transfers
             </div>
-            <span className="text-[10px] font-semibold text-muted">
-              Inter-facility Log
-            </span>
+            <span className="text-[10px] font-semibold text-muted">Inter-facility Log</span>
           </div>
         </div>
       </div>
@@ -230,7 +230,9 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-sm font-bold text-default">Immediate Replenishment Queue</h3>
-              <p className="text-[11px] text-muted">Material items requiring urgent purchase orders</p>
+              <p className="text-[11px] text-muted">
+                Material items requiring urgent purchase orders
+              </p>
             </div>
             <span className="rounded-full bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 text-[10px] font-bold">
               {attentionItems.length} Alerts
@@ -256,9 +258,16 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
                         <span className="text-[10px] text-muted font-mono">({item.sku})</span>
                       </div>
                       <div className="flex items-center gap-2 text-[11px] text-muted">
-                        <span>Warehouse: <strong className="text-default">{item.warehouse}</strong></span>
+                        <span>
+                          Warehouse: <strong className="text-default">{item.warehouse}</strong>
+                        </span>
                         <span>•</span>
-                        <span>Stock: <strong className={isOutOfStock ? 'text-red-500' : 'text-amber-500'}>{item.currentStock} {item.unit}</strong></span>
+                        <span>
+                          Stock:{' '}
+                          <strong className={isOutOfStock ? 'text-red-500' : 'text-amber-500'}>
+                            {item.currentStock} {item.unit}
+                          </strong>
+                        </span>
                         <span>•</span>
                         <span>Min: {item.minThreshold}</span>
                       </div>
@@ -340,7 +349,9 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-sm font-bold text-default">Recent Stock Activity</h3>
-            <p className="text-[11px] text-muted">Real-time ledger of inbound shipments and warehouse transfers</p>
+            <p className="text-[11px] text-muted">
+              Real-time ledger of inbound shipments and warehouse transfers
+            </p>
           </div>
           <Link
             to="/inventory"
@@ -358,7 +369,10 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
             </div>
           ) : (
             stockMovements.map((move) => (
-              <div key={move.id} className="p-3 rounded-xl border border-default bg-surface-sunken/40 space-y-1.5">
+              <div
+                key={move.id}
+                className="p-3 rounded-xl border border-default bg-surface-sunken/40 space-y-1.5"
+              >
                 <div className="flex items-center justify-between">
                   <span className="rounded-md bg-surface px-1.5 py-0.5 text-[9px] font-mono font-bold text-primary border border-default">
                     {move.type}
@@ -375,7 +389,6 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
           )}
         </div>
       </div>
-
     </div>
   );
 };

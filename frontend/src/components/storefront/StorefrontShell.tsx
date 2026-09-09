@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { Outlet, useParams } from 'react-router-dom';
 import { api } from '../../lib/api/client';
 import { useStorefrontCartStore } from '../../lib/storefront/storefrontCartStore';
@@ -8,6 +8,7 @@ import { StorefrontCartDrawer } from './StorefrontCartDrawer';
 import { SeoHead } from '../seo/SeoHead';
 import { JsonLdSchema } from '../seo/JsonLdSchema';
 import { useAuthStore } from '../../lib/auth/authStore';
+import { StorefrontRouteLoadingFallback } from '../routing/RouteLoadingFallback';
 import type { StorefrontConfig } from '../../types/api/storefront';
 
 export const StorefrontShell: React.FC = () => {
@@ -84,7 +85,10 @@ export const StorefrontShell: React.FC = () => {
     <div className="min-h-screen bg-zinc-950 font-sans text-zinc-100 flex flex-col justify-between selection:bg-emerald-500/30 selection:text-emerald-200">
       <SeoHead
         title={config.meta_title || config.name}
-        description={config.meta_description || 'Direct factory manufacturing and online commercial storefront.'}
+        description={
+          config.meta_description ||
+          'Direct factory manufacturing and online commercial storefront.'
+        }
         brandName={config.name}
       />
       {orgSchema && <JsonLdSchema id="global-org-schema" schema={orgSchema} />}
@@ -93,7 +97,9 @@ export const StorefrontShell: React.FC = () => {
       <div>
         <StorefrontHeader config={config} subdomain={subdomain} />
         <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-          <Outlet context={{ config, subdomain }} />
+          <Suspense fallback={<StorefrontRouteLoadingFallback />}>
+            <Outlet context={{ config, subdomain }} />
+          </Suspense>
         </main>
       </div>
 
@@ -102,4 +108,3 @@ export const StorefrontShell: React.FC = () => {
     </div>
   );
 };
-

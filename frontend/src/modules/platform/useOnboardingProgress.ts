@@ -62,7 +62,7 @@ export function useOnboardingProgress() {
     queryKey: ['tenant', 'onboarding', 'state'],
     queryFn: async ({ signal }) => {
       try {
-        const res = await api.get<any>(
+        const res = await api.get<OnboardingStateResponse | { data: OnboardingStateResponse }>(
           '/tenant/onboarding/state',
           { signal }
         );
@@ -73,7 +73,7 @@ export function useOnboardingProgress() {
             return raw.data as OnboardingStateResponse;
           }
         }
-        return (raw as OnboardingStateResponse) ?? null;
+        return null;
       } catch {
         return null;
       }
@@ -88,15 +88,17 @@ export function useOnboardingProgress() {
 
   const completionPercentage = isCompleted
     ? 100
-    : stateQuery.data?.completion_score?.percentage ??
-      manifest?.onboarding_percentage ??
-      0;
+    : (stateQuery.data?.completion_score?.percentage ?? manifest?.onboarding_percentage ?? 0);
 
   const milestones: CompletionMilestones = stateQuery.data?.completion_score ?? {
     percentage: completionPercentage,
     is_completed: isCompleted,
     completed_milestones: [] as string[],
-    pending_milestones: ['legal_identity', 'operational_facilities', 'standards_branding'] as string[],
+    pending_milestones: [
+      'legal_identity',
+      'operational_facilities',
+      'standards_branding',
+    ] as string[],
   };
 
   const skipOnboarding = useCallback(() => {

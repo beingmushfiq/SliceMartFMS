@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
+import { RouteLoadingFallback } from '../routing/RouteLoadingFallback';
 import { AppHeader } from './AppHeader';
 import { Sidebar } from './Sidebar';
 import { ImpersonationBanner } from './ImpersonationBanner';
@@ -68,11 +69,12 @@ export function AppShell() {
           />
 
           <main className="flex-1 p-(--page-padding-mobile) sm:p-(--page-padding) overflow-x-hidden">
-            <Outlet />
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <Outlet />
+            </Suspense>
           </main>
         </div>
       </div>
     </div>
   );
 }
-

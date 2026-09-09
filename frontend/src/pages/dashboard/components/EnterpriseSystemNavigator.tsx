@@ -33,13 +33,7 @@ import { useTenantCapabilityStore } from '../../../lib/capabilities/tenantCapabi
 import { cn } from '../../../lib/utils';
 
 export type SubsystemDomain =
-  | 'all'
-  | 'commercial'
-  | 'supply'
-  | 'manufacturing'
-  | 'finance'
-  | 'workforce'
-  | 'governance';
+  'all' | 'commercial' | 'supply' | 'manufacturing' | 'finance' | 'workforce' | 'governance';
 
 interface SubsystemItem {
   id: string;
@@ -168,7 +162,11 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
     permission: ['ecommerce.storefront.view', 'ecommerce.storefront.manage'],
     pulseMetric: { value: 'Online', label: 'Public Web Store', tone: 'success' },
     quickActions: [
-      { label: 'Visual Page Builder', to: '/storefront/builder', permission: 'ecommerce.storefront.manage' },
+      {
+        label: 'Visual Page Builder',
+        to: '/storefront/builder',
+        permission: 'ecommerce.storefront.manage',
+      },
       { label: 'Store Settings', to: '/storefront', permission: 'ecommerce.storefront.manage' },
     ],
   },
@@ -177,7 +175,8 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
   {
     id: 'master-catalogue',
     title: 'Master Catalogue & BOM',
-    description: 'Product definitions, variants, raw materials, SKUs, and multi-level Bills of Materials',
+    description:
+      'Product definitions, variants, raw materials, SKUs, and multi-level Bills of Materials',
     to: '/catalogue',
     icon: Boxes,
     domain: 'supply',
@@ -185,7 +184,12 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
     permission: ['catalog.product.view', 'catalog.category.view', 'catalog.bom.view'],
     pulseMetric: { value: '148 SKUs', label: 'Finished & Raw', tone: 'default' },
     quickActions: [
-      { label: 'Add Product', to: '/catalogue?action=new', icon: Plus, permission: 'catalog.product.create' },
+      {
+        label: 'Add Product',
+        to: '/catalogue?action=new',
+        icon: Plus,
+        permission: 'catalog.product.create',
+      },
       { label: 'Bill of Materials', to: '/catalogue?tab=bom', permission: 'catalog.bom.view' },
       { label: 'Categories', to: '/catalogue?tab=categories', permission: 'catalog.category.view' },
     ],
@@ -193,7 +197,8 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
   {
     id: 'inventory-stock',
     title: 'Warehouse & Stock Ledger',
-    description: 'Multi-warehouse bin levels, internal transfers, low-stock alerts & stock reconciliation',
+    description:
+      'Multi-warehouse bin levels, internal transfers, low-stock alerts & stock reconciliation',
     to: '/inventory',
     icon: Warehouse,
     domain: 'supply',
@@ -201,9 +206,22 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
     permission: ['inventory.stock.view', 'inventory.warehouse.view', 'inventory.movement.view'],
     pulseMetric: { value: '3 Warnings', label: 'Reorder Needed', tone: 'warning' },
     quickActions: [
-      { label: 'Transfer Stock', to: '/inventory?action=transfer', icon: Plus, permission: 'inventory.transfer.create' },
-      { label: 'Stock Movements', to: '/inventory?tab=movements', permission: 'inventory.movement.view' },
-      { label: 'Stock Audit Count', to: '/inventory?tab=count', permission: 'inventory.count.view' },
+      {
+        label: 'Transfer Stock',
+        to: '/inventory?action=transfer',
+        icon: Plus,
+        permission: 'inventory.transfer.create',
+      },
+      {
+        label: 'Stock Movements',
+        to: '/inventory?tab=movements',
+        permission: 'inventory.movement.view',
+      },
+      {
+        label: 'Stock Audit Count',
+        to: '/inventory?tab=count',
+        permission: 'inventory.count.view',
+      },
     ],
   },
   {
@@ -217,15 +235,29 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
     permission: ['purchasing.order.view', 'purchasing.requisition.view', 'purchasing.grn.view'],
     pulseMetric: { value: '3 Incoming', label: 'GRNs Expected', tone: 'info' },
     quickActions: [
-      { label: 'Create PO', to: '/purchasing?action=new', icon: Plus, permission: 'purchasing.order.create' },
-      { label: 'Goods Receipts (GRN)', to: '/purchasing?tab=grn', permission: 'purchasing.grn.view' },
-      { label: 'Requisitions', to: '/purchasing?tab=requisitions', permission: 'purchasing.requisition.view' },
+      {
+        label: 'Create PO',
+        to: '/purchasing?action=new',
+        icon: Plus,
+        permission: 'purchasing.order.create',
+      },
+      {
+        label: 'Goods Receipts (GRN)',
+        to: '/purchasing?tab=grn',
+        permission: 'purchasing.grn.view',
+      },
+      {
+        label: 'Requisitions',
+        to: '/purchasing?tab=requisitions',
+        permission: 'purchasing.requisition.view',
+      },
     ],
   },
   {
     id: 'logistics-courier',
     title: 'Logistics, Delivery & COD',
-    description: 'Courier integrations (Steadfast, RedX, Pathao), run-sheets, delivery orders & cash collections',
+    description:
+      'Courier integrations (Steadfast, RedX, Pathao), run-sheets, delivery orders & cash collections',
     to: '/logistics',
     icon: Truck,
     domain: 'supply',
@@ -233,7 +265,11 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
     permission: ['logistics.delivery_order.view', 'logistics.run_sheet.view'],
     pulseMetric: { value: '18 Dispatches', label: 'In Transit', tone: 'info' },
     quickActions: [
-      { label: 'Run Sheets', to: '/logistics?tab=run-sheets', permission: 'logistics.run_sheet.view' },
+      {
+        label: 'Run Sheets',
+        to: '/logistics?tab=run-sheets',
+        permission: 'logistics.run_sheet.view',
+      },
       { label: 'COD Reconciliation', to: '/logistics?tab=cod', permission: 'logistics.cod.view' },
     ],
   },
@@ -242,7 +278,8 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
   {
     id: 'factory-production',
     title: 'Production Chain & Scheduling',
-    description: 'Work orders, batch execution, daily line planning, material routing & worker logs',
+    description:
+      'Work orders, batch execution, daily line planning, material routing & worker logs',
     to: '/production',
     icon: Factory,
     domain: 'manufacturing',
@@ -250,15 +287,29 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
     permission: ['production.batch.view', 'production.plan.view', 'production.worker_entry.view'],
     pulseMetric: { value: '96% Target', label: 'Floor Run Yield', tone: 'success' },
     quickActions: [
-      { label: 'Schedule Batch', to: '/production?action=new', icon: Plus, permission: 'production.batch.create' },
-      { label: 'Active Batches', to: '/production?tab=batches', permission: 'production.batch.view' },
-      { label: 'Shift Roster', to: '/production?tab=workers', permission: 'production.worker_entry.view' },
+      {
+        label: 'Schedule Batch',
+        to: '/production?action=new',
+        icon: Plus,
+        permission: 'production.batch.create',
+      },
+      {
+        label: 'Active Batches',
+        to: '/production?tab=batches',
+        permission: 'production.batch.view',
+      },
+      {
+        label: 'Shift Roster',
+        to: '/production?tab=workers',
+        permission: 'production.worker_entry.view',
+      },
     ],
   },
   {
     id: 'quality-control',
     title: 'Quality Control (QC Gate)',
-    description: 'Mandatory in-line and post-assembly quality audits, parameter thresholds & defect quarantine',
+    description:
+      'Mandatory in-line and post-assembly quality audits, parameter thresholds & defect quarantine',
     to: '/qc',
     icon: Microscope,
     domain: 'manufacturing',
@@ -266,7 +317,12 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
     permission: ['qc.inspection.view', 'qc.parameter.view', 'qc.wastage.view'],
     pulseMetric: { value: '97.5% Pass', label: 'ISO Standard', tone: 'success' },
     quickActions: [
-      { label: 'Audit Batch', to: '/qc?action=inspect', icon: Plus, permission: 'qc.inspection.create' },
+      {
+        label: 'Audit Batch',
+        to: '/qc?action=inspect',
+        icon: Plus,
+        permission: 'qc.inspection.create',
+      },
       { label: 'Defect & Wastage', to: '/qc?tab=wastage', permission: 'qc.wastage.view' },
       { label: 'QC Specs', to: '/qc?tab=parameters', permission: 'qc.parameter.view' },
     ],
@@ -282,8 +338,17 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
     permission: ['assets.asset.view', 'assets.maintenance.view'],
     pulseMetric: { value: '100% Up', label: 'Assembly Lines', tone: 'success' },
     quickActions: [
-      { label: 'Log Service', to: '/assets?action=log-service', icon: Plus, permission: 'assets.maintenance.create' },
-      { label: 'Maintenance Log', to: '/assets?tab=maintenance', permission: 'assets.maintenance.view' },
+      {
+        label: 'Log Service',
+        to: '/assets?action=log-service',
+        icon: Plus,
+        permission: 'assets.maintenance.create',
+      },
+      {
+        label: 'Maintenance Log',
+        to: '/assets?tab=maintenance',
+        permission: 'assets.maintenance.view',
+      },
     ],
   },
 
@@ -291,7 +356,8 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
   {
     id: 'finance-gl',
     title: 'Finance & Chart of Accounts',
-    description: 'General ledger journals, cash accounts, operating expense vouchers & bank reconciliations',
+    description:
+      'General ledger journals, cash accounts, operating expense vouchers & bank reconciliations',
     to: '/finance',
     icon: Coins,
     domain: 'finance',
@@ -299,15 +365,25 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
     permission: ['finance.account.view', 'finance.journal.view', 'finance.expense.view'],
     pulseMetric: { value: '৳ 75,250', label: "Today's Revenue", tone: 'success' },
     quickActions: [
-      { label: 'Record Voucher', to: '/finance?action=new-journal', icon: Plus, permission: 'finance.journal.create' },
+      {
+        label: 'Record Voucher',
+        to: '/finance?action=new-journal',
+        icon: Plus,
+        permission: 'finance.journal.create',
+      },
       { label: 'Expense Ledger', to: '/finance?tab=expenses', permission: 'finance.expense.view' },
-      { label: 'Chart of Accounts', to: '/finance?tab=accounts', permission: 'finance.account.view' },
+      {
+        label: 'Chart of Accounts',
+        to: '/finance?tab=accounts',
+        permission: 'finance.account.view',
+      },
     ],
   },
   {
     id: 'finance-dues',
     title: 'Due & Collections Ledger',
-    description: 'Customer credit limits, aged receivables breakdown, collection reminders & receipts',
+    description:
+      'Customer credit limits, aged receivables breakdown, collection reminders & receipts',
     to: '/finance?tab=due-collection',
     icon: DollarSign,
     domain: 'finance',
@@ -330,7 +406,12 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
     permission: ['assets.asset.view'],
     pulseMetric: { value: '18 Machines', label: 'Capital Assets', tone: 'default' },
     quickActions: [
-      { label: 'Register Asset', to: '/assets?action=new', icon: Plus, permission: 'assets.asset.create' },
+      {
+        label: 'Register Asset',
+        to: '/assets?action=new',
+        icon: Plus,
+        permission: 'assets.asset.create',
+      },
       { label: 'Depreciation Book', to: '/assets?tab=depreciation' },
     ],
   },
@@ -339,7 +420,8 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
   {
     id: 'workforce-roster',
     title: 'Workforce & Employees',
-    description: 'Staff directory, designations, production operator profiles & skill qualifications',
+    description:
+      'Staff directory, designations, production operator profiles & skill qualifications',
     to: '/hr?tab=employees',
     icon: Users,
     domain: 'workforce',
@@ -347,7 +429,12 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
     permission: ['hr.employee.view'],
     pulseMetric: { value: '32 Staff', label: 'Active Personnel', tone: 'default' },
     quickActions: [
-      { label: 'Add Employee', to: '/hr?action=new-employee', icon: Plus, permission: 'hr.employee.create' },
+      {
+        label: 'Add Employee',
+        to: '/hr?action=new-employee',
+        icon: Plus,
+        permission: 'hr.employee.create',
+      },
       { label: 'Departments', to: '/hr?tab=departments', permission: 'hr.employee.view' },
     ],
   },
@@ -362,14 +449,20 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
     permission: ['hr.attendance.view'],
     pulseMetric: { value: '24 Clocked In', label: 'Morning Shift', tone: 'success' },
     quickActions: [
-      { label: 'Record Attendance', to: '/hr?action=record-attendance', icon: Plus, permission: 'hr.attendance.create' },
+      {
+        label: 'Record Attendance',
+        to: '/hr?action=record-attendance',
+        icon: Plus,
+        permission: 'hr.attendance.create',
+      },
       { label: 'Shift Roster', to: '/hr?tab=shifts' },
     ],
   },
   {
     id: 'workforce-payroll',
     title: 'Piece-Rate & Monthly Payroll',
-    description: 'Piece-rate calculation for factory operators, salary disbursements & digital payslips',
+    description:
+      'Piece-rate calculation for factory operators, salary disbursements & digital payslips',
     to: '/hr?tab=payroll',
     icon: Receipt,
     domain: 'workforce',
@@ -377,8 +470,17 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
     permission: ['hr.payroll.view', 'hr.payslip.view'],
     pulseMetric: { value: 'Current', label: 'Payroll Cycle', tone: 'info' },
     quickActions: [
-      { label: 'Worker Performance', to: '/hr?tab=performance', permission: 'production.worker_entry.view' },
-      { label: 'Generate Payslips', to: '/hr?action=generate-payslips', icon: Plus, permission: 'hr.payroll.create' },
+      {
+        label: 'Worker Performance',
+        to: '/hr?tab=performance',
+        permission: 'production.worker_entry.view',
+      },
+      {
+        label: 'Generate Payslips',
+        to: '/hr?action=generate-payslips',
+        icon: Plus,
+        permission: 'hr.payroll.create',
+      },
     ],
   },
 
@@ -386,7 +488,8 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
   {
     id: 'reports-rms',
     title: 'Reports & RMS BI Suite',
-    description: 'Multi-dimensional analytics, production yield reports, financial P&L and exportable sheets',
+    description:
+      'Multi-dimensional analytics, production yield reports, financial P&L and exportable sheets',
     to: '/reports',
     icon: FileSpreadsheet,
     domain: 'governance',
@@ -409,14 +512,20 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
     permission: ['core.role.view', 'core.role.manage'],
     pulseMetric: { value: 'Secure', label: 'Role Scoped', tone: 'success' },
     quickActions: [
-      { label: 'New Custom Role', to: '/settings/roles?action=new', icon: Plus, permission: 'core.role.manage' },
+      {
+        label: 'New Custom Role',
+        to: '/settings/roles?action=new',
+        icon: Plus,
+        permission: 'core.role.manage',
+      },
       { label: 'Permission Catalog', to: '/settings/roles?tab=permissions' },
     ],
   },
   {
     id: 'audit-logs',
     title: 'Activity Log & Diff Trail',
-    description: 'Immutable operational audit trail, before/after record snapshots & login security history',
+    description:
+      'Immutable operational audit trail, before/after record snapshots & login security history',
     to: '/activity-logs',
     icon: ShieldCheck,
     domain: 'governance',
@@ -554,7 +663,8 @@ export const EnterpriseSystemNavigator: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-muted mt-0.5">
-                Navigate any operational wing, workflow or ledger according to your role authorization
+                Navigate any operational wing, workflow or ledger according to your role
+                authorization
               </p>
             </div>
           </div>
@@ -659,7 +769,9 @@ export const EnterpriseSystemNavigator: React.FC = () => {
                         <SectionIcon className="size-3.5" />
                       </div>
                       <h4 className="text-xs sm:text-sm font-bold text-default">{section.title}</h4>
-                      <span className="text-[11px] text-muted hidden sm:inline">• {section.subtitle}</span>
+                      <span className="text-[11px] text-muted hidden sm:inline">
+                        • {section.subtitle}
+                      </span>
                     </div>
                     <span className="text-[10px] font-mono text-muted">
                       {section.items.length} {section.items.length === 1 ? 'module' : 'modules'}
@@ -705,7 +817,8 @@ export const EnterpriseSystemNavigator: React.FC = () => {
                                       'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
                                     item.pulseMetric.tone === 'info' &&
                                       'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
-                                    (!item.pulseMetric.tone || item.pulseMetric.tone === 'default') &&
+                                    (!item.pulseMetric.tone ||
+                                      item.pulseMetric.tone === 'default') &&
                                       'bg-surface-sunken text-default border-default'
                                   )}
                                 >
@@ -722,7 +835,9 @@ export const EnterpriseSystemNavigator: React.FC = () => {
                           <div className="pt-2 border-t border-default/60 flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                               {item.quickActions
-                                .filter((action) => !action.permission || hasPermission(action.permission))
+                                .filter(
+                                  (action) => !action.permission || hasPermission(action.permission)
+                                )
                                 .map((action, idx) => {
                                   const ActionIcon = action.icon;
                                   return (

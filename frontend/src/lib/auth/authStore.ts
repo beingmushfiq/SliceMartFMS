@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { api, setAccessToken } from '../api/client';
+import { api, getAccessToken, refreshOnce, setAccessToken } from '../api/client';
 import type {
   BranchInfo,
   LoginResponseData,
@@ -130,7 +130,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   bootstrap: async () => {
-    const savedToken = localStorage.getItem('access_token');
+    let savedToken = getAccessToken();
+    if (!savedToken) {
+      const refreshed = await refreshOnce();
+      if (refreshed) {
+        savedToken = getAccessToken();
+      }
+    }
+
     if (savedToken) {
       setAccessToken(savedToken);
     } else {

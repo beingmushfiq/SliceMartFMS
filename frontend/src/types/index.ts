@@ -1,6 +1,33 @@
 // ─────────────────────────────────────────────────────────────
-// SLICE MART FMS — Core Type Definitions
+// SLICE MART FMS — Core Type Definitions & API Re-exports
 // ─────────────────────────────────────────────────────────────
+
+export * as AssetsTypes from './api/assets';
+export * as AuditTypes from './api/audit';
+export * as AuthTypes from './api/auth';
+export * as BomTypes from './api/bom';
+export * as CatalogTypes from './api/catalog';
+export * as DeliveryTypes from './api/delivery';
+export * as DocumentsTypes from './api/documents';
+export * as DomainsTypes from './api/domains';
+export * as FinanceTypes from './api/finance';
+export * as HrTypes from './api/hr';
+export * as InventoryTypes from './api/inventory';
+export * as NotificationsTypes from './api/notifications';
+export * as PartyTypes from './api/party';
+export * as PlatformTypes from './api/platform';
+export * as PosTypes from './api/pos';
+export * as PricingTypes from './api/pricing';
+export * as ProductionTypes from './api/production';
+export * as PurchasingTypes from './api/purchasing';
+export * as QcTypes from './api/qc';
+export * as ReportsTypes from './api/reports';
+export * as SalesTypes from './api/sales';
+export * as SettingsTypes from './api/settings';
+export * as StorefrontTypes from './api/storefront';
+export * as UnitTypes from './api/unit';
+export * as DashboardTypes from './api/dashboard';
+export * from './api/dashboard';
 
 // ── Shared ───────────────────────────────────────────────────
 

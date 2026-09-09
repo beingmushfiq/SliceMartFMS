@@ -25,15 +25,14 @@ import type { DashboardInvoice } from './SalesDashboardView';
 import type { DueCustomerItem } from './DashboardModals';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../lib/format/currency';
+import type { DashboardMetricsData, DashboardInvoiceItem } from '../../../types/api/dashboard';
 
 interface FinanceDashboardViewProps {
   onOpenDueItem?: (item: DueCustomerItem) => void;
   onOpenInvoice?: (invoice: DashboardInvoice) => void;
 }
 
-const CASH_FLOW_DATA = [
-  { month: 'Current', inflow: 0, outflow: 0 },
-];
+const CASH_FLOW_DATA = [{ month: 'Current', inflow: 0, outflow: 0 }];
 
 export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
   onOpenDueItem,
@@ -41,30 +40,39 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
 }) => {
   const { formatCurrency, currencySymbol } = useCurrency();
 
-  const { data: metrics } = useQuery({
+  const { data: metrics } = useQuery<DashboardMetricsData | null>({
     queryKey: ['tenant', 'dashboard', 'metrics'],
     queryFn: async () => {
       try {
-        const res = await api.get<any>('/dashboard/metrics');
+        const res = await api.get<DashboardMetricsData | { data: DashboardMetricsData }>(
+          '/dashboard/metrics'
+        );
         const raw = res.data;
         if (raw && typeof raw === 'object') {
-          if ('commercial' in raw) return raw;
-          if ('data' in raw && raw.data && typeof raw.data === 'object' && 'commercial' in raw.data) {
-            return raw.data;
+          if ('commercial' in raw) return raw as DashboardMetricsData;
+          if (
+            'data' in raw &&
+            raw.data &&
+            typeof raw.data === 'object' &&
+            'commercial' in raw.data
+          ) {
+            return raw.data as DashboardMetricsData;
           }
         }
-        return raw ?? null;
+        return null;
       } catch {
         return null;
       }
     },
   });
 
-  const { data: rawInvoices = [] } = useQuery({
+  const { data: rawInvoices = [] } = useQuery<DashboardInvoiceItem[]>({
     queryKey: ['sales', 'unpaid-invoices-finance'],
     queryFn: async () => {
       try {
-        const res = await api.get<any>('/sales/invoices?per_page=10');
+        const res = await api.get<DashboardInvoiceItem[] | { data: DashboardInvoiceItem[] }>(
+          '/sales/invoices?per_page=10'
+        );
         const d = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
         return Array.isArray(d) ? d : [];
       } catch {
@@ -88,10 +96,30 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
   }, [rawInvoices, formatCurrency]);
 
   const expenseBreakdown = [
-    { category: 'Raw Materials & Components', amount: formatCurrency(0), percent: 0, color: 'bg-blue-500' },
-    { category: 'Factory Labor & Operations', amount: formatCurrency(0), percent: 0, color: 'bg-emerald-500' },
-    { category: 'Machinery & Utilities', amount: formatCurrency(0), percent: 0, color: 'bg-amber-500' },
-    { category: 'Logistics & Shipping', amount: formatCurrency(0), percent: 0, color: 'bg-purple-500' },
+    {
+      category: 'Raw Materials & Components',
+      amount: formatCurrency(0),
+      percent: 0,
+      color: 'bg-blue-500',
+    },
+    {
+      category: 'Factory Labor & Operations',
+      amount: formatCurrency(0),
+      percent: 0,
+      color: 'bg-emerald-500',
+    },
+    {
+      category: 'Machinery & Utilities',
+      amount: formatCurrency(0),
+      percent: 0,
+      color: 'bg-amber-500',
+    },
+    {
+      category: 'Logistics & Shipping',
+      amount: formatCurrency(0),
+      percent: 0,
+      color: 'bg-purple-500',
+    },
   ];
 
   return (
@@ -149,7 +177,9 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              {metrics ? formatCurrency(metrics.commercial.total_receivable_due) : formatCurrency(0)}
+              {metrics
+                ? formatCurrency(metrics.commercial.total_receivable_due)
+                : formatCurrency(0)}
             </div>
             <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
               Active Accounts
@@ -191,9 +221,7 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
               {metrics ? formatCurrency(metrics.commercial.month_revenue) : formatCurrency(0)}
             </div>
-            <span className="text-[10px] font-semibold text-muted">
-              Current Month
-            </span>
+            <span className="text-[10px] font-semibold text-muted">Current Month</span>
           </div>
         </div>
 
@@ -211,9 +239,7 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
               {formatCurrency(0)}
             </div>
-            <span className="text-[10px] font-semibold text-muted">
-              Vendor Invoices
-            </span>
+            <span className="text-[10px] font-semibold text-muted">Vendor Invoices</span>
           </div>
         </div>
 
@@ -251,9 +277,7 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
               {formatCurrency(0)}
             </div>
-            <span className="text-[10px] font-semibold text-muted">
-              Asset Registry
-            </span>
+            <span className="text-[10px] font-semibold text-muted">Asset Registry</span>
           </div>
         </div>
       </div>
@@ -283,7 +307,10 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
 
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={CASH_FLOW_DATA} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <AreaChart
+                data={CASH_FLOW_DATA}
+                margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+              >
                 <defs>
                   <linearGradient id="cashInflow" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
@@ -294,9 +321,23 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
                     <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" opacity={0.07} />
-                <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fill: 'currentColor', fontSize: 11, opacity: 0.6 }} />
-                <YAxis tickLine={false} axisLine={false} tick={{ fill: 'currentColor', fontSize: 11, opacity: 0.6 }} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke="currentColor"
+                  opacity={0.07}
+                />
+                <XAxis
+                  dataKey="month"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fill: 'currentColor', fontSize: 11, opacity: 0.6 }}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fill: 'currentColor', fontSize: 11, opacity: 0.6 }}
+                />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'var(--surface-raised, #18181b)',
@@ -305,8 +346,23 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
                     fontSize: '11px',
                   }}
                 />
-                <Area type="monotone" dataKey="inflow" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#cashInflow)" />
-                <Area type="monotone" dataKey="outflow" stroke="#ef4444" strokeWidth={2} strokeDasharray="4 4" fillOpacity={1} fill="url(#cashOutflow)" />
+                <Area
+                  type="monotone"
+                  dataKey="inflow"
+                  stroke="#10b981"
+                  strokeWidth={2.5}
+                  fillOpacity={1}
+                  fill="url(#cashInflow)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="outflow"
+                  stroke="#ef4444"
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
+                  fillOpacity={1}
+                  fill="url(#cashOutflow)"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -328,9 +384,14 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
                     <span className="font-mono font-bold text-default">{item.amount}</span>
                   </div>
                   <div className="h-1.5 w-full rounded-full bg-surface-sunken overflow-hidden">
-                    <div className={`h-full rounded-full ${item.color}`} style={{ width: `${item.percent}%` }} />
+                    <div
+                      className={`h-full rounded-full ${item.color}`}
+                      style={{ width: `${item.percent}%` }}
+                    />
                   </div>
-                  <span className="text-[10px] text-muted block text-right font-mono">{item.percent}%</span>
+                  <span className="text-[10px] text-muted block text-right font-mono">
+                    {item.percent}%
+                  </span>
                 </div>
               ))}
             </div>
@@ -412,14 +473,16 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
                           due.oldestInvoiceDays > 20
                             ? 'bg-red-500/15 text-red-600'
                             : due.oldestInvoiceDays > 10
-                            ? 'bg-amber-500/15 text-amber-600'
-                            : 'bg-blue-500/15 text-blue-600'
+                              ? 'bg-amber-500/15 text-amber-600'
+                              : 'bg-blue-500/15 text-blue-600'
                         }`}
                       >
                         {due.oldestInvoiceDays} days overdue
                       </span>
                     </td>
-                    <td className="px-3 py-2.5 font-mono font-bold text-amber-500">{due.dueAmount}</td>
+                    <td className="px-3 py-2.5 font-mono font-bold text-amber-500">
+                      {due.dueAmount}
+                    </td>
                     <td className="px-3 py-2.5 text-right">
                       <button
                         type="button"

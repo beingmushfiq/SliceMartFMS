@@ -16,6 +16,14 @@ import {
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../lib/format/currency';
+import type { DashboardMetricsData, DashboardInvoiceItem } from '../../../types/api/dashboard';
+
+interface FastProductItem {
+  id: string | number;
+  name: string;
+  sku: string;
+  sale_price: number | string;
+}
 
 export interface DashboardInvoice {
   id: string;
@@ -35,30 +43,39 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
   const { formatCurrency } = useCurrency();
   const [salesFilter, setSalesFilter] = useState<'all' | 'DELIVERED' | 'CONFIRMED'>('all');
 
-  const { data: metrics } = useQuery({
+  const { data: metrics } = useQuery<DashboardMetricsData | null>({
     queryKey: ['tenant', 'dashboard', 'metrics'],
     queryFn: async () => {
       try {
-        const res = await api.get<any>('/dashboard/metrics');
+        const res = await api.get<DashboardMetricsData | { data: DashboardMetricsData }>(
+          '/dashboard/metrics'
+        );
         const raw = res.data;
         if (raw && typeof raw === 'object') {
-          if ('commercial' in raw) return raw;
-          if ('data' in raw && raw.data && typeof raw.data === 'object' && 'commercial' in raw.data) {
-            return raw.data;
+          if ('commercial' in raw) return raw as DashboardMetricsData;
+          if (
+            'data' in raw &&
+            raw.data &&
+            typeof raw.data === 'object' &&
+            'commercial' in raw.data
+          ) {
+            return raw.data as DashboardMetricsData;
           }
         }
-        return raw ?? null;
+        return null;
       } catch {
         return null;
       }
     },
   });
 
-  const { data: rawInvoices = [] } = useQuery({
+  const { data: rawInvoices = [] } = useQuery<DashboardInvoiceItem[]>({
     queryKey: ['sales', 'dashboard-invoices-list'],
     queryFn: async () => {
       try {
-        const res = await api.get<any>('/sales/invoices?per_page=10');
+        const res = await api.get<DashboardInvoiceItem[] | { data: DashboardInvoiceItem[] }>(
+          '/sales/invoices?per_page=10'
+        );
         const d = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
         return Array.isArray(d) ? d : [];
       } catch {
@@ -67,11 +84,13 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
     },
   });
 
-  const { data: rawProducts = [] } = useQuery({
+  const { data: rawProducts = [] } = useQuery<FastProductItem[]>({
     queryKey: ['catalogue', 'fast-moving-products'],
     queryFn: async () => {
       try {
-        const res = await api.get<any>('/products?per_page=5');
+        const res = await api.get<FastProductItem[] | { data: FastProductItem[] }>(
+          '/products?per_page=5'
+        );
         const d = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
         return Array.isArray(d) ? d : [];
       } catch {
@@ -88,7 +107,9 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
       amount: formatCurrency(Number(inv.total_amount) || 0),
       status: inv.status,
       payment: inv.payment_status || 'UNPAID',
-      date: inv.invoice_date || new Date(inv.created_at).toLocaleDateString(),
+      date:
+        inv.invoice_date ||
+        (inv.created_at ? new Date(inv.created_at).toLocaleDateString() : 'Recent'),
     }));
   }, [rawInvoices, formatCurrency]);
 
@@ -155,7 +176,8 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
               {metrics ? formatCurrency(metrics.commercial.today_revenue) : formatCurrency(0)}
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-              Month: {metrics ? formatCurrency(metrics.commercial.month_revenue) : formatCurrency(0)}
+              Month:{' '}
+              {metrics ? formatCurrency(metrics.commercial.month_revenue) : formatCurrency(0)}
             </span>
           </div>
         </div>
@@ -174,9 +196,7 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
               {metrics ? `${metrics.commercial.active_orders} Orders` : '0 Orders'}
             </div>
-            <span className="text-[10px] font-semibold text-muted">
-              Active Fulfillment
-            </span>
+            <span className="text-[10px] font-semibold text-muted">Active Fulfillment</span>
           </div>
         </div>
 
@@ -212,7 +232,9 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              {metrics ? formatCurrency(metrics.commercial.total_receivable_due) : formatCurrency(0)}
+              {metrics
+                ? formatCurrency(metrics.commercial.total_receivable_due)
+                : formatCurrency(0)}
             </div>
             <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
               Outstanding Due
@@ -234,9 +256,7 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
               0 Orders
             </div>
-            <span className="text-[10px] font-semibold text-muted">
-              Ecom Sync Online
-            </span>
+            <span className="text-[10px] font-semibold text-muted">Ecom Sync Online</span>
           </div>
         </div>
 
@@ -254,9 +274,7 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
               0 Prospects
             </div>
-            <span className="text-[10px] font-semibold text-muted">
-              Pipeline Ready
-            </span>
+            <span className="text-[10px] font-semibold text-muted">Pipeline Ready</span>
           </div>
         </div>
       </div>
@@ -270,14 +288,18 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div>
               <h3 className="text-sm font-bold text-default">Recent Invoices & Receivables</h3>
-              <p className="text-[11px] text-muted">Track customer invoices and payment clearance</p>
+              <p className="text-[11px] text-muted">
+                Track customer invoices and payment clearance
+              </p>
             </div>
             <div className="flex items-center gap-1.5 rounded-xl border border-default bg-surface-sunken p-1 text-xs">
               <button
                 type="button"
                 onClick={() => setSalesFilter('all')}
                 className={`rounded-lg px-2.5 py-1 font-semibold transition-colors cursor-pointer ${
-                  salesFilter === 'all' ? 'bg-surface text-default shadow-2xs' : 'text-muted hover:text-default'
+                  salesFilter === 'all'
+                    ? 'bg-surface text-default shadow-2xs'
+                    : 'text-muted hover:text-default'
                 }`}
               >
                 All
@@ -286,7 +308,9 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
                 type="button"
                 onClick={() => setSalesFilter('DELIVERED')}
                 className={`rounded-lg px-2.5 py-1 font-semibold transition-colors cursor-pointer ${
-                  salesFilter === 'DELIVERED' ? 'bg-surface text-default shadow-2xs' : 'text-muted hover:text-default'
+                  salesFilter === 'DELIVERED'
+                    ? 'bg-surface text-default shadow-2xs'
+                    : 'text-muted hover:text-default'
                 }`}
               >
                 Delivered
@@ -295,7 +319,9 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
                 type="button"
                 onClick={() => setSalesFilter('CONFIRMED')}
                 className={`rounded-lg px-2.5 py-1 font-semibold transition-colors cursor-pointer ${
-                  salesFilter === 'CONFIRMED' ? 'bg-surface text-default shadow-2xs' : 'text-muted hover:text-default'
+                  salesFilter === 'CONFIRMED'
+                    ? 'bg-surface text-default shadow-2xs'
+                    : 'text-muted hover:text-default'
                 }`}
               >
                 Confirmed
@@ -312,7 +338,9 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
                 >
                   <div className="space-y-0.5 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-default truncate">{inv.customer}</span>
+                      <span className="text-xs font-bold text-default truncate">
+                        {inv.customer}
+                      </span>
                       <span className="rounded-md bg-surface-sunken px-1.5 py-0.5 text-[9px] font-mono font-bold text-muted border border-default">
                         {inv.type}
                       </span>
@@ -326,14 +354,16 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
 
                   <div className="flex items-center gap-3">
                     <div className="text-right">
-                      <div className="text-xs font-extrabold font-mono text-default">{inv.amount}</div>
+                      <div className="text-xs font-extrabold font-mono text-default">
+                        {inv.amount}
+                      </div>
                       <span
                         className={`text-[9px] font-bold uppercase tracking-wider ${
                           inv.payment === 'PAID'
                             ? 'text-emerald-500'
                             : inv.payment === 'PARTIAL'
-                            ? 'text-amber-500'
-                            : 'text-red-500'
+                              ? 'text-amber-500'
+                              : 'text-red-500'
                         }`}
                       >
                         {inv.payment}
@@ -380,7 +410,10 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
             <div className="space-y-3">
               {rawProducts.length > 0 ? (
                 rawProducts.map((p) => (
-                  <div key={p.id || p.sku} className="flex items-center justify-between p-2 rounded-xl bg-surface-sunken/50">
+                  <div
+                    key={p.id || p.sku}
+                    className="flex items-center justify-between p-2 rounded-xl bg-surface-sunken/50"
+                  >
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs font-bold text-default truncate">{p.name}</span>
@@ -398,7 +431,10 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({ onOpenIn
                 <div className="p-8 text-center text-muted text-xs flex flex-col items-center justify-center gap-2">
                   <Package className="size-8 text-muted/50" />
                   <p>No catalogue items recorded.</p>
-                  <Link to="/catalogue" className="text-xs text-primary font-semibold hover:underline">
+                  <Link
+                    to="/catalogue"
+                    className="text-xs text-primary font-semibold hover:underline"
+                  >
                     Manage Catalogue
                   </Link>
                 </div>

@@ -69,9 +69,10 @@ export function SearchableSelect<T extends string | number>({
 
   const selectedOption = options.find((opt) => opt.value === value);
 
-  const filteredOptions = options.filter((opt) =>
-    opt.label.toLowerCase().includes(search.toLowerCase()) ||
-    (opt.description && opt.description.toLowerCase().includes(search.toLowerCase()))
+  const filteredOptions = options.filter(
+    (opt) =>
+      opt.label.toLowerCase().includes(search.toLowerCase()) ||
+      (opt.description && opt.description.toLowerCase().includes(search.toLowerCase()))
   );
 
   // Close when clicking outside
@@ -139,14 +140,10 @@ export function SearchableSelect<T extends string | number>({
       setHighlightedIndex(-1);
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setHighlightedIndex((prev) =>
-        prev < filteredOptions.length - 1 ? prev + 1 : 0
-      );
+      setHighlightedIndex((prev) => (prev < filteredOptions.length - 1 ? prev + 1 : 0));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setHighlightedIndex((prev) =>
-        prev > 0 ? prev - 1 : filteredOptions.length - 1
-      );
+      setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : filteredOptions.length - 1));
     } else if (e.key === 'Enter') {
       e.preventDefault();
       if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
@@ -195,9 +192,7 @@ export function SearchableSelect<T extends string | number>({
         )}
       >
         <span className="flex items-center gap-2 truncate">
-          {selectedOption?.icon && (
-            <selectedOption.icon className="size-4 shrink-0 text-muted" />
-          )}
+          {selectedOption?.icon && <selectedOption.icon className="size-4 shrink-0 text-muted" />}
           <span className={cn('truncate', !selectedOption && 'text-muted')}>
             {selectedOption ? selectedOption.label : placeholder}
           </span>
@@ -209,17 +204,21 @@ export function SearchableSelect<T extends string | number>({
           ) : (
             <>
               {clearable && selectedOption && !disabled && (
-                <span
-                  role="button"
+                <button
+                  type="button"
+                  aria-label="Clear selection"
                   tabIndex={-1}
                   onClick={handleClear}
-                  className="p-0.5 hover:bg-surface-sunken rounded text-muted hover:text-default"
+                  className="p-0.5 hover:bg-surface-sunken rounded text-muted hover:text-default bg-transparent border-0 cursor-pointer inline-flex items-center justify-center"
                 >
                   <X className="size-3.5" />
-                </span>
+                </button>
               )}
               <ChevronDown
-                className={cn('size-4 text-muted transition-transform duration-150', isOpen && 'rotate-180')}
+                className={cn(
+                  'size-4 text-muted transition-transform duration-150',
+                  isOpen && 'rotate-180'
+                )}
               />
             </>
           )}
@@ -269,9 +268,7 @@ export function SearchableSelect<T extends string | number>({
             className="max-h-60 overflow-y-auto p-1 text-xs space-y-0.5"
           >
             {filteredOptions.length === 0 ? (
-              <li className="p-4 text-center text-muted text-xs">
-                No matching options found.
-              </li>
+              <li className="p-4 text-center text-muted text-xs">No matching options found.</li>
             ) : (
               filteredOptions.map((opt, index) => {
                 const isSelected = opt.value === value;
@@ -283,6 +280,12 @@ export function SearchableSelect<T extends string | number>({
                     role="option"
                     aria-selected={isSelected}
                     onClick={() => handleSelect(opt)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleSelect(opt);
+                      }
+                    }}
                     onMouseEnter={() => setHighlightedIndex(index)}
                     className={cn(
                       'flex items-center justify-between px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors select-none',
@@ -395,6 +398,12 @@ export function MultiSelect<T extends string | number>({
         role="button"
         tabIndex={0}
         onClick={() => !disabled && setIsOpen((prev) => !prev)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            if (!disabled) setIsOpen((prev) => !prev);
+          }
+        }}
         className={cn(
           'min-h-10 w-full flex flex-wrap items-center gap-1.5 rounded-(--input-radius) border px-2.5 py-1.5',
           'bg-(--input-bg) text-default text-xs cursor-pointer border-(--input-border) hover:border-strong',
@@ -412,10 +421,14 @@ export function MultiSelect<T extends string | number>({
             >
               {opt.label}
               {!disabled && (
-                <X
-                  className="size-3 cursor-pointer hover:text-danger"
+                <button
+                  type="button"
+                  aria-label="Remove"
                   onClick={(e) => removeValue(opt.value, e)}
-                />
+                  className="inline-flex items-center text-current hover:text-danger bg-transparent border-0 p-0 cursor-pointer"
+                >
+                  <X className="size-3" />
+                </button>
               )}
             </span>
           ))
@@ -450,10 +463,20 @@ export function MultiSelect<T extends string | number>({
                 return (
                   <li
                     key={String(opt.value)}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => toggleOption(opt)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleOption(opt);
+                      }
+                    }}
                     className={cn(
                       'flex items-center justify-between px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors',
-                      isSelected ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-surface-sunken text-default'
+                      isSelected
+                        ? 'bg-primary/10 text-primary font-medium'
+                        : 'hover:bg-surface-sunken text-default'
                     )}
                   >
                     <span>{opt.label}</span>
@@ -609,11 +632,7 @@ export function SelectDropdown<T extends string | number = string>({
 
   return (
     <div className={cn('relative inline-flex flex-col', className)} ref={containerRef}>
-      {label && (
-        <label className="text-xs font-semibold text-default mb-1">
-          {label}
-        </label>
-      )}
+      {label && <label className="text-xs font-semibold text-default mb-1">{label}</label>}
 
       {/* Trigger Button */}
       <button
@@ -641,12 +660,13 @@ export function SelectDropdown<T extends string | number = string>({
           )}
           {selectedOption?.colorDot && (
             <span
-              className={cn('size-2 rounded-full shrink-0 ring-2 ring-white/20', selectedOption.colorDot)}
+              className={cn(
+                'size-2 rounded-full shrink-0 ring-2 ring-white/20',
+                selectedOption.colorDot
+              )}
             />
           )}
-          {SelectedIcon && (
-            <SelectedIcon className="size-3.5 text-primary shrink-0" />
-          )}
+          {SelectedIcon && <SelectedIcon className="size-3.5 text-primary shrink-0" />}
           <span className={cn('truncate', !selectedOption && 'text-muted')}>
             {selectedOption ? selectedOption.label : placeholder}
           </span>
@@ -654,9 +674,12 @@ export function SelectDropdown<T extends string | number = string>({
             <span
               className={cn(
                 'text-[10px] font-mono px-1.5 py-0.5 rounded-md font-semibold shrink-0',
-                selectedOption.badgeTone === 'success' && 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-                selectedOption.badgeTone === 'warning' && 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
-                selectedOption.badgeTone === 'danger' && 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+                selectedOption.badgeTone === 'success' &&
+                  'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+                selectedOption.badgeTone === 'warning' &&
+                  'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+                selectedOption.badgeTone === 'danger' &&
+                  'bg-rose-500/15 text-rose-600 dark:text-rose-400',
                 selectedOption.badgeTone === 'primary' && 'bg-primary/15 text-primary',
                 (!selectedOption.badgeTone || selectedOption.badgeTone === 'muted') &&
                   'bg-surface-sunken text-muted'
@@ -718,9 +741,7 @@ export function SelectDropdown<T extends string | number = string>({
             className="max-h-64 overflow-y-auto space-y-0.5 scrollbar-thin"
           >
             {filteredOptions.length === 0 ? (
-              <li className="px-3 py-3 text-center text-xs text-muted">
-                No matching options
-              </li>
+              <li className="px-3 py-3 text-center text-xs text-muted">No matching options</li>
             ) : (
               filteredOptions.map((opt, index) => {
                 const isSelected = opt.value === value;
@@ -733,6 +754,12 @@ export function SelectDropdown<T extends string | number = string>({
                     role="option"
                     aria-selected={isSelected}
                     onClick={() => handleSelect(opt)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleSelect(opt);
+                      }
+                    }}
                     onMouseEnter={() => setHighlightedIndex(index)}
                     className={cn(
                       'flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-medium cursor-pointer transition-all select-none',
@@ -745,7 +772,10 @@ export function SelectDropdown<T extends string | number = string>({
                     <div className="flex items-center gap-2 truncate min-w-0 mr-2">
                       {opt.colorDot && (
                         <span
-                          className={cn('size-2 rounded-full shrink-0 ring-2 ring-white/20', opt.colorDot)}
+                          className={cn(
+                            'size-2 rounded-full shrink-0 ring-2 ring-white/20',
+                            opt.colorDot
+                          )}
                         />
                       )}
                       {OptIcon && (
@@ -771,9 +801,12 @@ export function SelectDropdown<T extends string | number = string>({
                         <span
                           className={cn(
                             'text-[10px] font-mono px-1.5 py-0.5 rounded-md font-semibold',
-                            opt.badgeTone === 'success' && 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-                            opt.badgeTone === 'warning' && 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
-                            opt.badgeTone === 'danger' && 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+                            opt.badgeTone === 'success' &&
+                              'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+                            opt.badgeTone === 'warning' &&
+                              'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+                            opt.badgeTone === 'danger' &&
+                              'bg-rose-500/15 text-rose-600 dark:text-rose-400',
                             opt.badgeTone === 'primary' && 'bg-primary/15 text-primary',
                             (!opt.badgeTone || opt.badgeTone === 'muted') &&
                               'bg-surface-sunken text-muted'
@@ -796,4 +829,3 @@ export function SelectDropdown<T extends string | number = string>({
     </div>
   );
 }
-

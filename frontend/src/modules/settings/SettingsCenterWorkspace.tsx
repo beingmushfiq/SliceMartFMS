@@ -413,7 +413,9 @@ export const SettingsCenterWorkspace: React.FC = () => {
           if (payload['company_legal_name'] !== undefined) {
             localStorage.setItem('company_name', String(payload['company_legal_name'] || ''));
           }
-        } catch {}
+        } catch (err) {
+          void err;
+        }
         const updated = res.data.settings;
 
         const initial: Record<string, SettingFieldValue> = {};

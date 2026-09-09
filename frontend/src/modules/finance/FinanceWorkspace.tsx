@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   BookOpen,
   ReceiptText,
@@ -30,7 +30,8 @@ import type {
 import { DueCollectionSection } from './sections/DueCollectionSection';
 import { notify } from '../../components/ui/Toast';
 
-export type FinanceTab = 'coa' | 'journal' | 'banking' | 'expenses' | 'costing' | 'statements' | 'due-collection';
+export type FinanceTab =
+  'coa' | 'journal' | 'banking' | 'expenses' | 'costing' | 'statements' | 'due-collection';
 export type FinanceCategory = 'accounting' | 'treasury' | 'costing';
 
 interface CategoryConfig {
@@ -108,10 +109,15 @@ function createManualJournalEntry(
 
 export const FinanceWorkspace: React.FC = () => {
   const { formatCurrency } = useCurrency();
-  const [activeTab, setActiveTab] = useWorkspaceTab<FinanceTab>(
+  const [activeTab, setActiveTab] = useWorkspaceTab<FinanceTab>('journal', [
+    'coa',
     'journal',
-    ['coa', 'journal', 'banking', 'expenses', 'costing', 'statements', 'due-collection'] as const
-  );
+    'banking',
+    'expenses',
+    'costing',
+    'statements',
+    'due-collection',
+  ] as const);
 
   const [quickJumpOpen, setQuickJumpOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -448,9 +454,7 @@ export const FinanceWorkspace: React.FC = () => {
   const [newOpeningBalance, setNewOpeningBalance] = useState('0.00');
 
   const resetAccountForm = () => {
-    const numericCodes = accounts
-      .map((a) => parseInt(a.account_code, 10))
-      .filter((n) => !isNaN(n));
+    const numericCodes = accounts.map((a) => parseInt(a.account_code, 10)).filter((n) => !isNaN(n));
     const maxCode = numericCodes.length > 0 ? Math.max(...numericCodes) : 1000;
     setNewAccountCode(String(maxCode + 10));
     setNewAccountName('');
@@ -578,20 +582,24 @@ export const FinanceWorkspace: React.FC = () => {
     });
   };
 
-  const handleDuplicateExpense = (exp: Expense) => {
-    const clonedExpense: Expense = {
-      ...exp,
-      id: expenses.length + 1,
-      uuid: `exp-clone-${Date.now()}`,
-      expense_date: new Date().toISOString().slice(0, 10),
-      description: `Repeat of ${exp.description}`,
-      status: 'approved',
-    };
-    setExpenses([clonedExpense, ...expenses]);
-    notify.success('Expense Duplicated', {
-      description: `Cloned expense voucher for ${exp.payee_name || exp.category?.name || 'Operational Disbursement'}.`,
-    });
-  };
+  const handleDuplicateExpense = useCallback(
+    (exp: Expense) => {
+      const timestamp = Date.now();
+      const clonedExpense: Expense = {
+        ...exp,
+        id: expenses.length + 1,
+        uuid: `exp-clone-${timestamp}`,
+        expense_date: new Date(timestamp).toISOString().slice(0, 10),
+        description: `Repeat of ${exp.description}`,
+        status: 'approved',
+      };
+      setExpenses((prev) => [clonedExpense, ...prev]);
+      notify.success('Expense Duplicated', {
+        description: `Cloned expense voucher for ${exp.payee_name || exp.category?.name || 'Operational Disbursement'}.`,
+      });
+    },
+    [expenses.length]
+  );
 
   const handlePostJournal = (e: React.FormEvent) => {
     e.preventDefault();
@@ -630,13 +638,55 @@ export const FinanceWorkspace: React.FC = () => {
     icon: typeof BookOpen;
     count: string | number;
   }> = [
-    { id: 'journal', label: 'General Ledger & Journals', category: 'accounting', icon: BookOpen, count: journalEntries.length },
-    { id: 'coa', label: 'Chart of Accounts', category: 'accounting', icon: Scale, count: accounts.length },
-    { id: 'statements', label: 'Financial Statements & P&L', category: 'accounting', icon: TrendingUp, count: 'Live' },
-    { id: 'due-collection', label: 'Due Collections & Aging', category: 'treasury', icon: Coins, count: 'Aging' },
-    { id: 'banking', label: 'Banking & Treasury', category: 'treasury', icon: Landmark, count: bankAccounts.length },
-    { id: 'expenses', label: 'Operating Expenses', category: 'costing', icon: ReceiptText, count: expenses.length },
-    { id: 'costing', label: 'Product Cost Rollup', category: 'costing', icon: Calculator, count: productCosts.length },
+    {
+      id: 'journal',
+      label: 'General Ledger & Journals',
+      category: 'accounting',
+      icon: BookOpen,
+      count: journalEntries.length,
+    },
+    {
+      id: 'coa',
+      label: 'Chart of Accounts',
+      category: 'accounting',
+      icon: Scale,
+      count: accounts.length,
+    },
+    {
+      id: 'statements',
+      label: 'Financial Statements & P&L',
+      category: 'accounting',
+      icon: TrendingUp,
+      count: 'Live',
+    },
+    {
+      id: 'due-collection',
+      label: 'Due Collections & Aging',
+      category: 'treasury',
+      icon: Coins,
+      count: 'Aging',
+    },
+    {
+      id: 'banking',
+      label: 'Banking & Treasury',
+      category: 'treasury',
+      icon: Landmark,
+      count: bankAccounts.length,
+    },
+    {
+      id: 'expenses',
+      label: 'Operating Expenses',
+      category: 'costing',
+      icon: ReceiptText,
+      count: expenses.length,
+    },
+    {
+      id: 'costing',
+      label: 'Product Cost Rollup',
+      category: 'costing',
+      icon: Calculator,
+      count: productCosts.length,
+    },
   ];
 
   const filteredFinanceTabs = searchQuery.trim()
@@ -661,7 +711,8 @@ export const FinanceWorkspace: React.FC = () => {
             General Ledger & Cost Rollup Hub
           </h1>
           <p className="mt-1.5 text-xs text-muted max-w-2xl leading-relaxed">
-            Double-entry General Ledger, Chart of Accounts, Bank Reconciliations & Multi-Component Production Cost Rollups
+            Double-entry General Ledger, Chart of Accounts, Bank Reconciliations & Multi-Component
+            Production Cost Rollups
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -694,7 +745,9 @@ export const FinanceWorkspace: React.FC = () => {
           <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-2 font-mono">
             {formatCurrency(970000)}
           </div>
-          <div className="text-[11px] text-muted mt-1">Cash ({formatCurrency(125000)}) + Bank ({formatCurrency(845000)})</div>
+          <div className="text-[11px] text-muted mt-1">
+            Cash ({formatCurrency(125000)}) + Bank ({formatCurrency(845000)})
+          </div>
         </div>
 
         <div className="bg-surface rounded-2xl p-6 shadow-xs border border-default">
@@ -808,7 +861,9 @@ export const FinanceWorkspace: React.FC = () => {
                     <span>{tab.label}</span>
                     <span
                       className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
-                        isActive ? 'bg-white/20 text-white font-bold' : 'bg-surface-sunken text-muted'
+                        isActive
+                          ? 'bg-white/20 text-white font-bold'
+                          : 'bg-surface-sunken text-muted'
                       }`}
                     >
                       {tab.count}
@@ -819,7 +874,10 @@ export const FinanceWorkspace: React.FC = () => {
           </div>
 
           {/* Quick Jump Dropdown Popover */}
-          <div className="relative shrink-0 sm:border-l sm:border-default sm:pl-3" ref={quickJumpRef}>
+          <div
+            className="relative shrink-0 sm:border-l sm:border-default sm:pl-3"
+            ref={quickJumpRef}
+          >
             <button
               type="button"
               onClick={() => {
@@ -1043,9 +1101,7 @@ export const FinanceWorkspace: React.FC = () => {
                         {acc.account_code}
                       </button>
                     </td>
-                    <td className="px-5 py-3.5 font-semibold text-default">
-                      {acc.name}
-                    </td>
+                    <td className="px-5 py-3.5 font-semibold text-default">{acc.name}</td>
                     <td className="px-5 py-3.5 capitalize">
                       <span
                         className={`px-2.5 py-0.5 text-[10px] font-semibold rounded-full border ${
@@ -1292,7 +1348,9 @@ export const FinanceWorkspace: React.FC = () => {
               <div className="space-y-2.5 text-sm">
                 <div className="flex justify-between items-center text-gray-900 dark:text-gray-100 font-semibold">
                   <span>Gross Sales Revenue</span>
-                  <span className="font-mono text-emerald-600 dark:text-emerald-400">{formatCurrency(950000)}</span>
+                  <span className="font-mono text-emerald-600 dark:text-emerald-400">
+                    {formatCurrency(950000)}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center text-gray-600 dark:text-gray-300">
                   <span className="pl-4">Less: Cost of Goods Sold (COGS)</span>
@@ -1304,7 +1362,9 @@ export const FinanceWorkspace: React.FC = () => {
                 </div>
                 <div className="border-t pt-2 flex justify-between items-center font-bold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-900/40 p-2 rounded">
                   <span>Gross Profit</span>
-                  <span className="font-mono text-emerald-600 dark:text-emerald-400">{formatCurrency(325000)} (34.2%)</span>
+                  <span className="font-mono text-emerald-600 dark:text-emerald-400">
+                    {formatCurrency(325000)} (34.2%)
+                  </span>
                 </div>
               </div>
 
@@ -1325,8 +1385,12 @@ export const FinanceWorkspace: React.FC = () => {
                   <span className="font-mono">{formatCurrency(18200)}</span>
                 </div>
                 <div className="border-t pt-2 flex justify-between items-center font-bold text-base text-gray-900 dark:text-gray-100 bg-emerald-50 dark:bg-emerald-950/30 p-2.5 rounded-lg border border-emerald-500/20">
-                  <span className="text-emerald-700 dark:text-emerald-400">Net Operating Income</span>
-                  <span className="font-mono text-emerald-700 dark:text-emerald-400">{formatCurrency(244300)}</span>
+                  <span className="text-emerald-700 dark:text-emerald-400">
+                    Net Operating Income
+                  </span>
+                  <span className="font-mono text-emerald-700 dark:text-emerald-400">
+                    {formatCurrency(244300)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -1343,8 +1407,14 @@ export const FinanceWorkspace: React.FC = () => {
                     <span className="font-mono">{formatCurrency(1310000)}</span>
                   </div>
                   <div className="text-xs text-blue-700 dark:text-blue-400 space-y-0.5">
-                    <div className="flex justify-between"><span>• Liquid Cash & Banks:</span> <span className="font-mono font-semibold">{formatCurrency(970000)}</span></div>
-                    <div className="flex justify-between"><span>• Accounts Receivable:</span> <span className="font-mono font-semibold">{formatCurrency(340000)}</span></div>
+                    <div className="flex justify-between">
+                      <span>• Liquid Cash & Banks:</span>{' '}
+                      <span className="font-mono font-semibold">{formatCurrency(970000)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>• Accounts Receivable:</span>{' '}
+                      <span className="font-mono font-semibold">{formatCurrency(340000)}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -1354,7 +1424,10 @@ export const FinanceWorkspace: React.FC = () => {
                     <span className="font-mono">{formatCurrency(210000)}</span>
                   </div>
                   <div className="text-xs text-amber-700 dark:text-amber-400 space-y-0.5">
-                    <div className="flex justify-between"><span>• Accounts Payable:</span> <span className="font-mono font-semibold">{formatCurrency(210000)}</span></div>
+                    <div className="flex justify-between">
+                      <span>• Accounts Payable:</span>{' '}
+                      <span className="font-mono font-semibold">{formatCurrency(210000)}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -1364,13 +1437,22 @@ export const FinanceWorkspace: React.FC = () => {
                     <span className="font-mono">{formatCurrency(1100000)}</span>
                   </div>
                   <div className="text-xs text-indigo-700 dark:text-indigo-400 space-y-0.5">
-                    <div className="flex justify-between"><span>• Contributed Capital:</span> <span className="font-mono font-semibold">{formatCurrency(500000)}</span></div>
-                    <div className="flex justify-between"><span>• Retained Fiscal Earnings:</span> <span className="font-mono font-semibold">{formatCurrency(600000)}</span></div>
+                    <div className="flex justify-between">
+                      <span>• Contributed Capital:</span>{' '}
+                      <span className="font-mono font-semibold">{formatCurrency(500000)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>• Retained Fiscal Earnings:</span>{' '}
+                      <span className="font-mono font-semibold">{formatCurrency(600000)}</span>
+                    </div>
                   </div>
                 </div>
 
                 <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs font-semibold text-emerald-400">
-                  <span>Balance Check: {formatCurrency(1310000)} = {formatCurrency(210000)} + {formatCurrency(1100000)}</span>
+                  <span>
+                    Balance Check: {formatCurrency(1310000)} = {formatCurrency(210000)} +{' '}
+                    {formatCurrency(1100000)}
+                  </span>
                   <span>✓ 100% IN BALANCE</span>
                 </div>
               </div>
@@ -1584,10 +1666,14 @@ export const FinanceWorkspace: React.FC = () => {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface-sunken/60 p-3.5 rounded-xl border border-default text-xs">
                 <div>
                   <div className="text-muted text-[10px] uppercase font-semibold">Date</div>
-                  <div className="font-mono font-medium text-default mt-0.5">{viewingEntry.entry_date}</div>
+                  <div className="font-mono font-medium text-default mt-0.5">
+                    {viewingEntry.entry_date}
+                  </div>
                 </div>
                 <div>
-                  <div className="text-muted text-[10px] uppercase font-semibold">Source Module</div>
+                  <div className="text-muted text-[10px] uppercase font-semibold">
+                    Source Module
+                  </div>
                   <div className="capitalize text-default mt-0.5">{viewingEntry.source_module}</div>
                 </div>
                 <div>
@@ -1625,14 +1711,20 @@ export const FinanceWorkspace: React.FC = () => {
                             <div className="font-mono font-bold text-default">
                               {l.account?.account_code ?? l.account_id}
                             </div>
-                            <div className="text-muted text-[11px]">{l.account?.name ?? 'Account'}</div>
+                            <div className="text-muted text-[11px]">
+                              {l.account?.name ?? 'Account'}
+                            </div>
                           </td>
                           <td className="px-4 py-2.5 text-muted">{l.narration || '—'}</td>
                           <td className="px-4 py-2.5 text-right font-mono font-semibold text-default">
-                            {parseFloat(String(l.debit_amount)) > 0 ? formatCurrency(String(l.debit_amount)) : '—'}
+                            {parseFloat(String(l.debit_amount)) > 0
+                              ? formatCurrency(String(l.debit_amount))
+                              : '—'}
                           </td>
                           <td className="px-4 py-2.5 text-right font-mono font-semibold text-default">
-                            {parseFloat(String(l.credit_amount)) > 0 ? formatCurrency(String(l.credit_amount)) : '—'}
+                            {parseFloat(String(l.credit_amount)) > 0
+                              ? formatCurrency(String(l.credit_amount))
+                              : '—'}
                           </td>
                         </tr>
                       ))}
@@ -1699,7 +1791,9 @@ export const FinanceWorkspace: React.FC = () => {
                     </span>
                   </div>
                   <p className="text-xs text-muted mt-0.5 capitalize">
-                    {viewingAccount.account_type} {viewingAccount.account_subtype ? `(${viewingAccount.account_subtype})` : ''} • Normal {viewingAccount.normal_balance}
+                    {viewingAccount.account_type}{' '}
+                    {viewingAccount.account_subtype ? `(${viewingAccount.account_subtype})` : ''} •
+                    Normal {viewingAccount.normal_balance}
                   </p>
                 </div>
               </div>
@@ -1715,13 +1809,17 @@ export const FinanceWorkspace: React.FC = () => {
             <div className="p-6 overflow-y-auto space-y-4">
               <div className="grid grid-cols-2 gap-3 bg-surface-sunken/60 p-4 rounded-xl border border-default text-xs">
                 <div>
-                  <div className="text-muted text-[10px] uppercase font-semibold">Account Classification</div>
+                  <div className="text-muted text-[10px] uppercase font-semibold">
+                    Account Classification
+                  </div>
                   <div className="font-semibold text-default capitalize mt-1">
                     {viewingAccount.account_type} ({viewingAccount.account_subtype || 'Standard'})
                   </div>
                 </div>
                 <div>
-                  <div className="text-muted text-[10px] uppercase font-semibold">Current Balance</div>
+                  <div className="text-muted text-[10px] uppercase font-semibold">
+                    Current Balance
+                  </div>
                   <div className="font-mono text-base font-extrabold text-default mt-0.5">
                     {formatCurrency(viewingAccount.current_balance || '0')}
                   </div>
@@ -1744,23 +1842,45 @@ export const FinanceWorkspace: React.FC = () => {
                     </thead>
                     <tbody className="divide-y divide-default">
                       {journalEntries
-                        .filter((je) => je.lines?.some((l) => l.account_id === viewingAccount.id || l.account?.account_code === viewingAccount.account_code))
+                        .filter((je) =>
+                          je.lines?.some(
+                            (l) =>
+                              l.account_id === viewingAccount.id ||
+                              l.account?.account_code === viewingAccount.account_code
+                          )
+                        )
                         .map((je) => {
-                          const relevantLine = je.lines?.find((l) => l.account_id === viewingAccount.id || l.account?.account_code === viewingAccount.account_code);
+                          const relevantLine = je.lines?.find(
+                            (l) =>
+                              l.account_id === viewingAccount.id ||
+                              l.account?.account_code === viewingAccount.account_code
+                          );
                           return (
                             <tr key={je.id} className="hover:bg-surface-sunken/30">
-                              <td className="px-4 py-2.5 font-mono font-bold text-primary">{je.entry_number}</td>
+                              <td className="px-4 py-2.5 font-mono font-bold text-primary">
+                                {je.entry_number}
+                              </td>
                               <td className="px-4 py-2.5 text-muted">{je.entry_date}</td>
                               <td className="px-4 py-2.5 text-right font-mono font-semibold text-default">
-                                {relevantLine && parseFloat(String(relevantLine.debit_amount)) > 0 ? formatCurrency(String(relevantLine.debit_amount)) : '—'}
+                                {relevantLine && parseFloat(String(relevantLine.debit_amount)) > 0
+                                  ? formatCurrency(String(relevantLine.debit_amount))
+                                  : '—'}
                               </td>
                               <td className="px-4 py-2.5 text-right font-mono font-semibold text-default">
-                                {relevantLine && parseFloat(String(relevantLine.credit_amount)) > 0 ? formatCurrency(String(relevantLine.credit_amount)) : '—'}
+                                {relevantLine && parseFloat(String(relevantLine.credit_amount)) > 0
+                                  ? formatCurrency(String(relevantLine.credit_amount))
+                                  : '—'}
                               </td>
                             </tr>
                           );
                         })}
-                      {!journalEntries.some((je) => je.lines?.some((l) => l.account_id === viewingAccount.id || l.account?.account_code === viewingAccount.account_code)) && (
+                      {!journalEntries.some((je) =>
+                        je.lines?.some(
+                          (l) =>
+                            l.account_id === viewingAccount.id ||
+                            l.account?.account_code === viewingAccount.account_code
+                        )
+                      ) && (
                         <tr>
                           <td colSpan={4} className="px-4 py-6 text-center text-muted">
                             No ledger transactions recorded for this account head yet.
@@ -1806,10 +1926,15 @@ export const FinanceWorkspace: React.FC = () => {
               <div>
                 <h3 className="text-base sm:text-lg font-bold text-default flex items-center gap-2">
                   <Scale className="size-5 text-primary" />
-                  <span>{newAccountName.includes('(Copy)') ? 'Duplicate Account Head' : 'New Account Head'}</span>
+                  <span>
+                    {newAccountName.includes('(Copy)')
+                      ? 'Duplicate Account Head'
+                      : 'New Account Head'}
+                  </span>
                 </h3>
                 <p className="text-xs text-muted mt-0.5">
-                  Configure Chart of Accounts general ledger head with classification and normal balance
+                  Configure Chart of Accounts general ledger head with classification and normal
+                  balance
                 </p>
               </div>
               <button

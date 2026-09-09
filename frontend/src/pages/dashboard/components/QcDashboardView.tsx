@@ -12,6 +12,7 @@ import {
   Sliders,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
+import type { DashboardMetricsData } from '../../../types/api/dashboard';
 
 export interface QcItem {
   id: string;
@@ -29,19 +30,21 @@ interface QcDashboardViewProps {
 }
 
 export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpenQC }) => {
-  const { data: metrics } = useQuery({
+  const { data: metrics } = useQuery<DashboardMetricsData | null>({
     queryKey: ['tenant', 'dashboard', 'metrics'],
     queryFn: async () => {
       try {
-        const res = await api.get<any>('/dashboard/metrics');
+        const res = await api.get<DashboardMetricsData | { data: DashboardMetricsData }>(
+          '/dashboard/metrics'
+        );
         const raw = res.data;
         if (raw && typeof raw === 'object') {
-          if ('quality' in raw) return raw;
+          if ('quality' in raw) return raw as DashboardMetricsData;
           if ('data' in raw && raw.data && typeof raw.data === 'object' && 'quality' in raw.data) {
-            return raw.data;
+            return raw.data as DashboardMetricsData;
           }
         }
-        return raw ?? null;
+        return null;
       } catch {
         return null;
       }
@@ -49,11 +52,41 @@ export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpen
   });
 
   const parameters = [
-    { name: 'Electrical Insulation & Earth Resistance', spec: '> 10 MΩ @ 500V', passRate: 100, samples: 0, status: 'PASSED' },
-    { name: 'Thermal Cutoff & Heat Regulation (Bi-metal)', spec: '320°C ± 5°C', passRate: 100, samples: 0, status: 'PASSED' },
-    { name: 'Impact Resistance Standards', spec: 'Standard Drop Test', passRate: 100, samples: 0, status: 'PASSED' },
-    { name: 'Chassis Dimension & Fastener Torque', spec: 'Factory Tolerance Specification', passRate: 100, samples: 0, status: 'PASSED' },
-    { name: 'Carton Packaging & Barcode Scannability', spec: 'GS1 Compliance', passRate: 100, samples: 0, status: 'PASSED' },
+    {
+      name: 'Electrical Insulation & Earth Resistance',
+      spec: '> 10 MΩ @ 500V',
+      passRate: 100,
+      samples: 0,
+      status: 'PASSED',
+    },
+    {
+      name: 'Thermal Cutoff & Heat Regulation (Bi-metal)',
+      spec: '320°C ± 5°C',
+      passRate: 100,
+      samples: 0,
+      status: 'PASSED',
+    },
+    {
+      name: 'Impact Resistance Standards',
+      spec: 'Standard Drop Test',
+      passRate: 100,
+      samples: 0,
+      status: 'PASSED',
+    },
+    {
+      name: 'Chassis Dimension & Fastener Torque',
+      spec: 'Factory Tolerance Specification',
+      passRate: 100,
+      samples: 0,
+      status: 'PASSED',
+    },
+    {
+      name: 'Carton Packaging & Barcode Scannability',
+      spec: 'GS1 Compliance',
+      passRate: 100,
+      samples: 0,
+      status: 'PASSED',
+    },
   ];
 
   return (
@@ -117,9 +150,7 @@ export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpen
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-amber-500">
               {metrics?.quality?.pending_inspections ?? 0} Batches
             </div>
-            <span className="text-[10px] font-semibold text-muted">
-              Quality Inspection Queue
-            </span>
+            <span className="text-[10px] font-semibold text-muted">Quality Inspection Queue</span>
           </div>
         </div>
 
@@ -134,9 +165,7 @@ export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpen
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              0 pcs
-            </div>
+            <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">0 pcs</div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
               Approved Units
             </span>
@@ -155,7 +184,9 @@ export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpen
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              {metrics?.quality?.qc_pass_rate ? `${Math.max(0, 100 - Math.round(metrics.quality.qc_pass_rate))}%` : '0%'}
+              {metrics?.quality?.qc_pass_rate
+                ? `${Math.max(0, 100 - Math.round(metrics.quality.qc_pass_rate))}%`
+                : '0%'}
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
               Within Safety Target
@@ -174,12 +205,8 @@ export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpen
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              0 pcs
-            </div>
-            <span className="text-[10px] font-semibold text-muted">
-              Correction Station
-            </span>
+            <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">0 pcs</div>
+            <span className="text-[10px] font-semibold text-muted">Correction Station</span>
           </div>
         </div>
 
@@ -194,12 +221,8 @@ export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpen
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              0 pcs
-            </div>
-            <span className="text-[10px] font-semibold text-emerald-500">
-              Zero Unsalvageable
-            </span>
+            <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">0 pcs</div>
+            <span className="text-[10px] font-semibold text-emerald-500">Zero Unsalvageable</span>
           </div>
         </div>
 
@@ -215,7 +238,9 @@ export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpen
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              {metrics?.quality?.qc_pass_rate ? `${Math.round(metrics.quality.qc_pass_rate)}%` : '100%'}
+              {metrics?.quality?.qc_pass_rate
+                ? `${Math.round(metrics.quality.qc_pass_rate)}%`
+                : '100%'}
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
               Factory Certified Standard
@@ -233,7 +258,9 @@ export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpen
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-sm font-bold text-default">Batch Inspection Queue</h3>
-              <p className="text-[11px] text-muted">Awaiting quality engineer sign-off before warehouse transfer</p>
+              <p className="text-[11px] text-muted">
+                Awaiting quality engineer sign-off before warehouse transfer
+              </p>
             </div>
             <span className="rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 px-2 py-0.5 text-[10px] font-bold">
               {qcList.length} Batches
@@ -271,8 +298,12 @@ export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpen
                         <span>•</span>
                         <span>Batch: {item.orderNo}</span>
                         <span>•</span>
-                        <span>Qty: <strong>{item.qty} pcs</strong></span>
-                        {item.failed && <span className="text-red-500">({item.failed} failed)</span>}
+                        <span>
+                          Qty: <strong>{item.qty} pcs</strong>
+                        </span>
+                        {item.failed && (
+                          <span className="text-red-500">({item.failed} failed)</span>
+                        )}
                       </div>
                     </div>
 
@@ -296,7 +327,6 @@ export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpen
             )}
           </div>
 
-
           <Link
             to="/qc"
             className="mt-4 flex items-center justify-between text-xs font-semibold text-primary hover:underline pt-3 border-t border-default"
@@ -318,7 +348,9 @@ export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpen
               {parameters.map((param) => (
                 <div key={param.name} className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-default truncate max-w-45">{param.name}</span>
+                    <span className="font-semibold text-default truncate max-w-45">
+                      {param.name}
+                    </span>
                     <span className="font-mono text-emerald-500 font-bold">{param.passRate}%</span>
                   </div>
                   <div className="flex items-center justify-between text-[10px] text-muted">
@@ -326,7 +358,10 @@ export const QcDashboardView: React.FC<QcDashboardViewProps> = ({ qcList, onOpen
                     <span>{param.samples} samples</span>
                   </div>
                   <div className="h-1.5 w-full rounded-full bg-surface-sunken overflow-hidden">
-                    <div className="h-full rounded-full bg-emerald-500" style={{ width: `${param.passRate}%` }} />
+                    <div
+                      className="h-full rounded-full bg-emerald-500"
+                      style={{ width: `${param.passRate}%` }}
+                    />
                   </div>
                 </div>
               ))}

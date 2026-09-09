@@ -40,11 +40,7 @@ export const BrandAssetField: React.FC<BrandAssetFieldProps> = ({
   const [imageMeta, setImageMeta] = useState<{ width: number; height: number } | null>(null);
 
   useEffect(() => {
-    if (!url) {
-      setLoadedUrl(null);
-      setImageMeta(null);
-      return;
-    }
+    if (!url) return;
     let active = true;
     const img = new Image();
     img.src = url;
@@ -62,6 +58,8 @@ export const BrandAssetField: React.FC<BrandAssetFieldProps> = ({
     };
     return () => {
       active = false;
+      setLoadedUrl(null);
+      setImageMeta(null);
     };
   }, [url]);
 
@@ -102,7 +100,9 @@ export const BrandAssetField: React.FC<BrandAssetFieldProps> = ({
           } else {
             localStorage.setItem('brand_logo_url', res.data.url);
           }
-        } catch {}
+        } catch (err) {
+          void err;
+        }
         notify.success(`${label} uploaded successfully!`);
       }
     } catch {
@@ -145,7 +145,10 @@ export const BrandAssetField: React.FC<BrandAssetFieldProps> = ({
     : '.png,.jpg,.jpeg,.svg,.webp,image/png,image/jpeg,image/svg+xml,image/webp';
 
   return (
+    /* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */
     <div
+      role="region"
+      aria-label="Brand asset drop zone"
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -209,11 +212,13 @@ export const BrandAssetField: React.FC<BrandAssetFieldProps> = ({
       {/* Main Interactive Body: Thumbnail + Upload Action Buttons */}
       <div className="flex items-center gap-3.5">
         {/* Visual Thumbnail / Checkerboard Preview Box */}
-        <div
+        <button
+          type="button"
           onClick={() => fileInputRef.current?.click()}
           title="Click to choose a file"
+          aria-label="Click to choose a file"
           className={cn(
-            'rounded-xl border border-dashed border-default bg-surface-sunken flex items-center justify-center overflow-hidden shrink-0 transition-all cursor-pointer group hover:border-primary hover:bg-primary/5 relative',
+            'rounded-xl border border-dashed border-default bg-surface-sunken flex items-center justify-center overflow-hidden shrink-0 transition-all cursor-pointer group hover:border-primary hover:bg-primary/5 relative p-0',
             isFavicon ? 'size-14' : 'h-14 w-28'
           )}
           style={{
@@ -241,7 +246,7 @@ export const BrandAssetField: React.FC<BrandAssetFieldProps> = ({
               <RefreshCw className="size-4 text-primary animate-spin" />
             </div>
           )}
-        </div>
+        </button>
 
         {/* Upload Button, URL Input, and Controls */}
         <div className="flex-1 min-w-0 space-y-2">
@@ -289,7 +294,11 @@ export const BrandAssetField: React.FC<BrandAssetFieldProps> = ({
               type="text"
               value={url}
               onChange={(e) => onChange(e.target.value)}
-              placeholder={isFavicon ? 'https://.../favicon.png or upload' : 'https://.../brand-logo.png or upload'}
+              placeholder={
+                isFavicon
+                  ? 'https://.../favicon.png or upload'
+                  : 'https://.../brand-logo.png or upload'
+              }
               className="w-full bg-surface-sunken border border-default rounded-xl px-3 py-1.5 text-xs text-default placeholder:text-muted/60 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-mono transition-all"
             />
           </div>
@@ -298,7 +307,9 @@ export const BrandAssetField: React.FC<BrandAssetFieldProps> = ({
           <div className="flex items-center justify-between text-3xs text-muted">
             <span className="flex items-center gap-1">
               <ImageIcon className="size-2.5 text-primary" />
-              {isFavicon ? 'Recommended: 64×64 PNG or ICO' : 'Recommended: Transparent SVG or 512×512 PNG'}
+              {isFavicon
+                ? 'Recommended: 64×64 PNG or ICO'
+                : 'Recommended: Transparent SVG or 512×512 PNG'}
             </span>
             <span className="flex items-center gap-1">
               <FileCode className="size-2.5" /> Drag & drop supported

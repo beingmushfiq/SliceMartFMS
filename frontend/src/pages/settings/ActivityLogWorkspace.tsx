@@ -64,16 +64,23 @@ export const ActivityLogWorkspace: React.FC = () => {
       .get<AuditLogEntry[]>('/audit-logs', { params })
       .then((res) => {
         if (!ignore) {
-          const items: AuditLogEntry[] = Array.isArray(res.data)
-            ? res.data
-            : Array.isArray((res.data as any)?.data)
-              ? (res.data as any).data
+          const rawData = res.data as unknown;
+          const items: AuditLogEntry[] = Array.isArray(rawData)
+            ? (rawData as AuditLogEntry[])
+            : rawData &&
+                typeof rawData === 'object' &&
+                'data' in rawData &&
+                Array.isArray((rawData as { data: unknown }).data)
+              ? (rawData as { data: AuditLogEntry[] }).data
               : [];
           setLogs(items);
 
-          const pagination = (res.meta as any)?.total !== undefined
-            ? (res.meta as any)
-            : (res.data as any)?.meta;
+          const resMeta = res.meta as Record<string, unknown> | undefined;
+          const dataMeta =
+            rawData && typeof rawData === 'object' && 'meta' in rawData
+              ? (rawData as { meta: Record<string, unknown> }).meta
+              : undefined;
+          const pagination = resMeta?.total !== undefined ? resMeta : dataMeta;
 
           if (pagination) {
             setMeta({
@@ -149,11 +156,11 @@ export const ActivityLogWorkspace: React.FC = () => {
   // Metrics from current dataset
   const updatesCount = logs.filter((l) => l.action.toLowerCase().includes('update')).length;
   const createsCount = logs.filter((l) => l.action.toLowerCase().includes('create')).length;
-  const approvesCount = logs.filter((l) =>
-    l.action.toLowerCase().includes('approve') || l.action.toLowerCase().includes('verify')
+  const approvesCount = logs.filter(
+    (l) => l.action.toLowerCase().includes('approve') || l.action.toLowerCase().includes('verify')
   ).length;
-  const deletesCount = logs.filter((l) =>
-    l.action.toLowerCase().includes('delete') || l.action.toLowerCase().includes('void')
+  const deletesCount = logs.filter(
+    (l) => l.action.toLowerCase().includes('delete') || l.action.toLowerCase().includes('void')
   ).length;
 
   return (
@@ -180,7 +187,8 @@ export const ActivityLogWorkspace: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-muted max-w-2xl leading-relaxed">
-                Comprehensive historical timeline of all records created, updated, and deleted. Inspect exact 
+                Comprehensive historical timeline of all records created, updated, and deleted.
+                Inspect exact
                 <strong> Before vs. After field diffs</strong> and author tracking.
               </p>
             </div>
@@ -204,7 +212,9 @@ export const ActivityLogWorkspace: React.FC = () => {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <div className="rounded-2xl border border-default bg-surface p-4 space-y-1 shadow-2xs">
-          <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Total Recorded Logs</span>
+          <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
+            Total Recorded Logs
+          </span>
           <div className="text-2xl font-extrabold text-default font-mono">{meta.total}</div>
           <span className="text-[11px] text-muted">Historical activities</span>
         </div>
@@ -390,7 +400,9 @@ export const ActivityLogWorkspace: React.FC = () => {
                       <td className="py-3 px-4 whitespace-nowrap font-mono text-[11px] text-muted">
                         <div className="flex items-center gap-1.5">
                           <Clock className="size-3 text-muted" />
-                          <span>{log.created_at ? new Date(log.created_at).toLocaleString() : 'N/A'}</span>
+                          <span>
+                            {log.created_at ? new Date(log.created_at).toLocaleString() : 'N/A'}
+                          </span>
                         </div>
                       </td>
 
@@ -402,7 +414,8 @@ export const ActivityLogWorkspace: React.FC = () => {
                           </div>
                           <div>
                             <span className="font-semibold text-default block text-xs">
-                              {log.user?.name || (log.user_id ? `User #${log.user_id}` : 'System Agent')}
+                              {log.user?.name ||
+                                (log.user_id ? `User #${log.user_id}` : 'System Agent')}
                             </span>
                             {log.user?.email && (
                               <span className="text-[10px] text-muted block">{log.user.email}</span>
@@ -436,15 +449,22 @@ export const ActivityLogWorkspace: React.FC = () => {
                       <td className="py-3 px-4">
                         {(() => {
                           const act = log.action.toLowerCase();
-                          const effectiveChanged = (log.changed_fields && log.changed_fields.length > 0)
-                            ? log.changed_fields
-                            : log.before && log.after
-                              ? Object.keys({ ...log.before, ...log.after }).filter(
-                                  (k) => JSON.stringify(log.before?.[k]) !== JSON.stringify(log.after?.[k])
-                                )
-                              : [];
+                          const effectiveChanged =
+                            log.changed_fields && log.changed_fields.length > 0
+                              ? log.changed_fields
+                              : log.before && log.after
+                                ? Object.keys({ ...log.before, ...log.after }).filter(
+                                    (k) =>
+                                      JSON.stringify(log.before?.[k]) !==
+                                      JSON.stringify(log.after?.[k])
+                                  )
+                                : [];
 
-                          if (act.includes('create') || act.includes('store') || act.includes('insert')) {
+                          if (
+                            act.includes('create') ||
+                            act.includes('store') ||
+                            act.includes('insert')
+                          ) {
                             return (
                               <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">
                                 ✨ Initial Record Created
@@ -460,7 +480,11 @@ export const ActivityLogWorkspace: React.FC = () => {
                             );
                           }
 
-                          if (act.includes('delete') || act.includes('destroy') || act.includes('void')) {
+                          if (
+                            act.includes('delete') ||
+                            act.includes('destroy') ||
+                            act.includes('void')
+                          ) {
                             return (
                               <span className="inline-flex items-center gap-1 rounded-md bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold text-rose-600 dark:text-rose-400 border border-rose-500/20 font-mono">
                                 ✕ Record Removed / Voided
@@ -488,7 +512,9 @@ export const ActivityLogWorkspace: React.FC = () => {
                             );
                           }
 
-                          return <span className="text-[11px] text-muted italic">No state changes</span>;
+                          return (
+                            <span className="text-[11px] text-muted italic">No state changes</span>
+                          );
                         })()}
                       </td>
 

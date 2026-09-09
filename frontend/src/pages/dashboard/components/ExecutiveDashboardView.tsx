@@ -27,10 +27,10 @@ import {
   CartesianGrid,
   Tooltip,
 } from 'recharts';
-
-import type { DashboardInvoice } from './SalesDashboardView';
-import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../lib/format/currency';
+import { api } from '../../../lib/api/client';
+import type { DashboardMetricsData, DashboardInvoiceItem } from '../../../types/api/dashboard';
+import type { DashboardInvoice } from './SalesDashboardView';
 
 export interface TrendDataPoint {
   day?: string;
@@ -66,19 +66,26 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
 }) => {
   const { formatCurrency, currencySymbol } = useCurrency();
 
-  const { data: metrics } = useQuery({
+  const { data: metrics } = useQuery<DashboardMetricsData | null>({
     queryKey: ['tenant', 'dashboard', 'metrics'],
     queryFn: async () => {
       try {
-        const res = await api.get<any>('/dashboard/metrics');
+        const res = await api.get<DashboardMetricsData | { data: DashboardMetricsData }>(
+          '/dashboard/metrics'
+        );
         const raw = res.data;
         if (raw && typeof raw === 'object') {
-          if ('commercial' in raw) return raw;
-          if ('data' in raw && raw.data && typeof raw.data === 'object' && 'commercial' in raw.data) {
-            return raw.data;
+          if ('commercial' in raw) return raw as DashboardMetricsData;
+          if (
+            'data' in raw &&
+            raw.data &&
+            typeof raw.data === 'object' &&
+            'commercial' in raw.data
+          ) {
+            return raw.data as DashboardMetricsData;
           }
         }
-        return raw ?? null;
+        return null;
       } catch {
         return null;
       }
@@ -88,9 +95,12 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
   });
 
   const chartData = React.useMemo(() => {
-    const raw = (trends && trends.length > 0)
-      ? trends
-      : (metrics?.trends?.weekly && metrics.trends.weekly.length > 0 ? (metrics.trends.weekly as TrendDataPoint[]) : null);
+    const raw =
+      trends && trends.length > 0
+        ? trends
+        : metrics?.trends?.weekly && metrics.trends.weekly.length > 0
+          ? (metrics.trends.weekly as TrendDataPoint[])
+          : null;
     if (!raw) return REVENUE_DATA;
     return raw.map((d: TrendDataPoint) => ({
       day: d.day || d.time || 'Day',
@@ -100,11 +110,13 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
     }));
   }, [trends, metrics?.trends?.weekly]);
 
-  const { data: recentInvoices = [] } = useQuery({
+  const { data: recentInvoices = [] } = useQuery<DashboardInvoiceItem[]>({
     queryKey: ['sales', 'recent-invoices-dashboard'],
     queryFn: async () => {
       try {
-        const res = await api.get<any>('/sales/invoices?per_page=4');
+        const res = await api.get<DashboardInvoiceItem[] | { data: DashboardInvoiceItem[] }>(
+          '/sales/invoices?per_page=4'
+        );
         const d = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
         return Array.isArray(d) ? d : [];
       } catch {
@@ -170,7 +182,8 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
               {metrics ? formatCurrency(metrics.commercial.today_revenue) : formatCurrency(0)}
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-              Month: {metrics ? formatCurrency(metrics.commercial.month_revenue) : formatCurrency(0)}
+              Month:{' '}
+              {metrics ? formatCurrency(metrics.commercial.month_revenue) : formatCurrency(0)}
             </span>
           </div>
         </div>
@@ -190,7 +203,10 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
               {metrics ? `${metrics.commercial.active_orders} Orders` : '0 Orders'}
             </div>
             <span className="text-[10px] font-semibold text-muted">
-              Due: {metrics ? formatCurrency(metrics.commercial.total_receivable_due) : formatCurrency(0)}
+              Due:{' '}
+              {metrics
+                ? formatCurrency(metrics.commercial.total_receivable_due)
+                : formatCurrency(0)}
             </span>
           </div>
         </div>
@@ -210,7 +226,9 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
               {metrics ? `${metrics.production.today_output} pcs` : '0 pcs'}
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-              {metrics ? `${metrics.production.achievement_rate}% Target Achieved` : '0% Target Achieved'}
+              {metrics
+                ? `${metrics.production.achievement_rate}% Target Achieved`
+                : '0% Target Achieved'}
             </span>
           </div>
         </div>
@@ -230,7 +248,9 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
               {metrics ? formatCurrency(metrics.inventory.total_valuation) : formatCurrency(0)}
             </div>
             <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-              {metrics ? `${metrics.inventory.low_stock_count} Reorder Warnings` : '0 Reorder Warnings'}
+              {metrics
+                ? `${metrics.inventory.low_stock_count} Reorder Warnings`
+                : '0 Reorder Warnings'}
             </span>
           </div>
         </div>
@@ -398,11 +418,17 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
             <div className="mt-3 space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted">Today's Revenue:</span>
-                <strong className="text-default font-mono">{metrics ? formatCurrency(metrics.commercial.today_revenue) : formatCurrency(0)}</strong>
+                <strong className="text-default font-mono">
+                  {metrics ? formatCurrency(metrics.commercial.today_revenue) : formatCurrency(0)}
+                </strong>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted">Invoices Pending:</span>
-                <strong className="text-amber-500 font-mono">{metrics ? formatCurrency(metrics.commercial.total_receivable_due) : formatCurrency(0)}</strong>
+                <strong className="text-amber-500 font-mono">
+                  {metrics
+                    ? formatCurrency(metrics.commercial.total_receivable_due)
+                    : formatCurrency(0)}
+                </strong>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted">POS Register:</span>
@@ -438,7 +464,9 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted">Units Produced:</span>
                 <strong className="text-default font-mono">
-                  {metrics ? `${metrics.production.today_output} / ${metrics.production.target_output || 0} pcs` : '0 pcs'}
+                  {metrics
+                    ? `${metrics.production.today_output} / ${metrics.production.target_output || 0} pcs`
+                    : '0 pcs'}
                 </strong>
               </div>
               <div className="flex items-center justify-between text-xs">
@@ -553,7 +581,9 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-sm font-bold text-default">Commercial & Production Trends</h3>
-              <p className="text-[11px] text-muted">Weekly revenue correlation with manufacturing output</p>
+              <p className="text-[11px] text-muted">
+                Weekly revenue correlation with manufacturing output
+              </p>
             </div>
             <div className="flex items-center gap-3 text-xs">
               <span className="flex items-center gap-1.5 text-muted">
@@ -580,13 +610,29 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" opacity={0.07} />
-                <XAxis dataKey="day" tickLine={false} axisLine={false} tick={{ fill: 'currentColor', fontSize: 11, opacity: 0.6 }} />
-                <YAxis tickLine={false} axisLine={false} tick={{ fill: 'currentColor', fontSize: 11, opacity: 0.6 }} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke="currentColor"
+                  opacity={0.07}
+                />
+                <XAxis
+                  dataKey="day"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fill: 'currentColor', fontSize: 11, opacity: 0.6 }}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fill: 'currentColor', fontSize: 11, opacity: 0.6 }}
+                />
                 <Tooltip
-                  formatter={(value: any, name: any) => [
-                    name === 'revenue' ? formatCurrency(Number(value) || 0) : `${value} pcs`,
-                    name === 'revenue' ? 'Revenue' : 'Production Output',
+                  formatter={(value: unknown, name: unknown) => [
+                    String(name) === 'revenue'
+                      ? formatCurrency(Number(value) || 0)
+                      : `${String(value)} pcs`,
+                    String(name) === 'revenue' ? 'Revenue' : 'Production Output',
                   ]}
                   contentStyle={{
                     backgroundColor: 'var(--surface-raised, #18181b)',
@@ -595,8 +641,24 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
                     fontSize: '11px',
                   }}
                 />
-                <Area type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2.5} fillOpacity={1} fill="url(#execRevenueGrad)" name="revenue" />
-                <Area type="monotone" dataKey="production" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#execProdGrad)" name="production" />
+                <Area
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#3b82f6"
+                  strokeWidth={2.5}
+                  fillOpacity={1}
+                  fill="url(#execRevenueGrad)"
+                  name="revenue"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="production"
+                  stroke="#10b981"
+                  strokeWidth={2.5}
+                  fillOpacity={1}
+                  fill="url(#execProdGrad)"
+                  name="production"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -635,7 +697,8 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
                         {inv.customer?.name || 'Direct Customer'}
                       </div>
                       <div className="text-[10px] text-muted">
-                        Invoice {inv.invoice_number} • {formatCurrency(Number(inv.total_amount) || 0)}
+                        Invoice {inv.invoice_number} •{' '}
+                        {formatCurrency(Number(inv.total_amount) || 0)}
                       </div>
                     </div>
                     <span className="text-[10px] font-mono text-muted uppercase">{inv.status}</span>

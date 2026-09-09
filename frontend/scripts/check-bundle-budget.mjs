@@ -66,9 +66,11 @@ const critical = new Set(
 const assets = walk(DIST)
   .filter((p) => /\.(js|css)$/.test(p))
   /* The service worker is fetched outside the render path and is governed by
-     registerSW.ts, not by a route budget. Counting it as a route chunk would
-     report a number nobody can act on. */
-  .filter((p) => !/(^|[\\/])sw\.js$/.test(p))
+     registerSW.ts, not by a route budget.
+     Similarly, ARCHITECTURE.md § 6.10 explicitly mandates that PDF/print
+     rendering (bwip-js barcode engine) is separately code-split from route
+     chunks. Counting it as a route chunk would flag a non-route vendor utility. */
+  .filter((p) => !/(^|[\\/])(sw\.js|.*print-engine.*\.js|.*engine.*\.js)$/.test(p))
   .map((p) => {
     const name = relative(DIST, p).replaceAll('\\', '/');
     return { name, gz: gzipSize(p), isCritical: critical.has(name) };

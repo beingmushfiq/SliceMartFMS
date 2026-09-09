@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Http\Middleware;
 
+use App\Core\Tenancy\TenantContext;
 use App\Models\TenantRedirect;
 use Closure;
 use Illuminate\Http\Request;
@@ -16,7 +17,8 @@ class HandleTenantRedirects
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $tenantId = $request->attributes->get('tenant_id') ?? tenant('id');
+        $tenantId = $request->attributes->get('tenant_id')
+            ?? (TenantContext::isBound() ? TenantContext::current()->tenantId() : null);
 
         if (! $tenantId) {
             return $next($request);

@@ -134,10 +134,10 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
     setLoading(true);
     try {
       const [settingsRes, redirectsRes, notFoundRes, auditRes] = await Promise.allSettled([
-        api.get<{ data: SeoSettingsState }>('/tenant/seo/settings'),
-        api.get<{ data: RedirectItem[] }>('/tenant/redirects'),
-        api.get<{ data: NotFoundLogItem[] }>('/tenant/redirects/not-found-logs'),
-        api.get<{ data: SeoAuditResult }>('/tenant/seo/audit'),
+        api.get<{ data: SeoSettingsState }>('/storefront/seo/settings'),
+        api.get<{ data: RedirectItem[] }>('/storefront/redirects'),
+        api.get<{ data: NotFoundLogItem[] }>('/storefront/redirects/404-logs'),
+        api.get<{ data: SeoAuditResult }>('/storefront/seo/audit'),
       ]);
 
       if (settingsRes.status === 'fulfilled' && settingsRes.value.data.data) {
@@ -177,12 +177,12 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
     setSaving(true);
     setSaveSuccess(false);
     try {
-      await api.put('/tenant/seo/settings', settings);
+      await api.put('/storefront/seo/settings', settings);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
       notify.success('SEO settings saved successfully');
       // Refresh audit
-      const auditRes = await api.get<{ data: SeoAuditResult }>('/tenant/seo/audit');
+      const auditRes = await api.get<{ data: SeoAuditResult }>('/storefront/seo/audit');
       setAuditResult(auditRes.data.data);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to save SEO settings';
@@ -197,7 +197,7 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
     if (!newSource || !newTarget) return;
     setCreatingRedirect(true);
     try {
-      const res = await api.post<{ data: RedirectItem }>('/tenant/redirects', {
+      const res = await api.post<{ data: RedirectItem }>('/storefront/redirects', {
         source_path: newSource,
         target_path: newTarget,
         status_code: newStatusCode,
@@ -218,7 +218,7 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
   const handleDeleteRedirect = async (id: number) => {
     if (!confirm('Are you sure you want to delete this redirect?')) return;
     try {
-      await api.delete(`/tenant/redirects/${id}`);
+      await api.delete(`/storefront/redirects/${id}`);
       setRedirects(redirects.filter((r) => r.id !== id));
       notify.info('Redirect rule deleted');
     } catch (err: unknown) {
@@ -231,7 +231,7 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
     const target = prompt(`Enter target URL for ${log.path}:`, '/');
     if (!target) return;
     try {
-      await api.post(`/tenant/redirects/resolve-not-found/${log.id}`, {
+      await api.post(`/storefront/redirects/404-logs/${log.id}/resolve`, {
         target_path: target,
         status_code: 301,
       });
@@ -252,7 +252,7 @@ export const SeoDiscoverabilityWorkspace: React.FC = () => {
         .map((u) => u.trim())
         .filter(Boolean);
 
-      const res = await api.post<{ message: string; submitted_urls: string[] }>('/tenant/seo/indexnow/ping', {
+      const res = await api.post<{ message: string; submitted_urls: string[] }>('/storefront/seo/indexnow/ping', {
         urls: urlList.length > 0 ? urlList : undefined,
       });
 

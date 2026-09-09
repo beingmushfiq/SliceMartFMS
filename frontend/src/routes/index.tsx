@@ -1,54 +1,130 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, createBrowserRouter } from 'react-router-dom';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 import { AppShell } from '../components/layout/AppShell';
 import { RouteErrorBoundary } from '../components/routing/RouteErrorBoundary';
-import LoginPage from '../pages/auth/LoginPage';
-import CatalogueWorkspace from '../modules/catalogue/CatalogueWorkspace';
-import ProductionWorkspace from '../modules/production/ProductionWorkspace';
-import QcWorkspace from '../modules/qc/QcWorkspace';
-import InventoryWorkspace from '../modules/inventory/InventoryWorkspace';
-import PurchasingWorkspace from '../modules/purchasing/PurchasingWorkspace';
-import SalesWorkspace from '../modules/sales/SalesWorkspace';
-import PosWorkspace from '../modules/pos/PosWorkspace';
-import DeliveryWorkspace from '../modules/delivery/DeliveryWorkspace';
-import FinanceWorkspace from '../modules/finance/FinanceWorkspace';
-import AssetsWorkspace from '../modules/assets/AssetsWorkspace';
-import HrWorkspace from '../modules/hr/HrWorkspace';
-import { ReportsWorkspace } from '../modules/reports/ReportsWorkspace';
-import { ActivityLogWorkspace } from '../pages/settings/ActivityLogWorkspace';
-import { RolesManagementWorkspace } from '../pages/settings/RolesManagementWorkspace';
-import { SettingsCenterWorkspace } from '../modules/settings/SettingsCenterWorkspace';
-import { TenantRoleDashboard } from '../pages/dashboard/TenantRoleDashboard';
-import { ProfileSettingsWorkspace } from '../pages/settings/ProfileSettingsWorkspace';
-import { SeoDiscoverabilityWorkspace } from '../pages/settings/SeoDiscoverabilityWorkspace';
-import { OnboardingWizard } from '../modules/platform/OnboardingWizard';
-import { NotFoundPage } from '../pages/errors/NotFoundPage';
+import { RouteLoadingFallback } from '../components/routing/RouteLoadingFallback';
+
+// Auth & Shell Fallbacks
+const LoginPage = lazy(() => import('../pages/auth/LoginPage'));
+const NotFoundPage = lazy(() =>
+  import('../pages/errors/NotFoundPage').then((m) => ({ default: m.NotFoundPage }))
+);
+
+// ERP Tenant Workspaces
+const TenantRoleDashboard = lazy(() =>
+  import('../pages/dashboard/TenantRoleDashboard').then((m) => ({ default: m.TenantRoleDashboard }))
+);
+const CatalogueWorkspace = lazy(() => import('../modules/catalogue/CatalogueWorkspace'));
+const ProductionWorkspace = lazy(() => import('../modules/production/ProductionWorkspace'));
+const QcWorkspace = lazy(() => import('../modules/qc/QcWorkspace'));
+const InventoryWorkspace = lazy(() => import('../modules/inventory/InventoryWorkspace'));
+const PurchasingWorkspace = lazy(() => import('../modules/purchasing/PurchasingWorkspace'));
+const SalesWorkspace = lazy(() => import('../modules/sales/SalesWorkspace'));
+const PosWorkspace = lazy(() => import('../modules/pos/PosWorkspace'));
+const DeliveryWorkspace = lazy(() => import('../modules/delivery/DeliveryWorkspace'));
+const FinanceWorkspace = lazy(() => import('../modules/finance/FinanceWorkspace'));
+const AssetsWorkspace = lazy(() => import('../modules/assets/AssetsWorkspace'));
+const HrWorkspace = lazy(() => import('../modules/hr/HrWorkspace'));
+const ReportsWorkspace = lazy(() =>
+  import('../modules/reports/ReportsWorkspace').then((m) => ({ default: m.ReportsWorkspace }))
+);
+const ActivityLogWorkspace = lazy(() =>
+  import('../pages/settings/ActivityLogWorkspace').then((m) => ({
+    default: m.ActivityLogWorkspace,
+  }))
+);
+const RolesManagementWorkspace = lazy(() =>
+  import('../pages/settings/RolesManagementWorkspace').then((m) => ({
+    default: m.RolesManagementWorkspace,
+  }))
+);
+const SettingsCenterWorkspace = lazy(() =>
+  import('../modules/settings/SettingsCenterWorkspace').then((m) => ({
+    default: m.SettingsCenterWorkspace,
+  }))
+);
+const ProfileSettingsWorkspace = lazy(() =>
+  import('../pages/settings/ProfileSettingsWorkspace').then((m) => ({
+    default: m.ProfileSettingsWorkspace,
+  }))
+);
+const SeoDiscoverabilityWorkspace = lazy(() =>
+  import('../pages/settings/SeoDiscoverabilityWorkspace').then((m) => ({
+    default: m.SeoDiscoverabilityWorkspace,
+  }))
+);
+const OnboardingWizard = lazy(() =>
+  import('../modules/platform/OnboardingWizard').then((m) => ({ default: m.OnboardingWizard }))
+);
 
 // Master SaaS Platform Admin imports
 import { PlatformProtectedRoute } from '../components/platform/PlatformProtectedRoute';
 import { PlatformShell } from '../components/platform/PlatformShell';
-import PlatformLoginPage from '../pages/platform/PlatformLoginPage';
-import PlatformDashboardWorkspace from '../modules/platform/PlatformDashboardWorkspace';
-import TenantDirectoryWorkspace from '../modules/platform/TenantDirectoryWorkspace';
-import TenantRegistrationWizard from '../modules/platform/TenantRegistrationWizard';
-import TenantDetailWorkspace from '../modules/platform/TenantDetailWorkspace';
-import PlanManagerWorkspace from '../modules/platform/PlanManagerWorkspace';
-import PlatformAuditWorkspace from '../modules/platform/PlatformAuditWorkspace';
-import PlatformErrorMonitoringWorkspace from '../modules/platform/PlatformErrorMonitoringWorkspace';
+const PlatformLoginPage = lazy(() => import('../pages/platform/PlatformLoginPage'));
+const PlatformDashboardWorkspace = lazy(
+  () => import('../modules/platform/PlatformDashboardWorkspace')
+);
+const TenantDirectoryWorkspace = lazy(() => import('../modules/platform/TenantDirectoryWorkspace'));
+const TenantRegistrationWizard = lazy(() => import('../modules/platform/TenantRegistrationWizard'));
+const TenantDetailWorkspace = lazy(() => import('../modules/platform/TenantDetailWorkspace'));
+const PlanManagerWorkspace = lazy(() => import('../modules/platform/PlanManagerWorkspace'));
+const PlatformAuditWorkspace = lazy(() => import('../modules/platform/PlatformAuditWorkspace'));
+const PlatformErrorMonitoringWorkspace = lazy(
+  () => import('../modules/platform/PlatformErrorMonitoringWorkspace')
+);
 
 // Public Headless E-Commerce Storefront imports
 import { StorefrontShell } from '../components/storefront/StorefrontShell';
-import { StorefrontHomePage } from '../pages/storefront/StorefrontHomePage';
-import { StorefrontCatalogPage } from '../pages/storefront/StorefrontCatalogPage';
-import { StorefrontProductDetailPage } from '../pages/storefront/StorefrontProductDetailPage';
-import { StorefrontCheckoutPage } from '../pages/storefront/StorefrontCheckoutPage';
-import { StorefrontOrderConfirmationPage } from '../pages/storefront/StorefrontOrderConfirmationPage';
-import { StorefrontOrderTrackingPage } from '../pages/storefront/StorefrontOrderTrackingPage';
-import { StorefrontDynamicPage } from '../pages/storefront/StorefrontDynamicPage';
-import { StorefrontAccountPage } from '../pages/storefront/StorefrontAccountPage';
-import { StorefrontSettingsWorkspace } from '../modules/storefront/StorefrontSettingsWorkspace';
-import { StorefrontPageBuilderWorkspace } from '../modules/storefront/StorefrontPageBuilderWorkspace';
 import { StorefrontRedirect } from '../components/routing/StorefrontRedirect';
+const StorefrontHomePage = lazy(() =>
+  import('../pages/storefront/StorefrontHomePage').then((m) => ({ default: m.StorefrontHomePage }))
+);
+const StorefrontCatalogPage = lazy(() =>
+  import('../pages/storefront/StorefrontCatalogPage').then((m) => ({
+    default: m.StorefrontCatalogPage,
+  }))
+);
+const StorefrontProductDetailPage = lazy(() =>
+  import('../pages/storefront/StorefrontProductDetailPage').then((m) => ({
+    default: m.StorefrontProductDetailPage,
+  }))
+);
+const StorefrontCheckoutPage = lazy(() =>
+  import('../pages/storefront/StorefrontCheckoutPage').then((m) => ({
+    default: m.StorefrontCheckoutPage,
+  }))
+);
+const StorefrontOrderConfirmationPage = lazy(() =>
+  import('../pages/storefront/StorefrontOrderConfirmationPage').then((m) => ({
+    default: m.StorefrontOrderConfirmationPage,
+  }))
+);
+const StorefrontOrderTrackingPage = lazy(() =>
+  import('../pages/storefront/StorefrontOrderTrackingPage').then((m) => ({
+    default: m.StorefrontOrderTrackingPage,
+  }))
+);
+const StorefrontDynamicPage = lazy(() =>
+  import('../pages/storefront/StorefrontDynamicPage').then((m) => ({
+    default: m.StorefrontDynamicPage,
+  }))
+);
+const StorefrontAccountPage = lazy(() =>
+  import('../pages/storefront/StorefrontAccountPage').then((m) => ({
+    default: m.StorefrontAccountPage,
+  }))
+);
+const StorefrontSettingsWorkspace = lazy(() =>
+  import('../modules/storefront/StorefrontSettingsWorkspace').then((m) => ({
+    default: m.StorefrontSettingsWorkspace,
+  }))
+);
+const StorefrontPageBuilderWorkspace = lazy(() =>
+  import('../modules/storefront/StorefrontPageBuilderWorkspace').then((m) => ({
+    default: m.StorefrontPageBuilderWorkspace,
+  }))
+);
 
 export const router = createBrowserRouter([
   // Public Headless Storefront Routes
@@ -107,7 +183,11 @@ export const router = createBrowserRouter([
   // Master SaaS Admin Platform Routes
   {
     path: '/platform/login',
-    element: <PlatformLoginPage />,
+    element: (
+      <Suspense fallback={<RouteLoadingFallback />}>
+        <PlatformLoginPage />
+      </Suspense>
+    ),
   },
   {
     path: '/platform',
@@ -157,7 +237,11 @@ export const router = createBrowserRouter([
   // Tenant Application Routes (Slice Mart as Tenant #1)
   {
     path: '/login',
-    element: <LoginPage />,
+    element: (
+      <Suspense fallback={<RouteLoadingFallback />}>
+        <LoginPage />
+      </Suspense>
+    ),
   },
   {
     path: '/',
@@ -329,6 +413,10 @@ export const router = createBrowserRouter([
   },
   {
     path: '*',
-    element: <NotFoundPage />,
+    element: (
+      <Suspense fallback={<RouteLoadingFallback />}>
+        <NotFoundPage />
+      </Suspense>
+    ),
   },
 ]);

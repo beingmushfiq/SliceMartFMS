@@ -366,7 +366,7 @@ async function performRefresh(): Promise<boolean> {
   }
 }
 
-function refreshOnce(): Promise<boolean> {
+export function refreshOnce(): Promise<boolean> {
   refreshInFlight ??= performRefresh().finally(() => {
     refreshInFlight = null;
   });

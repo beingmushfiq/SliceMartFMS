@@ -75,13 +75,7 @@ import { EnterpriseSystemNavigator } from './components/EnterpriseSystemNavigato
 // ── Types & Datasets ──────────────────────────────────────────
 
 export type DashboardRoleView =
-  | 'executive'
-  | 'production'
-  | 'inventory'
-  | 'qc'
-  | 'sales'
-  | 'finance'
-  | 'workforce';
+  'executive' | 'production' | 'inventory' | 'qc' | 'sales' | 'finance' | 'workforce';
 type TimeframeType = 'today' | '7days' | '30days' | 'custom';
 
 interface DashboardTrendItem {
@@ -203,15 +197,22 @@ export const TenantRoleDashboard: React.FC = () => {
     queryKey: ['tenant', 'dashboard', 'metrics'],
     queryFn: async () => {
       try {
-        const res = await api.get<any>('/dashboard/metrics');
+        const res = await api.get<DashboardMetricsData | { data: DashboardMetricsData }>(
+          '/dashboard/metrics'
+        );
         const raw = res.data;
         if (raw && typeof raw === 'object') {
           if ('commercial' in raw) return raw as DashboardMetricsData;
-          if ('data' in raw && raw.data && typeof raw.data === 'object' && 'commercial' in raw.data) {
+          if (
+            'data' in raw &&
+            raw.data &&
+            typeof raw.data === 'object' &&
+            'commercial' in raw.data
+          ) {
             return raw.data as DashboardMetricsData;
           }
         }
-        return (raw as DashboardMetricsData) ?? null;
+        return null;
       } catch {
         return null;
       }
@@ -225,12 +226,27 @@ export const TenantRoleDashboard: React.FC = () => {
   const canAccessExecutive = Boolean(
     user?.is_platform_admin ||
     hasPermission('*') ||
-    (hasPermission('core.setting.view') && hasPermission('sales.order.view') && hasPermission('production.batch.view'))
+    (hasPermission('core.setting.view') &&
+      hasPermission('sales.order.view') &&
+      hasPermission('production.batch.view'))
   );
-  const canAccessProduction = hasPermission(['production.batch.view', 'production.plan.view', 'production.worker_entry.view']);
-  const canAccessInventory = hasPermission(['inventory.stock.view', 'inventory.warehouse.view', 'inventory.movement.view']);
+  const canAccessProduction = hasPermission([
+    'production.batch.view',
+    'production.plan.view',
+    'production.worker_entry.view',
+  ]);
+  const canAccessInventory = hasPermission([
+    'inventory.stock.view',
+    'inventory.warehouse.view',
+    'inventory.movement.view',
+  ]);
   const canAccessQC = hasPermission(['qc.inspection.view', 'qc.parameter.view', 'qc.wastage.view']);
-  const canAccessSales = hasPermission(['sales.order.view', 'pos.terminal.view', 'pos.sale.create', 'sales.invoice.view']);
+  const canAccessSales = hasPermission([
+    'sales.order.view',
+    'pos.terminal.view',
+    'pos.sale.create',
+    'sales.invoice.view',
+  ]);
   const canAccessFinance = hasPermission([
     'finance.account.view',
     'finance.journal.view',
@@ -247,9 +263,12 @@ export const TenantRoleDashboard: React.FC = () => {
   const initialView: DashboardRoleView = useMemo(() => {
     const slug = roleName.toLowerCase();
     if (slug.includes('finance') || slug.includes('account')) return 'finance';
-    if (slug.includes('hr') || slug.includes('workforce') || slug.includes('payroll')) return 'workforce';
-    if (slug.includes('sales') || slug.includes('commercial') || slug.includes('pos')) return 'sales';
-    if (slug.includes('store') || slug.includes('warehouse') || slug.includes('inventory')) return 'inventory';
+    if (slug.includes('hr') || slug.includes('workforce') || slug.includes('payroll'))
+      return 'workforce';
+    if (slug.includes('sales') || slug.includes('commercial') || slug.includes('pos'))
+      return 'sales';
+    if (slug.includes('store') || slug.includes('warehouse') || slug.includes('inventory'))
+      return 'inventory';
     if (slug.includes('qc') || slug.includes('quality')) return 'qc';
     if (slug.includes('production') || slug.includes('factory')) return 'production';
     if (canAccessExecutive) return 'executive';
@@ -260,10 +279,23 @@ export const TenantRoleDashboard: React.FC = () => {
     if (canAccessFinance) return 'finance';
     if (canAccessWorkforce) return 'workforce';
     return 'executive';
-  }, [roleName, canAccessExecutive, canAccessProduction, canAccessQC, canAccessInventory, canAccessSales, canAccessFinance, canAccessWorkforce]);
+  }, [
+    roleName,
+    canAccessExecutive,
+    canAccessProduction,
+    canAccessQC,
+    canAccessInventory,
+    canAccessSales,
+    canAccessFinance,
+    canAccessWorkforce,
+  ]);
 
   const availableViews = useMemo(() => {
-    const views: Array<{ id: DashboardRoleView; label: string; icon: React.ComponentType<{ className?: string }> }> = [];
+    const views: Array<{
+      id: DashboardRoleView;
+      label: string;
+      icon: React.ComponentType<{ className?: string }>;
+    }> = [];
     if (canAccessExecutive) {
       views.push({ id: 'executive', label: 'Executive Overview', icon: LayoutDashboard });
     }
@@ -286,7 +318,15 @@ export const TenantRoleDashboard: React.FC = () => {
       views.push({ id: 'workforce', label: 'Workforce & HR', icon: Users });
     }
     return views;
-  }, [canAccessExecutive, canAccessProduction, canAccessInventory, canAccessQC, canAccessSales, canAccessFinance, canAccessWorkforce]);
+  }, [
+    canAccessExecutive,
+    canAccessProduction,
+    canAccessInventory,
+    canAccessQC,
+    canAccessSales,
+    canAccessFinance,
+    canAccessWorkforce,
+  ]);
 
   const [userSelectedView, setUserSelectedView] = useState<DashboardRoleView | null>(null);
 
@@ -307,11 +347,18 @@ export const TenantRoleDashboard: React.FC = () => {
   const [timeframe, setTimeframe] = useState<TimeframeType>('7days');
   const [showBalance, setShowBalance] = useState(true);
   const [salesFilter, setSalesFilter] = useState<'all' | 'DELIVERED' | 'CONFIRMED'>('all');
-  const [orderFilter, setOrderFilter] = useState<'all' | 'QC PENDING' | 'COMPLETED' | 'READY'>('all');
+  const [orderFilter, setOrderFilter] = useState<'all' | 'QC PENDING' | 'COMPLETED' | 'READY'>(
+    'all'
+  );
 
   // Helper to check whether PWA prompt is allowed to show
   const isPwaEligible = (): boolean => {
-    if (typeof window === 'undefined' || typeof localStorage === 'undefined' || typeof localStorage.getItem !== 'function') return false;
+    if (
+      typeof window === 'undefined' ||
+      typeof localStorage === 'undefined' ||
+      typeof localStorage.getItem !== 'function'
+    )
+      return false;
     const isInstalled =
       localStorage.getItem('slicemart_pwa_installed') === 'true' ||
       localStorage.getItem('pwa_installed') === 'true';
@@ -428,14 +475,17 @@ export const TenantRoleDashboard: React.FC = () => {
   const [customRangeLabel, setCustomRangeLabel] = useState<string | null>(null);
 
   // Production KPIs for single daily operational shift
-  const currentKPIs: ProductionStat = useMemo(() => ({
-    target: metrics?.production?.target_output ?? 0,
-    produced: metrics?.production?.today_output ?? 0,
-    pendingOrders: metrics?.production?.active_batches ?? 0,
-    qcPending: metrics?.quality?.pending_inspections ?? 0,
-    reworkQty: 0,
-    achievement: metrics?.production?.achievement_rate ?? 0,
-  }), [metrics]);
+  const currentKPIs: ProductionStat = useMemo(
+    () => ({
+      target: metrics?.production?.target_output ?? 0,
+      produced: metrics?.production?.today_output ?? 0,
+      pendingOrders: metrics?.production?.active_batches ?? 0,
+      qcPending: metrics?.quality?.pending_inspections ?? 0,
+      reworkQty: 0,
+      achievement: metrics?.production?.achievement_rate ?? 0,
+    }),
+    [metrics]
+  );
 
   // Chart data resolution - dynamic from metrics trends
   const chartData = useMemo(() => {
@@ -453,22 +503,58 @@ export const TenantRoleDashboard: React.FC = () => {
     }
     switch (timeframe) {
       case 'today':
-        return metrics.trends.today && metrics.trends.today.length > 0 ? metrics.trends.today : EMPTY_TREND_TODAY;
+        return metrics.trends.today && metrics.trends.today.length > 0
+          ? metrics.trends.today
+          : EMPTY_TREND_TODAY;
       case '30days':
-        return metrics.trends.monthly && metrics.trends.monthly.length > 0 ? metrics.trends.monthly : EMPTY_TREND_30DAYS;
+        return metrics.trends.monthly && metrics.trends.monthly.length > 0
+          ? metrics.trends.monthly
+          : EMPTY_TREND_30DAYS;
       case 'custom':
       case '7days':
       default:
-        return metrics.trends.weekly && metrics.trends.weekly.length > 0 ? metrics.trends.weekly : EMPTY_TREND_7DAYS;
+        return metrics.trends.weekly && metrics.trends.weekly.length > 0
+          ? metrics.trends.weekly
+          : EMPTY_TREND_7DAYS;
     }
-  }, [timeframe, metrics?.trends]);
+  }, [timeframe, metrics]);
 
-  // Operational Attention Items - query low stock dynamically
-  const { data: rawLowStock = [] } = useQuery({
+  const { data: rawLowStock = [] } = useQuery<
+    Array<{
+      id: string | number;
+      name: string;
+      sku: string;
+      warehouse?: { name: string };
+      current_stock?: number;
+      min_stock_alert?: number;
+      unit?: string;
+    }>
+  >({
     queryKey: ['inventory', 'low-stock-attention'],
     queryFn: async () => {
       try {
-        const res = await api.get<any>('/inventory/stock?low_stock=true&per_page=5');
+        const res = await api.get<
+          | Array<{
+              id: string | number;
+              name: string;
+              sku: string;
+              warehouse?: { name: string };
+              current_stock?: number;
+              min_stock_alert?: number;
+              unit?: string;
+            }>
+          | {
+              data: Array<{
+                id: string | number;
+                name: string;
+                sku: string;
+                warehouse?: { name: string };
+                current_stock?: number;
+                min_stock_alert?: number;
+                unit?: string;
+              }>;
+            }
+        >('/inventory/stock?low_stock=true&per_page=5');
         const d = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
         return Array.isArray(d) ? d : [];
       } catch {
@@ -496,12 +582,36 @@ export const TenantRoleDashboard: React.FC = () => {
     return [];
   }, [rawLowStock, metrics?.attention_items]);
 
-  // Invoices list - query dynamic invoices
-  const { data: rawInvoices = [] } = useQuery({
+  const { data: rawInvoices = [] } = useQuery<
+    Array<{
+      invoice_number: string;
+      customer?: { name: string };
+      total_amount: number | string;
+      status?: string;
+      payment_status?: string;
+    }>
+  >({
     queryKey: ['sales', 'dashboard-invoices'],
     queryFn: async () => {
       try {
-        const res = await api.get<any>('/sales/invoices?per_page=5');
+        const res = await api.get<
+          | Array<{
+              invoice_number: string;
+              customer?: { name: string };
+              total_amount: number | string;
+              status?: string;
+              payment_status?: string;
+            }>
+          | {
+              data: Array<{
+                invoice_number: string;
+                customer?: { name: string };
+                total_amount: number | string;
+                status?: string;
+                payment_status?: string;
+              }>;
+            }
+        >('/sales/invoices?per_page=5');
         const d = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
         return Array.isArray(d) ? d : [];
       } catch {
@@ -569,7 +679,6 @@ export const TenantRoleDashboard: React.FC = () => {
     return metrics?.active_workers || [];
   }, [metrics?.active_workers]);
 
-
   return (
     <div className="space-y-5 pb-16 max-w-[1600px] mx-auto transition-token-colors">
       <OnboardingStartupModal />
@@ -584,7 +693,8 @@ export const TenantRoleDashboard: React.FC = () => {
           </div>
           <div className="min-w-0">
             <span className="text-xs font-bold text-default truncate">
-              {user?.role ?? (user?.is_platform_admin ? 'Super Administrator' : 'Operations Member')}
+              {user?.role ??
+                (user?.is_platform_admin ? 'Super Administrator' : 'Operations Member')}
             </span>
           </div>
         </div>
@@ -598,15 +708,22 @@ export const TenantRoleDashboard: React.FC = () => {
               toast.info(next ? 'Live telemetry active (auto-updating)' : 'Live telemetry paused');
             }}
             className={cn(
-              "flex items-center gap-1.5 rounded-xl border px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer",
+              'flex items-center gap-1.5 rounded-xl border px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer',
               isLiveTelemetry
-                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                : "border-default bg-surface-sunken text-muted hover:text-default"
+                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                : 'border-default bg-surface-sunken text-muted hover:text-default'
             )}
             title="Toggle live telemetry auto-refresh"
           >
-            <span className={cn("size-2 rounded-full", isLiveTelemetry ? "bg-emerald-500 animate-pulse" : "bg-muted")} />
-            <span className="hidden sm:inline">{isLiveTelemetry ? 'Live Sync' : 'Sync Paused'}</span>
+            <span
+              className={cn(
+                'size-2 rounded-full',
+                isLiveTelemetry ? 'bg-emerald-500 animate-pulse' : 'bg-muted'
+              )}
+            />
+            <span className="hidden sm:inline">
+              {isLiveTelemetry ? 'Live Sync' : 'Sync Paused'}
+            </span>
           </button>
 
           <button
@@ -624,7 +741,9 @@ export const TenantRoleDashboard: React.FC = () => {
             className="flex items-center gap-1.5 rounded-xl border border-default bg-surface px-2.5 py-1 text-xs font-semibold text-muted hover:text-default hover:bg-surface-sunken transition-all cursor-pointer disabled:opacity-50"
             title="Refresh dashboard metrics"
           >
-            <RefreshCw className={cn("size-3.5", isRefreshingMetrics && "animate-spin text-primary")} />
+            <RefreshCw
+              className={cn('size-3.5', isRefreshingMetrics && 'animate-spin text-primary')}
+            />
             <span className="hidden md:inline">Refresh</span>
           </button>
 
@@ -639,13 +758,13 @@ export const TenantRoleDashboard: React.FC = () => {
                     type="button"
                     onClick={() => setActiveView(v.id)}
                     className={cn(
-                      "flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap",
+                      'flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap',
                       isActive
-                        ? "bg-surface text-default shadow-xs border border-default"
-                        : "text-muted hover:text-default hover:bg-surface/50"
+                        ? 'bg-surface text-default shadow-xs border border-default'
+                        : 'text-muted hover:text-default hover:bg-surface/50'
                     )}
                   >
-                    <Icon className={cn("size-3.5", isActive ? "text-primary" : "text-muted")} />
+                    <Icon className={cn('size-3.5', isActive ? 'text-primary' : 'text-muted')} />
                     <span>{v.label}</span>
                   </button>
                 );
@@ -756,11 +875,7 @@ export const TenantRoleDashboard: React.FC = () => {
         />
       )}
 
-      {activeView === 'sales' && (
-        <SalesDashboardView
-          onOpenInvoice={setSelectedInvoice}
-        />
-      )}
+      {activeView === 'sales' && <SalesDashboardView onOpenInvoice={setSelectedInvoice} />}
 
       {activeView === 'inventory' && (
         <InventoryDashboardView
@@ -770,12 +885,7 @@ export const TenantRoleDashboard: React.FC = () => {
         />
       )}
 
-      {activeView === 'qc' && (
-        <QcDashboardView
-          qcList={qcList}
-          onOpenQC={setSelectedQCItem}
-        />
-      )}
+      {activeView === 'qc' && <QcDashboardView qcList={qcList} onOpenQC={setSelectedQCItem} />}
 
       {activeView === 'finance' && (
         <FinanceDashboardView
@@ -785,10 +895,7 @@ export const TenantRoleDashboard: React.FC = () => {
       )}
 
       {activeView === 'workforce' && (
-        <WorkforceDashboardView
-          onOpenWorker={setSelectedWorker}
-          workers={workers}
-        />
+        <WorkforceDashboardView onOpenWorker={setSelectedWorker} workers={workers} />
       )}
 
       {/* ─────────────────────────────────────────────────────────────
@@ -797,1115 +904,1217 @@ export const TenantRoleDashboard: React.FC = () => {
       {activeView === 'production' && (
         <div className="space-y-5 animate-in fade-in duration-200">
           {isAlertBannerVisible && (
-        <div className="rounded-2xl border border-amber-500/30 bg-surface shadow-xs overflow-hidden transition-all duration-300">
-          <div className="h-1 bg-linear-to-r from-red-500 via-amber-500 to-orange-400" />
-          
-          <div className="p-4 sm:p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <div className="flex size-7 items-center justify-center rounded-lg bg-red-500/15 text-red-600 dark:text-red-400">
-                  <AlertTriangle className="size-4" />
+            <div className="rounded-2xl border border-amber-500/30 bg-surface shadow-xs overflow-hidden transition-all duration-300">
+              <div className="h-1 bg-linear-to-r from-red-500 via-amber-500 to-orange-400" />
+
+              <div className="p-4 sm:p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <div className="flex size-7 items-center justify-center rounded-lg bg-red-500/15 text-red-600 dark:text-red-400">
+                      <AlertTriangle className="size-4" />
+                    </div>
+                    <h2 className="text-xs sm:text-sm font-bold tracking-tight text-default uppercase">
+                      OPERATIONAL ATTENTION REQUIRED
+                    </h2>
+                    <div className="flex items-center gap-1.5 ml-1">
+                      <span className="rounded-full bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/25 px-2 py-0.5 text-[10px] font-bold">
+                        1 Critical
+                      </span>
+                      <span className="rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25 px-2 py-0.5 text-[10px] font-bold">
+                        2 Low Stock
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsAlertBannerExpanded(!isAlertBannerExpanded)}
+                      className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                    >
+                      <span>{isAlertBannerExpanded ? 'Hide' : 'Show'}</span>
+                      {isAlertBannerExpanded ? (
+                        <ChevronUp className="size-3.5" />
+                      ) : (
+                        <ChevronDown className="size-3.5" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsAlertBannerVisible(false)}
+                      className="rounded-lg p-1 text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                      title="Dismiss alert banner"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
                 </div>
-                <h2 className="text-xs sm:text-sm font-bold tracking-tight text-default uppercase">
-                  OPERATIONAL ATTENTION REQUIRED
+
+                <p className="text-[11px] sm:text-xs text-muted mt-1">
+                  Production materials below minimum threshold in Warehouse A
+                </p>
+
+                {isAlertBannerExpanded && (
+                  <div className="mt-4 space-y-3 animate-in fade-in duration-200">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                      {attentionItems.map((item) => {
+                        const isOutOfStock = item.currentStock <= 0;
+                        return (
+                          <div
+                            key={item.id}
+                            className={`rounded-xl border p-3.5 flex items-center justify-between gap-3 transition-all ${
+                              isOutOfStock
+                                ? 'border-red-500/30 bg-red-500/5 hover:border-red-500/50'
+                                : 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500/50'
+                            }`}
+                          >
+                            <div className="space-y-1 min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${
+                                    isOutOfStock ? 'text-red-500' : 'text-amber-500'
+                                  }`}
+                                >
+                                  <span
+                                    className={`size-1.5 rounded-full ${
+                                      isOutOfStock ? 'bg-red-500' : 'bg-amber-500'
+                                    }`}
+                                  />
+                                  {isOutOfStock ? 'OUT OF STOCK' : 'LOW STOCK'}
+                                </span>
+                                <span className="text-[10px] text-muted font-mono">
+                                  {item.warehouse}
+                                </span>
+                              </div>
+                              <h3 className="text-xs sm:text-sm font-bold text-default truncate">
+                                {item.name}
+                              </h3>
+                              <p className="text-[11px] text-muted font-mono">
+                                Current:{' '}
+                                <strong
+                                  className={isOutOfStock ? 'text-red-500' : 'text-amber-500'}
+                                >
+                                  {item.currentStock} {item.unit}
+                                </strong>{' '}
+                                (Min: {item.minThreshold})
+                              </p>
+                            </div>
+
+                            <div className="shrink-0">
+                              {isOutOfStock ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setOrderPoItem(item)}
+                                  className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-red-700 transition-colors cursor-pointer"
+                                >
+                                  <ShoppingCart className="size-3.5" />
+                                  <span>Order PO</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setReviewStockItem(item)}
+                                  className="flex items-center gap-1.5 rounded-lg border border-default bg-surface px-3 py-1.5 text-xs font-semibold text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                                >
+                                  <Eye className="size-3.5 text-muted" />
+                                  <span>Review</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-default text-[11px] text-muted">
+                      <div className="flex items-center gap-1.5">
+                        <Sparkles className="size-3.5 text-primary" />
+                        <span>
+                          Raw materials can be requisitioned or ordered directly via Procurement.
+                        </span>
+                      </div>
+                      <Link
+                        to="/inventory"
+                        className="font-semibold text-primary hover:underline flex items-center gap-1"
+                      >
+                        <span>View Full Inventory Ledger</span>
+                        <ArrowRight className="size-3" />
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ─────────────────────────────────────────────────────────────
+          2. TODAY'S PRODUCTION HEADER & 6-KPI CARDS DECK
+      ───────────────────────────────────────────────────────────── */}
+          <div className="space-y-3.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg sm:text-xl font-bold tracking-tight text-default">
+                  Today's Production
                 </h2>
-                <div className="flex items-center gap-1.5 ml-1">
-                  <span className="rounded-full bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/25 px-2 py-0.5 text-[10px] font-bold">
-                    1 Critical
+                <div className="flex items-center gap-2 text-xs text-muted mt-0.5">
+                  <span>
+                    {new Date().toLocaleDateString(undefined, {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
                   </span>
-                  <span className="rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25 px-2 py-0.5 text-[10px] font-bold">
-                    2 Low Stock
+                  <span>•</span>
+                  <span className="font-medium text-default">Daily Factory Run</span>
+                </div>
+              </div>
+
+              <Link
+                to="/production"
+                className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 self-start sm:self-center"
+              >
+                <span>View orders</span>
+                <ArrowRight className="size-3" />
+              </Link>
+            </div>
+
+            {/* 6 Metric KPI Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+              {/* Card 1: Today's Target */}
+              <div className="rounded-2xl border border-default bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-token-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
+                    TODAY'S TARGET
+                  </span>
+                  <div className="flex size-7 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
+                    <FileText className="size-3.5" />
+                  </div>
+                </div>
+                <div className="mt-2 text-2xl sm:text-3xl font-extrabold font-mono text-default">
+                  {currentKPIs.target}
+                </div>
+              </div>
+
+              {/* Card 2: Produced (with green left border) */}
+              <div className="rounded-2xl border-y border-r border-default border-l-4 border-l-emerald-500 bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-token-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
+                    PRODUCED
+                  </span>
+                  <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
+                    <TrendingUp className="size-3.5" />
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <div className="text-2xl sm:text-3xl font-extrabold font-mono text-default">
+                    {currentKPIs.produced}
+                  </div>
+                  <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    {currentKPIs.achievement}% of target
                   </span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAlertBannerExpanded(!isAlertBannerExpanded)}
-                  className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
-                >
-                  <span>{isAlertBannerExpanded ? 'Hide' : 'Show'}</span>
-                  {isAlertBannerExpanded ? (
-                    <ChevronUp className="size-3.5" />
-                  ) : (
-                    <ChevronDown className="size-3.5" />
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsAlertBannerVisible(false)}
-                  className="rounded-lg p-1 text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
-                  title="Dismiss alert banner"
-                >
-                  <X className="size-4" />
-                </button>
+              {/* Card 3: Pending Orders */}
+              <div className="rounded-2xl border border-default bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-token-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
+                    PENDING ORDERS
+                  </span>
+                  <div className="flex size-7 items-center justify-center rounded-lg bg-surface-sunken text-muted">
+                    <Package className="size-3.5" />
+                  </div>
+                </div>
+                <div className="mt-2 text-2xl sm:text-3xl font-extrabold font-mono text-default">
+                  {currentKPIs.pendingOrders}
+                </div>
+              </div>
+
+              {/* Card 4: QC Pending */}
+              <div className="rounded-2xl border-y border-r border-default border-l-4 border-l-amber-500 bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-token-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
+                    QC PENDING
+                  </span>
+                  <div className="flex size-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
+                    <ShieldCheck className="size-3.5" />
+                  </div>
+                </div>
+                <div className="mt-2 text-2xl sm:text-3xl font-extrabold font-mono text-default">
+                  {currentKPIs.qcPending}
+                </div>
+              </div>
+
+              {/* Card 5: Rework Qty */}
+              <div className="rounded-2xl border border-default bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-token-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
+                    REWORK QTY
+                  </span>
+                  <div className="flex size-7 items-center justify-center rounded-lg bg-orange-500/10 text-orange-500">
+                    <RotateCcw className="size-3.5" />
+                  </div>
+                </div>
+                <div className="mt-2 text-2xl sm:text-3xl font-extrabold font-mono text-default">
+                  {currentKPIs.reworkQty}
+                </div>
+              </div>
+
+              {/* Card 6: Achievement */}
+              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 shadow-xs flex flex-col justify-between hover:border-emerald-500 transition-token-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                    ACHIEVEMENT
+                  </span>
+                  <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                    <TrendingUp className="size-3.5" />
+                  </div>
+                </div>
+                <div className="mt-2 text-2xl sm:text-3xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
+                  {currentKPIs.achievement}%
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ─────────────────────────────────────────────────────────────
+          3. PRODUCTION TREND & INVENTORY HEALTH (ROW 1)
+      ───────────────────────────────────────────────────────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Left Column (~65% / 8 cols): Production Trend */}
+            <div className="lg:col-span-8 rounded-2xl border border-default bg-surface p-5 shadow-xs flex flex-col justify-between space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-default">Production Trend</h3>
+                    {isLiveTelemetry && (
+                      <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[9px] font-bold text-emerald-600">
+                        <span className="size-1.5 rounded-full bg-emerald-500 animate-ping" />
+                        LIVE
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-muted">Target vs Produced vs Passed QC</p>
+                </div>
+
+                {/* Timeframe selector tabs: Today, 7 Days, 30 Days, Custom Range */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <div className="flex items-center rounded-lg border border-default bg-surface-sunken p-0.5 text-[11px] font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTimeframe('today');
+                        setCustomRangeLabel(null);
+                      }}
+                      className={`rounded-md px-2.5 py-1 transition-all cursor-pointer ${
+                        timeframe === 'today'
+                          ? 'bg-default text-surface shadow-xs font-bold'
+                          : 'text-muted hover:text-default'
+                      }`}
+                    >
+                      Today
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTimeframe('7days');
+                        setCustomRangeLabel(null);
+                      }}
+                      className={`rounded-md px-2.5 py-1 transition-all cursor-pointer ${
+                        timeframe === '7days'
+                          ? 'bg-default text-surface shadow-xs font-bold'
+                          : 'text-muted hover:text-default'
+                      }`}
+                    >
+                      7 Days
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTimeframe('30days');
+                        setCustomRangeLabel(null);
+                      }}
+                      className={`rounded-md px-2.5 py-1 transition-all cursor-pointer ${
+                        timeframe === '30days'
+                          ? 'bg-default text-surface shadow-xs font-bold'
+                          : 'text-muted hover:text-default'
+                      }`}
+                    >
+                      30 Days
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomDateOpen(true)}
+                      className={`rounded-md px-2.5 py-1 flex items-center gap-1 transition-all cursor-pointer ${
+                        timeframe === 'custom'
+                          ? 'bg-default text-surface shadow-xs font-bold'
+                          : 'text-muted hover:text-default'
+                      }`}
+                    >
+                      <Calendar className="size-3" />
+                      <span>{customRangeLabel ?? 'Custom Range'}</span>
+                    </button>
+                  </div>
+
+                  {/* Live Telemetry Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setIsLiveTelemetry(!isLiveTelemetry)}
+                    title="Toggle Real-Time Telemetry Stream"
+                    className={`rounded-lg p-1.5 border transition-colors cursor-pointer ${
+                      isLiveTelemetry
+                        ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-600'
+                        : 'border-default bg-surface text-muted hover:text-default'
+                    }`}
+                  >
+                    <Radio className="size-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Recharts Area/Line Chart */}
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="gradientProduced" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#0284c7" stopOpacity={0.12} />
+                        <stop offset="95%" stopColor="#0284c7" stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--color-border)"
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="time"
+                      stroke="var(--color-text-muted)"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={{ stroke: 'var(--color-border)' }}
+                    />
+                    <YAxis
+                      stroke="var(--color-text-muted)"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={{ stroke: 'var(--color-border)' }}
+                    />
+                    <Tooltip
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          const producedVal = Number(
+                            payload.find((p) => p.dataKey === 'produced')?.value ?? 0
+                          );
+                          const qcVal = Number(
+                            payload.find((p) => p.dataKey === 'qcPassed')?.value ?? 0
+                          );
+                          const targetVal = Number(
+                            payload.find((p) => p.dataKey === 'target')?.value ?? 0
+                          );
+                          const yieldPct =
+                            producedVal > 0 ? ((qcVal / producedVal) * 100).toFixed(1) : '100';
+
+                          return (
+                            <div className="rounded-xl border border-default bg-surface-raised p-3 shadow-xl text-xs space-y-1.5">
+                              <p className="font-bold text-default">{label}</p>
+                              <div className="space-y-1 text-[11px]">
+                                <div className="flex items-center justify-between gap-4 text-blue-500">
+                                  <span className="flex items-center gap-1.5">
+                                    <span className="size-2 rounded-full bg-blue-500" />
+                                    Produced:
+                                  </span>
+                                  <strong className="font-mono">{producedVal} pcs</strong>
+                                </div>
+                                <div className="flex items-center justify-between gap-4 text-emerald-500">
+                                  <span className="flex items-center gap-1.5">
+                                    <span className="size-2 rounded-full bg-emerald-500" />
+                                    QC Passed:
+                                  </span>
+                                  <strong className="font-mono">
+                                    {qcVal} pcs ({yieldPct}%)
+                                  </strong>
+                                </div>
+                                <div className="flex items-center justify-between gap-4 text-slate-400">
+                                  <span className="flex items-center gap-1.5">
+                                    <span className="size-2 rounded-full bg-slate-400" />
+                                    Target:
+                                  </span>
+                                  <strong className="font-mono">{targetVal} pcs</strong>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="produced"
+                      name="Produced"
+                      stroke="#0284c7"
+                      strokeWidth={2.5}
+                      fill="url(#gradientProduced)"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="qcPassed"
+                      name="QC Passed"
+                      stroke="#10b981"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="target"
+                      name="Target"
+                      stroke="#94a3b8"
+                      strokeWidth={1.5}
+                      strokeDasharray="4 4"
+                      dot={false}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Chart Legend */}
+              <div className="flex items-center justify-center gap-6 text-[11px] font-semibold text-muted pt-2 border-t border-default/60">
+                <span className="flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-blue-500" />
+                  Produced
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-emerald-500" />
+                  QC Passed
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 border-t border-dashed border-slate-400" />
+                  Target
+                </span>
               </div>
             </div>
 
-            <p className="text-[11px] sm:text-xs text-muted mt-1">
-              Production materials below minimum threshold in Warehouse A
-            </p>
+            {/* Right Column (~35% / 4 cols): Inventory Health */}
+            <div className="lg:col-span-4 rounded-2xl border border-default bg-surface p-5 shadow-xs flex flex-col justify-between space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-default">Inventory Health</h3>
+                <Link
+                  to="/inventory"
+                  className="text-xs font-semibold text-primary hover:underline"
+                >
+                  View all
+                </Link>
+              </div>
 
-            {isAlertBannerExpanded && (
-              <div className="mt-4 space-y-3 animate-in fade-in duration-200">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-                  {attentionItems.map((item) => {
-                    const isOutOfStock = item.currentStock <= 0;
-                    return (
-                      <div
-                        key={item.id}
-                        className={`rounded-xl border p-3.5 flex items-center justify-between gap-3 transition-all ${
-                          isOutOfStock
-                            ? 'border-red-500/30 bg-red-500/5 hover:border-red-500/50'
-                            : 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500/50'
-                        }`}
-                      >
-                        <div className="space-y-1 min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${
-                                isOutOfStock ? 'text-red-500' : 'text-amber-500'
-                              }`}
-                            >
-                              <span
-                                className={`size-1.5 rounded-full ${
-                                  isOutOfStock ? 'bg-red-500' : 'bg-amber-500'
-                                }`}
-                              />
-                              {isOutOfStock ? 'OUT OF STOCK' : 'LOW STOCK'}
-                            </span>
-                            <span className="text-[10px] text-muted font-mono">{item.warehouse}</span>
-                          </div>
-                          <h3 className="text-xs sm:text-sm font-bold text-default truncate">{item.name}</h3>
-                          <p className="text-[11px] text-muted font-mono">
-                            Current: <strong className={isOutOfStock ? 'text-red-500' : 'text-amber-500'}>{item.currentStock} {item.unit}</strong>{' '}
-                            (Min: {item.minThreshold})
-                          </p>
-                        </div>
-
-                        <div className="shrink-0">
-                          {isOutOfStock ? (
-                            <button
-                              type="button"
-                              onClick={() => setOrderPoItem(item)}
-                              className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-red-700 transition-colors cursor-pointer"
-                            >
-                              <ShoppingCart className="size-3.5" />
-                              <span>Order PO</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setReviewStockItem(item)}
-                              className="flex items-center gap-1.5 rounded-lg border border-default bg-surface px-3 py-1.5 text-xs font-semibold text-default hover:bg-surface-sunken transition-colors cursor-pointer"
-                            >
-                              <Eye className="size-3.5 text-muted" />
-                              <span>Review</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+              {/* 2 Big Stat Tiles */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-default bg-surface-sunken p-3.5 space-y-1">
+                  <div className="text-2xl font-extrabold font-mono text-default">
+                    {metrics?.inventory?.low_stock_count ?? 0}
+                  </div>
+                  <div className="text-[11px] font-semibold text-muted">Stock Alerts</div>
+                  <div className="text-xs font-bold font-mono text-default">
+                    {formatCurrency(metrics?.inventory?.total_valuation ?? 0)}
+                  </div>
+                  <div className="text-[10px] text-muted font-mono">Total Valuation</div>
                 </div>
 
-                <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-default text-[11px] text-muted">
-                  <div className="flex items-center gap-1.5">
-                    <Sparkles className="size-3.5 text-primary" />
-                    <span>Raw materials can be requisitioned or ordered directly via Procurement.</span>
+                <div className="rounded-xl border border-default bg-surface-sunken p-3.5 space-y-1">
+                  <div className="text-2xl font-extrabold font-mono text-default">
+                    {rawLowStock.length}
                   </div>
-                  <Link
-                    to="/inventory"
-                    className="font-semibold text-primary hover:underline flex items-center gap-1"
-                  >
-                    <span>View Full Inventory Ledger</span>
-                    <ArrowRight className="size-3" />
+                  <div className="text-[11px] font-semibold text-muted">Attention Items</div>
+                  <div className="text-xs font-bold font-mono text-default">
+                    {formatCurrency(0)}
+                  </div>
+                  <div className="text-[10px] text-muted font-mono">PO Reorder Value</div>
+                </div>
+              </div>
+
+              {/* Alert Pills */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between rounded-xl border border-red-500/25 bg-red-500/10 p-2.5 text-xs text-red-600 dark:text-red-400">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="size-4 shrink-0" />
+                    <span className="font-semibold">Out of stock</span>
+                  </div>
+                  <span className="font-bold font-mono text-sm">1</span>
+                </div>
+
+                <div className="flex items-center justify-between rounded-xl border border-amber-500/25 bg-amber-500/10 p-2.5 text-xs text-amber-600 dark:text-amber-400">
+                  <div className="flex items-center gap-2">
+                    <Package className="size-4 shrink-0" />
+                    <span className="font-semibold">Low stock</span>
+                  </div>
+                  <span className="font-bold font-mono text-sm">5</span>
+                </div>
+              </div>
+
+              {/* Warehouse Distribution Bars */}
+              <div className="space-y-3 pt-1 border-t border-default/60">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted">
+                  WAREHOUSE DISTRIBUTION
+                </span>
+
+                {/* WH-A */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[11px]">
+                    <span className="font-medium text-default">WH-A Raw Materials</span>
+                    <span className="font-mono text-muted">
+                      <strong className="text-default">6,370</strong> / 5,000 pcs
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full rounded-full bg-surface-sunken overflow-hidden">
+                    <div className="h-full rounded-full bg-blue-500" style={{ width: '100%' }} />
+                  </div>
+                  <div className="flex justify-end">
+                    <span className="text-[9px] font-bold text-amber-500">127% (Overcapacity)</span>
+                  </div>
+                </div>
+
+                {/* WH-B */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[11px]">
+                    <span className="font-medium text-default">WH-B Finished Goods</span>
+                    <span className="font-mono text-muted">
+                      <strong className="text-default">482</strong> / 1,000 pcs
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full rounded-full bg-surface-sunken overflow-hidden">
+                    <div className="h-full rounded-full bg-emerald-500" style={{ width: '48%' }} />
+                  </div>
+                  <div className="flex justify-end">
+                    <span className="text-[9px] font-bold text-emerald-600">48% Utilization</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ─────────────────────────────────────────────────────────────
+          4. SALES OVERVIEW & TODAY'S PERFORMANCE (ROW 2)
+      ───────────────────────────────────────────────────────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Left Column (~65% / 8 cols): Sales Overview */}
+            <div className="lg:col-span-8 rounded-2xl border border-default bg-surface p-5 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-default pb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-default">Sales Overview</h3>
+                  <p className="text-[11px] text-muted">
+                    {new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center rounded-lg border border-default bg-surface-sunken p-0.5 text-[10px] font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setSalesFilter('all')}
+                      className={`rounded-md px-2 py-0.5 transition-colors cursor-pointer ${
+                        salesFilter === 'all'
+                          ? 'bg-default text-surface font-bold'
+                          : 'text-muted hover:text-default'
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSalesFilter('DELIVERED')}
+                      className={`rounded-md px-2 py-0.5 transition-colors cursor-pointer ${
+                        salesFilter === 'DELIVERED'
+                          ? 'bg-default text-surface font-bold'
+                          : 'text-muted hover:text-default'
+                      }`}
+                    >
+                      Delivered
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSalesFilter('CONFIRMED')}
+                      className={`rounded-md px-2 py-0.5 transition-colors cursor-pointer ${
+                        salesFilter === 'CONFIRMED'
+                          ? 'bg-default text-surface font-bold'
+                          : 'text-muted hover:text-default'
+                      }`}
+                    >
+                      Confirmed
+                    </button>
+                  </div>
+
+                  <Link to="/sales" className="text-xs font-semibold text-primary hover:underline">
+                    View all sales
                   </Link>
                 </div>
               </div>
-            )}
+
+              {/* 4 Metric Summary Strip */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-1">
+                <div>
+                  <div className="text-lg sm:text-xl font-extrabold font-mono text-default">
+                    {formatCurrency(metrics?.commercial?.today_revenue ?? 0)}
+                  </div>
+                  <div className="text-[11px] text-muted">Today's Sales</div>
+                </div>
+                <div>
+                  <div className="text-lg sm:text-xl font-extrabold font-mono text-default">
+                    {formatCurrency(metrics?.commercial?.month_revenue ?? 0)}
+                  </div>
+                  <div className="text-[11px] text-muted">Monthly Revenue</div>
+                </div>
+                <div>
+                  <div className="text-lg sm:text-xl font-extrabold font-mono text-red-500">
+                    {formatCurrency(metrics?.commercial?.total_receivable_due ?? 0)}
+                  </div>
+                  <div className="text-[11px] text-muted">Outstanding</div>
+                </div>
+                <div>
+                  <div className="text-lg sm:text-xl font-extrabold font-mono text-default">
+                    {metrics?.commercial?.active_orders ?? 0}
+                  </div>
+                  <div className="text-[11px] text-muted">Pending Delivery</div>
+                </div>
+              </div>
+
+              {/* Sales Invoices Table */}
+              <div className="overflow-x-auto rounded-xl border border-default">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-surface-sunken text-[10px] uppercase font-bold text-muted border-b border-default">
+                    <tr>
+                      <th className="px-3.5 py-2.5">INVOICE</th>
+                      <th className="px-3.5 py-2.5">CUSTOMER</th>
+                      <th className="px-3.5 py-2.5">TYPE</th>
+                      <th className="px-3.5 py-2.5">AMOUNT</th>
+                      <th className="px-3.5 py-2.5">STATUS</th>
+                      <th className="px-3.5 py-2.5">PAYMENT</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-default font-sans">
+                    {filteredInvoices.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="text-center py-6 text-muted text-xs">
+                          No invoices found for current filter
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredInvoices.map((inv) => (
+                        <tr
+                          key={inv.id}
+                          onClick={() => setSelectedInvoice(inv)}
+                          className="hover:bg-surface-sunken/60 cursor-pointer transition-colors"
+                        >
+                          <td className="px-3.5 py-2.5 font-mono font-bold text-primary">
+                            {inv.id}
+                          </td>
+                          <td className="px-3.5 py-2.5 font-medium text-default">{inv.customer}</td>
+                          <td className="px-3.5 py-2.5">
+                            <span className="rounded-md bg-blue-500/10 text-blue-500 px-1.5 py-0.5 text-[10px] font-bold">
+                              {inv.type}
+                            </span>
+                          </td>
+                          <td className="px-3.5 py-2.5 font-mono font-semibold text-default">
+                            {inv.amount}
+                          </td>
+                          <td className="px-3.5 py-2.5">
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                inv.status === 'DELIVERED'
+                                  ? 'bg-emerald-500/15 text-emerald-600'
+                                  : 'bg-surface-sunken text-muted'
+                              }`}
+                            >
+                              <span className="size-1.5 rounded-full bg-current" />
+                              {inv.status}
+                            </span>
+                          </td>
+                          <td className="px-3.5 py-2.5">
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                inv.payment === 'PAID'
+                                  ? 'bg-emerald-500/15 text-emerald-600'
+                                  : inv.payment === 'PARTIAL'
+                                    ? 'bg-amber-500/15 text-amber-600'
+                                    : 'bg-red-500/15 text-red-600'
+                              }`}
+                            >
+                              <span className="size-1.5 rounded-full bg-current" />
+                              {inv.payment}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Bottom Financial Mini Strip */}
+              <div className="grid grid-cols-3 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowBalance(!showBalance)}
+                  className="group rounded-xl border border-default bg-surface-sunken p-2.5 text-left hover:border-primary/50 transition-all cursor-pointer flex flex-col justify-between"
+                  title={showBalance ? 'Click to hide balance' : 'Click to show balance'}
+                >
+                  <div className="flex items-center justify-between gap-1 w-full">
+                    <span className="text-xs font-bold font-mono text-default">
+                      {showBalance
+                        ? formatCurrency(metrics?.commercial?.month_revenue ?? 0)
+                        : `${currencySymbol} ••••••`}
+                    </span>
+                    {showBalance ? (
+                      <Eye className="size-3.5 text-muted group-hover:text-primary transition-colors shrink-0" />
+                    ) : (
+                      <EyeOff className="size-3.5 text-muted group-hover:text-primary transition-colors shrink-0" />
+                    )}
+                  </div>
+                  <div className="text-[10px] text-muted flex items-center justify-between mt-1">
+                    <span>Total Balance</span>
+                    <span className="text-[9px] text-muted/70">
+                      {showBalance ? 'Hide' : 'Show'}
+                    </span>
+                  </div>
+                </button>
+
+                <div className="rounded-xl border border-default bg-surface-sunken p-2.5 text-left flex flex-col justify-between">
+                  <div className="text-xs font-bold font-mono text-default">
+                    {formatCurrency(0)}
+                  </div>
+                  <div className="text-[10px] text-muted mt-1">Today's Expenses</div>
+                </div>
+
+                <Link
+                  to="/finance"
+                  className="group rounded-xl border border-default bg-surface-sunken p-2.5 text-left hover:border-primary/50 transition-all flex flex-col justify-between"
+                  title="View bank accounts & ledgers"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold font-mono text-default">0</span>
+                    <ArrowRight className="size-3 text-muted group-hover:text-primary transition-colors" />
+                  </div>
+                  <div className="text-[10px] text-muted group-hover:text-primary transition-colors mt-1">
+                    Active Accounts
+                  </div>
+                </Link>
+              </div>
+            </div>
+
+            {/* Right Column (~35% / 4 cols): Today's Performance (Leaderboard) */}
+            <div className="lg:col-span-4 rounded-2xl border border-default bg-surface p-5 shadow-xs flex flex-col justify-between space-y-4">
+              <div className="flex items-center justify-between border-b border-default pb-3">
+                <h3 className="text-sm font-bold text-default">Today's Performance</h3>
+                <Link
+                  to="/workforce"
+                  className="text-xs font-semibold text-primary hover:underline"
+                >
+                  Full report
+                </Link>
+              </div>
+
+              {/* Worker Leaderboard */}
+              <div className="space-y-4">
+                {workers.length === 0 ? (
+                  <div className="text-center py-8 text-xs text-muted">
+                    No worker performance records for this shift
+                  </div>
+                ) : (
+                  workers.map((w) => (
+                    <button
+                      type="button"
+                      key={w.name}
+                      onClick={() => setSelectedWorker(w)}
+                      className="w-full text-left group rounded-xl border border-transparent hover:border-default hover:bg-surface-sunken/40 p-2.5 -mx-2.5 transition-all cursor-pointer space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex size-7 items-center justify-center rounded-full bg-surface-sunken font-bold text-xs text-default border border-default">
+                            {w.initials}
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-default group-hover:text-primary transition-colors">
+                              {w.name}
+                            </span>
+                            <span className="block text-[10px] text-muted font-mono">
+                              {w.output}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs font-bold font-mono text-default">
+                            {w.rate}%
+                          </span>
+                          <span className="block text-[9px] text-muted">{w.badge}</span>
+                        </div>
+                      </div>
+
+                      <div className="h-1.5 w-full rounded-full bg-surface-sunken overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${w.color}`}
+                          style={{ width: `${w.rate}%` }}
+                        />
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+
+              <div className="pt-2 border-t border-default">
+                <Link
+                  to="/workforce"
+                  className="text-xs font-semibold text-muted hover:text-default flex items-center justify-center gap-1"
+                >
+                  <span>View all workforce members</span>
+                  <ArrowRight className="size-3" />
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* ─────────────────────────────────────────────────────────────
+          5. ACTIVE PRODUCTION ORDERS & QUALITY CONTROL (ROW 3)
+      ───────────────────────────────────────────────────────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Left Column (~60% / 7 cols): Active Production Orders */}
+            <div className="lg:col-span-7 rounded-2xl border border-default bg-surface p-5 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-default pb-3">
+                <h3 className="text-sm font-bold text-default">Active Production Orders</h3>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center rounded-lg border border-default bg-surface-sunken p-0.5 text-[10px] font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setOrderFilter('all')}
+                      className={`rounded-md px-2 py-0.5 transition-colors cursor-pointer ${
+                        orderFilter === 'all'
+                          ? 'bg-default text-surface font-bold'
+                          : 'text-muted hover:text-default'
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOrderFilter('QC PENDING')}
+                      className={`rounded-md px-2 py-0.5 transition-colors cursor-pointer ${
+                        orderFilter === 'QC PENDING'
+                          ? 'bg-default text-surface font-bold'
+                          : 'text-muted hover:text-default'
+                      }`}
+                    >
+                      QC Pending
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOrderFilter('COMPLETED')}
+                      className={`rounded-md px-2 py-0.5 transition-colors cursor-pointer ${
+                        orderFilter === 'COMPLETED'
+                          ? 'bg-default text-surface font-bold'
+                          : 'text-muted hover:text-default'
+                      }`}
+                    >
+                      Completed
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOrderFilter('READY')}
+                      className={`rounded-md px-2 py-0.5 transition-colors cursor-pointer ${
+                        orderFilter === 'READY'
+                          ? 'bg-default text-surface font-bold'
+                          : 'text-muted hover:text-default'
+                      }`}
+                    >
+                      Ready
+                    </button>
+                  </div>
+
+                  <Link
+                    to="/production"
+                    className="text-xs font-semibold text-primary hover:underline"
+                  >
+                    View all
+                  </Link>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-default">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-surface-sunken text-[10px] uppercase font-bold text-muted border-b border-default">
+                    <tr>
+                      <th className="px-3.5 py-2.5">ORDER #</th>
+                      <th className="px-3.5 py-2.5">PRODUCT</th>
+                      <th className="px-3.5 py-2.5">TARGET</th>
+                      <th className="px-3.5 py-2.5">PRODUCED</th>
+                      <th className="px-3.5 py-2.5">PROGRESS</th>
+                      <th className="px-3.5 py-2.5">STATUS</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-default">
+                    {filteredOrders.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="text-center py-6 text-muted text-xs">
+                          No active production orders
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredOrders.map((ord) => (
+                        <tr
+                          key={ord.id}
+                          onClick={() => setSelectedOrder(ord)}
+                          className="hover:bg-surface-sunken/60 cursor-pointer transition-colors"
+                        >
+                          <td className="px-3.5 py-2.5 font-mono font-bold text-primary">
+                            {ord.id}
+                          </td>
+                          <td className="px-3.5 py-2.5">
+                            <div className="font-semibold text-default">{ord.code}</div>
+                            <div className="text-[10px] text-muted truncate max-w-40">
+                              {ord.product}
+                            </div>
+                          </td>
+                          <td className="px-3.5 py-2.5 font-mono font-semibold">{ord.target}</td>
+                          <td className="px-3.5 py-2.5 font-mono font-semibold">{ord.produced}</td>
+                          <td className="px-3.5 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <div className="h-1.5 w-14 rounded-full bg-surface-sunken overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-emerald-500"
+                                  style={{ width: `${ord.progress}%` }}
+                                />
+                              </div>
+                              <span className="text-[10px] font-mono text-muted">
+                                {ord.progress}%
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-3.5 py-2.5">
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                ord.status === 'COMPLETED'
+                                  ? 'bg-emerald-500/15 text-emerald-600'
+                                  : ord.status === 'QC PENDING'
+                                    ? 'bg-amber-500/15 text-amber-600'
+                                    : 'bg-blue-500/15 text-blue-600'
+                              }`}
+                            >
+                              <span className="size-1.5 rounded-full bg-current" />
+                              {ord.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Right Column (~40% / 5 cols): Quality Control */}
+            <div className="lg:col-span-5 rounded-2xl border border-default bg-surface p-5 shadow-xs flex flex-col justify-between space-y-4">
+              <div className="flex items-center justify-between border-b border-default pb-3">
+                <h3 className="text-sm font-bold text-default">Quality Control</h3>
+                <Link to="/qc" className="text-xs font-semibold text-primary hover:underline">
+                  QC Queue
+                </Link>
+              </div>
+
+              <div className="space-y-3">
+                {qcList.length === 0 ? (
+                  <div className="text-center py-8 text-xs text-muted">
+                    No active QC audit queue items
+                  </div>
+                ) : (
+                  qcList.map((qc) => (
+                    <button
+                      type="button"
+                      key={qc.id}
+                      onClick={() => setSelectedQCItem(qc)}
+                      className="w-full text-left group rounded-xl border border-default bg-surface-sunken/30 hover:border-primary/40 hover:bg-surface-sunken p-3 transition-all cursor-pointer space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-xs text-primary">{qc.id}</span>
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                              qc.status === 'PASSED'
+                                ? 'bg-emerald-500/15 text-emerald-600'
+                                : qc.status === 'PENDING'
+                                  ? 'bg-amber-500/15 text-amber-600'
+                                  : 'bg-blue-500/15 text-blue-600'
+                            }`}
+                          >
+                            <span className="size-1 rounded-full bg-current" />
+                            {qc.status}
+                          </span>
+                        </div>
+                        <span className="text-xs font-mono font-bold text-default">
+                          {qc.qty} pcs
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-medium text-default">{qc.product}</span>
+                        <span className="text-[10px] text-muted font-mono">{qc.orderNo}</span>
+                      </div>
+
+                      {qc.failed !== undefined && (
+                        <div className="flex items-center gap-3 text-[10px] text-muted pt-1">
+                          <span className="text-red-500">{qc.failed} failed</span>
+                          <span className="text-amber-500">{qc.rework} rework</span>
+                        </div>
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+
+              {/* 3 Summary Pill Counters */}
+              <div className="grid grid-cols-3 gap-2.5 pt-1">
+                <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-2 text-center">
+                  <div className="text-base font-extrabold font-mono text-amber-600 dark:text-amber-400">
+                    {metrics?.quality?.pending_inspections ?? 0}
+                  </div>
+                  <div className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase">
+                    PENDING
+                  </div>
+                </div>
+                <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-2 text-center">
+                  <div className="text-base font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
+                    {metrics?.quality?.qc_pass_rate
+                      ? `${Math.round(metrics.quality.qc_pass_rate)}%`
+                      : '0%'}
+                  </div>
+                  <div className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">
+                    PASS RATE
+                  </div>
+                </div>
+                <div className="rounded-xl border border-orange-500/25 bg-orange-500/10 p-2 text-center">
+                  <div className="text-base font-extrabold font-mono text-orange-600 dark:text-orange-400">
+                    0
+                  </div>
+                  <div className="text-[9px] font-bold text-orange-600 dark:text-orange-400 uppercase">
+                    REWORK
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ─────────────────────────────────────────────────────────────
+          6. RECENT DELIVERIES & WORKFORCE TODAY (ROW 4)
+      ───────────────────────────────────────────────────────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Left Column (50% / 6 cols): Recent Deliveries */}
+            <div className="lg:col-span-6 rounded-2xl border border-default bg-surface p-5 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-default pb-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-default">Recent Deliveries</h3>
+                </div>
+                <Link to="/delivery" className="text-xs font-semibold text-primary hover:underline">
+                  View all
+                </Link>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-default">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-surface-sunken text-[10px] uppercase font-bold text-muted border-b border-default">
+                    <tr>
+                      <th className="px-3.5 py-2.5">DELIVERY #</th>
+                      <th className="px-3.5 py-2.5">CUSTOMER</th>
+                      <th className="px-3.5 py-2.5">ITEMS</th>
+                      <th className="px-3.5 py-2.5">STATUS</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-default">
+                    <tr>
+                      <td colSpan={4} className="text-center py-6 text-muted text-xs font-sans">
+                        No outbound deliveries recorded today
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Right Column (50% / 6 cols): Workforce Today */}
+            <div className="lg:col-span-6 rounded-2xl border border-default bg-surface p-5 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-default pb-3">
+                <div className="flex items-center gap-2">
+                  <Users className="size-4 text-primary" />
+                  <h3 className="text-sm font-bold text-default">Workforce Attendance Today</h3>
+                </div>
+                <Link to="/hr" className="text-xs font-semibold text-primary hover:underline">
+                  View all staff
+                </Link>
+              </div>
+
+              {/* Single Shift Daily Attendance Counters */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-center">
+                  <div className="text-xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
+                    0
+                  </div>
+                  <div className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    Present on Floor
+                  </div>
+                </div>
+                <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-center">
+                  <div className="text-xl font-extrabold font-mono text-amber-600 dark:text-amber-400">
+                    0
+                  </div>
+                  <div className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                    Approved Leave
+                  </div>
+                </div>
+                <div className="rounded-xl border border-blue-500/25 bg-blue-500/10 p-3 text-center">
+                  <div className="text-xl font-extrabold font-mono text-blue-600 dark:text-blue-400">
+                    0
+                  </div>
+                  <div className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">
+                    Total Headcount
+                  </div>
+                </div>
+              </div>
+
+              {/* Present Today List */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted">
+                  ACTIVE ON FLOOR TODAY
+                </span>
+                <div className="space-y-1.5 text-xs">
+                  {[
+                    { name: 'Md. Abdur Rahim', role: 'Senior Line Lead' },
+                    { name: 'Md. Karim Hossain', role: 'Assembly Operator' },
+                    { name: 'Meshkat Afrose', role: 'Soldering Operator' },
+                    { name: 'Rima Begum', role: 'Testing & QC' },
+                    { name: 'Mushfiqur Rahman', role: 'Factory Manager' },
+                  ].map((emp) => (
+                    <div
+                      key={emp.name}
+                      className="flex items-center justify-between p-2 rounded-lg hover:bg-surface-sunken transition-colors"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex size-6 items-center justify-center rounded-full bg-surface-sunken text-[10px] font-bold border border-default">
+                          {emp.name
+                            .split(' ')
+                            .map((n) => n[0])
+                            .slice(0, 2)
+                            .join('')}
+                        </div>
+                        <span className="font-medium text-default">{emp.name}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-muted">{emp.role}</span>
+                        <span className="size-1.5 rounded-full bg-emerald-500" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
-
-      {/* ─────────────────────────────────────────────────────────────
-          2. TODAY'S PRODUCTION HEADER & 6-KPI CARDS DECK
-      ───────────────────────────────────────────────────────────── */}
-      <div className="space-y-3.5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg sm:text-xl font-bold tracking-tight text-default">
-              Today's Production
-            </h2>
-            <div className="flex items-center gap-2 text-xs text-muted mt-0.5">
-              <span>{new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-              <span>•</span>
-              <span className="font-medium text-default">Daily Factory Run</span>
-            </div>
-          </div>
-
-          <Link
-            to="/production"
-            className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 self-start sm:self-center"
-          >
-            <span>View orders</span>
-            <ArrowRight className="size-3" />
-          </Link>
-        </div>
-
-        {/* 6 Metric KPI Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
-          {/* Card 1: Today's Target */}
-          <div className="rounded-2xl border border-default bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-token-colors">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
-                TODAY'S TARGET
-              </span>
-              <div className="flex size-7 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
-                <FileText className="size-3.5" />
-              </div>
-            </div>
-            <div className="mt-2 text-2xl sm:text-3xl font-extrabold font-mono text-default">
-              {currentKPIs.target}
-            </div>
-          </div>
-
-          {/* Card 2: Produced (with green left border) */}
-          <div className="rounded-2xl border-y border-r border-default border-l-4 border-l-emerald-500 bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-token-colors">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
-                PRODUCED
-              </span>
-              <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
-                <TrendingUp className="size-3.5" />
-              </div>
-            </div>
-            <div className="mt-2">
-              <div className="text-2xl sm:text-3xl font-extrabold font-mono text-default">
-                {currentKPIs.produced}
-              </div>
-              <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-                {currentKPIs.achievement}% of target
-              </span>
-            </div>
-          </div>
-
-          {/* Card 3: Pending Orders */}
-          <div className="rounded-2xl border border-default bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-token-colors">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
-                PENDING ORDERS
-              </span>
-              <div className="flex size-7 items-center justify-center rounded-lg bg-surface-sunken text-muted">
-                <Package className="size-3.5" />
-              </div>
-            </div>
-            <div className="mt-2 text-2xl sm:text-3xl font-extrabold font-mono text-default">
-              {currentKPIs.pendingOrders}
-            </div>
-          </div>
-
-          {/* Card 4: QC Pending */}
-          <div className="rounded-2xl border-y border-r border-default border-l-4 border-l-amber-500 bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-token-colors">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
-                QC PENDING
-              </span>
-              <div className="flex size-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
-                <ShieldCheck className="size-3.5" />
-              </div>
-            </div>
-            <div className="mt-2 text-2xl sm:text-3xl font-extrabold font-mono text-default">
-              {currentKPIs.qcPending}
-            </div>
-          </div>
-
-          {/* Card 5: Rework Qty */}
-          <div className="rounded-2xl border border-default bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-token-colors">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
-                REWORK QTY
-              </span>
-              <div className="flex size-7 items-center justify-center rounded-lg bg-orange-500/10 text-orange-500">
-                <RotateCcw className="size-3.5" />
-              </div>
-            </div>
-            <div className="mt-2 text-2xl sm:text-3xl font-extrabold font-mono text-default">
-              {currentKPIs.reworkQty}
-            </div>
-          </div>
-
-          {/* Card 6: Achievement */}
-          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 shadow-xs flex flex-col justify-between hover:border-emerald-500 transition-token-colors">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                ACHIEVEMENT
-              </span>
-              <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-                <TrendingUp className="size-3.5" />
-              </div>
-            </div>
-            <div className="mt-2 text-2xl sm:text-3xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
-              {currentKPIs.achievement}%
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ─────────────────────────────────────────────────────────────
-          3. PRODUCTION TREND & INVENTORY HEALTH (ROW 1)
-      ───────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left Column (~65% / 8 cols): Production Trend */}
-        <div className="lg:col-span-8 rounded-2xl border border-default bg-surface p-5 shadow-xs flex flex-col justify-between space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-default">Production Trend</h3>
-                {isLiveTelemetry && (
-                  <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[9px] font-bold text-emerald-600">
-                    <span className="size-1.5 rounded-full bg-emerald-500 animate-ping" />
-                    LIVE
-                  </span>
-                )}
-              </div>
-              <p className="text-[11px] text-muted">Target vs Produced vs Passed QC</p>
-            </div>
-
-            {/* Timeframe selector tabs: Today, 7 Days, 30 Days, Custom Range */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <div className="flex items-center rounded-lg border border-default bg-surface-sunken p-0.5 text-[11px] font-semibold">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTimeframe('today');
-                    setCustomRangeLabel(null);
-                  }}
-                  className={`rounded-md px-2.5 py-1 transition-all cursor-pointer ${
-                    timeframe === 'today'
-                      ? 'bg-default text-surface shadow-xs font-bold'
-                      : 'text-muted hover:text-default'
-                  }`}
-                >
-                  Today
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTimeframe('7days');
-                    setCustomRangeLabel(null);
-                  }}
-                  className={`rounded-md px-2.5 py-1 transition-all cursor-pointer ${
-                    timeframe === '7days'
-                      ? 'bg-default text-surface shadow-xs font-bold'
-                      : 'text-muted hover:text-default'
-                  }`}
-                >
-                  7 Days
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTimeframe('30days');
-                    setCustomRangeLabel(null);
-                  }}
-                  className={`rounded-md px-2.5 py-1 transition-all cursor-pointer ${
-                    timeframe === '30days'
-                      ? 'bg-default text-surface shadow-xs font-bold'
-                      : 'text-muted hover:text-default'
-                  }`}
-                >
-                  30 Days
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsCustomDateOpen(true)}
-                  className={`rounded-md px-2.5 py-1 flex items-center gap-1 transition-all cursor-pointer ${
-                    timeframe === 'custom'
-                      ? 'bg-default text-surface shadow-xs font-bold'
-                      : 'text-muted hover:text-default'
-                  }`}
-                >
-                  <Calendar className="size-3" />
-                  <span>{customRangeLabel ?? 'Custom Range'}</span>
-                </button>
-              </div>
-
-              {/* Live Telemetry Toggle */}
-              <button
-                type="button"
-                onClick={() => setIsLiveTelemetry(!isLiveTelemetry)}
-                title="Toggle Real-Time Telemetry Stream"
-                className={`rounded-lg p-1.5 border transition-colors cursor-pointer ${
-                  isLiveTelemetry
-                    ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-600'
-                    : 'border-default bg-surface text-muted hover:text-default'
-                }`}
-              >
-                <Radio className="size-3.5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Recharts Area/Line Chart */}
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gradientProduced" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0284c7" stopOpacity={0.12} />
-                    <stop offset="95%" stopColor="#0284c7" stopOpacity={0.0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-                <XAxis
-                  dataKey="time"
-                  stroke="var(--color-text-muted)"
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={{ stroke: 'var(--color-border)' }}
-                />
-                <YAxis
-                  stroke="var(--color-text-muted)"
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={{ stroke: 'var(--color-border)' }}
-                />
-                <Tooltip
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      const producedVal = Number(payload.find((p) => p.dataKey === 'produced')?.value ?? 0);
-                      const qcVal = Number(payload.find((p) => p.dataKey === 'qcPassed')?.value ?? 0);
-                      const targetVal = Number(payload.find((p) => p.dataKey === 'target')?.value ?? 0);
-                      const yieldPct = producedVal > 0 ? ((qcVal / producedVal) * 100).toFixed(1) : '100';
-
-                      return (
-                        <div className="rounded-xl border border-default bg-surface-raised p-3 shadow-xl text-xs space-y-1.5">
-                          <p className="font-bold text-default">{label}</p>
-                          <div className="space-y-1 text-[11px]">
-                            <div className="flex items-center justify-between gap-4 text-blue-500">
-                              <span className="flex items-center gap-1.5">
-                                <span className="size-2 rounded-full bg-blue-500" />
-                                Produced:
-                              </span>
-                              <strong className="font-mono">{producedVal} pcs</strong>
-                            </div>
-                            <div className="flex items-center justify-between gap-4 text-emerald-500">
-                              <span className="flex items-center gap-1.5">
-                                <span className="size-2 rounded-full bg-emerald-500" />
-                                QC Passed:
-                              </span>
-                              <strong className="font-mono">{qcVal} pcs ({yieldPct}%)</strong>
-                            </div>
-                            <div className="flex items-center justify-between gap-4 text-slate-400">
-                              <span className="flex items-center gap-1.5">
-                                <span className="size-2 rounded-full bg-slate-400" />
-                                Target:
-                              </span>
-                              <strong className="font-mono">{targetVal} pcs</strong>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="produced"
-                  name="Produced"
-                  stroke="#0284c7"
-                  strokeWidth={2.5}
-                  fill="url(#gradientProduced)"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="qcPassed"
-                  name="QC Passed"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="target"
-                  name="Target"
-                  stroke="#94a3b8"
-                  strokeWidth={1.5}
-                  strokeDasharray="4 4"
-                  dot={false}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Chart Legend */}
-          <div className="flex items-center justify-center gap-6 text-[11px] font-semibold text-muted pt-2 border-t border-default/60">
-            <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-blue-500" />
-              Produced
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-emerald-500" />
-              QC Passed
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-3 border-t border-dashed border-slate-400" />
-              Target
-            </span>
-          </div>
-        </div>
-
-        {/* Right Column (~35% / 4 cols): Inventory Health */}
-        <div className="lg:col-span-4 rounded-2xl border border-default bg-surface p-5 shadow-xs flex flex-col justify-between space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-default">Inventory Health</h3>
-            <Link to="/inventory" className="text-xs font-semibold text-primary hover:underline">
-              View all
-            </Link>
-          </div>
-
-          {/* 2 Big Stat Tiles */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl border border-default bg-surface-sunken p-3.5 space-y-1">
-              <div className="text-2xl font-extrabold font-mono text-default">
-                {metrics?.inventory?.low_stock_count ?? 0}
-              </div>
-              <div className="text-[11px] font-semibold text-muted">Stock Alerts</div>
-              <div className="text-xs font-bold font-mono text-default">
-                {formatCurrency(metrics?.inventory?.total_valuation ?? 0)}
-              </div>
-              <div className="text-[10px] text-muted font-mono">Total Valuation</div>
-            </div>
-
-            <div className="rounded-xl border border-default bg-surface-sunken p-3.5 space-y-1">
-              <div className="text-2xl font-extrabold font-mono text-default">
-                {rawLowStock.length}
-              </div>
-              <div className="text-[11px] font-semibold text-muted">Attention Items</div>
-              <div className="text-xs font-bold font-mono text-default">
-                {formatCurrency(0)}
-              </div>
-              <div className="text-[10px] text-muted font-mono">PO Reorder Value</div>
-            </div>
-          </div>
-
-          {/* Alert Pills */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between rounded-xl border border-red-500/25 bg-red-500/10 p-2.5 text-xs text-red-600 dark:text-red-400">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="size-4 shrink-0" />
-                <span className="font-semibold">Out of stock</span>
-              </div>
-              <span className="font-bold font-mono text-sm">1</span>
-            </div>
-
-            <div className="flex items-center justify-between rounded-xl border border-amber-500/25 bg-amber-500/10 p-2.5 text-xs text-amber-600 dark:text-amber-400">
-              <div className="flex items-center gap-2">
-                <Package className="size-4 shrink-0" />
-                <span className="font-semibold">Low stock</span>
-              </div>
-              <span className="font-bold font-mono text-sm">5</span>
-            </div>
-          </div>
-
-          {/* Warehouse Distribution Bars */}
-          <div className="space-y-3 pt-1 border-t border-default/60">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted">
-              WAREHOUSE DISTRIBUTION
-            </span>
-
-            {/* WH-A */}
-            <div className="space-y-1">
-              <div className="flex justify-between text-[11px]">
-                <span className="font-medium text-default">WH-A Raw Materials</span>
-                <span className="font-mono text-muted">
-                  <strong className="text-default">6,370</strong> / 5,000 pcs
-                </span>
-              </div>
-              <div className="h-1.5 w-full rounded-full bg-surface-sunken overflow-hidden">
-                <div className="h-full rounded-full bg-blue-500" style={{ width: '100%' }} />
-              </div>
-              <div className="flex justify-end">
-                <span className="text-[9px] font-bold text-amber-500">127% (Overcapacity)</span>
-              </div>
-            </div>
-
-            {/* WH-B */}
-            <div className="space-y-1">
-              <div className="flex justify-between text-[11px]">
-                <span className="font-medium text-default">WH-B Finished Goods</span>
-                <span className="font-mono text-muted">
-                  <strong className="text-default">482</strong> / 1,000 pcs
-                </span>
-              </div>
-              <div className="h-1.5 w-full rounded-full bg-surface-sunken overflow-hidden">
-                <div className="h-full rounded-full bg-emerald-500" style={{ width: '48%' }} />
-              </div>
-              <div className="flex justify-end">
-                <span className="text-[9px] font-bold text-emerald-600">48% Utilization</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ─────────────────────────────────────────────────────────────
-          4. SALES OVERVIEW & TODAY'S PERFORMANCE (ROW 2)
-      ───────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left Column (~65% / 8 cols): Sales Overview */}
-        <div className="lg:col-span-8 rounded-2xl border border-default bg-surface p-5 shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-default pb-3">
-            <div>
-              <h3 className="text-sm font-bold text-default">Sales Overview</h3>
-              <p className="text-[11px] text-muted">{new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</p>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <div className="flex items-center rounded-lg border border-default bg-surface-sunken p-0.5 text-[10px] font-semibold">
-                <button
-                  type="button"
-                  onClick={() => setSalesFilter('all')}
-                  className={`rounded-md px-2 py-0.5 transition-colors cursor-pointer ${
-                    salesFilter === 'all' ? 'bg-default text-surface font-bold' : 'text-muted hover:text-default'
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSalesFilter('DELIVERED')}
-                  className={`rounded-md px-2 py-0.5 transition-colors cursor-pointer ${
-                    salesFilter === 'DELIVERED' ? 'bg-default text-surface font-bold' : 'text-muted hover:text-default'
-                  }`}
-                >
-                  Delivered
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSalesFilter('CONFIRMED')}
-                  className={`rounded-md px-2 py-0.5 transition-colors cursor-pointer ${
-                    salesFilter === 'CONFIRMED' ? 'bg-default text-surface font-bold' : 'text-muted hover:text-default'
-                  }`}
-                >
-                  Confirmed
-                </button>
-              </div>
-
-              <Link to="/sales" className="text-xs font-semibold text-primary hover:underline">
-                View all sales
-              </Link>
-            </div>
-          </div>
-
-          {/* 4 Metric Summary Strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-1">
-            <div>
-              <div className="text-lg sm:text-xl font-extrabold font-mono text-default">
-                {formatCurrency(metrics?.commercial?.today_revenue ?? 0)}
-              </div>
-              <div className="text-[11px] text-muted">Today's Sales</div>
-            </div>
-            <div>
-              <div className="text-lg sm:text-xl font-extrabold font-mono text-default">
-                {formatCurrency(metrics?.commercial?.month_revenue ?? 0)}
-              </div>
-              <div className="text-[11px] text-muted">Monthly Revenue</div>
-            </div>
-            <div>
-              <div className="text-lg sm:text-xl font-extrabold font-mono text-red-500">
-                {formatCurrency(metrics?.commercial?.total_receivable_due ?? 0)}
-              </div>
-              <div className="text-[11px] text-muted">Outstanding</div>
-            </div>
-            <div>
-              <div className="text-lg sm:text-xl font-extrabold font-mono text-default">
-                {metrics?.commercial?.active_orders ?? 0}
-              </div>
-              <div className="text-[11px] text-muted">Pending Delivery</div>
-            </div>
-          </div>
-
-          {/* Sales Invoices Table */}
-          <div className="overflow-x-auto rounded-xl border border-default">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-surface-sunken text-[10px] uppercase font-bold text-muted border-b border-default">
-                <tr>
-                  <th className="px-3.5 py-2.5">INVOICE</th>
-                  <th className="px-3.5 py-2.5">CUSTOMER</th>
-                  <th className="px-3.5 py-2.5">TYPE</th>
-                  <th className="px-3.5 py-2.5">AMOUNT</th>
-                  <th className="px-3.5 py-2.5">STATUS</th>
-                  <th className="px-3.5 py-2.5">PAYMENT</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-default font-sans">
-                {filteredInvoices.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-center py-6 text-muted text-xs">
-                      No invoices found for current filter
-                    </td>
-                  </tr>
-                ) : (
-                  filteredInvoices.map((inv) => (
-                    <tr
-                      key={inv.id}
-                      onClick={() => setSelectedInvoice(inv)}
-                      className="hover:bg-surface-sunken/60 cursor-pointer transition-colors"
-                    >
-                      <td className="px-3.5 py-2.5 font-mono font-bold text-primary">{inv.id}</td>
-                      <td className="px-3.5 py-2.5 font-medium text-default">{inv.customer}</td>
-                      <td className="px-3.5 py-2.5">
-                        <span className="rounded-md bg-blue-500/10 text-blue-500 px-1.5 py-0.5 text-[10px] font-bold">
-                          {inv.type}
-                        </span>
-                      </td>
-                      <td className="px-3.5 py-2.5 font-mono font-semibold text-default">{inv.amount}</td>
-                      <td className="px-3.5 py-2.5">
-                        <span
-                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                            inv.status === 'DELIVERED'
-                              ? 'bg-emerald-500/15 text-emerald-600'
-                              : 'bg-surface-sunken text-muted'
-                          }`}
-                        >
-                          <span className="size-1.5 rounded-full bg-current" />
-                          {inv.status}
-                        </span>
-                      </td>
-                      <td className="px-3.5 py-2.5">
-                        <span
-                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                            inv.payment === 'PAID'
-                              ? 'bg-emerald-500/15 text-emerald-600'
-                              : inv.payment === 'PARTIAL'
-                              ? 'bg-amber-500/15 text-amber-600'
-                              : 'bg-red-500/15 text-red-600'
-                          }`}
-                        >
-                          <span className="size-1.5 rounded-full bg-current" />
-                          {inv.payment}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Bottom Financial Mini Strip */}
-          <div className="grid grid-cols-3 gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => setShowBalance(!showBalance)}
-              className="group rounded-xl border border-default bg-surface-sunken p-2.5 text-left hover:border-primary/50 transition-all cursor-pointer flex flex-col justify-between"
-              title={showBalance ? 'Click to hide balance' : 'Click to show balance'}
-            >
-              <div className="flex items-center justify-between gap-1 w-full">
-                <span className="text-xs font-bold font-mono text-default">
-                  {showBalance ? formatCurrency(metrics?.commercial?.month_revenue ?? 0) : `${currencySymbol} ••••••`}
-                </span>
-                {showBalance ? (
-                  <Eye className="size-3.5 text-muted group-hover:text-primary transition-colors shrink-0" />
-                ) : (
-                  <EyeOff className="size-3.5 text-muted group-hover:text-primary transition-colors shrink-0" />
-                )}
-              </div>
-              <div className="text-[10px] text-muted flex items-center justify-between mt-1">
-                <span>Total Balance</span>
-                <span className="text-[9px] text-muted/70">{showBalance ? 'Hide' : 'Show'}</span>
-              </div>
-            </button>
-
-            <div className="rounded-xl border border-default bg-surface-sunken p-2.5 text-left flex flex-col justify-between">
-              <div className="text-xs font-bold font-mono text-default">{formatCurrency(0)}</div>
-              <div className="text-[10px] text-muted mt-1">Today's Expenses</div>
-            </div>
-
-            <Link
-              to="/finance"
-              className="group rounded-xl border border-default bg-surface-sunken p-2.5 text-left hover:border-primary/50 transition-all flex flex-col justify-between"
-              title="View bank accounts & ledgers"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold font-mono text-default">0</span>
-                <ArrowRight className="size-3 text-muted group-hover:text-primary transition-colors" />
-              </div>
-              <div className="text-[10px] text-muted group-hover:text-primary transition-colors mt-1">
-                Active Accounts
-              </div>
-            </Link>
-          </div>
-        </div>
-
-        {/* Right Column (~35% / 4 cols): Today's Performance (Leaderboard) */}
-        <div className="lg:col-span-4 rounded-2xl border border-default bg-surface p-5 shadow-xs flex flex-col justify-between space-y-4">
-          <div className="flex items-center justify-between border-b border-default pb-3">
-            <h3 className="text-sm font-bold text-default">Today's Performance</h3>
-            <Link to="/workforce" className="text-xs font-semibold text-primary hover:underline">
-              Full report
-            </Link>
-          </div>
-
-          {/* Worker Leaderboard */}
-          <div className="space-y-4">
-            {workers.length === 0 ? (
-              <div className="text-center py-8 text-xs text-muted">
-                No worker performance records for this shift
-              </div>
-            ) : (
-              workers.map((w) => (
-                <button
-                  type="button"
-                  key={w.name}
-                  onClick={() => setSelectedWorker(w)}
-                  className="w-full text-left group rounded-xl border border-transparent hover:border-default hover:bg-surface-sunken/40 p-2.5 -mx-2.5 transition-all cursor-pointer space-y-1.5"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex size-7 items-center justify-center rounded-full bg-surface-sunken font-bold text-xs text-default border border-default">
-                        {w.initials}
-                      </div>
-                      <div>
-                        <span className="text-xs font-bold text-default group-hover:text-primary transition-colors">
-                          {w.name}
-                        </span>
-                        <span className="block text-[10px] text-muted font-mono">{w.output}</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-xs font-bold font-mono text-default">{w.rate}%</span>
-                      <span className="block text-[9px] text-muted">{w.badge}</span>
-                    </div>
-                  </div>
-
-                  <div className="h-1.5 w-full rounded-full bg-surface-sunken overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${w.color}`}
-                      style={{ width: `${w.rate}%` }}
-                    />
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-
-          <div className="pt-2 border-t border-default">
-            <Link
-              to="/workforce"
-              className="text-xs font-semibold text-muted hover:text-default flex items-center justify-center gap-1"
-            >
-              <span>View all workforce members</span>
-              <ArrowRight className="size-3" />
-            </Link>
-          </div>
-        </div>
-
-      </div>
-
-      {/* ─────────────────────────────────────────────────────────────
-          5. ACTIVE PRODUCTION ORDERS & QUALITY CONTROL (ROW 3)
-      ───────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left Column (~60% / 7 cols): Active Production Orders */}
-        <div className="lg:col-span-7 rounded-2xl border border-default bg-surface p-5 shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-default pb-3">
-            <h3 className="text-sm font-bold text-default">Active Production Orders</h3>
-            
-            <div className="flex items-center gap-2">
-              <div className="flex items-center rounded-lg border border-default bg-surface-sunken p-0.5 text-[10px] font-semibold">
-                <button
-                  type="button"
-                  onClick={() => setOrderFilter('all')}
-                  className={`rounded-md px-2 py-0.5 transition-colors cursor-pointer ${
-                    orderFilter === 'all' ? 'bg-default text-surface font-bold' : 'text-muted hover:text-default'
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOrderFilter('QC PENDING')}
-                  className={`rounded-md px-2 py-0.5 transition-colors cursor-pointer ${
-                    orderFilter === 'QC PENDING' ? 'bg-default text-surface font-bold' : 'text-muted hover:text-default'
-                  }`}
-                >
-                  QC Pending
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOrderFilter('COMPLETED')}
-                  className={`rounded-md px-2 py-0.5 transition-colors cursor-pointer ${
-                    orderFilter === 'COMPLETED' ? 'bg-default text-surface font-bold' : 'text-muted hover:text-default'
-                  }`}
-                >
-                  Completed
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOrderFilter('READY')}
-                  className={`rounded-md px-2 py-0.5 transition-colors cursor-pointer ${
-                    orderFilter === 'READY' ? 'bg-default text-surface font-bold' : 'text-muted hover:text-default'
-                  }`}
-                >
-                  Ready
-                </button>
-              </div>
-
-              <Link to="/production" className="text-xs font-semibold text-primary hover:underline">
-                View all
-              </Link>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto rounded-xl border border-default">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-surface-sunken text-[10px] uppercase font-bold text-muted border-b border-default">
-                <tr>
-                  <th className="px-3.5 py-2.5">ORDER #</th>
-                  <th className="px-3.5 py-2.5">PRODUCT</th>
-                  <th className="px-3.5 py-2.5">TARGET</th>
-                  <th className="px-3.5 py-2.5">PRODUCED</th>
-                  <th className="px-3.5 py-2.5">PROGRESS</th>
-                  <th className="px-3.5 py-2.5">STATUS</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-default">
-                {filteredOrders.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-center py-6 text-muted text-xs">
-                      No active production orders
-                    </td>
-                  </tr>
-                ) : (
-                  filteredOrders.map((ord) => (
-                    <tr
-                      key={ord.id}
-                      onClick={() => setSelectedOrder(ord)}
-                      className="hover:bg-surface-sunken/60 cursor-pointer transition-colors"
-                    >
-                      <td className="px-3.5 py-2.5 font-mono font-bold text-primary">{ord.id}</td>
-                      <td className="px-3.5 py-2.5">
-                        <div className="font-semibold text-default">{ord.code}</div>
-                        <div className="text-[10px] text-muted truncate max-w-40">{ord.product}</div>
-                      </td>
-                      <td className="px-3.5 py-2.5 font-mono font-semibold">{ord.target}</td>
-                      <td className="px-3.5 py-2.5 font-mono font-semibold">{ord.produced}</td>
-                      <td className="px-3.5 py-2.5">
-                        <div className="flex items-center gap-2">
-                          <div className="h-1.5 w-14 rounded-full bg-surface-sunken overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-emerald-500"
-                              style={{ width: `${ord.progress}%` }}
-                            />
-                          </div>
-                          <span className="text-[10px] font-mono text-muted">{ord.progress}%</span>
-                        </div>
-                      </td>
-                      <td className="px-3.5 py-2.5">
-                        <span
-                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                            ord.status === 'COMPLETED'
-                              ? 'bg-emerald-500/15 text-emerald-600'
-                              : ord.status === 'QC PENDING'
-                              ? 'bg-amber-500/15 text-amber-600'
-                              : 'bg-blue-500/15 text-blue-600'
-                          }`}
-                        >
-                          <span className="size-1.5 rounded-full bg-current" />
-                          {ord.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Right Column (~40% / 5 cols): Quality Control */}
-        <div className="lg:col-span-5 rounded-2xl border border-default bg-surface p-5 shadow-xs flex flex-col justify-between space-y-4">
-          <div className="flex items-center justify-between border-b border-default pb-3">
-            <h3 className="text-sm font-bold text-default">Quality Control</h3>
-            <Link to="/qc" className="text-xs font-semibold text-primary hover:underline">
-              QC Queue
-            </Link>
-          </div>
-
-          <div className="space-y-3">
-            {qcList.length === 0 ? (
-              <div className="text-center py-8 text-xs text-muted">
-                No active QC audit queue items
-              </div>
-            ) : (
-              qcList.map((qc) => (
-                <button
-                  type="button"
-                  key={qc.id}
-                  onClick={() => setSelectedQCItem(qc)}
-                  className="w-full text-left group rounded-xl border border-default bg-surface-sunken/30 hover:border-primary/40 hover:bg-surface-sunken p-3 transition-all cursor-pointer space-y-1.5"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-xs text-primary">{qc.id}</span>
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold ${
-                          qc.status === 'PASSED'
-                            ? 'bg-emerald-500/15 text-emerald-600'
-                            : qc.status === 'PENDING'
-                            ? 'bg-amber-500/15 text-amber-600'
-                            : 'bg-blue-500/15 text-blue-600'
-                        }`}
-                      >
-                        <span className="size-1 rounded-full bg-current" />
-                        {qc.status}
-                      </span>
-                    </div>
-                    <span className="text-xs font-mono font-bold text-default">{qc.qty} pcs</span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-medium text-default">{qc.product}</span>
-                    <span className="text-[10px] text-muted font-mono">{qc.orderNo}</span>
-                  </div>
-
-                  {qc.failed !== undefined && (
-                    <div className="flex items-center gap-3 text-[10px] text-muted pt-1">
-                      <span className="text-red-500">{qc.failed} failed</span>
-                      <span className="text-amber-500">{qc.rework} rework</span>
-                    </div>
-                  )}
-                </button>
-              ))
-            )}
-          </div>
-
-          {/* 3 Summary Pill Counters */}
-          <div className="grid grid-cols-3 gap-2.5 pt-1">
-            <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-2 text-center">
-              <div className="text-base font-extrabold font-mono text-amber-600 dark:text-amber-400">
-                {metrics?.quality?.pending_inspections ?? 0}
-              </div>
-              <div className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase">PENDING</div>
-            </div>
-            <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-2 text-center">
-              <div className="text-base font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
-                {metrics?.quality?.qc_pass_rate ? `${Math.round(metrics.quality.qc_pass_rate)}%` : '0%'}
-              </div>
-              <div className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">PASS RATE</div>
-            </div>
-            <div className="rounded-xl border border-orange-500/25 bg-orange-500/10 p-2 text-center">
-              <div className="text-base font-extrabold font-mono text-orange-600 dark:text-orange-400">0</div>
-              <div className="text-[9px] font-bold text-orange-600 dark:text-orange-400 uppercase">REWORK</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ─────────────────────────────────────────────────────────────
-          6. RECENT DELIVERIES & WORKFORCE TODAY (ROW 4)
-      ───────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left Column (50% / 6 cols): Recent Deliveries */}
-        <div className="lg:col-span-6 rounded-2xl border border-default bg-surface p-5 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-default pb-3">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-default">Recent Deliveries</h3>
-            </div>
-            <Link to="/delivery" className="text-xs font-semibold text-primary hover:underline">
-              View all
-            </Link>
-          </div>
-
-          <div className="overflow-x-auto rounded-xl border border-default">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-surface-sunken text-[10px] uppercase font-bold text-muted border-b border-default">
-                <tr>
-                  <th className="px-3.5 py-2.5">DELIVERY #</th>
-                  <th className="px-3.5 py-2.5">CUSTOMER</th>
-                  <th className="px-3.5 py-2.5">ITEMS</th>
-                  <th className="px-3.5 py-2.5">STATUS</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-default">
-                <tr>
-                  <td colSpan={4} className="text-center py-6 text-muted text-xs font-sans">
-                    No outbound deliveries recorded today
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Right Column (50% / 6 cols): Workforce Today */}
-        <div className="lg:col-span-6 rounded-2xl border border-default bg-surface p-5 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-default pb-3">
-            <div className="flex items-center gap-2">
-              <Users className="size-4 text-primary" />
-              <h3 className="text-sm font-bold text-default">Workforce Attendance Today</h3>
-            </div>
-            <Link to="/hr" className="text-xs font-semibold text-primary hover:underline">
-              View all staff
-            </Link>
-          </div>
-
-          {/* Single Shift Daily Attendance Counters */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-center">
-              <div className="text-xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">0</div>
-              <div className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">Present on Floor</div>
-            </div>
-            <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-center">
-              <div className="text-xl font-extrabold font-mono text-amber-600 dark:text-amber-400">0</div>
-              <div className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">Approved Leave</div>
-            </div>
-            <div className="rounded-xl border border-blue-500/25 bg-blue-500/10 p-3 text-center">
-              <div className="text-xl font-extrabold font-mono text-blue-600 dark:text-blue-400">0</div>
-              <div className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">Total Headcount</div>
-            </div>
-          </div>
-
-          {/* Present Today List */}
-          <div className="space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted">
-              ACTIVE ON FLOOR TODAY
-            </span>
-            <div className="space-y-1.5 text-xs">
-              {[
-                { name: 'Md. Abdur Rahim', role: 'Senior Line Lead' },
-                { name: 'Md. Karim Hossain', role: 'Assembly Operator' },
-                { name: 'Meshkat Afrose', role: 'Soldering Operator' },
-                { name: 'Rima Begum', role: 'Testing & QC' },
-                { name: 'Mushfiqur Rahman', role: 'Factory Manager' },
-              ].map((emp) => (
-                <div
-                  key={emp.name}
-                  className="flex items-center justify-between p-2 rounded-lg hover:bg-surface-sunken transition-colors"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex size-6 items-center justify-center rounded-full bg-surface-sunken text-[10px] font-bold border border-default">
-                      {emp.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
-                    </div>
-                    <span className="font-medium text-default">{emp.name}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-muted">{emp.role}</span>
-                    <span className="size-1.5 rounded-full bg-emerald-500" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )}
 
       {/* ─────────────────────────────────────────────────────────────
           6. ENTERPRISE SUBSYSTEM COCKPIT & NAVIGATOR
@@ -1934,7 +2143,9 @@ export const TenantRoleDashboard: React.FC = () => {
                 )}
               </div>
               <div className="min-w-0">
-                <h4 className="font-bold text-xs text-default truncate">Install {companyName || 'Enterprise Cloud'}</h4>
+                <h4 className="font-bold text-xs text-default truncate">
+                  Install {companyName || 'Enterprise Cloud'}
+                </h4>
                 <span className="text-[10px] text-muted">Business Operations Platform PWA</span>
               </div>
             </div>
@@ -1948,7 +2159,8 @@ export const TenantRoleDashboard: React.FC = () => {
             </button>
           </div>
           <p className="mt-2 text-xs text-muted leading-relaxed">
-            Add to your home screen for quick offline access, full-screen view & faster business operations.
+            Add to your home screen for quick offline access, full-screen view & faster business
+            operations.
           </p>
           <div className="mt-3.5 flex items-center gap-2">
             <Button

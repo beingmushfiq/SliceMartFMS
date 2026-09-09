@@ -90,7 +90,9 @@ export function ProductsSection() {
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const [selectedLabelProduct, setSelectedLabelProduct] = useState<Product | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [activeFormTab, setActiveFormTab] = useState<'general' | 'pricing' | 'media' | 'seo' | 'custom'>('general');
+  const [activeFormTab, setActiveFormTab] = useState<
+    'general' | 'pricing' | 'media' | 'seo' | 'custom'
+  >('general');
 
   // Quick-Add Sub-Modal States
   const [isQuickUnitOpen, setIsQuickUnitOpen] = useState(false);
@@ -193,7 +195,14 @@ export function ProductsSection() {
         setDraft((prev) => ({ ...prev, base_unit_id: String(newUnit.id) }));
       }
       setIsQuickUnitOpen(false);
-      setQuickUnitDraft({ code: '', name: '', type: 'piece', precision: 2, is_base: true, is_active: true });
+      setQuickUnitDraft({
+        code: '',
+        name: '',
+        type: 'piece',
+        precision: 2,
+        is_base: true,
+        is_active: true,
+      });
       notify.success(`Unit "${quickUnitDraft.name}" created and selected!`);
     },
     onError: (err) => {
@@ -338,7 +347,12 @@ export function ProductsSection() {
   const handleOpenEdit = (p: Product) => {
     setErrorMsg(null);
     setActiveFormTab('general');
-    const onlineMeta = p.online_meta as { image_url?: string; meta_title?: string; meta_description?: string; canonical_url?: string } | null;
+    const onlineMeta = p.online_meta as {
+      image_url?: string;
+      meta_title?: string;
+      meta_description?: string;
+      canonical_url?: string;
+    } | null;
     setDraft({
       sku: p.sku,
       name: p.name,
@@ -369,7 +383,12 @@ export function ProductsSection() {
   const handleDuplicate = (p: Product) => {
     setErrorMsg(null);
     setActiveFormTab('general');
-    const onlineMeta = p.online_meta as { image_url?: string; meta_title?: string; meta_description?: string; canonical_url?: string } | null;
+    const onlineMeta = p.online_meta as {
+      image_url?: string;
+      meta_title?: string;
+      meta_description?: string;
+      canonical_url?: string;
+    } | null;
     setDraft({
       sku: `${p.sku}-COPY`,
       name: `${p.name} (Copy)`,
@@ -392,7 +411,9 @@ export function ProductsSection() {
       warehouse_id: '',
       tracking_mode: p.tracking_mode || 'batch',
       online_slug: '',
-      online_meta: onlineMeta ? { ...onlineMeta, meta_title: `${onlineMeta.meta_title || p.name} (Copy)` } : null,
+      online_meta: onlineMeta
+        ? { ...onlineMeta, meta_title: `${onlineMeta.meta_title || p.name} (Copy)` }
+        : null,
     });
     setEditingProduct(null);
     setIsCreateOpen(true);
@@ -423,16 +444,17 @@ export function ProductsSection() {
   const warehouses: WarehouseOption[] = Array.isArray(warehousesQuery.data?.data)
     ? (warehousesQuery.data.data as WarehouseOption[])
     : Array.isArray(warehousesQuery.data)
-    ? (warehousesQuery.data as WarehouseOption[])
-    : [];
+      ? (warehousesQuery.data as WarehouseOption[])
+      : [];
 
   const unitMap = useMemo(() => {
     const map = new Map<string, string>();
-    units.forEach((u) => {
+    const list = unitsQuery.data?.data ?? [];
+    list.forEach((u) => {
       map.set(String(u.id), u.code || u.name);
     });
     return map;
-  }, [units]);
+  }, [unitsQuery.data?.data]);
 
   return (
     <div className="space-y-6">
@@ -555,8 +577,12 @@ export function ProductsSection() {
                   <td colSpan={7} className="py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Package className="size-8 text-slate-300 dark:text-slate-600" />
-                      <p className="font-medium text-slate-700 dark:text-slate-300">No products found</p>
-                      <p className="text-xs text-slate-400">Click "New Product" above to create your first catalogue item.</p>
+                      <p className="font-medium text-slate-700 dark:text-slate-300">
+                        No products found
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        Click "New Product" above to create your first catalogue item.
+                      </p>
                     </div>
                   </td>
                 </tr>
@@ -566,7 +592,10 @@ export function ProductsSection() {
                   const thumb = pMeta?.image_url;
 
                   return (
-                    <tr key={p.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group">
+                    <tr
+                      key={p.id}
+                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group"
+                    >
                       <td className="py-3 pl-4 pr-3">
                         <div className="flex items-center gap-3">
                           {thumb ? (
@@ -601,7 +630,9 @@ export function ProductsSection() {
                           {p.type.replace('_', ' ')}
                         </span>
                       </td>
-                      <td className="py-3 px-3 font-mono text-slate-700 dark:text-slate-300 font-medium">{formatCurrency(p.standard_cost)}</td>
+                      <td className="py-3 px-3 font-mono text-slate-700 dark:text-slate-300 font-medium">
+                        {formatCurrency(p.standard_cost)}
+                      </td>
                       <td className="py-3 px-3 font-mono text-emerald-600 dark:text-emerald-400 font-bold">
                         {formatCurrency(p.default_sale_price)}
                       </td>
@@ -617,8 +648,15 @@ export function ProductsSection() {
                             return (
                               <div className="flex flex-col gap-1">
                                 <div className="flex items-center gap-1 font-mono font-bold text-slate-900 dark:text-white text-xs">
-                                  <span>{qty.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
-                                  <span className="text-[10px] font-normal uppercase text-slate-400">{unitCode}</span>
+                                  <span>
+                                    {qty.toLocaleString(undefined, {
+                                      minimumFractionDigits: 0,
+                                      maximumFractionDigits: 2,
+                                    })}
+                                  </span>
+                                  <span className="text-[10px] font-normal uppercase text-slate-400">
+                                    {unitCode}
+                                  </span>
                                 </div>
                                 <div>
                                   <span
@@ -626,16 +664,24 @@ export function ProductsSection() {
                                       isOutOfStock
                                         ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
                                         : isLowStock
-                                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                                        : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                                          : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                                     }`}
                                   >
                                     <span
                                       className={`size-1.5 rounded-full ${
-                                        isOutOfStock ? 'bg-rose-500' : isLowStock ? 'bg-amber-500' : 'bg-emerald-500'
+                                        isOutOfStock
+                                          ? 'bg-rose-500'
+                                          : isLowStock
+                                            ? 'bg-amber-500'
+                                            : 'bg-emerald-500'
                                       }`}
                                     />
-                                    {isOutOfStock ? 'Out of Stock' : isLowStock ? 'Low Stock' : 'In Stock'}
+                                    {isOutOfStock
+                                      ? 'Out of Stock'
+                                      : isLowStock
+                                        ? 'Low Stock'
+                                        : 'In Stock'}
                                   </span>
                                 </div>
                               </div>
@@ -902,7 +948,9 @@ export function ProductsSection() {
                 {/* Category */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Category</label>
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Category
+                    </label>
                     <button
                       type="button"
                       onClick={() => setIsQuickCategoryOpen(true)}
@@ -935,7 +983,9 @@ export function ProductsSection() {
                 {/* Brand */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Brand</label>
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Brand
+                    </label>
                     <button
                       type="button"
                       onClick={() => setIsQuickBrandOpen(true)}
@@ -969,7 +1019,9 @@ export function ProductsSection() {
               {/* Status & Tracking Mode */}
               <div className="grid grid-cols-2 gap-4 pt-1">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Lifecycle Status</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Lifecycle Status
+                  </label>
                   <div className="relative">
                     <select
                       value={draft.status ?? 'active'}
@@ -988,7 +1040,9 @@ export function ProductsSection() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tracking Mode</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Tracking Mode
+                  </label>
                   <div className="relative">
                     <select
                       value={draft.tracking_mode ?? 'batch'}
@@ -1028,7 +1082,9 @@ export function ProductsSection() {
                       className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 pl-8 pr-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
                     />
                   </div>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 block">BOM standard valuation cost</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 block">
+                    BOM standard valuation cost
+                  </span>
                 </div>
 
                 <div>
@@ -1046,7 +1102,9 @@ export function ProductsSection() {
                       className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 pl-8 pr-3 py-2 text-xs font-mono font-semibold text-emerald-600 dark:text-emerald-400 focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
                     />
                   </div>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 block">Base retail & POS selling price</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 block">
+                    Base retail & POS selling price
+                  </span>
                 </div>
               </div>
 
@@ -1062,7 +1120,9 @@ export function ProductsSection() {
                     onChange={(e) => setDraft({ ...draft, reorder_level: e.target.value })}
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
                   />
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">Safety stock trigger threshold</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">
+                    Safety stock trigger threshold
+                  </span>
                 </div>
 
                 <div>
@@ -1076,7 +1136,9 @@ export function ProductsSection() {
                     onChange={(e) => setDraft({ ...draft, reorder_quantity: e.target.value })}
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
                   />
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">Economic order lot size</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">
+                    Economic order lot size
+                  </span>
                 </div>
               </div>
 
@@ -1139,8 +1201,12 @@ export function ProductsSection() {
                     className="mt-0.5 size-4 rounded border-slate-300 text-primary focus:ring-primary/20"
                   />
                   <div>
-                    <span className="text-xs font-semibold text-slate-900 dark:text-white block">Inventory Stock Tracking</span>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400">Keep warehouse ledger & balance audits</span>
+                    <span className="text-xs font-semibold text-slate-900 dark:text-white block">
+                      Inventory Stock Tracking
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Keep warehouse ledger & balance audits
+                    </span>
                   </div>
                 </label>
 
@@ -1152,8 +1218,12 @@ export function ProductsSection() {
                     className="mt-0.5 size-4 rounded border-slate-300 text-primary focus:ring-primary/20"
                   />
                   <div>
-                    <span className="text-xs font-semibold text-slate-900 dark:text-white block">Publish to Storefront</span>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400">Expose on customer online portal & POS</span>
+                    <span className="text-xs font-semibold text-slate-900 dark:text-white block">
+                      Publish to Storefront
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Expose on customer online portal & POS
+                    </span>
                   </div>
                 </label>
               </div>
@@ -1209,7 +1279,9 @@ export function ProductsSection() {
                           <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 block">
                             Click to Upload Image
                           </span>
-                          <span className="text-[10px] text-slate-400 block mt-1">PNG, JPG, WebP up to 2MB</span>
+                          <span className="text-[10px] text-slate-400 block mt-1">
+                            PNG, JPG, WebP up to 2MB
+                          </span>
                         </div>
                       )}
                     </button>
@@ -1249,7 +1321,8 @@ export function ProductsSection() {
                     </div>
 
                     <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs leading-relaxed">
-                      💡 <strong>Image Sync:</strong> Product photos are automatically displayed on POS checkout registers and customer e-commerce catalogs.
+                      💡 <strong>Image Sync:</strong> Product photos are automatically displayed on
+                      POS checkout registers and customer e-commerce catalogs.
                     </div>
                   </div>
                 </div>
@@ -1274,7 +1347,9 @@ export function ProductsSection() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Unit Weight (Kg)</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Unit Weight (Kg)
+                  </label>
                   <div className="relative">
                     <Scale className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
                     <input
@@ -1292,9 +1367,12 @@ export function ProductsSection() {
               <div>
                 <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
-                    <FileCode className="size-3.5 text-primary" /> Product Description & Production Notes (Custom HTML & CSS)
+                    <FileCode className="size-3.5 text-primary" /> Product Description & Production
+                    Notes (Custom HTML & CSS)
                   </span>
-                  <span className="text-[10px] text-slate-400 font-mono">HTML5 / CSS3 / Inline Styles</span>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    HTML5 / CSS3 / Inline Styles
+                  </span>
                 </label>
                 <ProductDescriptionEditor
                   value={draft.description ?? ''}
@@ -1321,14 +1399,24 @@ export function ProductsSection() {
                       </span>
                       <input
                         type="text"
-                        placeholder={draft.name ? draft.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'product-slug'}
+                        placeholder={
+                          draft.name
+                            ? draft.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+                            : 'product-slug'
+                        }
                         value={draft.online_slug ?? ''}
-                        onChange={(e) => setDraft({ ...draft, online_slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                        onChange={(e) =>
+                          setDraft({
+                            ...draft,
+                            online_slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''),
+                          })
+                        }
                         className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 pl-24 pr-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
                       />
                     </div>
                     <span className="text-[11px] text-slate-500 mt-1 block">
-                      Clean, search-engine friendly slug. Defaults to product name or SKU if left empty.
+                      Clean, search-engine friendly slug. Defaults to product name or SKU if left
+                      empty.
                     </span>
                   </div>
 
@@ -1338,7 +1426,9 @@ export function ProductsSection() {
                     </label>
                     <input
                       type="text"
-                      placeholder={draft.name ? `${draft.name} | Slice Mart` : 'Page Title Override'}
+                      placeholder={
+                        draft.name ? `${draft.name} | Slice Mart` : 'Page Title Override'
+                      }
                       value={draft.online_meta?.meta_title ?? ''}
                       onChange={(e) =>
                         setDraft({
@@ -1359,7 +1449,11 @@ export function ProductsSection() {
                     </label>
                     <textarea
                       rows={3}
-                      placeholder={draft.description ? draft.description.replace(/<[^>]*>?/gm, '').slice(0, 150) : 'Concise product summary for Google & AI search engines...'}
+                      placeholder={
+                        draft.description
+                          ? draft.description.replace(/<[^>]*>?/gm, '').slice(0, 150)
+                          : 'Concise product summary for Google & AI search engines...'
+                      }
                       value={draft.online_meta?.meta_description ?? ''}
                       onChange={(e) =>
                         setDraft({
@@ -1377,10 +1471,15 @@ export function ProductsSection() {
 
                 <div className="space-y-4">
                   <SerpPreviewCard
-                    title={draft.online_meta?.meta_title || (draft.name ? `${draft.name} | Slice Mart` : 'Product Title')}
+                    title={
+                      draft.online_meta?.meta_title ||
+                      (draft.name ? `${draft.name} | Slice Mart` : 'Product Title')
+                    }
                     description={
                       draft.online_meta?.meta_description ||
-                      (draft.description ? draft.description.replace(/<[^>]*>?/gm, '').slice(0, 150) : 'Direct factory manufacturing and wholesale catalog.')
+                      (draft.description
+                        ? draft.description.replace(/<[^>]*>?/gm, '').slice(0, 150)
+                        : 'Direct factory manufacturing and wholesale catalog.')
                     }
                     urlPath={`/products/${draft.online_slug || draft.sku.toLowerCase() || 'item-sku'}`}
                     imageUrl={draft.image_url || undefined}
@@ -1621,7 +1720,9 @@ export function ProductsSection() {
                   {/* Category */}
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Category</label>
+                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Category
+                      </label>
                       <button
                         type="button"
                         onClick={() => setIsQuickCategoryOpen(true)}
@@ -1633,7 +1734,9 @@ export function ProductsSection() {
                     <div className="relative">
                       <select
                         value={draft.category_id ?? ''}
-                        onChange={(e) => setDraft({ ...draft, category_id: e.target.value || null })}
+                        onChange={(e) =>
+                          setDraft({ ...draft, category_id: e.target.value || null })
+                        }
                         aria-label="Category"
                         className="w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs cursor-pointer font-medium"
                       >
@@ -1653,7 +1756,9 @@ export function ProductsSection() {
                   {/* Brand */}
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Brand</label>
+                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Brand
+                      </label>
                       <button
                         type="button"
                         onClick={() => setIsQuickBrandOpen(true)}
@@ -1686,7 +1791,9 @@ export function ProductsSection() {
                 {/* Status & Tracking Mode */}
                 <div className="grid grid-cols-2 gap-4 pt-1">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Lifecycle Status</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Lifecycle Status
+                    </label>
                     <div className="relative">
                       <select
                         value={draft.status ?? 'active'}
@@ -1705,7 +1812,9 @@ export function ProductsSection() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tracking Mode</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Tracking Mode
+                    </label>
                     <div className="relative">
                       <select
                         value={draft.tracking_mode ?? 'batch'}
@@ -1731,7 +1840,9 @@ export function ProductsSection() {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Standard Cost ({currencySymbol} {currencyCode})</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Standard Cost ({currencySymbol} {currencyCode})
+                    </label>
                     <div className="relative">
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 font-mono">
                         {currencySymbol}
@@ -1746,7 +1857,9 @@ export function ProductsSection() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Default Sale Price ({currencySymbol} {currencyCode})</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Default Sale Price ({currencySymbol} {currencyCode})
+                    </label>
                     <div className="relative">
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono">
                         {currencySymbol}
@@ -1772,7 +1885,9 @@ export function ProductsSection() {
                       onChange={(e) => setDraft({ ...draft, reorder_level: e.target.value })}
                       className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
                     />
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">Safety stock trigger threshold</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">
+                      Safety stock trigger threshold
+                    </span>
                   </div>
 
                   <div>
@@ -1785,7 +1900,9 @@ export function ProductsSection() {
                       onChange={(e) => setDraft({ ...draft, reorder_quantity: e.target.value })}
                       className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
                     />
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">Economic order lot size</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">
+                      Economic order lot size
+                    </span>
                   </div>
                 </div>
 
@@ -1821,7 +1938,9 @@ export function ProductsSection() {
                       </label>
                       <select
                         value={draft.warehouse_id ?? ''}
-                        onChange={(e) => setDraft({ ...draft, warehouse_id: e.target.value || null })}
+                        onChange={(e) =>
+                          setDraft({ ...draft, warehouse_id: e.target.value || null })
+                        }
                         className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs cursor-pointer font-medium"
                       >
                         <option value="">Default Main Warehouse</option>
@@ -1847,8 +1966,12 @@ export function ProductsSection() {
                       className="mt-0.5 size-4 rounded border-slate-300 text-primary focus:ring-primary/20"
                     />
                     <div>
-                      <span className="text-xs font-semibold text-slate-900 dark:text-white block">Inventory Stock Tracking</span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Keep warehouse ledger & balance audits</span>
+                      <span className="text-xs font-semibold text-slate-900 dark:text-white block">
+                        Inventory Stock Tracking
+                      </span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Keep warehouse ledger & balance audits
+                      </span>
                     </div>
                   </label>
 
@@ -1860,8 +1983,12 @@ export function ProductsSection() {
                       className="mt-0.5 size-4 rounded border-slate-300 text-primary focus:ring-primary/20"
                     />
                     <div>
-                      <span className="text-xs font-semibold text-slate-900 dark:text-white block">Publish to Storefront</span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Expose on customer online portal & POS</span>
+                      <span className="text-xs font-semibold text-slate-900 dark:text-white block">
+                        Publish to Storefront
+                      </span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Expose on customer online portal & POS
+                      </span>
                     </div>
                   </label>
                 </div>
@@ -1899,233 +2026,262 @@ export function ProductsSection() {
                               }}
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter' || e.key === ' ') {
-                                e.stopPropagation();
-                                setDraft({ ...draft, image_url: '' });
-                              }
-                            }}
-                            className="absolute top-2 right-2 size-7 rounded-full bg-slate-900/80 text-white flex items-center justify-center hover:bg-rose-600 transition-colors shadow-sm cursor-pointer"
-                            title="Remove Photo"
-                          >
-                            <X className="size-4" />
-                          </span>
-                        </>
-                      ) : (
-                        <div className="p-4 text-center">
-                          <Upload className="size-8 text-primary/70 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-                          <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 block">
-                            Click to Upload Image
-                          </span>
-                          <span className="text-[10px] text-slate-400 block mt-1">PNG, JPG, WebP up to 2MB</span>
-                        </div>
-                      )}
-                    </button>
+                                  e.stopPropagation();
+                                  setDraft({ ...draft, image_url: '' });
+                                }
+                              }}
+                              className="absolute top-2 right-2 size-7 rounded-full bg-slate-900/80 text-white flex items-center justify-center hover:bg-rose-600 transition-colors shadow-sm cursor-pointer"
+                              title="Remove Photo"
+                            >
+                              <X className="size-4" />
+                            </span>
+                          </>
+                        ) : (
+                          <div className="p-4 text-center">
+                            <Upload className="size-8 text-primary/70 mx-auto mb-2 group-hover:scale-110 transition-transform" />
+                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 block">
+                              Click to Upload Image
+                            </span>
+                            <span className="text-[10px] text-slate-400 block mt-1">
+                              PNG, JPG, WebP up to 2MB
+                            </span>
+                          </div>
+                        )}
+                      </button>
 
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleImageUpload}
-                      accept="image/*"
-                      className="hidden"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2 space-y-3">
-                    <div>
-                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                        Or Enter Direct Image URL
-                      </span>
-                      <div className="flex gap-2">
-                        <input
-                          type="url"
-                          placeholder="https://example.com/product-image.jpg"
-                          value={draft.image_url ?? ''}
-                          onChange={(e) => setDraft({ ...draft, image_url: e.target.value })}
-                          className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
-                        />
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="flex items-center gap-1.5 text-xs shrink-0 py-2 shadow-xs"
-                        >
-                          <Upload className="size-3.5" /> Browse
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs leading-relaxed">
-                      💡 <strong>Image Sync:</strong> Product photos are automatically displayed on POS checkout registers and customer e-commerce catalogs.
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-200 dark:border-slate-800">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Barcode / EAN-13 / GTIN
-                  </label>
-                  <div className="relative">
-                    <BarcodeIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
-                    <input
-                      type="text"
-                      placeholder="e.g. 890123456789"
-                      value={draft.barcode ?? ''}
-                      onChange={(e) => setDraft({ ...draft, barcode: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 pl-9 pr-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Unit Weight (Kg)</label>
-                  <div className="relative">
-                    <Scale className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
-                    <input
-                      type="text"
-                      placeholder="e.g. 0.500"
-                      value={draft.weight ?? ''}
-                      onChange={(e) => setDraft({ ...draft, weight: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 pl-9 pr-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Product Description & Production Notes with Custom HTML & CSS Support */}
-              <div>
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <FileCode className="size-3.5 text-primary" /> Product Description & Production Notes (Custom HTML & CSS)
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-mono">HTML5 / CSS3 / Inline Styles</span>
-                </label>
-                <ProductDescriptionEditor
-                  value={draft.description ?? ''}
-                  onChange={(val) => setDraft({ ...draft, description: val })}
-                  placeholder="<h2>Product Overview</h2><p>Ingredients, allergen notices, packaging specs, custom styled tables...</p>"
-                  rows={5}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* TAB: SEO & Discoverability */}
-          {activeFormTab === 'seo' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Custom URL Slug (Product Path)
-                    </label>
-                    <div className="relative">
-                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400">
-                        /products/
-                      </span>
                       <input
-                        type="text"
-                        placeholder={draft.name ? draft.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'product-slug'}
-                        value={draft.online_slug ?? ''}
-                        onChange={(e) => setDraft({ ...draft, online_slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 pl-24 pr-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleImageUpload}
+                        accept="image/*"
+                        className="hidden"
                       />
                     </div>
-                    <span className="text-[11px] text-slate-500 mt-1 block">
-                      Clean, search-engine friendly slug. Defaults to product name or SKU if left empty.
-                    </span>
-                  </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Custom SEO Meta Title
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={draft.name ? `${draft.name} | Slice Mart` : 'Page Title Override'}
-                      value={draft.online_meta?.meta_title ?? ''}
-                      onChange={(e) =>
-                        setDraft({
-                          ...draft,
-                          online_meta: {
-                            ...(draft.online_meta || {}),
-                            meta_title: e.target.value,
-                          },
-                        })
-                      }
-                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
-                    />
-                  </div>
+                    <div className="sm:col-span-2 space-y-3">
+                      <div>
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                          Or Enter Direct Image URL
+                        </span>
+                        <div className="flex gap-2">
+                          <input
+                            type="url"
+                            placeholder="https://example.com/product-image.jpg"
+                            value={draft.image_url ?? ''}
+                            onChange={(e) => setDraft({ ...draft, image_url: e.target.value })}
+                            className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
+                          />
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="flex items-center gap-1.5 text-xs shrink-0 py-2 shadow-xs"
+                          >
+                            <Upload className="size-3.5" /> Browse
+                          </Button>
+                        </div>
+                      </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Custom SEO Meta Description
-                    </label>
-                    <textarea
-                      rows={3}
-                      placeholder={draft.description ? draft.description.replace(/<[^>]*>?/gm, '').slice(0, 150) : 'Concise product summary for Google & AI search engines...'}
-                      value={draft.online_meta?.meta_description ?? ''}
-                      onChange={(e) =>
-                        setDraft({
-                          ...draft,
-                          online_meta: {
-                            ...(draft.online_meta || {}),
-                            meta_description: e.target.value,
-                          },
-                        })
-                      }
-                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 p-3 text-xs text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs leading-relaxed"
-                    />
+                      <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs leading-relaxed">
+                        💡 <strong>Image Sync:</strong> Product photos are automatically displayed
+                        on POS checkout registers and customer e-commerce catalogs.
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <SerpPreviewCard
-                    title={draft.online_meta?.meta_title || (draft.name ? `${draft.name} | Slice Mart` : 'Product Title')}
-                    description={
-                      draft.online_meta?.meta_description ||
-                      (draft.description ? draft.description.replace(/<[^>]*>?/gm, '').slice(0, 150) : 'Direct factory manufacturing and wholesale catalog.')
-                    }
-                    urlPath={`/products/${draft.online_slug || draft.sku.toLowerCase() || 'item-sku'}`}
-                    imageUrl={draft.image_url || undefined}
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-200 dark:border-slate-800">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Barcode / EAN-13 / GTIN
+                    </label>
+                    <div className="relative">
+                      <BarcodeIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="e.g. 890123456789"
+                        value={draft.barcode ?? ''}
+                        onChange={(e) => setDraft({ ...draft, barcode: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 pl-9 pr-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
+                      />
+                    </div>
+                  </div>
 
-                  <DiscoverabilityChecklist
-                    title={draft.online_meta?.meta_title || draft.name || ''}
-                    description={draft.online_meta?.meta_description || draft.description || ''}
-                    slug={draft.online_slug || undefined}
-                    hasImage={Boolean(draft.image_url)}
-                    imageAlt={draft.name}
-                    hasSchema={true}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Unit Weight (Kg)
+                    </label>
+                    <div className="relative">
+                      <Scale className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="e.g. 0.500"
+                        value={draft.weight ?? ''}
+                        onChange={(e) => setDraft({ ...draft, weight: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 pl-9 pr-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Product Description & Production Notes with Custom HTML & CSS Support */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <FileCode className="size-3.5 text-primary" /> Product Description &
+                      Production Notes (Custom HTML & CSS)
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      HTML5 / CSS3 / Inline Styles
+                    </span>
+                  </label>
+                  <ProductDescriptionEditor
+                    value={draft.description ?? ''}
+                    onChange={(val) => setDraft({ ...draft, description: val })}
+                    placeholder="<h2>Product Overview</h2><p>Ingredients, allergen notices, packaging specs, custom styled tables...</p>"
+                    rows={5}
                   />
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Modal Footer */}
-          <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800">
-            <div className="text-[11px] text-slate-500 dark:text-slate-400">
-              {activeFormTab === 'general' && 'Step 1 of 3 · Core Info'}
-              {activeFormTab === 'pricing' && 'Step 2 of 3 · Cost & Stock'}
-              {activeFormTab === 'media' && 'Step 3 of 3 · Visuals & HTML Notes'}
+            {/* TAB: SEO & Discoverability */}
+            {activeFormTab === 'seo' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Custom URL Slug (Product Path)
+                      </label>
+                      <div className="relative">
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400">
+                          /products/
+                        </span>
+                        <input
+                          type="text"
+                          placeholder={
+                            draft.name
+                              ? draft.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+                              : 'product-slug'
+                          }
+                          value={draft.online_slug ?? ''}
+                          onChange={(e) =>
+                            setDraft({
+                              ...draft,
+                              online_slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''),
+                            })
+                          }
+                          className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 pl-24 pr-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
+                        />
+                      </div>
+                      <span className="text-[11px] text-slate-500 mt-1 block">
+                        Clean, search-engine friendly slug. Defaults to product name or SKU if left
+                        empty.
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Custom SEO Meta Title
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={
+                          draft.name ? `${draft.name} | Slice Mart` : 'Page Title Override'
+                        }
+                        value={draft.online_meta?.meta_title ?? ''}
+                        onChange={(e) =>
+                          setDraft({
+                            ...draft,
+                            online_meta: {
+                              ...(draft.online_meta || {}),
+                              meta_title: e.target.value,
+                            },
+                          })
+                        }
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Custom SEO Meta Description
+                      </label>
+                      <textarea
+                        rows={3}
+                        placeholder={
+                          draft.description
+                            ? draft.description.replace(/<[^>]*>?/gm, '').slice(0, 150)
+                            : 'Concise product summary for Google & AI search engines...'
+                        }
+                        value={draft.online_meta?.meta_description ?? ''}
+                        onChange={(e) =>
+                          setDraft({
+                            ...draft,
+                            online_meta: {
+                              ...(draft.online_meta || {}),
+                              meta_description: e.target.value,
+                            },
+                          })
+                        }
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 p-3 text-xs text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs leading-relaxed"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <SerpPreviewCard
+                      title={
+                        draft.online_meta?.meta_title ||
+                        (draft.name ? `${draft.name} | Slice Mart` : 'Product Title')
+                      }
+                      description={
+                        draft.online_meta?.meta_description ||
+                        (draft.description
+                          ? draft.description.replace(/<[^>]*>?/gm, '').slice(0, 150)
+                          : 'Direct factory manufacturing and wholesale catalog.')
+                      }
+                      urlPath={`/products/${draft.online_slug || draft.sku.toLowerCase() || 'item-sku'}`}
+                      imageUrl={draft.image_url || undefined}
+                    />
+
+                    <DiscoverabilityChecklist
+                      title={draft.online_meta?.meta_title || draft.name || ''}
+                      description={draft.online_meta?.meta_description || draft.description || ''}
+                      slug={draft.online_slug || undefined}
+                      hasImage={Boolean(draft.image_url)}
+                      imageAlt={draft.name}
+                      hasSchema={true}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800">
+              <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                {activeFormTab === 'general' && 'Step 1 of 3 · Core Info'}
+                {activeFormTab === 'pricing' && 'Step 2 of 3 · Cost & Stock'}
+                {activeFormTab === 'media' && 'Step 3 of 3 · Visuals & HTML Notes'}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="secondary" type="button" onClick={() => setEditingProduct(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  type="submit"
+                  disabled={updateMutation.isPending}
+                  className="shadow-md shadow-primary/20"
+                >
+                  {updateMutation.isPending ? 'Updating...' : 'Update Product'}
+                </Button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button variant="secondary" type="button" onClick={() => setEditingProduct(null)}>
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                type="submit"
-                disabled={updateMutation.isPending}
-                className="shadow-md shadow-primary/20"
-              >
-                {updateMutation.isPending ? 'Updating...' : 'Update Product'}
-              </Button>
-            </div>
-          </div>
-        </form>
-      </Modal>
+          </form>
+        </Modal>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
@@ -2155,7 +2311,9 @@ export function ProductsSection() {
               type="text"
               placeholder="e.g. KG, LTR, BOX, PCS, PACK"
               value={quickUnitDraft.code}
-              onChange={(e) => setQuickUnitDraft({ ...quickUnitDraft, code: e.target.value.toUpperCase() })}
+              onChange={(e) =>
+                setQuickUnitDraft({ ...quickUnitDraft, code: e.target.value.toUpperCase() })
+              }
               className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white uppercase font-mono focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
             />
           </div>
@@ -2176,7 +2334,9 @@ export function ProductsSection() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Dimension Type</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Dimension Type
+              </label>
               <div className="relative">
                 <select
                   value={quickUnitDraft.type}
@@ -2197,11 +2357,15 @@ export function ProductsSection() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Decimal Precision</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Decimal Precision
+              </label>
               <div className="relative">
                 <select
                   value={quickUnitDraft.precision}
-                  onChange={(e) => setQuickUnitDraft({ ...quickUnitDraft, precision: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setQuickUnitDraft({ ...quickUnitDraft, precision: Number(e.target.value) })
+                  }
                   aria-label="Decimal Precision"
                   className="w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs cursor-pointer font-medium"
                 >
@@ -2260,7 +2424,9 @@ export function ProductsSection() {
               type="text"
               placeholder="e.g. CAT-BRD, CAT-RAW"
               value={quickCategoryDraft.code}
-              onChange={(e) => setQuickCategoryDraft({ ...quickCategoryDraft, code: e.target.value.toUpperCase() })}
+              onChange={(e) =>
+                setQuickCategoryDraft({ ...quickCategoryDraft, code: e.target.value.toUpperCase() })
+              }
               className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white uppercase font-mono focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
             />
           </div>
@@ -2274,17 +2440,26 @@ export function ProductsSection() {
               type="text"
               placeholder="e.g. Infrared Cookers, Gas Stoves, Electronic Components"
               value={quickCategoryDraft.name}
-              onChange={(e) => setQuickCategoryDraft({ ...quickCategoryDraft, name: e.target.value })}
+              onChange={(e) =>
+                setQuickCategoryDraft({ ...quickCategoryDraft, name: e.target.value })
+              }
               className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Parent Category (Optional)</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Parent Category (Optional)
+            </label>
             <div className="relative">
               <select
                 value={quickCategoryDraft.parent_id ?? ''}
-                onChange={(e) => setQuickCategoryDraft({ ...quickCategoryDraft, parent_id: e.target.value || null })}
+                onChange={(e) =>
+                  setQuickCategoryDraft({
+                    ...quickCategoryDraft,
+                    parent_id: e.target.value || null,
+                  })
+                }
                 aria-label="Parent Category (Optional)"
                 className="w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs cursor-pointer font-medium"
               >
@@ -2344,7 +2519,9 @@ export function ProductsSection() {
               type="text"
               placeholder="e.g. BRD-SLM, BRD-GLD"
               value={quickBrandDraft.code}
-              onChange={(e) => setQuickBrandDraft({ ...quickBrandDraft, code: e.target.value.toUpperCase() })}
+              onChange={(e) =>
+                setQuickBrandDraft({ ...quickBrandDraft, code: e.target.value.toUpperCase() })
+              }
               className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white uppercase font-mono focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
             />
           </div>
@@ -2412,7 +2589,9 @@ export function ProductsSection() {
 
               <div className="min-w-0 flex-1 text-center sm:text-left space-y-1">
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                  <span className="font-mono font-bold text-primary text-sm">{viewingProduct.sku}</span>
+                  <span className="font-mono font-bold text-primary text-sm">
+                    {viewingProduct.sku}
+                  </span>
                   <span className="inline-flex items-center gap-1 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:text-slate-400 capitalize">
                     {viewingProduct.type.replace('_', ' ')}
                   </span>
@@ -2426,7 +2605,9 @@ export function ProductsSection() {
                     {viewingProduct.status}
                   </span>
                 </div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">{viewingProduct.name}</h3>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  {viewingProduct.name}
+                </h3>
               </div>
             </div>
 
@@ -2451,12 +2632,18 @@ export function ProductsSection() {
                           isOutOfStock
                             ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
                             : isLowStock
-                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                         }`}
                       >
-                        <span className={`size-1.5 rounded-full ${isOutOfStock ? 'bg-rose-500' : isLowStock ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-                        {isOutOfStock ? 'Out of Stock' : isLowStock ? 'Low Stock Warning' : 'In Stock'}
+                        <span
+                          className={`size-1.5 rounded-full ${isOutOfStock ? 'bg-rose-500' : isLowStock ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                        />
+                        {isOutOfStock
+                          ? 'Out of Stock'
+                          : isLowStock
+                            ? 'Low Stock Warning'
+                            : 'In Stock'}
                       </span>
                     );
                   })()
@@ -2469,7 +2656,9 @@ export function ProductsSection() {
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
                 <div>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Live Available Stock</span>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">
+                    Live Available Stock
+                  </span>
                   <span className="font-mono font-bold text-slate-900 dark:text-white text-base mt-0.5 block">
                     {viewingProduct.is_stock_tracked
                       ? `${Number(viewingProduct.stock_quantity ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${unitMap.get(String(viewingProduct.base_unit_id)) || 'Units'}`
@@ -2477,19 +2666,27 @@ export function ProductsSection() {
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Reorder Minimum</span>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">
+                    Reorder Minimum
+                  </span>
                   <span className="font-mono font-medium text-slate-700 dark:text-slate-300 text-sm mt-0.5 block">
-                    {viewingProduct.reorder_level || '10'} {unitMap.get(String(viewingProduct.base_unit_id)) || 'Units'}
+                    {viewingProduct.reorder_level || '10'}{' '}
+                    {unitMap.get(String(viewingProduct.base_unit_id)) || 'Units'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Reorder Batch Lot</span>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">
+                    Reorder Batch Lot
+                  </span>
                   <span className="font-mono font-medium text-slate-700 dark:text-slate-300 text-sm mt-0.5 block">
-                    {viewingProduct.reorder_quantity || '50'} {unitMap.get(String(viewingProduct.base_unit_id)) || 'Units'}
+                    {viewingProduct.reorder_quantity || '50'}{' '}
+                    {unitMap.get(String(viewingProduct.base_unit_id)) || 'Units'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Stock Tracking Mode</span>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">
+                    Stock Tracking Mode
+                  </span>
                   <span className="font-medium text-slate-700 dark:text-slate-300 text-sm mt-0.5 block capitalize">
                     {viewingProduct.tracking_mode || 'Batch'}
                   </span>
@@ -2500,21 +2697,27 @@ export function ProductsSection() {
             {/* Financials & Stock Ledger Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700">
-                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Standard Cost</span>
+                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                  Standard Cost
+                </span>
                 <span className="font-mono font-semibold text-slate-900 dark:text-white text-sm mt-0.5 block">
                   {formatCurrency(viewingProduct.standard_cost)}
                 </span>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700">
-                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Sale Price</span>
+                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                  Sale Price
+                </span>
                 <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm mt-0.5 block">
                   {formatCurrency(viewingProduct.default_sale_price)}
                 </span>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700">
-                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Gross Margin</span>
+                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                  Gross Margin
+                </span>
                 <span className="font-mono font-bold text-primary text-sm mt-0.5 block">
                   {(() => {
                     const cost = Number(viewingProduct.standard_cost) || 0;
@@ -2527,7 +2730,9 @@ export function ProductsSection() {
               </div>
 
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700">
-                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Tracking Mode</span>
+                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                  Tracking Mode
+                </span>
                 <span className="font-medium text-slate-900 dark:text-white text-xs mt-1 block capitalize">
                   {viewingProduct.tracking_mode || 'Batch'}
                 </span>
@@ -2537,21 +2742,28 @@ export function ProductsSection() {
             {/* Technical Parameters */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700">
               <div>
-                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Barcode / EAN</span>
+                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                  Barcode / EAN
+                </span>
                 <span className="font-mono text-slate-900 dark:text-white font-medium mt-0.5 block">
                   {viewingProduct.barcode || '—'}
                 </span>
               </div>
 
               <div>
-                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Reorder Buffer / Lot</span>
+                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                  Reorder Buffer / Lot
+                </span>
                 <span className="font-medium text-slate-900 dark:text-white mt-0.5 block">
-                  Min: {viewingProduct.reorder_level || '10'} · Lot: {viewingProduct.reorder_quantity || '50'}
+                  Min: {viewingProduct.reorder_level || '10'} · Lot:{' '}
+                  {viewingProduct.reorder_quantity || '50'}
                 </span>
               </div>
 
               <div>
-                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Unit Weight / Mass</span>
+                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                  Unit Weight / Mass
+                </span>
                 <span className="font-medium text-slate-900 dark:text-white mt-0.5 block">
                   {viewingProduct.weight ? `${viewingProduct.weight} kg` : '—'}
                 </span>
@@ -2610,10 +2822,12 @@ export function ProductsSection() {
           <div className="space-y-4 text-xs">
             <p className="text-slate-800 dark:text-slate-200 leading-relaxed">
               Are you sure you want to delete product{' '}
-              <strong className="text-primary font-mono">{deletingProduct.sku}</strong> ({deletingProduct.name})?
+              <strong className="text-primary font-mono">{deletingProduct.sku}</strong> (
+              {deletingProduct.name})?
             </p>
             <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-[11px] leading-relaxed">
-              ⚠️ Deleting this product is protected: any historical inventory transactions or production batches will retain ledger integrity.
+              ⚠️ Deleting this product is protected: any historical inventory transactions or
+              production batches will retain ledger integrity.
             </div>
 
             <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">

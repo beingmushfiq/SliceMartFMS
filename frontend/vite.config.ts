@@ -36,6 +36,31 @@ export default defineConfig({
       'tailwind-merge',
     ],
   },
+  build: {
+    modulePreload: {
+      resolveDependencies(_filename, deps, { hostType }) {
+        if (hostType === 'html') {
+          return deps.filter((dep) => !dep.includes('recharts') && !dep.includes('print-engine'));
+        }
+        return deps;
+      },
+    },
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/recharts')) {
+            return 'recharts';
+          }
+          if (id.includes('node_modules/d3-') || id.includes('node_modules/victory-vendor')) {
+            return 'chart-math';
+          }
+          if (id.includes('node_modules/bwip-js') || id.includes('src/lib/barcode')) {
+            return 'print-engine';
+          }
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     strictPort: true,

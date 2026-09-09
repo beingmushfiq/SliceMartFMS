@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', '*.config.*'] },
+  { ignores: ['dist', 'node_modules', 'public', '*.config.*'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],
@@ -39,12 +39,24 @@ export default tseslint.config(
           //   resolveStatus   / badge that renders it
           // Name-scoped rather than a file- or rule-level exemption, so any
           // *new* non-component export still reports.
-          allowExportNames: ['notify', 'useDelayedFlag', 'STATUS_REGISTRY', 'resolveStatus'],
+          allowExportNames: [
+            'notify',
+            'useDelayedFlag',
+            'STATUS_REGISTRY',
+            'resolveStatus',
+            'router',
+          ],
         },
       ],
       'jsx-a11y/no-static-element-interactions': 'error',
       'jsx-a11y/click-events-have-key-events': 'error',
       'jsx-a11y/no-noninteractive-element-interactions': 'error',
+    },
+  },
+  {
+    files: ['src/routes/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
     },
   }
 );

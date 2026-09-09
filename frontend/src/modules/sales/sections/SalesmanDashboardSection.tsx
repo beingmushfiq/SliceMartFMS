@@ -45,7 +45,9 @@ export function SalesmanDashboardSection({ initialSalesmanId }: Props) {
 
   const salesmen: SalesmanSummary[] = useMemo(() => {
     if (Array.isArray(salesmenResponse)) return salesmenResponse;
-    if (salesmenResponse && Array.isArray((salesmenResponse as any).data)) return (salesmenResponse as any).data;
+    if (salesmenResponse && 'data' in salesmenResponse && Array.isArray(salesmenResponse.data)) {
+      return salesmenResponse.data;
+    }
     return [];
   }, [salesmenResponse]);
 

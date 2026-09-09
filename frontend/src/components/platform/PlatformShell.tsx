@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
 import { PlatformSidebar } from './PlatformSidebar';
 import { PlatformHeader } from './PlatformHeader';
 import { OfflineBanner } from '../layout/OfflineBanner';
 import { SeoHead } from '../seo/SeoHead';
+import { RouteLoadingFallback } from '../routing/RouteLoadingFallback';
 
 export const PlatformShell: React.FC = () => {
   return (
@@ -24,7 +25,9 @@ export const PlatformShell: React.FC = () => {
           <PlatformHeader />
           <main className="flex-1 p-6 lg:p-8 overflow-y-auto bg-(--app-bg) transition-colors duration-200">
             <div className="max-w-7xl mx-auto">
-              <Outlet />
+              <Suspense fallback={<RouteLoadingFallback />}>
+                <Outlet />
+              </Suspense>
             </div>
           </main>
         </div>

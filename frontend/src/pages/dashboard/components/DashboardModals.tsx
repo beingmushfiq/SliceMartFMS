@@ -102,10 +102,16 @@ export function OrderPOModal({
               Location: <strong className="text-default font-mono">{item.warehouse}</strong>
             </div>
             <div>
-              Current: <strong className="text-red-500 font-mono">{item.currentStock} {item.unit}</strong>
+              Current:{' '}
+              <strong className="text-red-500 font-mono">
+                {item.currentStock} {item.unit}
+              </strong>
             </div>
             <div>
-              Min Buffer: <strong className="text-default font-mono">{item.minThreshold} {item.unit}</strong>
+              Min Buffer:{' '}
+              <strong className="text-default font-mono">
+                {item.minThreshold} {item.unit}
+              </strong>
             </div>
           </div>
         </div>
@@ -304,8 +310,12 @@ export function QCAuditModal({
             <span className="font-mono font-bold text-default text-sm">{qcItem.qty} pcs</span>
           </div>
           <div className="grid grid-cols-2 gap-2 text-[11px] text-muted pt-2 border-t border-default/60">
-            <div>Sample Size: <strong>100% Comprehensive</strong></div>
-            <div>Test Standard: <strong>ISO-9001 Heat Sensor</strong></div>
+            <div>
+              Sample Size: <strong>100% Comprehensive</strong>
+            </div>
+            <div>
+              Test Standard: <strong>ISO-9001 Heat Sensor</strong>
+            </div>
           </div>
         </div>
 
@@ -389,8 +399,8 @@ export function InvoiceQuickViewModal({
                 invoice.payment === 'PAID'
                   ? 'bg-emerald-500/15 text-emerald-600'
                   : invoice.payment === 'PARTIAL'
-                  ? 'bg-amber-500/15 text-amber-600'
-                  : 'bg-red-500/15 text-red-600'
+                    ? 'bg-amber-500/15 text-amber-600'
+                    : 'bg-red-500/15 text-red-600'
               }`}
             >
               {invoice.payment}
@@ -599,7 +609,9 @@ export function ProductionOrderDetailModal({
         </div>
 
         <div className="rounded-xl border border-default p-3.5 space-y-2 text-xs">
-          <h4 className="font-bold text-default text-xs mb-1">Bill of Materials (BOM) Allocation</h4>
+          <h4 className="font-bold text-default text-xs mb-1">
+            Bill of Materials (BOM) Allocation
+          </h4>
           <div className="flex justify-between py-1 border-b border-default/50 text-[11px]">
             <span>PCB Control Board (V3.2)</span>
             <span className="font-mono font-semibold">{order.target} units</span>
@@ -694,9 +706,7 @@ export function FinancialDueModal({
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-xl border border-default bg-surface-sunken p-3.5">
             <span className="text-xs text-muted">Total Outstanding Due</span>
-            <p className="mt-1 text-2xl font-bold font-mono text-amber-500">
-              {dueItem.dueAmount}
-            </p>
+            <p className="mt-1 text-2xl font-bold font-mono text-amber-500">{dueItem.dueAmount}</p>
             <span className="text-[11px] text-muted">{dueItem.invoicesCount} unpaid invoices</span>
           </div>
           <div className="rounded-xl border border-default bg-surface-sunken p-3.5">
@@ -755,4 +765,3 @@ export function FinancialDueModal({
     </Modal>
   );
 }
-
