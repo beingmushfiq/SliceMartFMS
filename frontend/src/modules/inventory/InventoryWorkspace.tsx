@@ -23,6 +23,8 @@ import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../lib/utils';
+import { StockTransferModal } from './modals/StockTransferModal';
+import { StockAdjustmentModal } from './modals/StockAdjustmentModal';
 
 export type InventoryTab = 'ledger' | 'transfers' | 'adjustments' | 'counts' | 'thresholds';
 export type InventoryCategory = 'visibility' | 'operations';
@@ -132,6 +134,10 @@ export default function InventoryWorkspace() {
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const quickJumpRef = useRef<HTMLDivElement>(null);
+
+  // Quick Action Modals
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
 
   const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[0]!;
   const activeCategory = currentTab.category;
@@ -324,6 +330,46 @@ export default function InventoryWorkspace() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Universal Quick-Action Ribbon */}
+      <div className="flex items-center gap-2.5 p-2 rounded-2xl bg-surface border border-default shadow-xs flex-wrap">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('ledger');
+            const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement;
+            searchInput?.focus();
+          }}
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-primary hover:bg-primary/90 text-primary-fg shadow-xs transition cursor-pointer"
+        >
+          <Search className="size-4" />
+          <span>🔍 Quick Stock Check</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowTransferModal(true)}
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
+        >
+          <ArrowRightLeft className="size-4" />
+          <span>🔄 Move Stock (Transfer)</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowAdjustmentModal(true)}
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition cursor-pointer"
+        >
+          <AlertTriangle className="size-4" />
+          <span>📝 Report Damaged / Lost Items</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('counts')}
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface-sunken hover:bg-surface border border-default text-default transition cursor-pointer"
+        >
+          <ClipboardCheck className="size-4 text-emerald-500" />
+          <span>📋 Start Physical Stock Count</span>
+        </button>
       </div>
 
       {/* Primary 2 Command Pillars (with Embedded Direct Child Pills) */}
@@ -628,12 +674,26 @@ export default function InventoryWorkspace() {
             <div className="text-xs text-muted">
               Keyboard shortcut: Press <kbd className="px-1.5 py-0.5 bg-surface rounded border border-default font-mono text-[10px] font-bold">1</kbd> for Stock Controls, <kbd className="px-1.5 py-0.5 bg-surface rounded border border-default font-mono text-[10px] font-bold">2</kbd> for Movements.
             </div>
-            <Button variant="ghost" size="sm" onClick={() => setIsGuideOpen(false)}>
-              Close Guide
-            </Button>
           </div>
         </div>
       </Modal>
+
+      {/* Action Modals */}
+      <StockTransferModal
+        open={showTransferModal}
+        onClose={() => setShowTransferModal(false)}
+        onSuccess={() => {
+          setActiveTab('transfers');
+        }}
+      />
+
+      <StockAdjustmentModal
+        open={showAdjustmentModal}
+        onClose={() => setShowAdjustmentModal(false)}
+        onSuccess={() => {
+          setActiveTab('adjustments');
+        }}
+      />
     </div>
   );
 }

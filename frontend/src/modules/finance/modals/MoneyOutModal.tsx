@@ -86,7 +86,7 @@ export const MoneyOutModal: React.FC<MoneyOutModalProps> = ({
     const entryId = timestamp % 10000;
     const entryNumber = `JE-${monthStr}-${String(entryId).padStart(4, '0')}`;
 
-    let narration = '';
+    let narration: string;
     let debitAccountId = 501; // default expense
     let createdExpense: Expense | undefined;
 

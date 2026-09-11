@@ -12,11 +12,14 @@ import {
   Workflow,
   BookOpen,
   Boxes,
+  CheckCircle2,
 } from 'lucide-react';
 import { ProductionPlansSection } from './sections/ProductionPlansSection';
 import { ProductionBatchesSection } from './sections/ProductionBatchesSection';
 import { WorkerProductionSection } from './sections/WorkerProductionSection';
 import { ProductionFloorKioskView } from './components/ProductionFloorKioskView';
+import { LaunchBatchModal } from './modals/LaunchBatchModal';
+import { RecordBatchOutputModal } from './modals/RecordBatchOutputModal';
 
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { Modal } from '../../components/ui/Modal';
@@ -71,6 +74,8 @@ export default function ProductionWorkspace() {
   const [activeTab, setActiveTab] = useWorkspaceTab<ProductionTab>('batches', VALID_TABS);
   const [isKioskOpen, setIsKioskOpen] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [isLaunchModalOpen, setIsLaunchModalOpen] = useState(false);
+  const [isOutputModalOpen, setIsOutputModalOpen] = useState(false);
 
   // Global hotkeys (1, 2) to quickly jump between primary manufacturing pillars
   useEffect(() => {
@@ -317,6 +322,55 @@ export default function ProductionWorkspace() {
           </div>
         </div>
 
+        {/* Universal Manufacturing Quick-Action Ribbon */}
+        <div className="rounded-2xl border border-primary/20 bg-linear-to-r from-primary/5 via-surface to-surface-raised p-3.5 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-default">
+                <Zap className="size-3.5 text-amber-500 fill-amber-500" />
+                <span>Quick Actions • What do you want to do today?</span>
+              </div>
+              <p className="text-[11px] text-muted">
+                Zero hassle manufacturing shortcuts — start runs, record output, or log wages with 1 click.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setIsLaunchModalOpen(true)}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer"
+              >
+                <Factory className="size-3.5" />
+                <span>Start New Batch</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsOutputModalOpen(true)}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-700/90 hover:bg-emerald-800 text-white shadow-xs transition-all cursor-pointer"
+              >
+                <CheckCircle2 className="size-3.5" />
+                <span>Record Finished Output</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('plans')}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
+              >
+                <ClipboardList className="size-3.5 text-primary" />
+                <span>Plan Production</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('worker-entries')}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
+              >
+                <Users className="size-3.5 text-primary" />
+                <span>Log Worker Wages</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Master Grouped Navigation Ribbon: All 3 Stages Fully Visible */}
         <div className="rounded-xl border border-default/80 bg-surface-sunken/60 p-2 shadow-2xs">
           <div className="flex items-center justify-between gap-2 px-1 mb-1.5">
@@ -464,6 +518,19 @@ export default function ProductionWorkspace() {
           </div>
         </div>
       </Modal>
+
+      {/* Quick Action Modals */}
+      <LaunchBatchModal
+        open={isLaunchModalOpen}
+        onClose={() => setIsLaunchModalOpen(false)}
+        onSuccess={() => setActiveTab('batches')}
+      />
+
+      <RecordBatchOutputModal
+        open={isOutputModalOpen}
+        onClose={() => setIsOutputModalOpen(false)}
+        onSuccess={() => setActiveTab('batches')}
+      />
     </div>
   );
 }

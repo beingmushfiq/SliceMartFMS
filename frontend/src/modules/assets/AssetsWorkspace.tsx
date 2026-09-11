@@ -21,6 +21,7 @@ import {
   Clock,
   Lock,
   Layers,
+  Zap,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -522,6 +523,55 @@ export const AssetsWorkspace: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Universal Asset Lifecycle Quick-Action Ribbon */}
+      <div className="rounded-2xl border border-primary/20 bg-linear-to-r from-primary/5 via-surface to-surface-raised p-3.5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-1.5 text-xs font-bold text-default">
+              <Zap className="size-3.5 text-amber-500 fill-amber-500" />
+              <span>Quick Actions • Equipment Health & Financial Assets</span>
+            </div>
+            <p className="text-[11px] text-muted">
+              Report equipment repairs, add capital assets, or execute monthly depreciation ledger write-downs with 1 click.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setShowAddMaintenanceModal(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition-all cursor-pointer"
+            >
+              <Wrench className="size-3.5" />
+              <span>Log Repair Ticket</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAddAssetModal(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-primary hover:bg-primary/90 text-primary-fg shadow-xs transition-all cursor-pointer"
+            >
+              <Plus className="size-3.5" />
+              <span>Register Asset</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('depreciation')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
+            >
+              <TrendingDown className="size-3.5 text-indigo-500" />
+              <span>Run Monthly Depreciation</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('machinery')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
+            >
+              <Cpu className="size-3.5 text-cyan-600" />
+              <span>Machinery Status</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Navigation Tabs */}
       <div className="flex overflow-x-auto p-1.5 bg-surface-sunken rounded-2xl border border-default shadow-2xs">

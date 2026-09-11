@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   AlertTriangle,
@@ -9,6 +10,7 @@ import {
   RefreshCw,
   TrendingDown,
   Warehouse as WarehouseIcon,
+  ShoppingCart,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { KPICard } from '../../../components/ui/KPICard';
@@ -160,14 +162,23 @@ export const StockThresholdsSection: React.FC = () => {
               </p>
             </div>
           </div>
-          <Button
-            size="sm"
-            variant="danger"
-            onClick={() => setStatusFilter('low')}
-            className="shrink-0 text-xs"
-          >
-            Filter Critical Items
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              to="/purchasing?tab=orders"
+              className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-xs flex items-center gap-1.5 shrink-0"
+            >
+              <ShoppingCart className="size-3.5" />
+              <span>Reorder in Purchasing</span>
+            </Link>
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={() => setStatusFilter('low')}
+              className="shrink-0 text-xs"
+            >
+              Filter Critical Items
+            </Button>
+          </div>
         </div>
       )}
 
@@ -304,15 +315,27 @@ export const StockThresholdsSection: React.FC = () => {
                       )}
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handleOpenEdit(item)}
-                        className="text-xs h-7 gap-1"
-                      >
-                        <Sliders className="h-3.5 w-3.5" />
-                        Configure
-                      </Button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        {item.is_low_stock && (
+                          <Link
+                            to={`/purchasing?tab=orders&product=${encodeURIComponent(item.product_name)}&sku=${encodeURIComponent(item.sku)}&qty=${item.reorder_quantity}`}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-primary text-primary-fg hover:opacity-90 transition shadow-2xs cursor-pointer"
+                            title="Quick Reorder from Supplier in Purchasing"
+                          >
+                            <ShoppingCart className="size-3" />
+                            <span>Reorder</span>
+                          </Link>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleOpenEdit(item)}
+                          className="text-xs h-7 gap-1"
+                        >
+                          <Sliders className="h-3.5 w-3.5" />
+                          Configure
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))

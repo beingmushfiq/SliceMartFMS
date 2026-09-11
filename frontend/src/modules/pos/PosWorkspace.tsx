@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Clock, HardDrive, Play } from 'lucide-react';
+import { Clock, HardDrive, Play, Zap } from 'lucide-react';
 import { PosSessionsSection } from './sections/PosSessionsSection';
 import { PosTerminalsSection } from './sections/PosTerminalsSection';
 import { POSShell } from './POSShell';
@@ -137,6 +137,48 @@ export default function PosWorkspace() {
             <Play className="size-3.5 fill-current" />
             <span>Open POS Interface</span>
           </Button>
+        </div>
+      </div>
+
+      {/* Universal POS Quick-Action Ribbon */}
+      <div className="rounded-2xl border border-primary/20 bg-linear-to-r from-primary/5 via-surface to-surface-raised p-3.5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-1.5 text-xs font-bold text-default">
+              <Zap className="size-3.5 text-amber-500 fill-amber-500" />
+              <span>Quick Actions • Cash Counter & Hardware Operations</span>
+            </div>
+            <p className="text-[11px] text-muted">
+              Launch full-screen cashier register, reconcile cash floats, or configure receipt printers with 1 click.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setSearchParams({})}
+              className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+            >
+              <Play className="size-3.5 fill-current" />
+              <span>Resume Cashier Screen</span>
+            </Button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('sessions')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
+            >
+              <Clock className="size-3.5 text-primary" />
+              <span>Shift Reconciliations</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('terminals')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
+            >
+              <HardDrive className="size-3.5 text-cyan-600" />
+              <span>Terminals & Hardware</span>
+            </button>
+          </div>
         </div>
       </div>
 

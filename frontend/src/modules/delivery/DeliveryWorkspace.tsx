@@ -11,7 +11,7 @@ import { RunSheetsSection } from './sections/RunSheetsSection';
 import { CourierProvidersSection } from './sections/CourierProvidersSection';
 import { CodReconciliationSection } from './sections/CodReconciliationSection';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
-import { Truck, Bike, Building2, Banknote, RefreshCw } from 'lucide-react';
+import { Truck, Bike, Building2, Banknote, RefreshCw, Zap } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 type DeliveryTab = 'shipments' | 'run_sheets' | 'providers' | 'cod_reconciliation';
@@ -348,6 +348,55 @@ export const DeliveryWorkspace: React.FC = () => {
             <RefreshCw className="size-3.5" />
             Bulk Courier Sync
           </button>
+        </div>
+      </div>
+
+      {/* Universal Delivery Quick-Action Ribbon */}
+      <div className="rounded-2xl border border-primary/20 bg-linear-to-r from-primary/5 via-surface to-surface-raised p-3.5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-1.5 text-xs font-bold text-default">
+              <Zap className="size-3.5 text-amber-500 fill-amber-500" />
+              <span>Quick Actions • Courier Dispatch & Driver Logistics</span>
+            </div>
+            <p className="text-[11px] text-muted">
+              Book courier parcels, prepare rider delivery run sheets, or reconcile collected cash with 1 click.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setActiveTab('shipments')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer"
+            >
+              <Truck className="size-3.5" />
+              <span>Book Courier Parcel</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('run_sheets')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
+            >
+              <Bike className="size-3.5 text-cyan-600" />
+              <span>Create Rider Run Sheet</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('cod_reconciliation')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
+            >
+              <Banknote className="size-3.5 text-emerald-600" />
+              <span>Settle COD Cash</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('providers')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
+            >
+              <Building2 className="size-3.5 text-primary" />
+              <span>Manage Couriers</span>
+            </button>
+          </div>
         </div>
       </div>
 

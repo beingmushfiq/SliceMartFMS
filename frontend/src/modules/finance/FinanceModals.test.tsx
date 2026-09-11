@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import React from 'react';
 import { MoneyOutModal } from './modals/MoneyOutModal';
 import { MoneyInModal } from './modals/MoneyInModal';
 import { TransferMoneyModal } from './modals/TransferMoneyModal';
@@ -98,7 +97,7 @@ describe('Finance Action Modals', () => {
       fireEvent.click(submitBtn);
 
       expect(onSuccess).toHaveBeenCalledTimes(1);
-      const payload = onSuccess.mock.calls[0][0];
+      const payload = onSuccess.mock.calls[0]![0];
       expect(payload.expense).toBeDefined();
       expect(payload.expense.amount).toBe('1500.0000');
       expect(payload.journalEntry.total_debit).toBe('1500.0000');
@@ -133,7 +132,7 @@ describe('Finance Action Modals', () => {
       fireEvent.click(submitBtn);
 
       expect(onSuccess).toHaveBeenCalledTimes(1);
-      const payload = onSuccess.mock.calls[0][0];
+      const payload = onSuccess.mock.calls[0]![0];
       expect(payload.collectedCustomerName).toBe('Aarong Retail');
       expect(payload.collectedAmount).toBe(12500);
       expect(payload.journalEntry.total_debit).toBe('12500.0000');
@@ -167,7 +166,7 @@ describe('Finance Action Modals', () => {
       fireEvent.click(transferBtn);
 
       expect(onSuccess).toHaveBeenCalledTimes(1);
-      const payload = onSuccess.mock.calls[0][0];
+      const payload = onSuccess.mock.calls[0]![0];
       expect(payload.journalEntry.total_debit).toBe('5000.0000');
       expect(payload.journalEntry.total_credit).toBe('5000.0000');
       expect(onClose).toHaveBeenCalled();

@@ -9,6 +9,7 @@ import {
   Search,
   SlidersHorizontal,
   X,
+  UserPlus,
 } from 'lucide-react';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { useCurrency } from '../../hooks/useCurrency';
@@ -485,6 +486,55 @@ export const HrWorkspace: React.FC = () => {
             {leaveRequests.length} Scheduled
           </div>
           <div className="text-xs text-gray-400 mt-1">Casual & Medical Quota</div>
+        </div>
+      </div>
+
+      {/* Universal Workforce & HR Quick-Action Ribbon */}
+      <div className="rounded-2xl border border-primary/20 bg-linear-to-r from-primary/5 via-surface to-surface-raised p-3.5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-1.5 text-xs font-bold text-default">
+              <Zap className="size-3.5 text-amber-500 fill-amber-500" />
+              <span>Quick Actions • Workforce & Payroll Management</span>
+            </div>
+            <p className="text-[11px] text-muted">
+              Add new team members, log shift attendance, submit leave, or disburse monthly salary payouts with 1 click.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setShowOnboardModal(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer"
+            >
+              <UserPlus className="size-3.5" />
+              <span>Add Employee</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('attendance')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
+            >
+              <Clock className="size-3.5 text-primary" />
+              <span>Mark Attendance</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('leaves')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
+            >
+              <CalendarCheck className="size-3.5 text-blue-500" />
+              <span>Leave Requests</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('payroll')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
+            >
+              <Wallet className="size-3.5 text-emerald-600" />
+              <span>Payroll Payouts</span>
+            </button>
+          </div>
         </div>
       </div>
 

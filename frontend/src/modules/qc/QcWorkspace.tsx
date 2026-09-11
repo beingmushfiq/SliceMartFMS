@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   AlertOctagon,
   Microscope,
@@ -12,6 +13,7 @@ import {
   CheckCircle2,
   ArrowRight,
   ShieldCheck,
+  Boxes,
 } from 'lucide-react';
 import { QcInspectionsSection } from './sections/QcInspectionsSection';
 import { QcParametersSection } from './sections/QcParametersSection';
@@ -309,6 +311,54 @@ export default function QcWorkspace() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Universal Quality Control Quick-Action Ribbon */}
+      <div className="rounded-2xl border border-primary/20 bg-linear-to-r from-primary/5 via-surface to-surface-raised p-3.5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-1.5 text-xs font-bold text-default">
+              <Zap className="size-3.5 text-amber-500 fill-amber-500" />
+              <span>Quick Actions • Quality & Scrap Shortcuts</span>
+            </div>
+            <p className="text-[11px] text-muted">
+              Inspect incoming supplies, release verified goods to inventory, or salvage defective items with 1 click.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setActiveTab('inspections')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer"
+            >
+              <Microscope className="size-3.5" />
+              <span>New Inspection Run</span>
+            </button>
+            <Link
+              to="/inventory"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all cursor-pointer"
+            >
+              <Boxes className="size-3.5" />
+              <span>Release to Stock</span>
+            </Link>
+            <button
+              type="button"
+              onClick={() => setActiveTab('rework')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
+            >
+              <RotateCcw className="size-3.5 text-amber-500" />
+              <span>Route to Rework</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('wastage')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
+            >
+              <AlertOctagon className="size-3.5 text-rose-500" />
+              <span>Log Scrap & Waste</span>
+            </button>
           </div>
         </div>
       </div>

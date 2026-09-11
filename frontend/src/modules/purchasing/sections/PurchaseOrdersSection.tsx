@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -8,6 +9,8 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
+  PackageCheck,
+  Receipt,
   Truck,
   XCircle,
   Eye,
@@ -184,7 +187,12 @@ const SAMPLE_ORDERS: PurchaseOrder[] = [
   },
 ];
 
-export function PurchaseOrdersSection() {
+export interface PurchaseOrdersSectionProps {
+  onReceivePo?: (order: PurchaseOrder) => void;
+  onCreateBill?: (order: PurchaseOrder) => void;
+}
+
+export function PurchaseOrdersSection({ onReceivePo, onCreateBill }: PurchaseOrdersSectionProps = {}) {
   const { formatCurrency, currencyCode } = useCurrency();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -1086,6 +1094,39 @@ export function PurchaseOrdersSection() {
                             </button>
                           </>
                         )}
+
+                        {(o.status === 'approved' || o.status === 'partially_received') && (
+                          <button
+                            type="button"
+                            onClick={() => onReceivePo?.(o)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs transition cursor-pointer"
+                            title="Receive Inward Goods at Warehouse Gate (Fast GRN)"
+                          >
+                            <PackageCheck className="size-3" />
+                            <span>Receive Goods</span>
+                          </button>
+                        )}
+
+                        {(o.status === 'received' || o.status === 'partially_received') && (
+                          <button
+                            type="button"
+                            onClick={() => onCreateBill?.(o)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xs transition cursor-pointer"
+                            title="Enter Supplier Bill in Accounts Payable"
+                          >
+                            <Receipt className="size-3" />
+                            <span>Create Bill</span>
+                          </button>
+                        )}
+
+                        <Link
+                          to={`/finance?tab=expenses&supplier=${encodeURIComponent(o.supplier_name || '')}&amount=${o.grand_total}`}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold bg-surface-sunken hover:bg-surface text-default border border-default transition cursor-pointer"
+                          title="Pay Supplier from Cash & Bank in Finance"
+                        >
+                          <DollarSign className="size-3 text-emerald-500" />
+                          <span>Pay</span>
+                        </Link>
                       </div>
                     </td>
                   </tr>

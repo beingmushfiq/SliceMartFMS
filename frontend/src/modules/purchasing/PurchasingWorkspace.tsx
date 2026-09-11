@@ -23,6 +23,10 @@ import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../lib/utils';
+import type { PurchaseOrder } from '../../types/api/purchasing';
+import { FastPoModal } from './modals/FastPoModal';
+import { FastGrnModal } from './modals/FastGrnModal';
+import { FastBillModal } from './modals/FastBillModal';
 
 export type PurchasingTab = 'requisitions' | 'orders' | 'receipts' | 'bills' | 'returns';
 export type PurchasingCategory = 'sourcing' | 'fulfillment' | 'returns';
@@ -132,10 +136,26 @@ const tabs: TabConfig[] = [
 
 export default function PurchasingWorkspace() {
   const [activeTab, setActiveTab] = useWorkspaceTab<PurchasingTab>('orders', VALID_TABS);
-  const [quickJumpOpen, setQuickJumpOpen] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [quickJumpOpen, setQuickJumpOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const quickJumpRef = useRef<HTMLDivElement>(null);
+
+  // Quick-Action Modals State
+  const [showFastPoModal, setShowFastPoModal] = useState(false);
+  const [showFastGrnModal, setShowFastGrnModal] = useState(false);
+  const [showFastBillModal, setShowFastBillModal] = useState(false);
+  const [selectedPoForAction, setSelectedPoForAction] = useState<PurchaseOrder | null>(null);
+
+  const handleReceivePo = (order: PurchaseOrder) => {
+    setSelectedPoForAction(order);
+    setShowFastGrnModal(true);
+  };
+
+  const handleCreateBill = (order: PurchaseOrder) => {
+    setSelectedPoForAction(order);
+    setShowFastBillModal(true);
+  };
 
   const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[1]!;
   const activeCategory = currentTab.category;
@@ -328,6 +348,48 @@ export default function PurchasingWorkspace() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Universal Quick-Action Ribbon */}
+      <div className="flex items-center gap-2.5 p-2 rounded-2xl bg-surface border border-default shadow-xs flex-wrap">
+        <button
+          type="button"
+          onClick={() => setShowFastPoModal(true)}
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-primary hover:bg-primary/90 text-primary-fg shadow-xs transition cursor-pointer"
+        >
+          <ShoppingCart className="size-4" />
+          <span>🛒 Order Materials</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedPoForAction(null);
+            setShowFastGrnModal(true);
+          }}
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition cursor-pointer"
+        >
+          <PackageCheck className="size-4" />
+          <span>📦 Inward Delivery (GRN)</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedPoForAction(null);
+            setShowFastBillModal(true);
+          }}
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition cursor-pointer"
+        >
+          <Receipt className="size-4" />
+          <span>🧾 Enter Supplier Bill</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('returns')}
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface-sunken hover:bg-surface border border-default text-default transition cursor-pointer"
+        >
+          <Undo2 className="size-4 text-amber-500" />
+          <span>↩️ Return Defective Items</span>
+        </button>
       </div>
 
       {/* Non-Technical Workflow Guide: Recommended Procurement Order */}
@@ -733,11 +795,49 @@ export default function PurchasingWorkspace() {
       {/* Tab Content */}
       <div className="pt-1">
         {activeTab === 'requisitions' && <PurchaseRequisitionsSection />}
-        {activeTab === 'orders' && <PurchaseOrdersSection />}
+        {activeTab === 'orders' && (
+          <PurchaseOrdersSection
+            onReceivePo={handleReceivePo}
+            onCreateBill={handleCreateBill}
+          />
+        )}
         {activeTab === 'receipts' && <GoodsReceiptsSection />}
         {activeTab === 'bills' && <PurchaseBillsSection />}
         {activeTab === 'returns' && <PurchaseReturnsSection />}
       </div>
+
+      {/* Fast Action Modals */}
+      <FastPoModal
+        open={showFastPoModal}
+        onClose={() => setShowFastPoModal(false)}
+        onSuccess={() => {
+          setActiveTab('orders');
+        }}
+      />
+
+      <FastGrnModal
+        open={showFastGrnModal}
+        onClose={() => {
+          setShowFastGrnModal(false);
+          setSelectedPoForAction(null);
+        }}
+        initialPo={selectedPoForAction}
+        onSuccess={() => {
+          setActiveTab('receipts');
+        }}
+      />
+
+      <FastBillModal
+        open={showFastBillModal}
+        onClose={() => {
+          setShowFastBillModal(false);
+          setSelectedPoForAction(null);
+        }}
+        initialPo={selectedPoForAction}
+        onSuccess={() => {
+          setActiveTab('bills');
+        }}
+      />
     </div>
   );
 }

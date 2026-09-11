@@ -456,6 +456,55 @@ export default function SalesWorkspace() {
         </div>
       </div>
 
+      {/* Universal Commercial Sales Quick-Action Ribbon */}
+      <div className="rounded-2xl border border-primary/20 bg-linear-to-r from-primary/5 via-surface to-surface-raised p-3.5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-1.5 text-xs font-bold text-default">
+              <Zap className="size-3.5 text-amber-500 fill-amber-500" />
+              <span>Quick Actions • Sales & Revenue Flow</span>
+            </div>
+            <p className="text-[11px] text-muted">
+              Book customer orders, issue invoices, collect outstanding dues, or dispatch shipments with 1 click.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setActiveTab('orders')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer"
+            >
+              <ShoppingCart className="size-3.5" />
+              <span>New Customer Order</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('invoices')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all cursor-pointer"
+            >
+              <FileText className="size-3.5" />
+              <span>Invoices & Billing</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('payments')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
+            >
+              <Receipt className="size-3.5 text-emerald-600" />
+              <span>Collect Payment</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('deliveries')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
+            >
+              <Truck className="size-3.5 text-cyan-600" />
+              <span>Dispatch Delivery</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Primary 3 Command Pillars (with Embedded Direct Child Pills) */}
       <div
         role="tablist"

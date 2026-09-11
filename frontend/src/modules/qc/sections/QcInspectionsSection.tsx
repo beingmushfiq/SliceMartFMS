@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertTriangle,
@@ -12,6 +13,8 @@ import {
   ShieldCheck,
   Trash2,
   XCircle,
+  Boxes,
+  RotateCcw,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
@@ -398,20 +401,45 @@ export function QcInspectionsSection() {
                       </select>
                     </td>
                     <td className="py-3.5 pr-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                      <div className="flex items-center justify-end gap-1.5 flex-wrap">
                         {insp.status !== 'approved' && (
                           <Button
                             variant="secondary"
                             size="sm"
                             onClick={() => approveMutation.mutate(insp.id)}
                             disabled={approveMutation.isPending}
-                            className="text-xs text-emerald-600 dark:text-emerald-400"
-                            title="Approve inspection"
+                            className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 min-h-8"
+                            title="Approve & pass inspection"
                           >
                             <ShieldCheck className="h-3.5 w-3.5" />
-                            <span>Approve</span>
+                            <span>Approve Pass</span>
                           </Button>
                         )}
+
+                        {/* Release to Stock action when approved or passed */}
+                        {(insp.status === 'approved' || insp.result === 'pass') && (
+                          <Link
+                            to="/inventory"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700 hover:bg-blue-100 transition-colors shadow-2xs"
+                            title="Goods approved - view and manage in warehouse stock"
+                          >
+                            <Boxes className="size-3.5" />
+                            <span>Release to Stock</span>
+                          </Link>
+                        )}
+
+                        {/* Route to Rework when defective items found */}
+                        {(insp.result === 'fail' || insp.result === 'partial' || parseFloat(insp.rejected_quantity || insp.failed_quantity || '0') > 0) && (
+                          <Link
+                            to="/qc?tab=rework"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700 hover:bg-amber-100 transition-colors shadow-2xs"
+                            title="Defects detected - send to secondary workstation for rework"
+                          >
+                            <RotateCcw className="size-3.5" />
+                            <span>Route to Rework</span>
+                          </Link>
+                        )}
+
                         <Button
                           variant="ghost"
                           size="sm"

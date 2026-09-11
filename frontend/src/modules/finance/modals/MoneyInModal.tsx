@@ -72,7 +72,7 @@ export const MoneyInModal: React.FC<MoneyInModalProps> = ({
     const entryId = timestamp % 10000;
     const entryNumber = `JE-${monthStr}-${String(entryId).padStart(4, '0')}`;
 
-    let narration = '';
+    let narration: string;
     let creditAccountId = 103; // default Accounts Receivable (COA 103 / 1050)
 
     if (inType === 'customer') {
@@ -277,7 +277,7 @@ export const MoneyInModal: React.FC<MoneyInModalProps> = ({
               <label className="block text-xs font-semibold text-default mb-1">Payment Method</label>
               <select
                 value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value as any)}
+                onChange={(e) => setPaymentMethod(e.target.value as 'cash' | 'bank_transfer' | 'mobile_banking')}
                 className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-xs sm:text-sm focus:border-emerald-500 focus:outline-none"
               >
                 <option value="cash">Cash in Hand</option>

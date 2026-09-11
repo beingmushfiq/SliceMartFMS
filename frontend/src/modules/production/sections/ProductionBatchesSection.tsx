@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Activity,
@@ -17,6 +18,7 @@ import {
   Download,
   CheckSquare,
   X,
+  ShieldCheck,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
@@ -575,7 +577,7 @@ export function ProductionBatchesSection() {
                       {getCompletenessBadge(batch.context_completeness)}
                     </td>
                     <td className="py-3 pr-4 text-right">
-                      <div className="flex items-center justify-end gap-1 flex-wrap">
+                      <div className="flex items-center justify-end gap-1.5 flex-wrap">
                         {/* Start action */}
                         {(batch.status === 'draft' || batch.status === 'scheduled') && (
                           <Button
@@ -583,12 +585,73 @@ export function ProductionBatchesSection() {
                             size="sm"
                             onClick={() => startMutation.mutate(batch.id)}
                             disabled={startMutation.isPending}
-                            className="text-xs flex items-center gap-1 text-emerald-600 dark:text-emerald-400 min-h-8"
-                            title="Start Batch"
+                            className="text-xs font-bold flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 min-h-8"
+                            title="Start Production Run"
                           >
-                            <Play className="h-3 w-3" />
-                            <span>Start</span>
+                            <Play className="h-3 w-3 fill-emerald-600 dark:fill-emerald-400" />
+                            <span>Start Batch</span>
                           </Button>
+                        )}
+
+                        {/* Record Output action */}
+                        {batch.status === 'in_progress' && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              setErrorMsg(null);
+                              setOutputDraft({
+                                product_id: batch.product_id,
+                                warehouse_id: warehouses[0]?.id ?? '',
+                                output_type: 'finished_good',
+                                good_quantity: batch.target_quantity,
+                                rejected_quantity: '0.0000',
+                                unit_cost: '15.0000',
+                              });
+                              setActiveBatchModal({ batch, type: 'output' });
+                            }}
+                            className="text-xs font-bold flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 min-h-8"
+                            title="Record Finished Output"
+                          >
+                            <CheckCircle2 className="h-3 w-3" />
+                            <span>Record Output</span>
+                          </Button>
+                        )}
+
+                        {/* Issue Materials action */}
+                        {batch.status === 'in_progress' && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              setErrorMsg(null);
+                              setInputDraft({
+                                product_id: batch.product_id,
+                                warehouse_id: warehouses[0]?.id ?? '',
+                                planned_quantity: '50.0000',
+                                actual_quantity: '50.0000',
+                                unit_cost: '10.0000',
+                              });
+                              setActiveBatchModal({ batch, type: 'input' });
+                            }}
+                            className="text-xs font-medium flex items-center gap-1 text-blue-600 dark:text-blue-400 min-h-8"
+                            title="Issue Raw Materials to Batch"
+                          >
+                            <Box className="h-3 w-3" />
+                            <span>+ Materials</span>
+                          </Button>
+                        )}
+
+                        {/* Send to QC for Inspection when completed */}
+                        {batch.status === 'completed' && (
+                          <Link
+                            to={`/qc?tab=inspections`}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 transition-colors shadow-2xs"
+                            title="Route finished batch to Quality Control for inspection"
+                          >
+                            <ShieldCheck className="size-3.5" />
+                            <span>Send to QC</span>
+                          </Link>
                         )}
 
                         {/* Complete action */}
@@ -598,11 +661,10 @@ export function ProductionBatchesSection() {
                             size="sm"
                             onClick={() => completeMutation.mutate(batch.id)}
                             disabled={completeMutation.isPending}
-                            className="text-xs flex items-center gap-1 text-emerald-600 dark:text-emerald-400 min-h-8"
-                            title="Complete Batch"
+                            className="text-xs flex items-center gap-1 text-muted hover:text-default min-h-8"
+                            title="Mark Batch Complete"
                           >
-                            <CheckCircle2 className="h-3 w-3" />
-                            <span>Complete</span>
+                            <span>Mark Done</span>
                           </Button>
                         )}
 
@@ -619,49 +681,6 @@ export function ProductionBatchesSection() {
                             <span>Close</span>
                           </Button>
                         )}
-
-                        {/* Material button */}
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => {
-                            setErrorMsg(null);
-                            setInputDraft({
-                              product_id: batch.product_id,
-                              warehouse_id: warehouses[0]?.id ?? '',
-                              planned_quantity: '50.0000',
-                              actual_quantity: '50.0000',
-                              unit_cost: '10.0000',
-                            });
-                            setActiveBatchModal({ batch, type: 'input' });
-                          }}
-                          className="text-xs text-blue-600 dark:text-blue-400 min-h-8"
-                          title="Issue Raw Materials"
-                        >
-                          + Material
-                        </Button>
-
-                        {/* Output button */}
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => {
-                            setErrorMsg(null);
-                            setOutputDraft({
-                              product_id: batch.product_id,
-                              warehouse_id: warehouses[0]?.id ?? '',
-                              output_type: 'finished_good',
-                              good_quantity: batch.target_quantity,
-                              rejected_quantity: '0.0000',
-                              unit_cost: '15.0000',
-                            });
-                            setActiveBatchModal({ batch, type: 'output' });
-                          }}
-                          className="text-xs text-emerald-600 dark:text-emerald-400 min-h-8"
-                          title="Record Finished Output"
-                        >
-                          + Output
-                        </Button>
 
                         {/* Status selector */}
                         <select

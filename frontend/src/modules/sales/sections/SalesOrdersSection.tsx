@@ -24,6 +24,7 @@ import {
   TrendingUp,
   Truck,
   FileText,
+  DollarSign,
 } from 'lucide-react';
 import type { SalesOrder, SalesOrderStatus, SalesOrderPaymentStatus } from '../../../types/api/sales';
 import type { Product } from '../../../types/api/catalog';
@@ -1066,6 +1067,17 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
                           >
                             <FileText className="size-3" />
                             <span>Invoice</span>
+                          </button>
+                        )}
+                        {onNavigateToTab && order.payment_status !== 'paid' && (order.status === 'dispatched' || order.status === 'delivered') && (
+                          <button
+                            type="button"
+                            onClick={() => onNavigateToTab('payments')}
+                            className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 cursor-pointer transition-colors flex items-center gap-1"
+                            title="Jump to Payments tab to record customer collection"
+                          >
+                            <DollarSign className="size-3" />
+                            <span>Collect</span>
                           </button>
                         )}
                         <button

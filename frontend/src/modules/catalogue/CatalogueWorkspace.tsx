@@ -15,6 +15,7 @@ import {
   Compass,
   ArrowRight,
   Zap,
+  Plus,
 } from 'lucide-react';
 import { ProductsSection } from './sections/ProductsSection';
 import { UnitsSection } from './sections/UnitsSection';
@@ -413,6 +414,55 @@ export default function CatalogueWorkspace() {
             <span className="size-4 rounded-full bg-black/20 flex items-center justify-center text-[10px]">4</span>
             <span>Recipes (BOM)</span>
           </button>
+        </div>
+      </div>
+
+      {/* Universal Catalogue & Master Data Quick-Action Ribbon */}
+      <div className="rounded-2xl border border-primary/20 bg-linear-to-r from-primary/5 via-surface to-surface-raised p-3.5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-1.5 text-xs font-bold text-default">
+              <Zap className="size-3.5 text-amber-500 fill-amber-500" />
+              <span>Quick Actions • Product Catalog & Recipe Formulations</span>
+            </div>
+            <p className="text-[11px] text-muted">
+              Add products, configure production recipes (BOM), organize categories, or register warehouse locations with 1 click.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setActiveTab('products')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer"
+            >
+              <Plus className="size-3.5" />
+              <span>Add Product Item</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('bom')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
+            >
+              <FileCode className="size-3.5 text-primary" />
+              <span>Create Recipe (BOM)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('categories')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
+            >
+              <Tag className="size-3.5 text-blue-500" />
+              <span>Categories & Brands</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('warehouses')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
+            >
+              <Warehouse className="size-3.5 text-cyan-600" />
+              <span>Warehouses & Bins</span>
+            </button>
+          </div>
         </div>
       </div>
 
