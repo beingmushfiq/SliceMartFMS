@@ -8,6 +8,8 @@ use App\Core\Tenancy\Concerns\BelongsToTenant;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * App\Models\ProductImage
@@ -27,6 +29,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $created_by
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
+ * @property-read string $url
  * @property-read Tenant $tenant
  * @property-read Product $product
  * @property-read ProductVariant|null $variant
@@ -35,6 +38,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 final class ProductImage extends Model
 {
     use BelongsToTenant;
+
+    /**
+     * @var list<string>
+     */
+    protected $appends = [
+        'url',
+    ];
 
     /**
      * `tenant_id` is deliberately absent: it is stamped by BelongsToTenant and
@@ -51,6 +61,22 @@ final class ProductImage extends Model
         'is_primary',
         'created_by',
     ];
+
+    /**
+     * Resolve the public URL for the image path.
+     */
+    public function getUrlAttribute(): string
+    {
+        if (empty($this->path)) {
+            return '';
+        }
+
+        if (Str::startsWith($this->path, ['http://', 'https://', 'data:'])) {
+            return $this->path;
+        }
+
+        return Storage::disk('public')->url($this->path);
+    }
 
     /**
      * Owning tenant.

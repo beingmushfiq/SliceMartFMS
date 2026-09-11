@@ -22,7 +22,7 @@ class StorefrontRobotsController extends Controller
      */
     public function __invoke(Request $request): Response
     {
-        $tenantId = $request->attributes->get('tenant_id') ?? tenant('id');
+        $tenantId = $request->attributes->get('tenant_id');
         $storefront = $request->attributes->get('storefront');
 
         if (! $tenantId) {
@@ -44,19 +44,21 @@ class StorefrontRobotsController extends Controller
 
         $tenant = Tenant::find($tenantId) ?? Tenant::first();
 
-        // If staging/local environment or indexing disabled by tenant
-        $isProduction = config('app.env') === 'production';
         $settings = $tenant ? $this->seoMetadataService->getTenantSeoSettings($tenant->id) : null;
-        $indexingAllowed = $isProduction && ($settings ? $settings->indexing_enabled : true);
+        $indexingAllowed = $settings ? (bool) $settings->indexing_enabled : true;
 
         $lines = [];
+        $isProduction = config('app.env') === 'production';
+        if (! $isProduction) {
+            $lines[] = '# Development Environment (APP_ENV=' . config('app.env') . ')';
+        }
 
         if (! $indexingAllowed) {
-            $lines[] = '# Staging / Non-Production / Private Tenant Environment';
+            $lines[] = '# Storefront Indexing Disabled in Tenant SEO Settings';
             $lines[] = 'User-agent: *';
             $lines[] = 'Disallow: /';
         } else {
-            $baseUrl = $tenant ? $this->seoMetadataService->resolveBaseUrl($tenant, $storefront) : 'https://slicemart.tech';
+            $baseUrl = $tenant ? $this->seoMetadataService->resolveBaseUrl($tenant, $storefront) : 'http://localhost:5173';
 
             $lines[] = '# Standard Search Engine Crawlers';
             $lines[] = 'User-agent: *';

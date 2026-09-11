@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useEffect, type ChangeEvent } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -8,8 +8,6 @@ import {
   Eye,
   Edit2,
   Trash2,
-  Upload,
-  X,
   Boxes,
   Ruler,
   Layers,
@@ -42,6 +40,10 @@ import {
   ProductDescriptionEditor,
   RenderHtmlContent,
 } from '../components/ProductDescriptionEditor';
+import {
+  ProductImageGalleryUploader,
+  type LocalQueuedImage,
+} from '../components/ProductImageGalleryUploader';
 import { SerpPreviewCard } from '../../../components/seo/SerpPreviewCard';
 import { DiscoverabilityChecklist } from '../../../components/seo/DiscoverabilityChecklist';
 import type { Product, Category, Brand } from '../../../types/api/catalog';
@@ -94,6 +96,7 @@ export function ProductsSection() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [createQueuedImages, setCreateQueuedImages] = useState<LocalQueuedImage[]>([]);
   const [selectedLabelProducts, setSelectedLabelProducts] = useState<Product[]>([]);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string | number>>(new Set());
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
@@ -155,7 +158,6 @@ export function ProductsSection() {
     tracking_mode: 'batch',
   });
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
   // Fetch Products
@@ -270,7 +272,28 @@ export function ProductsSection() {
       };
       return api.post<Product>('/products', finalPayload);
     },
-    onSuccess: async () => {
+    onSuccess: async (response) => {
+      const created = response.data;
+      if (created?.id && createQueuedImages.length > 0) {
+        for (const item of createQueuedImages) {
+          try {
+            if (item.file) {
+              const fd = new FormData();
+              fd.append('image', item.file);
+              if (item.is_primary) fd.append('is_primary', '1');
+              await api.post(`/api/v1/products/${created.id}/images`, fd);
+            } else if (item.url) {
+              await api.post(`/api/v1/products/${created.id}/images`, {
+                url: item.url,
+                is_primary: item.is_primary,
+              });
+            }
+          } catch (e) {
+            console.error('Failed uploading queued image', e);
+          }
+        }
+      }
+      setCreateQueuedImages([]);
       await queryClient.invalidateQueries({ queryKey: ['catalogue', 'products'] });
       setIsCreateOpen(false);
       resetDraft();
@@ -302,7 +325,7 @@ export function ProductsSection() {
       await queryClient.invalidateQueries({ queryKey: ['catalogue', 'products'] });
       setEditingProduct(null);
       setErrorMsg(null);
-      notify.success('Product specifications updated successfully.');
+      notify.success('Product updated successfully.');
     },
     onError: (err) => {
       if (isApiError(err)) {
@@ -327,6 +350,8 @@ export function ProductsSection() {
   });
 
   const resetDraft = () => {
+    setErrorMsg(null);
+    setCreateQueuedImages([]);
     setDraft({
       sku: '',
       name: '',
@@ -377,7 +402,7 @@ export function ProductsSection() {
       status: p.status,
       description: p.description || '',
       barcode: p.barcode || '',
-      image_url: onlineMeta?.image_url || '',
+      image_url: p.image_url || onlineMeta?.image_url || '',
       reorder_level: p.reorder_level || '10',
       reorder_quantity: p.reorder_quantity || '50',
       weight: p.weight || '1',
@@ -428,23 +453,6 @@ export function ProductsSection() {
     setEditingProduct(null);
     setIsCreateOpen(true);
     notify.info(`Duplicating "${p.name}". Review specifications, modify SKU, and save.`);
-  };
-
-  // Image File Upload Handler
-  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        notify.error('Image size should be less than 2MB');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setDraft((prev) => ({ ...prev, image_url: reader.result as string }));
-        notify.success('Image loaded successfully');
-      };
-      reader.readAsDataURL(file);
-    }
   };
 
   const products = useMemo(() => productsQuery.data?.data ?? [], [productsQuery.data?.data]);
@@ -852,7 +860,7 @@ export function ProductsSection() {
               ) : (
                 products.map((p) => {
                   const pMeta = p.online_meta as { image_url?: string } | null;
-                  const thumb = pMeta?.image_url;
+                  const thumb = p.image_url || pMeta?.image_url;
                   const isSelected = selectedProductIds.has(p.id);
 
                   return (
@@ -1511,99 +1519,17 @@ export function ProductsSection() {
           {/* TAB 3: Media & HTML Notes */}
           {activeFormTab === 'media' && (
             <div className="space-y-4">
-              {/* Product Image Section */}
+              {/* Product Multi-Image Gallery */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  Product Image & Media
+                  Product Image Gallery & Media
                 </label>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
-                  {/* Upload / Preview Box */}
-                  <div className="sm:col-span-1">
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full relative aspect-square rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 flex flex-col items-center justify-center overflow-hidden group cursor-pointer hover:border-primary hover:bg-primary/5 transition-all text-left"
-                    >
-                      {draft.image_url ? (
-                        <>
-                          <img
-                            src={draft.image_url}
-                            alt="Product Preview"
-                            className="size-full object-cover rounded-2xl group-hover:scale-105 transition-transform duration-300"
-                          />
-                          <span
-                            role="button"
-                            tabIndex={0}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDraft({ ...draft, image_url: '' });
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.stopPropagation();
-                                setDraft({ ...draft, image_url: '' });
-                              }
-                            }}
-                            className="absolute top-2 right-2 size-7 rounded-full bg-slate-900/80 text-white flex items-center justify-center hover:bg-rose-600 transition-colors shadow-sm cursor-pointer"
-                            title="Remove Photo"
-                          >
-                            <X className="size-4" />
-                          </span>
-                        </>
-                      ) : (
-                        <div className="p-4 text-center">
-                          <Upload className="size-8 text-primary/70 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-                          <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 block">
-                            Click to Upload Image
-                          </span>
-                          <span className="text-[10px] text-slate-400 block mt-1">
-                            PNG, JPG, WebP up to 2MB
-                          </span>
-                        </div>
-                      )}
-                    </button>
-
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleImageUpload}
-                      accept="image/*"
-                      className="hidden"
-                    />
-                  </div>
-
-                  {/* Image URL Input & Info */}
-                  <div className="sm:col-span-2 space-y-3">
-                    <div>
-                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                        Or Enter Direct Image URL
-                      </span>
-                      <div className="flex gap-2">
-                        <input
-                          type="url"
-                          placeholder="https://example.com/product-image.jpg"
-                          value={draft.image_url ?? ''}
-                          onChange={(e) => setDraft({ ...draft, image_url: e.target.value })}
-                          className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
-                        />
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="flex items-center gap-1.5 text-xs shrink-0 py-2 shadow-xs"
-                        >
-                          <Upload className="size-3.5" /> Browse
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs leading-relaxed">
-                      💡 <strong>Image Sync:</strong> Product photos are automatically displayed on
-                      POS checkout registers and customer e-commerce catalogs.
-                    </div>
-                  </div>
-                </div>
+                <ProductImageGalleryUploader
+                  queuedImages={createQueuedImages}
+                  onQueuedImagesChange={setCreateQueuedImages}
+                  primaryImageUrl={draft.image_url}
+                  onPrimaryImageChange={(url) => setDraft((prev) => ({ ...prev, image_url: url }))}
+                />
               </div>
 
               {/* Barcode & Physical Weight */}
@@ -2276,96 +2202,17 @@ export function ProductsSection() {
             {/* TAB 3: Media & HTML Notes */}
             {activeFormTab === 'media' && (
               <div className="space-y-4">
+                {/* Product Multi-Image Gallery */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                    Product Image & Media
+                    Product Image Gallery & Media
                   </label>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
-                    <div className="sm:col-span-1">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="w-full relative aspect-square rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 flex flex-col items-center justify-center overflow-hidden group cursor-pointer hover:border-primary hover:bg-primary/5 transition-all text-left"
-                      >
-                        {draft.image_url ? (
-                          <>
-                            <img
-                              src={draft.image_url}
-                              alt="Product Preview"
-                              className="size-full object-cover rounded-2xl group-hover:scale-105 transition-transform duration-300"
-                            />
-                            <span
-                              role="button"
-                              tabIndex={0}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDraft({ ...draft, image_url: '' });
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.stopPropagation();
-                                  setDraft({ ...draft, image_url: '' });
-                                }
-                              }}
-                              className="absolute top-2 right-2 size-7 rounded-full bg-slate-900/80 text-white flex items-center justify-center hover:bg-rose-600 transition-colors shadow-sm cursor-pointer"
-                              title="Remove Photo"
-                            >
-                              <X className="size-4" />
-                            </span>
-                          </>
-                        ) : (
-                          <div className="p-4 text-center">
-                            <Upload className="size-8 text-primary/70 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 block">
-                              Click to Upload Image
-                            </span>
-                            <span className="text-[10px] text-slate-400 block mt-1">
-                              PNG, JPG, WebP up to 2MB
-                            </span>
-                          </div>
-                        )}
-                      </button>
-
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleImageUpload}
-                        accept="image/*"
-                        className="hidden"
-                      />
-                    </div>
-
-                    <div className="sm:col-span-2 space-y-3">
-                      <div>
-                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                          Or Enter Direct Image URL
-                        </span>
-                        <div className="flex gap-2">
-                          <input
-                            type="url"
-                            placeholder="https://example.com/product-image.jpg"
-                            value={draft.image_url ?? ''}
-                            onChange={(e) => setDraft({ ...draft, image_url: e.target.value })}
-                            className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"
-                          />
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="flex items-center gap-1.5 text-xs shrink-0 py-2 shadow-xs"
-                          >
-                            <Upload className="size-3.5" /> Browse
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs leading-relaxed">
-                        💡 <strong>Image Sync:</strong> Product photos are automatically displayed
-                        on POS checkout registers and customer e-commerce catalogs.
-                      </div>
-                    </div>
-                  </div>
+                  <ProductImageGalleryUploader
+                    productUuid={editingProduct.id}
+                    existingImages={editingProduct.images || []}
+                    primaryImageUrl={draft.image_url}
+                    onPrimaryImageChange={(url) => setDraft((prev) => ({ ...prev, image_url: url }))}
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-200 dark:border-slate-800">
@@ -2851,16 +2698,33 @@ export function ProductsSection() {
             <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
               {(() => {
                 const meta = viewingProduct.online_meta as { image_url?: string } | null;
-                const photo = meta?.image_url;
-                return photo ? (
-                  <img
-                    src={photo}
-                    alt={viewingProduct.name}
-                    className="size-24 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-md shrink-0"
-                  />
-                ) : (
-                  <div className="size-24 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 shrink-0 shadow-2xs">
-                    <Package className="size-10 text-slate-300 dark:text-slate-600" />
+                const photo = viewingProduct.image_url || meta?.image_url;
+                const gallery = viewingProduct.images || [];
+                return (
+                  <div className="flex flex-col items-center gap-2 shrink-0">
+                    {photo ? (
+                      <img
+                        src={photo}
+                        alt={viewingProduct.name}
+                        className="size-24 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-md"
+                      />
+                    ) : (
+                      <div className="size-24 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 shadow-2xs">
+                        <Package className="size-10 text-slate-300 dark:text-slate-600" />
+                      </div>
+                    )}
+                    {gallery.length > 1 && (
+                      <div className="flex items-center gap-1 max-w-30 overflow-x-auto py-1">
+                        {gallery.map((img) => (
+                          <img
+                            key={img.id}
+                            src={img.url}
+                            alt=""
+                            className="size-6 rounded-md object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })()}

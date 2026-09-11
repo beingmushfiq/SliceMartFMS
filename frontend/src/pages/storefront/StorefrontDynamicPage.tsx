@@ -18,6 +18,7 @@ import { SeoHead } from '../../components/seo/SeoHead';
 import { BreadcrumbNav } from '../../components/seo/BreadcrumbNav';
 import type { StorefrontConfig } from '../../types/api/storefront';
 import type { PageBlock } from '../../modules/storefront/StorefrontPageBuilderWorkspace';
+import { StorefrontRichDescription } from '../../components/storefront/StorefrontRichDescription';
 
 interface OutletContextType {
   config: StorefrontConfig;
@@ -67,7 +68,10 @@ export const StorefrontDynamicPage: React.FC = () => {
   if (loading) {
     return (
       <div className="flex h-96 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+        <div 
+          className="h-8 w-8 animate-spin rounded-full border-2 border-t-transparent" 
+          style={{ borderColor: 'var(--store-primary, #10b981)', borderTopColor: 'transparent' }}
+        />
       </div>
     );
   }
@@ -89,10 +93,10 @@ export const StorefrontDynamicPage: React.FC = () => {
 
         <BreadcrumbNav items={breadcrumbs} className="py-1" />
 
-        <div className="space-y-2 border-b border-zinc-800/80 pb-6">
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">{page.title}</h1>
+        <div className="space-y-2 border-b border-slate-200 dark:border-zinc-800/80 pb-6">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">{page.title}</h1>
           {page.meta_description && (
-            <p className="text-xs text-zinc-400 leading-relaxed max-w-2xl">{page.meta_description}</p>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 leading-relaxed max-w-2xl">{page.meta_description}</p>
           )}
         </div>
 
@@ -100,19 +104,24 @@ export const StorefrontDynamicPage: React.FC = () => {
           {(page.blocks || []).map((block, idx) => (
             <div key={block.id || idx} className="space-y-4">
               {block.type === 'hero_banner' && (
-                <div className="rounded-3xl border border-emerald-500/30 bg-linear-to-br from-emerald-950/40 via-zinc-900 to-zinc-950 p-8 sm:p-12 text-center space-y-4 shadow-2xl">
+                <div 
+                  className="rounded-3xl border border-white/15 p-8 sm:p-12 text-center space-y-4 shadow-xl text-white relative overflow-hidden"
+                  style={{
+                    background: 'linear-gradient(135deg, var(--store-primary, #10b981) 0%, #0f172a 100%)',
+                  }}
+                >
                   <h2 className="text-2xl font-bold text-white sm:text-3xl tracking-tight">
                     {block.title}
                   </h2>
                   {block.subtitle && (
-                    <p className="text-xs text-zinc-300 max-w-xl mx-auto leading-relaxed">
+                    <p className="text-xs sm:text-sm text-white/90 max-w-xl mx-auto leading-relaxed">
                       {block.subtitle}
                     </p>
                   )}
                   {block.cta_text && (
                     <Link
                       to={block.cta_url || `/store/${subdomain}/products`}
-                      className="inline-block rounded-xl bg-emerald-500 px-6 py-2.5 text-xs font-bold text-zinc-950 hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20"
+                      className="inline-block rounded-xl bg-white text-slate-900 hover:bg-white/90 px-6 py-2.5 text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
                     >
                       {block.cta_text}
                     </Link>
@@ -121,29 +130,129 @@ export const StorefrontDynamicPage: React.FC = () => {
               )}
 
               {block.type === 'rich_text' && (
-                <div className="rounded-3xl border border-zinc-800/80 bg-zinc-900/40 p-6 sm:p-8 space-y-3 shadow-xl">
+                <div className="rounded-3xl border border-slate-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 p-6 sm:p-8 space-y-3 shadow-xs">
                   {block.title && (
-                    <h3 className="text-base font-bold text-zinc-100">{block.title}</h3>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">{block.title}</h3>
                   )}
-                  <div className="text-xs text-zinc-300 leading-relaxed whitespace-pre-line">
-                    {block.content}
+                  <StorefrontRichDescription
+                    html={block.content}
+                    className="text-xs sm:text-sm text-slate-600 dark:text-zinc-300"
+                  />
+                </div>
+              )}
+
+              {block.type === 'value_props' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {(block.items || []).map((it, i) => (
+                    <div key={i} className="p-5 rounded-2xl border border-slate-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 shadow-xs space-y-2">
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white">{it.title}</h4>
+                      <p className="text-[11px] text-slate-600 dark:text-zinc-400 leading-relaxed">{it.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {block.type === 'quality_journey' && (
+                <div className="rounded-3xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 p-6 sm:p-8 space-y-6 shadow-xs">
+                  {block.title && (
+                    <div className="text-center space-y-1">
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white">{block.title}</h3>
+                      {block.subtitle && <p className="text-xs text-slate-600 dark:text-zinc-400">{block.subtitle}</p>}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                    {(block.steps || []).map((st, i) => (
+                      <div key={i} className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800/80 bg-slate-50 dark:bg-zinc-900/50 shadow-2xs space-y-1">
+                        <span className="font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{st.step}</span>
+                        <h5 className="text-xs font-bold text-slate-900 dark:text-white">{st.title}</h5>
+                        <p className="text-[10px] text-slate-600 dark:text-zinc-400">{st.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {block.type === 'promo_split_banner' && (
+                <div 
+                  className="rounded-3xl border border-slate-200 dark:border-zinc-800 bg-linear-to-r p-8 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4"
+                  style={{
+                    backgroundColor: 'var(--store-primary-subtle, rgba(16,185,129,0.08))',
+                  }}
+                >
+                  <div className="space-y-1">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">{block.title}</h3>
+                    {block.subtitle && <p className="text-xs text-slate-600 dark:text-zinc-300">{block.subtitle}</p>}
+                  </div>
+                  {block.cta_text && (
+                    <Link
+                      to={block.cta_url || `/store/${subdomain}/products`}
+                      className="px-5 py-2.5 rounded-xl font-bold text-xs shadow-xs whitespace-nowrap cursor-pointer transition-all"
+                      style={{
+                        backgroundColor: 'var(--store-primary, #10b981)',
+                        color: 'var(--store-primary-fg, #ffffff)',
+                      }}
+                    >
+                      {block.cta_text}
+                    </Link>
+                  )}
+                </div>
+              )}
+
+              {block.type === 'newsletter_vip' && (
+                <div 
+                  className="rounded-3xl border border-white/15 p-8 text-center text-white space-y-3 shadow-xl"
+                  style={{
+                    background: 'linear-gradient(135deg, var(--store-primary, #10b981) 0%, #0f172a 100%)',
+                  }}
+                >
+                  <h3 className="text-lg font-bold text-white">{block.title || 'Join the VIP Club'}</h3>
+                  <p className="text-xs text-white/90 max-w-sm mx-auto">{block.subtitle}</p>
+                  <div className="flex items-center justify-center gap-2 max-w-xs mx-auto pt-2">
+                    <input
+                      type="text"
+                      placeholder="Your phone or email..."
+                      className="w-full rounded-xl border border-white/20 dark:border-zinc-700 bg-white/10 dark:bg-zinc-900 px-3 py-2 text-xs text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/40"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => alert('Thank you for joining our VIP list!')}
+                      className="px-4 py-2 rounded-xl bg-white text-slate-900 hover:bg-white/90 font-bold text-xs whitespace-nowrap cursor-pointer shadow-xs"
+                    >
+                      {block.button_text || 'Join'}
+                    </button>
                   </div>
                 </div>
               )}
 
               {block.type === 'faq' && (
-                <div className="rounded-3xl border border-zinc-800/80 bg-zinc-900/40 p-6 sm:p-8 space-y-4 shadow-xl">
-                  <h3 className="text-base font-bold text-zinc-100">
+                <div className="rounded-3xl border border-slate-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 p-6 sm:p-8 space-y-4 shadow-xs">
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
                     {block.title || 'Frequently Asked Questions'}
                   </h3>
-                  <div className="divide-y divide-zinc-800/60">
+                  <div className="divide-y divide-slate-200 dark:divide-zinc-800/60">
                     {(block.faqs || []).map((faq, fIdx) => (
                       <div key={fIdx} className="py-3.5 space-y-1">
-                        <h4 className="text-xs font-bold text-zinc-200">{faq.q}</h4>
-                        <p className="text-xs text-zinc-400 leading-relaxed">{faq.a}</p>
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-zinc-200">{faq.q}</h4>
+                        <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">{faq.a}</p>
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {block.type === 'custom_html_css' && (
+                <div className="overflow-hidden rounded-3xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-xs">
+                  <iframe
+                    title="Custom Section Block"
+                    sandbox="allow-scripts"
+                    srcDoc={`
+                      <html>
+                        <head><style>${block.css || ''}</style></head>
+                        <body style="margin: 0; font-family: sans-serif;">${block.html || ''}</body>
+                      </html>
+                    `}
+                    className="w-full min-h-48 border-0"
+                  />
                 </div>
               )}
             </div>
@@ -171,8 +280,13 @@ export const StorefrontDynamicPage: React.FC = () => {
         <BreadcrumbNav items={breadcrumbs} className="py-1" />
 
         {/* Hero Section */}
-        <div className="relative overflow-hidden rounded-3xl border border-emerald-500/20 bg-linear-to-br from-emerald-950/80 via-zinc-900 to-zinc-950 p-8 sm:p-12 shadow-2xl space-y-5">
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1 text-xs font-semibold text-emerald-400">
+        <div 
+          className="relative overflow-hidden rounded-3xl border border-white/15 p-8 sm:p-12 shadow-2xl space-y-5 text-white"
+          style={{
+            background: 'linear-gradient(135deg, var(--store-primary, #10b981) 0%, #0f172a 100%)',
+          }}
+        >
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1 text-xs font-semibold text-white">
             <Sparkles className="size-3.5" />
             <span>Industrial Heritage & Craftsmanship</span>
           </div>
@@ -181,7 +295,7 @@ export const StorefrontDynamicPage: React.FC = () => {
             Direct from Our Factory Floor to Your Doorstep
           </h1>
 
-          <p className="text-xs sm:text-sm text-zinc-300 max-w-2xl leading-relaxed">
+          <p className="text-xs sm:text-sm text-white/90 max-w-2xl leading-relaxed">
             {config?.name ? `${config.name} ` : 'Our enterprise '}is an integrated manufacturing facility engineered to produce 
             premium-grade goods with absolute traceability, automated quality control, and zero middleman inflation.
           </p>
@@ -189,41 +303,48 @@ export const StorefrontDynamicPage: React.FC = () => {
 
         {/* 3 Pillars */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6 space-y-3 shadow-lg">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+          <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6 space-y-3 shadow-xs">
+            <div 
+              className="flex size-10 items-center justify-center rounded-xl border"
+              style={{
+                backgroundColor: 'var(--store-primary-subtle, rgba(16,185,129,0.1))',
+                borderColor: 'var(--store-primary-border, rgba(16,185,129,0.2))',
+                color: 'var(--store-primary, #10b981)',
+              }}
+            >
               <Factory className="size-5" />
             </div>
-            <h3 className="text-sm font-bold text-white">Automated Batching</h3>
-            <p className="text-xs text-zinc-400 leading-relaxed">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Automated Batching</h3>
+            <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
               Industrial precision weighing and automated production runs ensure consistency across every single unit.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6 space-y-3 shadow-lg">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+          <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6 space-y-3 shadow-xs">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400">
               <ShieldCheck className="size-5" />
             </div>
-            <h3 className="text-sm font-bold text-white">Strict QC Audits</h3>
-            <p className="text-xs text-zinc-400 leading-relaxed">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Strict QC Audits</h3>
+            <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
               Every batch undergoes sensory, dimensional, and packaging defect inspection before receiving dispatch clearance.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6 space-y-3 shadow-lg">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
+          <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6 space-y-3 shadow-xs">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400">
               <Award className="size-5" />
             </div>
-            <h3 className="text-sm font-bold text-white">Direct Value Pricing</h3>
-            <p className="text-xs text-zinc-400 leading-relaxed">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Direct Value Pricing</h3>
+            <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
               By removing distribution tiers, retail brokerages, and shelf margins, you receive wholesale factory rates directly.
             </p>
           </div>
         </div>
 
         {/* Manufacturing Standards */}
-        <div className="rounded-3xl border border-zinc-800 bg-zinc-900/40 p-8 space-y-6">
-          <h2 className="text-xl font-bold text-white">Our Quality & Manufacturing Commitment</h2>
-          <div className="space-y-4 text-xs text-zinc-300 leading-relaxed">
+        <div className="rounded-3xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 p-8 space-y-6 shadow-xs">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Our Quality & Manufacturing Commitment</h2>
+          <div className="space-y-4 text-xs sm:text-sm text-slate-600 dark:text-zinc-300 leading-relaxed">
             <p>
               Founded with the vision to modernize consumer goods manufacturing, our facility combines automated material feeding with 
               skilled artisan craftsmanship. We maintain strict compliance with hygienic handling, safe labor practices, 
@@ -235,14 +356,18 @@ export const StorefrontDynamicPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="pt-4 border-t border-zinc-800/80 flex flex-wrap items-center justify-between gap-4">
+          <div className="pt-4 border-t border-slate-200 dark:border-zinc-800/80 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="size-4 text-emerald-400" />
-              <span className="text-xs font-semibold text-zinc-200">100% Genuine Direct Production</span>
+              <CheckCircle2 className="size-4" style={{ color: 'var(--store-primary, #10b981)' }} />
+              <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200">100% Genuine Direct Production</span>
             </div>
             <Link
               to={`/store/${subdomain}/products`}
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-xs font-bold text-zinc-950 hover:bg-emerald-400 transition-all shadow-md shadow-emerald-500/20"
+              className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold transition-all shadow-md cursor-pointer"
+              style={{
+                backgroundColor: 'var(--store-primary, #10b981)',
+                color: 'var(--store-primary-fg, #ffffff)',
+              }}
             >
               <span>Explore Products</span>
               <span>→</span>
@@ -308,33 +433,41 @@ export const StorefrontDynamicPage: React.FC = () => {
         <BreadcrumbNav items={breadcrumbs} className="py-1" />
 
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">
+          <div 
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+            style={{
+              backgroundColor: 'var(--store-primary-subtle, rgba(16,185,129,0.1))',
+              color: 'var(--store-primary, #10b981)',
+              borderColor: 'var(--store-primary-border, rgba(16,185,129,0.2))',
+              borderWidth: '1px',
+            }}
+          >
             <HelpCircle className="size-3.5" />
             <span>Customer Support & FAQs</span>
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
             Frequently Asked Questions
           </h1>
-          <p className="text-xs text-zinc-400 max-w-md mx-auto">
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 max-w-md mx-auto">
             Everything you need to know about factory direct ordering, delivery, and payment options.
           </p>
         </div>
 
-        <div className="rounded-3xl border border-zinc-800 bg-zinc-900/50 p-6 sm:p-8 space-y-3 shadow-xl">
+        <div className="rounded-3xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6 sm:p-8 space-y-3 shadow-xs">
           {FAQS.map((faq, idx) => {
             const isExpanded = expandedFaq === idx;
             return (
-              <div key={idx} className="rounded-2xl border border-zinc-800/80 bg-zinc-950/60 overflow-hidden">
+              <div key={idx} className="rounded-2xl border border-slate-200 dark:border-zinc-800/80 bg-slate-50 dark:bg-zinc-950/60 overflow-hidden">
                 <button
                   type="button"
                   onClick={() => setExpandedFaq(isExpanded ? null : idx)}
-                  className="w-full flex items-center justify-between p-4 text-left text-xs font-bold text-zinc-100 hover:text-emerald-400 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between p-4 text-left text-xs font-bold text-slate-900 dark:text-zinc-100 hover:opacity-80 transition-colors cursor-pointer"
                 >
                   <span>{faq.q}</span>
-                  <ChevronDown className={`size-4 text-zinc-400 transition-transform ${isExpanded ? 'rotate-180 text-emerald-400' : ''}`} />
+                  <ChevronDown className={`size-4 text-slate-400 dark:text-zinc-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                 </button>
                 {isExpanded && (
-                  <div className="px-4 pb-4 text-xs text-zinc-400 leading-relaxed border-t border-zinc-800/60 pt-3 animate-fade-in">
+                  <div className="px-4 pb-4 text-xs text-slate-600 dark:text-zinc-400 leading-relaxed border-t border-slate-200/80 dark:border-zinc-800/60 pt-3 animate-fade-in">
                     {faq.a}
                   </div>
                 )}
@@ -344,15 +477,25 @@ export const StorefrontDynamicPage: React.FC = () => {
         </div>
 
         {/* Contact Us Box */}
-        <div className="rounded-3xl border border-emerald-500/20 bg-emerald-950/20 p-6 text-center space-y-3">
-          <h3 className="text-sm font-bold text-white">Still have questions?</h3>
-          <p className="text-xs text-zinc-400">Our customer support team is on standby to assist you with your orders.</p>
+        <div 
+          className="rounded-3xl border p-6 text-center space-y-3"
+          style={{
+            backgroundColor: 'var(--store-primary-subtle, rgba(16,185,129,0.05))',
+            borderColor: 'var(--store-primary-border, rgba(16,185,129,0.2))',
+          }}
+        >
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Still have questions?</h3>
+          <p className="text-xs text-slate-600 dark:text-zinc-400">Our customer support team is on standby to assist you with your orders.</p>
           <div className="pt-2">
             <a
               href={`https://wa.me/${config?.whatsapp_number?.replace(/[^0-9]/g, '') || '8801700000000'}?text=${encodeURIComponent('Hello, I have a question regarding my order.')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-xs font-bold text-zinc-950 hover:bg-emerald-400 transition-all shadow-md shadow-emerald-500/20"
+              className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold transition-all shadow-md"
+              style={{
+                backgroundColor: 'var(--store-primary, #10b981)',
+                color: 'var(--store-primary-fg, #ffffff)',
+              }}
             >
               <span>Chat with Support on WhatsApp</span>
             </a>
@@ -379,23 +522,23 @@ export const StorefrontDynamicPage: React.FC = () => {
 
         <BreadcrumbNav items={breadcrumbs} className="py-1" />
 
-        <div className="space-y-2 border-b border-zinc-800/80 pb-6">
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-800/80 px-3 py-0.5 text-[11px] font-semibold text-zinc-300">
-            <Lock className="size-3 text-emerald-400" />
+        <div className="space-y-2 border-b border-slate-200 dark:border-zinc-800/80 pb-6">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-zinc-700 bg-slate-100 dark:bg-zinc-800/80 px-3 py-0.5 text-[11px] font-semibold text-slate-700 dark:text-zinc-300">
+            <Lock className="size-3" style={{ color: 'var(--store-primary, #10b981)' }} />
             <span>Legal Notice & Privacy Standard</span>
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
             Privacy Policy & Terms of Service
           </h1>
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-slate-500 dark:text-zinc-400">
             Last Updated: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </p>
         </div>
 
-        <div className="space-y-8 text-xs text-zinc-300 leading-relaxed">
-          <section className="rounded-3xl border border-zinc-800 bg-zinc-900/40 p-6 sm:p-8 space-y-3 shadow-xl">
-            <h2 className="text-sm font-bold text-white flex items-center gap-2">
-              <FileText className="size-4 text-emerald-400" />
+        <div className="space-y-8 text-xs sm:text-sm text-slate-600 dark:text-zinc-300 leading-relaxed">
+          <section className="rounded-3xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 p-6 sm:p-8 space-y-3 shadow-xs">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <FileText className="size-4" style={{ color: 'var(--store-primary, #10b981)' }} />
               <span>1. Information Collection & Usage</span>
             </h2>
             <p>
@@ -405,9 +548,9 @@ export const StorefrontDynamicPage: React.FC = () => {
             </p>
           </section>
 
-          <section className="rounded-3xl border border-zinc-800 bg-zinc-900/40 p-6 sm:p-8 space-y-3 shadow-xl">
-            <h2 className="text-sm font-bold text-white flex items-center gap-2">
-              <ShieldCheck className="size-4 text-emerald-400" />
+          <section className="rounded-3xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 p-6 sm:p-8 space-y-3 shadow-xs">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <ShieldCheck className="size-4" style={{ color: 'var(--store-primary, #10b981)' }} />
               <span>2. Payment Security & Data Protection</span>
             </h2>
             <p>
@@ -416,9 +559,9 @@ export const StorefrontDynamicPage: React.FC = () => {
             </p>
           </section>
 
-          <section className="rounded-3xl border border-zinc-800 bg-zinc-900/40 p-6 sm:p-8 space-y-3 shadow-xl">
-            <h2 className="text-sm font-bold text-white flex items-center gap-2">
-              <Truck className="size-4 text-emerald-400" />
+          <section className="rounded-3xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 p-6 sm:p-8 space-y-3 shadow-xs">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Truck className="size-4" style={{ color: 'var(--store-primary, #10b981)' }} />
               <span>3. Shipping, Returns & Cancellation</span>
             </h2>
             <p>
@@ -439,16 +582,27 @@ export const StorefrontDynamicPage: React.FC = () => {
         description="Official custom page"
         brandName={config?.name ?? 'Slice Mart'}
       />
-      <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+      <div 
+        className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border"
+        style={{
+          backgroundColor: 'var(--store-primary-subtle, rgba(16,185,129,0.1))',
+          borderColor: 'var(--store-primary-border, rgba(16,185,129,0.2))',
+          color: 'var(--store-primary, #10b981)',
+        }}
+      >
         <FileText className="h-6 w-6" />
       </div>
-      <h2 className="text-2xl font-bold text-white">Custom Storefront Page</h2>
-      <p className="text-xs text-zinc-400 max-w-sm mx-auto leading-relaxed">
+      <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Custom Storefront Page</h2>
+      <p className="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 max-w-sm mx-auto leading-relaxed">
         This custom page is currently being updated in the Storefront Page Builder CMS.
       </p>
       <Link
         to={`/store/${subdomain}/products`}
-        className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-xs font-bold text-zinc-950 hover:bg-emerald-400 shadow-md shadow-emerald-500/20 transition-all"
+        className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold shadow-md transition-all cursor-pointer"
+        style={{
+          backgroundColor: 'var(--store-primary, #10b981)',
+          color: 'var(--store-primary-fg, #ffffff)',
+        }}
       >
         <ArrowLeft className="h-4 w-4" />
         <span>Return to Product Catalog</span>

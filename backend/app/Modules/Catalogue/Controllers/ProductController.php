@@ -70,7 +70,7 @@ final class ProductController extends Controller
         ], 'quantity');
         $include = $request->input('include');
         if (is_string($include)) {
-            $relations = array_intersect(explode(',', $include), ['category', 'brand', 'baseUnit', 'purchaseUnit', 'salesUnit', 'taxProfile']);
+            $relations = array_intersect(explode(',', $include), ['category', 'brand', 'baseUnit', 'purchaseUnit', 'salesUnit', 'taxProfile', 'images']);
             if ($relations !== []) {
                 $query->with(array_values($relations));
             }
@@ -104,9 +104,10 @@ final class ProductController extends Controller
         if (TenantContext::isBound() && $product->tenant_id !== TenantContext::current()->tenantId()) {
             return ErrorResponse::make(request: $request, code: 'NOT_FOUND', message: 'The requested resource was not found.', httpStatus: 404, retryable: false);
         }
+        $product->loadMissing('images');
         $includeRaw = $request->query('include', '');
         if (is_string($includeRaw)) {
-            $relations = array_intersect(explode(',', $includeRaw), ['category', 'brand', 'baseUnit', 'purchaseUnit', 'salesUnit', 'taxProfile']);
+            $relations = array_intersect(explode(',', $includeRaw), ['category', 'brand', 'baseUnit', 'purchaseUnit', 'salesUnit', 'taxProfile', 'images']);
             if ($relations !== []) {
                 $product->load(array_values($relations));
             }

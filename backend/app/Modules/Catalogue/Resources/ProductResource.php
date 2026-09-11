@@ -23,6 +23,16 @@ final class ProductResource extends JsonResource
             'tracking_mode' => $this->tracking_mode, 'shelf_life_days' => $this->shelf_life_days, 'reorder_level' => $this->reorder_level, 'reorder_quantity' => $this->reorder_quantity,
             'standard_cost' => $this->standard_cost, 'default_sale_price' => $this->default_sale_price, 'tax_profile_id' => $this->taxProfile?->uuid, 'weight' => $this->weight,
             'dimensions' => $this->dimensions, 'is_online' => $this->is_online, 'online_slug' => $this->online_slug, 'online_meta' => $this->online_meta, 'status' => $this->status,
+            'image_url' => $this->image_url,
+            'images' => $this->relationLoaded('images') ? $this->images->map(static fn ($img) => [
+                'id' => $img->id,
+                'path' => $img->path,
+                'url' => $img->url,
+                'is_primary' => (bool) $img->is_primary,
+                'sort_order' => (int) $img->sort_order,
+                'alt_key' => $img->alt_key,
+                'variant_id' => $img->variant_id,
+            ])->values()->all() : [],
             'created_at' => $this->created_at?->toIso8601String(), 'updated_at' => $this->updated_at?->toIso8601String(),
         ];
     }

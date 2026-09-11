@@ -14,6 +14,11 @@ import {
   ToggleLeft,
   ToggleRight,
   Truck,
+  Menu,
+  Megaphone,
+  Plus,
+  Trash2,
+  ExternalLink,
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
 import type { StorefrontConfig } from '../../types/api/storefront';
@@ -21,6 +26,7 @@ import { DomainSettingsTab } from './DomainSettingsTab';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { useCurrency } from '../../hooks/useCurrency';
 import { notify } from '../../components/ui/Toast';
+import { broadcastThemeDraft } from '../../lib/storefront/themeSync';
 
 interface PublishedProductItem {
   id: number;
@@ -35,13 +41,13 @@ interface PublishedProductItem {
   display_order: number;
 }
 
-type StorefrontSettingTab = 'branding' | 'products' | 'checkout' | 'domains';
+type StorefrontSettingTab = 'branding' | 'header' | 'footer' | 'products' | 'checkout' | 'domains';
 
 export const StorefrontSettingsWorkspace: React.FC = () => {
   const { currencyCode } = useCurrency();
   const [activeTab, setActiveTab] = useWorkspaceTab<StorefrontSettingTab>(
     'branding',
-    ['branding', 'products', 'checkout', 'domains'] as const
+    ['branding', 'header', 'footer', 'products', 'checkout', 'domains'] as const
   );
   const [products, setProducts] = useState<PublishedProductItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +62,43 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
     accent_color: '#14b8a6',
     hero_title: '',
     hero_subtitle: '',
+    navbar_bg: '#0f172a',
+    navbar_text_color: '#ffffff',
+    announcement_enabled: false,
+    announcement_text: '',
+    announcement_bg: '#10b981',
+    announcement_text_color: '#ffffff',
+    menu_items: [
+      { label: 'All Products', url: '/products', is_external: false },
+      { label: 'Featured Collections', url: '/products', is_external: false },
+    ],
+    footer_bg: '#0f172a',
+    footer_text_color: '#94a3b8',
+    footer_columns: [
+      {
+        title: 'Explore',
+        links: [
+          { label: 'All Products', url: '/products' },
+          { label: 'Factory Direct Sourcing', url: '/products' },
+        ],
+      },
+      {
+        title: 'Customer Service',
+        links: [
+          { label: 'Order Tracking', url: '/orders' },
+          { label: 'Contact Support', url: '/contact' },
+        ],
+      },
+    ],
+    social_links: {
+      facebook: '',
+      instagram: '',
+      linkedin: '',
+      youtube: '',
+      whatsapp: '',
+    },
+    meta_pixel_id: '',
+    google_analytics_id: '',
     meta_title: '',
     meta_description: '',
     guest_checkout_enabled: true,
@@ -90,6 +133,54 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
               hero_title: conf.theme?.hero_title ?? 'Factory Fresh Goods',
               hero_subtitle:
                 conf.theme?.hero_subtitle ?? 'Industrial quality delivered straight to your door.',
+              navbar_bg: conf.theme?.navbar_bg ?? '#0f172a',
+              navbar_text_color: conf.theme?.navbar_text_color ?? '#ffffff',
+              announcement_enabled: conf.theme?.announcement_enabled ?? false,
+              announcement_text:
+                conf.theme?.announcement_text ?? '🎉 Factory Direct Deals: Authentic manufacturing quality delivered straight to your doorstep!',
+              announcement_bg: conf.theme?.announcement_bg ?? '#10b981',
+              announcement_text_color: conf.theme?.announcement_text_color ?? '#ffffff',
+              menu_items:
+                conf.theme?.menu_items && conf.theme.menu_items.length > 0
+                  ? conf.theme.menu_items.map((m) => ({
+                      label: m.label,
+                      url: m.url,
+                      is_external: Boolean(m.is_external),
+                    }))
+                  : [
+                      { label: 'Home', url: '/', is_external: false },
+                      { label: 'All Products', url: '/products', is_external: false },
+                    ],
+              footer_bg: conf.theme?.footer_bg ?? '#0f172a',
+              footer_text_color: conf.theme?.footer_text_color ?? '#94a3b8',
+              footer_columns:
+                conf.theme?.footer_columns && conf.theme.footer_columns.length > 0
+                  ? conf.theme.footer_columns
+                  : [
+                      {
+                        title: 'Catalogue',
+                        links: [
+                          { label: 'All Products', url: '/products' },
+                          { label: 'New Arrivals', url: '/products' },
+                        ],
+                      },
+                      {
+                        title: 'Company',
+                        links: [
+                          { label: 'About Us', url: '/products' },
+                          { label: 'Contact Us', url: '/products' },
+                        ],
+                      },
+                    ],
+              social_links: {
+                facebook: conf.theme?.social_links?.facebook ?? '',
+                instagram: conf.theme?.social_links?.instagram ?? '',
+                linkedin: conf.theme?.social_links?.linkedin ?? '',
+                youtube: conf.theme?.social_links?.youtube ?? '',
+                whatsapp: conf.theme?.social_links?.whatsapp ?? '',
+              },
+              meta_pixel_id: conf.theme?.meta_pixel_id ?? '',
+              google_analytics_id: conf.theme?.google_analytics_id ?? '',
               meta_title: conf.meta_title ?? '',
               meta_description: conf.meta_description ?? '',
               guest_checkout_enabled: conf.guest_checkout_enabled ?? true,
@@ -123,20 +214,76 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
     };
   }, [currencyCode]);
 
+  // Real-time live synchronization with open storefront tabs & previews
+  useEffect(() => {
+    if (!form.subdomain || loading) return;
+
+    broadcastThemeDraft(form.subdomain, {
+      primary_color: form.primary_color,
+      accent_color: form.accent_color,
+      hero_title: form.hero_title,
+      hero_subtitle: form.hero_subtitle,
+      navbar_bg: form.navbar_bg,
+      navbar_text_color: form.navbar_text_color,
+      announcement_enabled: form.announcement_enabled,
+      announcement_text: form.announcement_text,
+      announcement_bg: form.announcement_bg,
+      announcement_text_color: form.announcement_text_color,
+      menu_items: form.menu_items,
+      footer_bg: form.footer_bg,
+      footer_text_color: form.footer_text_color,
+      footer_columns: form.footer_columns,
+      social_links: form.social_links,
+    });
+  }, [
+    form.subdomain,
+    form.primary_color,
+    form.accent_color,
+    form.hero_title,
+    form.hero_subtitle,
+    form.navbar_bg,
+    form.navbar_text_color,
+    form.announcement_enabled,
+    form.announcement_text,
+    form.announcement_bg,
+    form.announcement_text_color,
+    form.menu_items,
+    form.footer_bg,
+    form.footer_text_color,
+    form.footer_columns,
+    form.social_links,
+    loading,
+  ]);
+
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
+      const themePayload = {
+        primary_color: form.primary_color,
+        accent_color: form.accent_color,
+        hero_title: form.hero_title,
+        hero_subtitle: form.hero_subtitle,
+        navbar_bg: form.navbar_bg,
+        navbar_text_color: form.navbar_text_color,
+        announcement_enabled: form.announcement_enabled,
+        announcement_text: form.announcement_text,
+        announcement_bg: form.announcement_bg,
+        announcement_text_color: form.announcement_text_color,
+        menu_items: form.menu_items,
+        footer_bg: form.footer_bg,
+        footer_text_color: form.footer_text_color,
+        footer_columns: form.footer_columns,
+        social_links: form.social_links,
+        meta_pixel_id: form.meta_pixel_id,
+        google_analytics_id: form.google_analytics_id,
+      };
+
       await api.put('/storefront/settings', {
         name: form.name,
         subdomain: form.subdomain,
         currency: form.currency,
-        theme: {
-          primary_color: form.primary_color,
-          accent_color: form.accent_color,
-          hero_title: form.hero_title,
-          hero_subtitle: form.hero_subtitle,
-        },
+        theme: themePayload,
         meta_title: form.meta_title,
         meta_description: form.meta_description,
         guest_checkout_enabled: form.guest_checkout_enabled,
@@ -147,7 +294,11 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
         min_order_amount: form.min_order_amount ? parseFloat(form.min_order_amount) : null,
         status: form.status,
       });
-      notify.success('Storefront configuration saved successfully');
+
+      // Broadcast saved state to all open windows/tabs
+      broadcastThemeDraft(form.subdomain, themePayload, 'SAVED');
+
+      notify.success('Storefront configuration saved and synchronized!');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to save settings';
       notify.error('Failed to save settings', { description: msg });
@@ -195,6 +346,109 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
     } finally {
       setSyncing(false);
     }
+  };
+
+  // Menu Item Helpers
+  const addMenuItem = () => {
+    setForm((prev) => ({
+      ...prev,
+      menu_items: [...prev.menu_items, { label: 'New Link', url: '/products', is_external: false }],
+    }));
+  };
+
+  const removeMenuItem = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      menu_items: prev.menu_items.filter((_, i) => i !== index),
+    }));
+  };
+
+  const updateMenuItem = (index: number, field: 'label' | 'url' | 'is_external', value: unknown) => {
+    setForm((prev) => {
+      const copy = [...prev.menu_items];
+      const item = copy[index];
+      if (!item) return prev;
+      copy[index] = {
+        label: item.label,
+        url: item.url,
+        is_external: item.is_external,
+        [field]: value,
+      };
+      return { ...prev, menu_items: copy };
+    });
+  };
+
+  // Footer Column Helpers
+  const addFooterColumn = () => {
+    setForm((prev) => ({
+      ...prev,
+      footer_columns: [
+        ...prev.footer_columns,
+        { title: 'New Column', links: [{ label: 'Link 1', url: '/products' }] },
+      ],
+    }));
+  };
+
+  const removeFooterColumn = (colIdx: number) => {
+    setForm((prev) => ({
+      ...prev,
+      footer_columns: prev.footer_columns.filter((_, i) => i !== colIdx),
+    }));
+  };
+
+  const updateFooterColumnTitle = (colIdx: number, title: string) => {
+    setForm((prev) => {
+      const copy = [...prev.footer_columns];
+      const col = copy[colIdx];
+      if (!col) return prev;
+      copy[colIdx] = { title, links: col.links };
+      return { ...prev, footer_columns: copy };
+    });
+  };
+
+  const addFooterLink = (colIdx: number) => {
+    setForm((prev) => {
+      const copy = [...prev.footer_columns];
+      const col = copy[colIdx];
+      if (!col) return prev;
+      copy[colIdx] = {
+        title: col.title,
+        links: [...col.links, { label: 'New Link', url: '/products' }],
+      };
+      return { ...prev, footer_columns: copy };
+    });
+  };
+
+  const removeFooterLink = (colIdx: number, linkIdx: number) => {
+    setForm((prev) => {
+      const copy = [...prev.footer_columns];
+      const col = copy[colIdx];
+      if (!col) return prev;
+      copy[colIdx] = {
+        title: col.title,
+        links: col.links.filter((_, i) => i !== linkIdx),
+      };
+      return { ...prev, footer_columns: copy };
+    });
+  };
+
+  const updateFooterLink = (
+    colIdx: number,
+    linkIdx: number,
+    field: 'label' | 'url',
+    value: string
+  ) => {
+    setForm((prev) => {
+      const copy = [...prev.footer_columns];
+      const col = copy[colIdx];
+      if (!col) return prev;
+      const link = col.links[linkIdx];
+      if (!link) return prev;
+      const linksCopy = [...col.links];
+      linksCopy[linkIdx] = { ...link, [field]: value };
+      copy[colIdx] = { title: col.title, links: linksCopy };
+      return { ...prev, footer_columns: copy };
+    });
   };
 
   if (loading) {
@@ -253,6 +507,8 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
         <div className="flex gap-1.5 min-w-full sm:min-w-0">
           {[
             { id: 'branding', label: 'Branding & Hero Theme', icon: Palette },
+            { id: 'header', label: 'Header & Navigation', icon: Menu },
+            { id: 'footer', label: 'Footer & Marketing', icon: Megaphone },
             { id: 'products', label: `Product Catalogue Visibility (${products.filter((p) => p.is_published).length}/${products.length})`, icon: Tag },
             { id: 'checkout', label: 'Checkout & Payment Rules', icon: Truck },
             { id: 'domains', label: 'Custom Domains & DNS', icon: Globe },
@@ -402,6 +658,663 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
                   <h3 className="text-lg font-bold text-default leading-tight">{form.hero_title}</h3>
                   <p className="text-xs text-muted line-clamp-2">{form.hero_subtitle}</p>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Header & Navigation Customizer */}
+      {activeTab === 'header' && (
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+          {/* Controls */}
+          <div className="rounded-2xl border border-default bg-surface p-6 space-y-6 shadow-xs">
+            <div>
+              <h2 className="text-sm font-bold text-default flex items-center gap-2">
+                <Menu className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Header & Navigation Customizer</span>
+              </h2>
+              <p className="text-xs text-muted mt-1">
+                Design your storefront's navigation bar, color palette, announcements, and custom menu links.
+              </p>
+            </div>
+
+            {/* Navbar Colors */}
+            <div className="space-y-3 p-4 rounded-xl bg-surface-sunken border border-default">
+              <span className="text-xs font-bold text-default block">Navbar Background & Styling</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block mb-1">
+                    Navbar Background
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={form.navbar_bg}
+                      onChange={(e) => setForm({ ...form, navbar_bg: e.target.value })}
+                      className="h-8 w-12 rounded-lg border border-default bg-transparent cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={form.navbar_bg}
+                      onChange={(e) => setForm({ ...form, navbar_bg: e.target.value })}
+                      className="w-24 rounded-lg border border-default bg-surface px-2.5 py-1 font-mono text-xs text-default uppercase"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-2">
+                    {['#0f172a', '#000000', '#ffffff', '#064e3b', '#1e293b', '#1e1b4b'].map((hex) => (
+                      <button
+                        key={hex}
+                        type="button"
+                        onClick={() => setForm({ ...form, navbar_bg: hex })}
+                        className="size-5 rounded-md border border-default cursor-pointer transition-transform hover:scale-110 shadow-2xs"
+                        style={{ backgroundColor: hex }}
+                        title={hex}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block mb-1">
+                    Navbar Text & Icons Color
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={form.navbar_text_color}
+                      onChange={(e) => setForm({ ...form, navbar_text_color: e.target.value })}
+                      className="h-8 w-12 rounded-lg border border-default bg-transparent cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={form.navbar_text_color}
+                      onChange={(e) => setForm({ ...form, navbar_text_color: e.target.value })}
+                      className="w-24 rounded-lg border border-default bg-surface px-2.5 py-1 font-mono text-xs text-default uppercase"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-2">
+                    {['#ffffff', '#0f172a', '#94a3b8', '#f8fafc', '#10b981'].map((hex) => (
+                      <button
+                        key={hex}
+                        type="button"
+                        onClick={() => setForm({ ...form, navbar_text_color: hex })}
+                        className="size-5 rounded-md border border-default cursor-pointer transition-transform hover:scale-110 shadow-2xs"
+                        style={{ backgroundColor: hex }}
+                        title={hex}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Announcement Top Bar */}
+            <div className="space-y-3 p-4 rounded-xl bg-surface-sunken border border-default">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-default block">Promotional Announcement Bar</span>
+                  <span className="text-[11px] text-muted">A top ribbon highlighting free shipping, factory direct deals, or flash sales.</span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.announcement_enabled}
+                    onChange={(e) => setForm({ ...form, announcement_enabled: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+              </div>
+
+              {form.announcement_enabled && (
+                <div className="space-y-3 pt-2">
+                  <div>
+                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block mb-1">
+                      Announcement Message
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 🎉 Free Worldwide Shipping on Orders Over $50 · Direct from the Factory"
+                      value={form.announcement_text}
+                      onChange={(e) => setForm({ ...form, announcement_text: e.target.value })}
+                      className="w-full rounded-xl border border-default bg-surface px-3.5 py-2 text-xs text-default focus:border-primary focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block mb-1">
+                        Ribbon Background
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={form.announcement_bg}
+                          onChange={(e) => setForm({ ...form, announcement_bg: e.target.value })}
+                          className="h-8 w-12 rounded-lg border border-default bg-transparent cursor-pointer"
+                        />
+                        <span className="font-mono text-xs text-default">{form.announcement_bg}</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block mb-1">
+                        Ribbon Text Color
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={form.announcement_text_color}
+                          onChange={(e) => setForm({ ...form, announcement_text_color: e.target.value })}
+                          className="h-8 w-12 rounded-lg border border-default bg-transparent cursor-pointer"
+                        />
+                        <span className="font-mono text-xs text-default">{form.announcement_text_color}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Header Navigation Menu Builder */}
+            <div className="space-y-3 p-4 rounded-xl bg-surface-sunken border border-default">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-default block">Header Navigation Links</span>
+                  <span className="text-[11px] text-muted">Define custom links rendered across the top navigation menu.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={addMenuItem}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 text-xs font-semibold cursor-pointer transition-colors"
+                >
+                  <Plus className="size-3.5" />
+                  <span>Add Link</span>
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {form.menu_items.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-2 p-2.5 rounded-xl border border-default bg-surface"
+                  >
+                    <input
+                      type="text"
+                      placeholder="Label (e.g. Shop)"
+                      value={item.label}
+                      onChange={(e) => updateMenuItem(idx, 'label', e.target.value)}
+                      className="w-1/3 rounded-lg border border-default bg-surface-sunken px-2.5 py-1.5 text-xs text-default focus:border-primary focus:outline-none"
+                    />
+                    <input
+                      type="text"
+                      placeholder="URL (e.g. /products or /contact)"
+                      value={item.url}
+                      onChange={(e) => updateMenuItem(idx, 'url', e.target.value)}
+                      className="flex-1 rounded-lg border border-default bg-surface-sunken px-2.5 py-1.5 text-xs text-default font-mono focus:border-primary focus:outline-none"
+                    />
+                    <label className="flex items-center gap-1 text-[11px] text-muted cursor-pointer shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={item.is_external ?? false}
+                        onChange={(e) => updateMenuItem(idx, 'is_external', e.target.checked)}
+                        className="rounded border-default text-emerald-500 focus:ring-emerald-500"
+                      />
+                      <ExternalLink className="size-3" />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => removeMenuItem(idx)}
+                      className="p-1 text-muted hover:text-rose-500 cursor-pointer transition-colors"
+                      title="Remove link"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Live Interactive Header Preview */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between text-xs font-semibold text-muted">
+              <span>Live Header & Navbar Preview</span>
+              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                Real-Time Canvas
+              </span>
+            </div>
+
+            <div className="rounded-2xl border border-default bg-slate-900/5 dark:bg-slate-950 p-4 space-y-4 shadow-sm">
+              <div className="rounded-xl overflow-hidden border border-default shadow-md">
+                {/* Announcement Preview */}
+                {form.announcement_enabled && (
+                  <div
+                    style={{
+                      backgroundColor: form.announcement_bg,
+                      color: form.announcement_text_color,
+                    }}
+                    className="py-2 px-4 text-center text-[11px] font-semibold tracking-wide transition-colors"
+                  >
+                    {form.announcement_text || 'Announcement Banner Preview'}
+                  </div>
+                )}
+
+                {/* Navbar Preview */}
+                <div
+                  style={{
+                    backgroundColor: form.navbar_bg,
+                    color: form.navbar_text_color,
+                  }}
+                  className="px-5 py-3.5 flex items-center justify-between transition-colors"
+                >
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2 font-black text-sm tracking-tight">
+                      <div
+                        className="size-7 rounded-lg flex items-center justify-center font-bold text-xs"
+                        style={{ backgroundColor: form.primary_color, color: '#ffffff' }}
+                      >
+                        {form.name ? form.name.charAt(0).toUpperCase() : 'S'}
+                      </div>
+                      <span>{form.name || 'Storefront Brand'}</span>
+                    </div>
+
+                    <div className="hidden md:flex items-center gap-4 text-xs font-medium opacity-90">
+                      {form.menu_items.map((m, i) => (
+                        <span
+                          key={i}
+                          className="hover:opacity-100 cursor-pointer transition-opacity"
+                        >
+                          {m.label || 'Link'}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="hidden sm:block w-36 px-2.5 py-1 rounded-lg bg-white/10 text-[10px] opacity-70">
+                      Search catalog...
+                    </div>
+                    <div
+                      className="px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1"
+                      style={{ backgroundColor: form.primary_color, color: '#ffffff' }}
+                    >
+                      <ShoppingBag className="size-3.5" />
+                      <span>Cart (0)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-8 bg-slate-100 dark:bg-slate-900/80 text-center space-y-2">
+                  <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] font-bold">
+                    STOREFRONT BODY CONTENT
+                  </div>
+                  <h3 className="text-sm font-bold text-default">{form.hero_title || 'Hero Title'}</h3>
+                  <p className="text-xs text-muted max-w-sm mx-auto">{form.hero_subtitle}</p>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-surface border border-default text-[11px] text-muted space-y-1">
+                <span className="font-bold text-default block">💡 Customization Tip:</span>
+                <p>
+                  Any background color you choose here will directly apply to all customer-facing header bars, dropdown menus, and announcement ribbons on both mobile devices and desktop screens.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Footer & Marketing Customizer */}
+      {activeTab === 'footer' && (
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+          {/* Controls */}
+          <div className="rounded-2xl border border-default bg-surface p-6 space-y-6 shadow-xs">
+            <div>
+              <h2 className="text-sm font-bold text-default flex items-center gap-2">
+                <Megaphone className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Footer & Digital Marketing</span>
+              </h2>
+              <p className="text-xs text-muted mt-1">
+                Customize footer colors, column links, social channels, and ad tracking pixels.
+              </p>
+            </div>
+
+            {/* Footer Colors */}
+            <div className="space-y-3 p-4 rounded-xl bg-surface-sunken border border-default">
+              <span className="text-xs font-bold text-default block">Footer Color & Tone</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block mb-1">
+                    Footer Background
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={form.footer_bg}
+                      onChange={(e) => setForm({ ...form, footer_bg: e.target.value })}
+                      className="h-8 w-12 rounded-lg border border-default bg-transparent cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={form.footer_bg}
+                      onChange={(e) => setForm({ ...form, footer_bg: e.target.value })}
+                      className="w-24 rounded-lg border border-default bg-surface px-2.5 py-1 font-mono text-xs text-default uppercase"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-2">
+                    {['#0f172a', '#090d16', '#18181b', '#022c22', '#1e1b4b', '#f8fafc'].map((hex) => (
+                      <button
+                        key={hex}
+                        type="button"
+                        onClick={() => setForm({ ...form, footer_bg: hex })}
+                        className="size-5 rounded-md border border-default cursor-pointer transition-transform hover:scale-110 shadow-2xs"
+                        style={{ backgroundColor: hex }}
+                        title={hex}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block mb-1">
+                    Footer Text Color
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={form.footer_text_color}
+                      onChange={(e) => setForm({ ...form, footer_text_color: e.target.value })}
+                      className="h-8 w-12 rounded-lg border border-default bg-transparent cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={form.footer_text_color}
+                      onChange={(e) => setForm({ ...form, footer_text_color: e.target.value })}
+                      className="w-24 rounded-lg border border-default bg-surface px-2.5 py-1 font-mono text-xs text-default uppercase"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-2">
+                    {['#94a3b8', '#cbd5e1', '#64748b', '#ffffff', '#0f172a'].map((hex) => (
+                      <button
+                        key={hex}
+                        type="button"
+                        onClick={() => setForm({ ...form, footer_text_color: hex })}
+                        className="size-5 rounded-md border border-default cursor-pointer transition-transform hover:scale-110 shadow-2xs"
+                        style={{ backgroundColor: hex }}
+                        title={hex}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Column Navigation */}
+            <div className="space-y-4 p-4 rounded-xl bg-surface-sunken border border-default">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-default block">Footer Link Columns</span>
+                  <span className="text-[11px] text-muted">Organize quick links, technical catalogs, and policies.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={addFooterColumn}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 text-xs font-semibold cursor-pointer transition-colors"
+                >
+                  <Plus className="size-3.5" />
+                  <span>Add Column</span>
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {form.footer_columns.map((col, colIdx) => (
+                  <div key={colIdx} className="p-3.5 rounded-xl border border-default bg-surface space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <input
+                        type="text"
+                        value={col.title}
+                        placeholder="Column Title (e.g. Products)"
+                        onChange={(e) => updateFooterColumnTitle(colIdx, e.target.value)}
+                        className="flex-1 rounded-lg border border-default bg-surface-sunken px-2.5 py-1 text-xs font-bold text-default focus:border-primary focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => addFooterLink(colIdx)}
+                        className="text-[11px] font-semibold text-primary hover:underline cursor-pointer flex items-center gap-1"
+                      >
+                        <Plus className="size-3" /> Add Link
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeFooterColumn(colIdx)}
+                        className="p-1 text-muted hover:text-rose-500 cursor-pointer"
+                        title="Remove column"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-1.5 pl-2 border-l-2 border-slate-200 dark:border-slate-700">
+                      {col.links.map((lnk, lnkIdx) => (
+                        <div key={lnkIdx} className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            placeholder="Label"
+                            value={lnk.label}
+                            onChange={(e) => updateFooterLink(colIdx, lnkIdx, 'label', e.target.value)}
+                            className="w-1/3 rounded-lg border border-default bg-surface-sunken px-2 py-1 text-xs text-default"
+                          />
+                          <input
+                            type="text"
+                            placeholder="URL"
+                            value={lnk.url}
+                            onChange={(e) => updateFooterLink(colIdx, lnkIdx, 'url', e.target.value)}
+                            className="flex-1 rounded-lg border border-default bg-surface-sunken px-2 py-1 text-xs text-default font-mono"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeFooterLink(colIdx, lnkIdx)}
+                            className="p-1 text-muted hover:text-rose-500 cursor-pointer"
+                          >
+                            <Trash2 className="size-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Social Media & Direct Outreach */}
+            <div className="space-y-3 p-4 rounded-xl bg-surface-sunken border border-default">
+              <span className="text-xs font-bold text-default block">Social Media & Direct Outreach</span>
+              <p className="text-[11px] text-muted">Direct customers to your verified social media pages & community channels.</p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-semibold text-muted block mb-1">WhatsApp Sourcing Link</label>
+                  <input
+                    type="text"
+                    placeholder="https://wa.me/..."
+                    value={form.social_links.whatsapp}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        social_links: { ...form.social_links, whatsapp: e.target.value },
+                      })
+                    }
+                    className="w-full rounded-xl border border-default bg-surface px-3 py-1.5 text-xs text-default"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-muted block mb-1">Facebook Page</label>
+                  <input
+                    type="text"
+                    placeholder="https://facebook.com/..."
+                    value={form.social_links.facebook}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        social_links: { ...form.social_links, facebook: e.target.value },
+                      })
+                    }
+                    className="w-full rounded-xl border border-default bg-surface px-3 py-1.5 text-xs text-default"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-muted block mb-1">Instagram Profile</label>
+                  <input
+                    type="text"
+                    placeholder="https://instagram.com/..."
+                    value={form.social_links.instagram}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        social_links: { ...form.social_links, instagram: e.target.value },
+                      })
+                    }
+                    className="w-full rounded-xl border border-default bg-surface px-3 py-1.5 text-xs text-default"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-muted block mb-1">LinkedIn Business Page</label>
+                  <input
+                    type="text"
+                    placeholder="https://linkedin.com/company/..."
+                    value={form.social_links.linkedin}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        social_links: { ...form.social_links, linkedin: e.target.value },
+                      })
+                    }
+                    className="w-full rounded-xl border border-default bg-surface px-3 py-1.5 text-xs text-default"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Digital Marketing & Ad Tracking */}
+            <div className="space-y-3 p-4 rounded-xl bg-surface-sunken border border-default">
+              <span className="text-xs font-bold text-default block">Digital Marketing & Conversion Tracking</span>
+              <p className="text-[11px] text-muted">
+                Automatically fire PageView, ViewContent, AddToCart, and Purchase events to maximize ROI on ad campaigns.
+              </p>
+
+              <div className="space-y-3 pt-1">
+                <div>
+                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block mb-1">
+                    Meta Pixel ID (Facebook Pixel)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 123456789012345"
+                    value={form.meta_pixel_id}
+                    onChange={(e) => setForm({ ...form, meta_pixel_id: e.target.value })}
+                    className="w-full rounded-xl border border-default bg-surface px-3.5 py-2 text-xs text-default font-mono focus:border-primary focus:outline-none"
+                  />
+                  <span className="text-[10px] text-muted mt-0.5 block">
+                    Found in Meta Events Manager. Tracks catalog views and retargets cart abandoners on Facebook/Instagram.
+                  </span>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block mb-1">
+                    Google Analytics 4 Measurement ID
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. G-XXXXXXXXXX"
+                    value={form.google_analytics_id}
+                    onChange={(e) => setForm({ ...form, google_analytics_id: e.target.value })}
+                    className="w-full rounded-xl border border-default bg-surface px-3.5 py-2 text-xs text-default font-mono focus:border-primary focus:outline-none"
+                  />
+                  <span className="text-[10px] text-muted mt-0.5 block">
+                    Found in Google Analytics Admin Data Streams. Tracks ecommerce funnel and conversion sources.
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Live Interactive Footer Preview */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between text-xs font-semibold text-muted">
+              <span>Live Footer Canvas Preview</span>
+              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                Real-Time Canvas
+              </span>
+            </div>
+
+            <div className="rounded-2xl border border-default bg-slate-900/5 dark:bg-slate-950 p-4 space-y-4 shadow-sm">
+              <div
+                style={{
+                  backgroundColor: form.footer_bg,
+                  color: form.footer_text_color,
+                }}
+                className="rounded-xl overflow-hidden p-6 space-y-6 transition-colors shadow-md border border-white/5"
+              >
+                {/* Brand & Bio */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-5">
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className="size-8 rounded-xl flex items-center justify-center font-black text-sm"
+                      style={{ backgroundColor: form.primary_color, color: '#ffffff' }}
+                    >
+                      {form.name ? form.name.charAt(0).toUpperCase() : 'S'}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-white">{form.name || 'Storefront Brand'}</h4>
+                      <p className="text-[11px] opacity-75">Direct Factory Production & Sourcing</p>
+                    </div>
+                  </div>
+
+                  {/* Social Icon Previews */}
+                  <div className="flex items-center gap-2">
+                    {['FB', 'IG', 'IN', 'YT', 'WA'].map((s) => (
+                      <div
+                        key={s}
+                        className="size-7 rounded-lg bg-white/10 flex items-center justify-center text-[10px] font-bold text-white/80"
+                      >
+                        {s}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Footer Columns */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 text-xs">
+                  {form.footer_columns.map((col, i) => (
+                    <div key={i} className="space-y-2">
+                      <h5 className="font-bold text-white tracking-wider text-[11px] uppercase">
+                        {col.title || 'Column'}
+                      </h5>
+                      <ul className="space-y-1 opacity-80 text-[11px]">
+                        {col.links.map((lnk, j) => (
+                          <li key={j} className="hover:opacity-100 cursor-pointer">
+                            {lnk.label || 'Link'}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Copyright */}
+                <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between text-[10px] opacity-60">
+                  <span>© {new Date().getFullYear()} {form.name || 'Storefront'}. All rights reserved.</span>
+                  <span>Powered by Production ERP & Storefront Engine</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-surface border border-default text-[11px] text-muted space-y-1">
+                <span className="font-bold text-default block">💡 Marketing Attribution:</span>
+                <p>
+                  Setting up your Meta Pixel and GA4 Measurement ID empowers your digital marketing campaigns with deep purchase tracking, conversion value attribution, and instant audience retargeting.
+                </p>
               </div>
             </div>
           </div>

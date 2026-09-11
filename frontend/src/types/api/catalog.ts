@@ -22,6 +22,17 @@ export interface Brand extends CatalogTimestamped {
   is_active: boolean;
 }
 
+export interface ProductImage {
+  id: number;
+  product_id?: number;
+  variant_id?: number | null;
+  path: string;
+  url: string;
+  is_primary: boolean;
+  sort_order: number;
+  alt_key?: string | null;
+}
+
 export interface Product extends CatalogTimestamped {
   id: string;
   product_id?: number;
@@ -55,6 +66,8 @@ export interface Product extends CatalogTimestamped {
   is_online: boolean;
   online_slug: string | null;
   online_meta: Record<string, unknown> | null;
+  image_url?: string | null;
+  images?: ProductImage[];
   status: string;
 }
 

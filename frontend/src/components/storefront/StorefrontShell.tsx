@@ -1,5 +1,5 @@
 import React, { useEffect, useState, Suspense } from 'react';
-import { Outlet, useParams } from 'react-router-dom';
+import { Outlet, useParams, useLocation } from 'react-router-dom';
 import { api } from '../../lib/api/client';
 import { useStorefrontCartStore } from '../../lib/storefront/storefrontCartStore';
 import { StorefrontHeader } from './StorefrontHeader';
@@ -10,9 +10,17 @@ import { JsonLdSchema } from '../seo/JsonLdSchema';
 import { useAuthStore } from '../../lib/auth/authStore';
 import { StorefrontRouteLoadingFallback } from '../routing/RouteLoadingFallback';
 import type { StorefrontConfig } from '../../types/api/storefront';
+import { initStorefrontTracking, trackStorefrontPageView } from '../../lib/storefront/storefrontTracking';
+import {
+  applyStorefrontThemeVariables,
+  subscribeToThemeDraft,
+  getStoredThemeDraft,
+  type StorefrontThemeConfig,
+} from '../../lib/storefront/themeSync';
 
 export const StorefrontShell: React.FC = () => {
   const { subdomain: paramSubdomain } = useParams<{ subdomain?: string }>();
+  const location = useLocation();
   const tenantSubdomain = useAuthStore((state) => state.tenant?.subdomain);
   const subdomain = paramSubdomain || tenantSubdomain || 'store';
 
@@ -22,6 +30,7 @@ export const StorefrontShell: React.FC = () => {
 
   const { setSubdomain, fetchCart } = useStorefrontCartStore();
 
+  // 1. Initial config fetch + apply stored draft if present
   useEffect(() => {
     setSubdomain(subdomain);
 
@@ -34,7 +43,30 @@ export const StorefrontShell: React.FC = () => {
             'X-Storefront-Subdomain': subdomain,
           },
         });
-        setConfig(response.data);
+
+        const initialConfig = response.data;
+        // Check if there is an active local draft from the customizer
+        const draft = getStoredThemeDraft(subdomain);
+        const mergedTheme = {
+          ...initialConfig.theme,
+          ...draft,
+        } as StorefrontThemeConfig;
+
+        const finalConfig: StorefrontConfig = {
+          ...initialConfig,
+          theme: mergedTheme,
+        };
+
+        setConfig(finalConfig);
+        applyStorefrontThemeVariables(mergedTheme);
+
+        // Initialize Meta Pixel & GA4 tracking if configured in CMS
+        if (mergedTheme.meta_pixel_id || mergedTheme.google_analytics_id) {
+          initStorefrontTracking(
+            mergedTheme.meta_pixel_id,
+            mergedTheme.google_analytics_id
+          );
+        }
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Storefront could not be loaded');
       } finally {
@@ -46,11 +78,42 @@ export const StorefrontShell: React.FC = () => {
     fetchCart();
   }, [subdomain, setSubdomain, fetchCart]);
 
+  // 2. Real-time Live Theme Subscription across tabs & windows
+  useEffect(() => {
+    const unsubscribe = subscribeToThemeDraft(subdomain, (updatedTheme) => {
+      setConfig((prev) => {
+        if (!prev) return prev;
+        const newTheme = {
+          ...prev.theme,
+          ...updatedTheme,
+        } as StorefrontThemeConfig;
+        applyStorefrontThemeVariables(newTheme);
+        return {
+          ...prev,
+          theme: newTheme,
+        };
+      });
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [subdomain]);
+
+  // Track page view on route transitions
+  useEffect(() => {
+    trackStorefrontPageView(location.pathname);
+  }, [location.pathname]);
+
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-400">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+          <div
+            style={{ borderColor: 'var(--store-primary, #10b981)', borderTopColor: 'transparent' }}
+            className="h-8 w-8 animate-spin rounded-full border-2"
+          />
           <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
             Loading Storefront...
           </span>
@@ -82,7 +145,7 @@ export const StorefrontShell: React.FC = () => {
   const websiteSchema = extendedConfig.seo?.website_schema;
 
   return (
-    <div className="min-h-screen bg-zinc-950 font-sans text-zinc-100 flex flex-col justify-between selection:bg-emerald-500/30 selection:text-emerald-200">
+    <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 font-sans text-slate-900 dark:text-zinc-100 flex flex-col justify-between transition-colors duration-200">
       <SeoHead
         title={config.meta_title || config.name}
         description={

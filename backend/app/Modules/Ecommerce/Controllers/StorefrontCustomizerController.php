@@ -73,6 +73,19 @@ final class StorefrontCustomizerController extends Controller
             'theme.accent_color' => 'nullable|string|max:32',
             'theme.hero_title' => 'nullable|string|max:255',
             'theme.hero_subtitle' => 'nullable|string|max:500',
+            'theme.navbar_bg' => 'nullable|string|max:32',
+            'theme.navbar_text_color' => 'nullable|string|max:32',
+            'theme.announcement_enabled' => 'nullable|boolean',
+            'theme.announcement_text' => 'nullable|string|max:255',
+            'theme.announcement_bg' => 'nullable|string|max:32',
+            'theme.announcement_text_color' => 'nullable|string|max:32',
+            'theme.footer_bg' => 'nullable|string|max:32',
+            'theme.footer_text_color' => 'nullable|string|max:32',
+            'theme.footer_columns' => 'nullable|array',
+            'theme.menu_items' => 'nullable|array',
+            'theme.social_links' => 'nullable|array',
+            'theme.meta_pixel_id' => 'nullable|string|max:64',
+            'theme.google_analytics_id' => 'nullable|string|max:64',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string|max:500',
             'guest_checkout_enabled' => 'sometimes|boolean',
@@ -84,6 +97,10 @@ final class StorefrontCustomizerController extends Controller
             'min_order_amount' => 'nullable|numeric|min:0',
             'status' => 'sometimes|required|in:draft,live,maintenance,suspended',
         ]);
+
+        if (isset($validated['theme']) && is_array($validated['theme'])) {
+            $validated['theme'] = array_merge($storefront->theme ?? [], $validated['theme']);
+        }
 
         $storefront->update($validated);
 

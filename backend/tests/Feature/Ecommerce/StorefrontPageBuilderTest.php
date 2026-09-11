@@ -156,4 +156,32 @@ class StorefrontPageBuilderTest extends TestCase
 
         $response->assertStatus(404);
     }
+
+    public function test_default_seeding_includes_storefront_homepage_with_ecommerce_blocks(): void
+    {
+        $response = $this->withHeaders([
+            'Authorization' => "Bearer {$this->tenantToken}",
+        ])->postJson('/api/v1/storefront/cms/pages/seed-defaults');
+
+        $response->assertOk();
+        $response->assertJsonPath('success', true);
+
+        // Check that home page is returned and has e-commerce blocks
+        $pages = collect($response->json('data'));
+        $homePage = $pages->firstWhere('slug', 'home');
+
+        $this->assertNotNull($homePage);
+        $this->assertEquals('Storefront Homepage', $homePage['title']);
+        $this->assertEquals('home', $homePage['page_type']);
+        $this->assertNotEmpty($homePage['blocks']);
+
+        // Verify public customer can fetch home page
+        $pubResponse = $this->withHeaders([
+            'X-Storefront-Subdomain' => 'slicemart',
+        ])->getJson('/api/v1/storefront/pages/home');
+
+        $pubResponse->assertOk();
+        $pubResponse->assertJsonPath('data.slug', 'home');
+        $this->assertGreaterThanOrEqual(5, count($pubResponse->json('data.blocks')));
+    }
 }

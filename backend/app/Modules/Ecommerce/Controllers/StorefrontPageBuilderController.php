@@ -67,6 +67,89 @@ final class StorefrontPageBuilderController extends Controller
     {
         $defaultPages = [
             [
+                'title' => 'Storefront Homepage',
+                'slug' => 'home',
+                'page_type' => 'home',
+                'meta_title' => 'Next-Gen Infrared Cookers & Premium Stoves — SliceMart Direct',
+                'meta_description' => 'Direct-from-factory kitchen appliances, infrared cookers, and double-burner stoves with 1-year official warranty.',
+                'status' => 'published',
+                'sort_order' => 0,
+                'blocks' => [
+                    [
+                        'id' => 'b_hero',
+                        'type' => 'hero_banner',
+                        'badge' => 'Factory Direct • Guaranteed Fresh Daily',
+                        'title' => 'Next-Gen Infrared Cookers & Premium Stoves',
+                        'subtitle' => 'High-efficiency energy saving, microcrystalline ceramic touch surfaces, and complete temperature control direct from our factory.',
+                        'cta_text' => 'Explore Fresh Catalog',
+                        'cta_url' => '#catalog',
+                        'secondary_cta_text' => 'Order via WhatsApp',
+                        'secondary_cta_url' => 'whatsapp',
+                    ],
+                    [
+                        'id' => 'b_props',
+                        'type' => 'value_props',
+                        'title' => 'Why Buy Direct',
+                        'items' => [
+                            ['icon' => 'flame', 'title' => 'Factory Direct', 'desc' => 'Built directly in our ISO-compliant assembly plant with zero middleman markups.'],
+                            ['icon' => 'truck', 'title' => 'Express Dispatch', 'desc' => 'Fast, temperature-controlled delivery fleet ensuring prime condition.'],
+                            ['icon' => 'shield', 'title' => '100% Quality Assurance', 'desc' => 'Every batch lab-tested for purity, weight consistency, and safety.'],
+                            ['icon' => 'message', 'title' => 'WhatsApp Concierge', 'desc' => 'Live order tracking, bulk corporate quotes, and instant support.'],
+                        ],
+                    ],
+                    [
+                        'id' => 'b_products',
+                        'type' => 'featured_products',
+                        'title' => 'Browse Available Products',
+                        'subtitle' => 'Select items below to add directly to your cart or order custom batch quantities.',
+                        'category_id' => null,
+                        'limit' => 12,
+                        'show_search' => true,
+                        'show_categories' => true,
+                    ],
+                    [
+                        'id' => 'b_journey',
+                        'type' => 'quality_journey',
+                        'title' => 'The SliceMart Quality Journey',
+                        'subtitle' => 'How we ensure every batch meets stringent safety and thermal efficiency standards.',
+                        'steps' => [
+                            ['step' => '01 / SOURCING', 'title' => 'Components & Glass', 'desc' => 'A-grade ceramic panels, pure copper coils, and flame-retardant chassis.'],
+                            ['step' => '02 / ASSEMBLY', 'title' => 'Precision Assembly', 'desc' => 'ESD-safe line with computerized torque drivers and automated PCB fitting.'],
+                            ['step' => '03 / TESTING', 'title' => 'Hi-Pot & Burn-In', 'desc' => '3750V dielectric insulation and 4-hour continuous thermal load testing.'],
+                            ['step' => '04 / QC CHECK', 'title' => 'Sensor & Safety QA', 'desc' => 'Overheat sensor calibration, touch panel responsiveness, and leak tests.'],
+                            ['step' => '05 / DISPATCH', 'title' => 'Drop-Tested Packaging', 'desc' => 'Custom molded EPE foam buffer and reinforced carton dispatch.'],
+                        ],
+                    ],
+                    [
+                        'id' => 'b_promo',
+                        'type' => 'promo_split_banner',
+                        'title' => 'Precision Engineering & Thermal Innovation',
+                        'subtitle' => 'High-efficiency infrared cookers, induction surfaces, and precision gas stoves.',
+                        'cta_text' => 'Explore Catalog',
+                        'cta_url' => '#catalog',
+                    ],
+                    [
+                        'id' => 'b_faq',
+                        'type' => 'faq',
+                        'title' => 'Got Questions? We’ve Got Answers.',
+                        'subtitle' => 'Frequently Asked Questions',
+                        'faqs' => [
+                            ['q' => 'How fresh are the products when delivered?', 'a' => 'All orders are dispatched directly from our central factory production line within 24 hours of batch output.'],
+                            ['q' => 'What payment methods do you accept?', 'a' => 'We accept Cash on Delivery (COD), bKash, Nagad, and major credit/debit cards.'],
+                            ['q' => 'Can I order custom or bulk quantities for events/businesses?', 'a' => 'Yes! You can contact us directly via WhatsApp or create a wholesale inquiry for volume discounts.'],
+                            ['q' => 'How do I track my delivery status?', 'a' => 'Simply visit our "Track My Order" page and enter your order tracking number or mobile phone number.'],
+                        ],
+                    ],
+                    [
+                        'id' => 'b_vip',
+                        'type' => 'newsletter_vip',
+                        'title' => 'Join the SliceMart VIP Club',
+                        'subtitle' => 'Get instant alerts when new products launch, plus exclusive perks and promotions.',
+                        'button_text' => 'Subscribe',
+                    ],
+                ],
+            ],
+            [
                 'title' => 'About Our Factory',
                 'slug' => 'about-us',
                 'page_type' => 'content',
@@ -351,6 +434,13 @@ final class StorefrontPageBuilderController extends Controller
     {
         $tenantId = TenantContext::current()->tenantId();
         $page = StorefrontPage::where('tenant_id', $tenantId)->findOrFail($id);
+
+        if ($page->slug === 'home') {
+            return response()->json([
+                'success' => false,
+                'message' => 'The storefront homepage cannot be deleted.',
+            ], 422);
+        }
 
         $page->delete();
 

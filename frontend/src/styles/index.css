@@ -335,3 +335,105 @@
   z-index: 9999;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   STOREFRONT RICH CONTENT STYLING (HTML Specifications & Tables)
+   ─────────────────────────────────────────────────────────────────────────── */
+.storefront-rich-content {
+  line-height: 1.6;
+}
+
+.storefront-rich-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  font-size: 0.75rem;
+}
+
+.storefront-rich-content th {
+  background-color: #f8fafc;
+  color: #1e293b;
+  font-weight: 700;
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+  border: 1px solid #e2e8f0;
+}
+
+.storefront-rich-content td {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+}
+
+.storefront-rich-content h1,
+.storefront-rich-content h2,
+.storefront-rich-content h3,
+.storefront-rich-content h4 {
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0.75rem 0 0.35rem 0;
+}
+
+.storefront-rich-content p {
+  margin: 0 0 0.5rem 0;
+  color: #475569;
+}
+
+.storefront-rich-content ul,
+.storefront-rich-content ol {
+  padding-left: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Dark Mode Overrides for Embedded HTML Content */
+html.dark .storefront-rich-content,
+.dark .storefront-rich-content {
+  color: #d4d4d8;
+}
+
+html.dark .storefront-rich-content div,
+.dark .storefront-rich-content div {
+  color: inherit;
+}
+
+html.dark .storefront-rich-content h1,
+html.dark .storefront-rich-content h2,
+html.dark .storefront-rich-content h3,
+html.dark .storefront-rich-content h4,
+.dark .storefront-rich-content h1,
+.dark .storefront-rich-content h2,
+.dark .storefront-rich-content h3,
+.dark .storefront-rich-content h4 {
+  color: #f4f4f5 !important;
+}
+
+html.dark .storefront-rich-content p,
+.dark .storefront-rich-content p {
+  color: #cbd5e1 !important;
+}
+
+html.dark .storefront-rich-content table,
+.dark .storefront-rich-content table {
+  border-color: #27272a !important;
+}
+
+html.dark .storefront-rich-content tr,
+.dark .storefront-rich-content tr {
+  background: transparent !important;
+}
+
+html.dark .storefront-rich-content th,
+.dark .storefront-rich-content th {
+  background-color: #18181b !important;
+  color: #f4f4f5 !important;
+  border-color: #27272a !important;
+}
+
+html.dark .storefront-rich-content td,
+.dark .storefront-rich-content td {
+  color: #d4d4d8 !important;
+  border-color: #27272a !important;
+}
+

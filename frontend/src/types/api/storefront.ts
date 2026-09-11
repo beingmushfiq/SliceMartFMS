@@ -13,6 +13,32 @@ export interface StorefrontConfig {
     hero_title: string;
     hero_subtitle: string;
     hero_image?: string | null;
+    navbar_bg?: string;
+    navbar_text_color?: string;
+    announcement_enabled?: boolean;
+    announcement_text?: string;
+    announcement_bg?: string;
+    announcement_text_color?: string;
+    footer_bg?: string;
+    footer_text_color?: string;
+    footer_columns?: Array<{
+      title: string;
+      links: Array<{ label: string; url: string }>;
+    }>;
+    menu_items?: Array<{
+      label: string;
+      url: string;
+      is_external?: boolean;
+    }>;
+    social_links?: {
+      facebook?: string;
+      instagram?: string;
+      linkedin?: string;
+      youtube?: string;
+      whatsapp?: string;
+    };
+    meta_pixel_id?: string;
+    google_analytics_id?: string;
   };
   meta_title: string;
   meta_description: string | null;
@@ -43,7 +69,10 @@ export interface StorefrontProduct {
   description: string | null;
   type: string;
   default_sale_price: string;
-  images?: { id?: number; url?: string; path?: string }[];
+  compare_at_price?: string | null;
+  is_featured?: boolean;
+  image_url?: string | null;
+  images?: { id?: number; url?: string; path?: string; is_primary?: boolean; sort_order?: number }[];
   category?: {
     id: number;
     name: string;

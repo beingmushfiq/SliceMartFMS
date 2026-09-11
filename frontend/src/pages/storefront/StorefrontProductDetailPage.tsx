@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
-import { ArrowLeft, Minus, Package, Plus, ShoppingBag, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Minus, Package, Plus, ShoppingBag, ShieldCheck, ChevronLeft, ChevronRight, Share2, Check } from 'lucide-react';
 import { api } from '../../lib/api/client';
 import { useStorefrontCartStore } from '../../lib/storefront/storefrontCartStore';
 import { SeoHead } from '../../components/seo/SeoHead';
 import { BreadcrumbNav } from '../../components/seo/BreadcrumbNav';
 import type { StorefrontConfig, StorefrontProduct, StorefrontProductVariant } from '../../types/api/storefront';
 import { useCurrency } from '../../hooks/useCurrency';
+import { StorefrontRichDescription } from '../../components/storefront/StorefrontRichDescription';
+import { stripHtml } from '../../lib/storefront/htmlUtils';
+import { trackStorefrontAddToCart, trackStorefrontViewContent } from '../../lib/storefront/storefrontTracking';
 
 interface OutletContextType {
   config: StorefrontConfig;
@@ -21,6 +24,8 @@ export const StorefrontProductDetailPage: React.FC = () => {
   const [selectedVariant, setSelectedVariant] = useState<StorefrontProductVariant | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const { addItem, openDrawer } = useStorefrontCartStore();
 
@@ -44,6 +49,20 @@ export const StorefrontProductDetailPage: React.FC = () => {
         if (prod?.variants && prod.variants.length > 0) {
           setSelectedVariant(prod.variants[0] ?? null);
         }
+
+        // Track ViewContent for Digital Marketing Analytics (Meta Pixel + GA4)
+        if (prod) {
+          const itemPrice = prod.variants?.[0]?.price
+            ? parseFloat(prod.variants[0].price)
+            : parseFloat(prod.default_sale_price || '0');
+          trackStorefrontViewContent({
+            id: prod.id,
+            name: prod.name,
+            price: itemPrice,
+            currency: config.currency ?? 'BDT',
+            category: prod.category?.name,
+          });
+        }
       } catch (err) {
         console.error('Failed to load product', err);
       } finally {
@@ -52,7 +71,7 @@ export const StorefrontProductDetailPage: React.FC = () => {
     };
 
     fetchProduct();
-  }, [idOrSku, subdomain]);
+  }, [idOrSku, subdomain, config.currency]);
 
   if (loading) {
     return (
@@ -90,22 +109,50 @@ export const StorefrontProductDetailPage: React.FC = () => {
     { name: product.name, url: `/store/${subdomain}/products/${product.online_slug || product.sku}` },
   ];
 
-  const primaryImage = product.images?.[0]?.url || product.images?.[0]?.path;
+  // Resolve all images (images array with fallback to product.image_url)
+  const productImages = (product.images && product.images.length > 0)
+    ? product.images
+    : (product.image_url ? [{ id: 'main', url: product.image_url, path: product.image_url, is_primary: true }] : []);
+
+  const activeImage = productImages[activeImageIndex]?.url || productImages[0]?.url || product.image_url;
   const productSchema = product.schema?.product;
 
   const handleAddToCart = async () => {
     await addItem(product.id, quantity, selectedVariant?.id);
+    trackStorefrontAddToCart({
+      id: product.id,
+      name: product.name,
+      price: parseFloat(price),
+      quantity,
+      currency,
+    });
     openDrawer();
   };
 
+  const handleCopyLink = () => {
+    if (typeof window !== 'undefined') {
+      navigator.clipboard.writeText(window.location.href);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }
+  };
+
+  const handleShareWhatsApp = () => {
+    if (typeof window !== 'undefined') {
+      const text = encodeURIComponent(`Check out ${product.name} at ${config.name}: ${window.location.href}`);
+      window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+    }
+  };
+
+
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto pb-20 md:pb-6">
       <SeoHead
         title={product.seo?.title || product.name}
-        description={product.seo?.description || product.description || ''}
+        description={product.seo?.description || stripHtml(product.description) || ''}
         canonical={product.seo?.canonical || undefined}
         ogType="product"
-        ogImage={primaryImage || config.theme?.hero_image || undefined}
+        ogImage={activeImage || config.theme?.hero_image || undefined}
         brandName={config.name}
         schema={productSchema}
       />
@@ -114,63 +161,188 @@ export const StorefrontProductDetailPage: React.FC = () => {
       <BreadcrumbNav items={breadcrumbs} className="py-2" />
 
       <div className="grid grid-cols-1 gap-10 md:grid-cols-2 items-start">
-        {/* Left: Product Visual Card */}
-        <div className="aspect-square rounded-3xl border border-zinc-800/80 bg-zinc-900/40 p-8 flex flex-col items-center justify-center relative overflow-hidden shadow-xl">
-          {primaryImage ? (
-            <img
-              src={primaryImage}
-              alt={product.name}
-              className="w-full h-full object-contain"
-              loading="eager"
-            />
-          ) : (
-            <>
-              <Package className="h-28 w-28 text-emerald-500/40 mb-4" />
-              <div className="text-center">
-                <span className="font-mono text-xs text-zinc-500">{product.sku}</span>
-                <div className="text-sm font-bold text-zinc-300 mt-1">{product.name}</div>
-              </div>
-            </>
+        {/* Left: Product Visual Multi-Image Gallery */}
+        <div className="space-y-4">
+          <div className="aspect-square rounded-3xl border border-slate-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 p-6 flex flex-col items-center justify-center relative overflow-hidden shadow-xs group">
+            {activeImage ? (
+              <img
+                src={activeImage}
+                alt={`${product.name} photo ${activeImageIndex + 1}`}
+                className="w-full h-full object-contain transition-all duration-300 group-hover:scale-105"
+                loading="eager"
+              />
+            ) : (
+              <>
+                <Package className="h-28 w-28 text-slate-300 dark:text-emerald-500/40 mb-4" />
+                <div className="text-center">
+                  <span className="font-mono text-xs text-slate-500 dark:text-zinc-500">{product.sku}</span>
+                  <div className="text-sm font-bold text-slate-800 dark:text-zinc-300 mt-1">{product.name}</div>
+                </div>
+              </>
+            )}
+
+            {/* In Stock Badge */}
+            <div
+              style={{
+                backgroundColor: 'var(--store-primary-subtle, rgba(16,185,129,0.1))',
+                borderColor: 'var(--store-primary-border, rgba(16,185,129,0.2))',
+                color: 'var(--store-primary, #10b981)',
+              }}
+              className="absolute top-4 right-4 rounded-full px-3 py-1 text-[11px] font-semibold border backdrop-blur-xs"
+            >
+              In Stock
+            </div>
+
+            {/* Gallery Navigation Arrows (if multiple photos) */}
+            {productImages.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : productImages.length - 1))}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 size-9 rounded-full bg-white/80 dark:bg-zinc-900/80 hover:bg-white dark:hover:bg-zinc-900 border border-slate-200 dark:border-zinc-700 flex items-center justify-center text-slate-800 dark:text-zinc-200 shadow-md backdrop-blur-xs transition-all opacity-80 group-hover:opacity-100 cursor-pointer"
+                  aria-label="Previous product image"
+                >
+                  <ChevronLeft className="size-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveImageIndex((prev) => (prev < productImages.length - 1 ? prev + 1 : 0))}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 size-9 rounded-full bg-white/80 dark:bg-zinc-900/80 hover:bg-white dark:hover:bg-zinc-900 border border-slate-200 dark:border-zinc-700 flex items-center justify-center text-slate-800 dark:text-zinc-200 shadow-md backdrop-blur-xs transition-all opacity-80 group-hover:opacity-100 cursor-pointer"
+                  aria-label="Next product image"
+                >
+                  <ChevronRight className="size-5" />
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Thumbnail Gallery Row */}
+          {productImages.length > 1 && (
+            <div className="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-thin">
+              {productImages.map((img, idx) => (
+                <button
+                  key={img.id || idx}
+                  type="button"
+                  onClick={() => setActiveImageIndex(idx)}
+                  style={
+                    activeImageIndex === idx
+                      ? {
+                          borderColor: 'var(--store-primary, #10b981)',
+                          boxShadow: '0 0 0 2px var(--store-primary-subtle, rgba(16,185,129,0.3))',
+                        }
+                      : undefined
+                  }
+                  className={`relative size-16 shrink-0 rounded-xl overflow-hidden border transition-all cursor-pointer ${
+                    activeImageIndex === idx
+                      ? 'shadow-sm'
+                      : 'border-slate-200 dark:border-zinc-800 opacity-60 hover:opacity-100'
+                  }`}
+                >
+                  <img
+                    src={img.url || (img as { path?: string }).path}
+                    alt={`${product.name} thumb ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                  {img.is_primary && (
+                    <span
+                      style={{
+                        backgroundColor: 'var(--store-primary, #10b981)',
+                        color: 'var(--store-primary-fg, #ffffff)',
+                      }}
+                      className="absolute bottom-0 inset-x-0 text-[8px] font-bold text-center py-0.5 uppercase"
+                    >
+                      Main
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
           )}
 
-          <div className="absolute top-4 right-4 rounded-full bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-400 ring-1 ring-emerald-500/20">
-            In Stock
+          {/* Value Highlights Under Gallery */}
+          <div className="pt-2 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleShareWhatsApp}
+              style={{
+                backgroundColor: 'var(--store-primary-subtle, rgba(16,185,129,0.12))',
+                borderColor: 'var(--store-primary-border, rgba(16,185,129,0.25))',
+                color: 'var(--store-primary, #10b981)',
+              }}
+              className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer hover:opacity-90"
+            >
+              <Share2 className="size-3.5" />
+              <span>Share on WhatsApp</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="inline-flex items-center justify-center gap-1.5 py-2 px-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 hover:bg-slate-50 dark:hover:bg-zinc-900 text-slate-700 dark:text-zinc-300 text-xs font-semibold transition-all cursor-pointer"
+            >
+              {copiedLink ? (
+                <>
+                  <Check
+                    style={{ color: 'var(--store-primary, #10b981)' }}
+                    className="size-3.5"
+                  />
+                  <span
+                    style={{ color: 'var(--store-primary, #10b981)' }}
+                    className="font-semibold"
+                  >
+                    Copied
+                  </span>
+                </>
+              ) : (
+                <span>Copy Link</span>
+              )}
+            </button>
           </div>
         </div>
 
         {/* Right: Details & Buying Flow */}
         <div className="space-y-6">
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs font-semibold text-zinc-500">
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-zinc-500">
               {product.category && (
-                <span className="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-emerald-400 font-mono">
+                <span
+                  style={{
+                    backgroundColor: 'var(--store-primary-subtle, rgba(16,185,129,0.1))',
+                    borderColor: 'var(--store-primary-border, rgba(16,185,129,0.2))',
+                    color: 'var(--store-primary, #10b981)',
+                  }}
+                  className="rounded-md border px-2 py-0.5 font-mono"
+                >
                   {product.category.name}
                 </span>
               )}
-              {product.brand && <span className="text-zinc-400">· {product.brand.name}</span>}
+              {product.brand && <span className="text-slate-500 dark:text-zinc-400">· {product.brand.name}</span>}
             </div>
 
-            <h1 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
               {product.name}
             </h1>
 
             <div className="flex items-center gap-3">
-              <span className="text-3xl font-extrabold text-emerald-400 font-mono">
+              <span
+                style={{ color: 'var(--store-primary, #10b981)' }}
+                className="text-3xl font-extrabold font-mono"
+              >
                 {currency} {price}
               </span>
-              <span className="text-xs text-zinc-400 font-mono">/ unit inclusive of taxes</span>
+              <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono">/ unit inclusive of taxes</span>
             </div>
           </div>
 
-          <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
-            {product.description ||
-              'Manufactured under strict batch control and verified quality assurance directly in our central manufacturing facility.'}
-          </p>
+          <StorefrontRichDescription
+            html={product.description}
+            fallbackText="Manufactured under strict batch control and verified quality assurance directly in our central manufacturing facility."
+            className="pt-1"
+          />
 
           {/* Variants Selector */}
           {product.variants && product.variants.length > 0 && (
-            <div className="space-y-2 pt-2 border-t border-zinc-800/80">
-              <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider block font-mono">
+            <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-zinc-800/80">
+              <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider block font-mono">
                 Select Option / Package Size
               </label>
               <div className="flex flex-wrap gap-2">
@@ -179,10 +351,19 @@ export const StorefrontProductDetailPage: React.FC = () => {
                     key={v.id}
                     type="button"
                     onClick={() => setSelectedVariant(v)}
+                    style={
+                      selectedVariant?.id === v.id
+                        ? {
+                            backgroundColor: 'var(--store-primary, #10b981)',
+                            color: 'var(--store-primary-fg, #ffffff)',
+                            borderColor: 'var(--store-primary, #10b981)',
+                          }
+                        : undefined
+                    }
                     className={`rounded-xl px-4 py-2 text-xs font-semibold transition-all cursor-pointer ${
                       selectedVariant?.id === v.id
-                        ? 'border-emerald-500 bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500 font-bold'
-                        : 'border border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white'
+                        ? 'font-bold shadow-md'
+                        : 'border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     {v.name}
@@ -193,33 +374,45 @@ export const StorefrontProductDetailPage: React.FC = () => {
           )}
 
           {/* Factory Freshness & Quality Guarantee Callout */}
-          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-950/20 p-4 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
-              <span className="flex size-2 rounded-full bg-emerald-400 animate-pulse" />
+          <div
+            style={{
+              backgroundColor: 'var(--store-primary-subtle, rgba(16,185,129,0.06))',
+              borderColor: 'var(--store-primary-border, rgba(16,185,129,0.25))',
+            }}
+            className="rounded-2xl border p-4 space-y-2"
+          >
+            <div
+              style={{ color: 'var(--store-primary, #10b981)' }}
+              className="flex items-center gap-2 text-xs font-bold"
+            >
+              <span
+                style={{ backgroundColor: 'var(--store-primary, #10b981)' }}
+                className="flex size-2 rounded-full animate-pulse"
+              />
               <span>Factory Freshness Guarantee</span>
             </div>
-            <p className="text-[11px] text-zinc-400 leading-relaxed">
+            <p className="text-[11px] text-slate-600 dark:text-zinc-400 leading-relaxed">
               Every package is freshly sealed directly at our production line and transported with temperature safeguards.
             </p>
           </div>
 
           {/* Quantity and Add to Cart */}
-          <div className="space-y-3.5 pt-4 border-t border-zinc-800/80">
+          <div className="space-y-3.5 pt-4 border-t border-slate-200 dark:border-zinc-800/80">
             <div className="flex items-center gap-4">
-              <div className="flex items-center rounded-xl border border-zinc-800 bg-zinc-900/80 p-1 shadow-2xs">
+              <div className="flex items-center rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/80 p-1 shadow-xs">
                 <button
                   type="button"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="rounded-lg p-2 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                  className="rounded-lg p-2 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                   title="Decrease Quantity"
                 >
                   <Minus className="size-4" />
                 </button>
-                <span className="w-10 text-center text-sm font-bold text-white font-mono">{quantity}</span>
+                <span className="w-10 text-center text-sm font-bold text-slate-900 dark:text-white font-mono">{quantity}</span>
                 <button
                   type="button"
                   onClick={() => setQuantity(quantity + 1)}
-                  className="rounded-lg p-2 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                  className="rounded-lg p-2 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                   title="Increase Quantity"
                 >
                   <Plus className="size-4" />
@@ -229,7 +422,11 @@ export const StorefrontProductDetailPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleAddToCart}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 py-3.5 text-xs font-extrabold shadow-lg shadow-emerald-500/20 transition-all cursor-pointer active:scale-98"
+                style={{
+                  backgroundColor: 'var(--store-primary, #10b981)',
+                  color: 'var(--store-primary-fg, #ffffff)',
+                }}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl py-3.5 text-xs font-extrabold shadow-lg transition-all cursor-pointer active:scale-98 hover:opacity-90"
               >
                 <ShoppingBag className="size-4 stroke-[2.5]" />
                 <span>Add to Cart ({currency} {(parseFloat(price) * quantity).toFixed(2)})</span>
@@ -270,7 +467,12 @@ export const StorefrontProductDetailPage: React.FC = () => {
                   window.open(`https://wa.me/${config?.whatsapp_number?.replace(/[^0-9]/g, '') || '8801700000000'}?text=${text}`, '_blank');
                 }
               }}
-              className="w-full flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 py-3 text-xs font-bold text-emerald-400 transition-all shadow-xs cursor-pointer"
+              style={{
+                backgroundColor: 'var(--store-primary-subtle, rgba(16,185,129,0.1))',
+                borderColor: 'var(--store-primary-border, rgba(16,185,129,0.3))',
+                color: 'var(--store-primary, #10b981)',
+              }}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border py-3 text-xs font-bold transition-all shadow-xs cursor-pointer hover:opacity-90"
             >
               <span>💬 Instant Order via WhatsApp</span>
             </button>
@@ -278,56 +480,101 @@ export const StorefrontProductDetailPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Sticky Mobile Add-to-Cart & WhatsApp Action Bar for High Ad Conversions */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-slate-200 dark:border-zinc-800 p-3 shadow-2xl flex items-center justify-between gap-3 animate-in slide-in-from-bottom-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          {activeImage && (
+            <img src={activeImage} alt={product.name} className="size-10 rounded-lg object-contain bg-slate-100 dark:bg-zinc-900 shrink-0" />
+          )}
+          <div className="min-w-0">
+            <div className="text-xs font-bold text-slate-900 dark:text-white truncate">{product.name}</div>
+            <div
+              style={{ color: 'var(--store-primary, #10b981)' }}
+              className="text-xs font-extrabold font-mono"
+            >
+              {currency} {price}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            style={{
+              backgroundColor: 'var(--store-primary, #10b981)',
+              color: 'var(--store-primary-fg, #ffffff)',
+            }}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-extrabold shadow-md active:scale-95 cursor-pointer hover:opacity-90"
+          >
+            <ShoppingBag className="size-3.5 stroke-[2.5]" />
+            <span>Add</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const text = encodeURIComponent(`Hello ${config?.name ?? 'Storefront'}, I would like to order ${product.name}.`);
+              window.open(`https://wa.me/${config?.whatsapp_number?.replace(/[^0-9]/g, '') || '8801700000000'}?text=${text}`, '_blank');
+            }}
+            className="flex items-center justify-center size-9 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 cursor-pointer"
+            title="Order via WhatsApp"
+          >
+            💬
+          </button>
+        </div>
+      </div>
+
+
       {/* AEO & GEO Structured Product Technical Specifications */}
-      <section aria-labelledby="product-specifications-heading" className="pt-8 border-t border-zinc-800/80 space-y-6">
+      <section aria-labelledby="product-specifications-heading" className="pt-8 border-t border-slate-200 dark:border-zinc-800/80 space-y-6">
         <div className="flex items-center gap-2">
-          <ShieldCheck className="size-5 text-emerald-400" />
-          <h2 id="product-specifications-heading" className="text-sm font-bold uppercase tracking-wider text-white">
+          <ShieldCheck className="size-5 text-emerald-600 dark:text-emerald-400" />
+          <h2 id="product-specifications-heading" className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">
             Technical Specifications & Certified Quality Data
           </h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5 space-y-3">
-            <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Manufacturing Details</h3>
+          <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 p-5 space-y-3 shadow-xs">
+            <h3 className="text-xs font-bold text-slate-900 dark:text-zinc-300 uppercase tracking-wider">Manufacturing Details</h3>
             <dl className="space-y-2 text-xs">
-              <div className="flex justify-between py-1 border-b border-zinc-800/60">
-                <dt className="text-zinc-500">Universal SKU</dt>
-                <dd className="font-mono font-bold text-zinc-200">{product.sku}</dd>
+              <div className="flex justify-between py-1 border-b border-slate-100 dark:border-zinc-800/60">
+                <dt className="text-slate-500 dark:text-zinc-500">Universal SKU</dt>
+                <dd className="font-mono font-bold text-slate-800 dark:text-zinc-200">{product.sku}</dd>
               </div>
-              <div className="flex justify-between py-1 border-b border-zinc-800/60">
-                <dt className="text-zinc-500">Brand Entity</dt>
-                <dd className="font-medium text-zinc-200">{product.brand?.name || config.name}</dd>
+              <div className="flex justify-between py-1 border-b border-slate-100 dark:border-zinc-800/60">
+                <dt className="text-slate-500 dark:text-zinc-500">Brand Entity</dt>
+                <dd className="font-medium text-slate-800 dark:text-zinc-200">{product.brand?.name || config.name}</dd>
               </div>
-              <div className="flex justify-between py-1 border-b border-zinc-800/60">
-                <dt className="text-zinc-500">Category</dt>
-                <dd className="font-medium text-zinc-200">{product.category?.name || 'General Wholesale'}</dd>
+              <div className="flex justify-between py-1 border-b border-slate-100 dark:border-zinc-800/60">
+                <dt className="text-slate-500 dark:text-zinc-500">Category</dt>
+                <dd className="font-medium text-slate-800 dark:text-zinc-200">{product.category?.name || 'General Wholesale'}</dd>
               </div>
               <div className="flex justify-between py-1">
-                <dt className="text-zinc-500">Standard Unit</dt>
-                <dd className="font-medium text-zinc-200">{product.base_unit?.name || 'Piece'}</dd>
+                <dt className="text-slate-500 dark:text-zinc-500">Standard Unit</dt>
+                <dd className="font-medium text-slate-800 dark:text-zinc-200">{product.base_unit?.name || 'Piece'}</dd>
               </div>
             </dl>
           </div>
 
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5 space-y-3">
-            <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Assurance & Logistics</h3>
+          <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 p-5 space-y-3 shadow-xs">
+            <h3 className="text-xs font-bold text-slate-900 dark:text-zinc-300 uppercase tracking-wider">Assurance & Logistics</h3>
             <dl className="space-y-2 text-xs">
-              <div className="flex justify-between py-1 border-b border-zinc-800/60">
-                <dt className="text-zinc-500">Origin / Facility</dt>
-                <dd className="font-medium text-emerald-400">Direct From Factory Line</dd>
+              <div className="flex justify-between py-1 border-b border-slate-100 dark:border-zinc-800/60">
+                <dt className="text-slate-500 dark:text-zinc-500">Origin / Facility</dt>
+                <dd className="font-medium text-emerald-600 dark:text-emerald-400">Direct From Factory Line</dd>
               </div>
-              <div className="flex justify-between py-1 border-b border-zinc-800/60">
-                <dt className="text-zinc-500">Quality Inspection</dt>
-                <dd className="font-medium text-zinc-200">ISO 9001 / Batch QA Verified</dd>
+              <div className="flex justify-between py-1 border-b border-slate-100 dark:border-zinc-800/60">
+                <dt className="text-slate-500 dark:text-zinc-500">Quality Inspection</dt>
+                <dd className="font-medium text-slate-800 dark:text-zinc-200">ISO 9001 / Batch QA Verified</dd>
               </div>
-              <div className="flex justify-between py-1 border-b border-zinc-800/60">
-                <dt className="text-zinc-500">Packaging</dt>
-                <dd className="font-medium text-zinc-200">Industrial Protective Sealed</dd>
+              <div className="flex justify-between py-1 border-b border-slate-100 dark:border-zinc-800/60">
+                <dt className="text-slate-500 dark:text-zinc-500">Packaging</dt>
+                <dd className="font-medium text-slate-800 dark:text-zinc-200">Industrial Protective Sealed</dd>
               </div>
               <div className="flex justify-between py-1">
-                <dt className="text-zinc-500">Fulfillment Speed</dt>
-                <dd className="font-medium text-zinc-200">Same-day Dispatch Available</dd>
+                <dt className="text-slate-500 dark:text-zinc-500">Fulfillment Speed</dt>
+                <dd className="font-medium text-slate-800 dark:text-zinc-200">Same-day Dispatch Available</dd>
               </div>
             </dl>
           </div>

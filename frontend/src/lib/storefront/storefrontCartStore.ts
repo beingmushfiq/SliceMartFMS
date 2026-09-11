@@ -24,12 +24,19 @@ interface StorefrontCartState {
 const STORAGE_SESSION_KEY = 'storefront_cart_session';
 
 function getOrGenerateSessionToken(): string {
-  let token = localStorage.getItem(STORAGE_SESSION_KEY);
-  if (!token) {
-    token = 'sess_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    localStorage.setItem(STORAGE_SESSION_KEY, token);
+  try {
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') {
+      let token = localStorage.getItem(STORAGE_SESSION_KEY);
+      if (!token) {
+        token = 'sess_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem(STORAGE_SESSION_KEY, token);
+      }
+      return token;
+    }
+  } catch {
+    // Graceful fallback if storage is restricted
   }
-  return token;
+  return 'sess_' + Math.random().toString(36).substring(2, 15);
 }
 
 export const useStorefrontCartStore = create<StorefrontCartState>((set, get) => ({

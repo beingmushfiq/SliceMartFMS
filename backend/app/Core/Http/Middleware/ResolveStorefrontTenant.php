@@ -35,6 +35,8 @@ class ResolveStorefrontTenant
             $subdomain = $request->header('X-Storefront-Subdomain')
                 ?: $request->header('X-Tenant-Subdomain')
                 ?: $request->query('subdomain')
+                ?: $request->route('subdomain')
+                ?: $this->extractSubdomainFromPath($request->path())
                 ?: $this->extractSubdomainFromHost($host);
 
             if (empty($subdomain)) {
@@ -119,9 +121,22 @@ class ResolveStorefrontTenant
         return $next($request);
     }
 
+    private function extractSubdomainFromPath(string $path): ?string
+    {
+        if (preg_match('#^/?store/([^/]+)#i', $path, $matches)) {
+            return $matches[1];
+        }
+        return null;
+    }
+
     private function extractSubdomainFromHost(string $host): ?string
     {
-        $parts = explode('.', $host);
+        $cleanHost = explode(':', $host)[0];
+        if ($cleanHost === 'localhost' || filter_var($cleanHost, FILTER_VALIDATE_IP)) {
+            return null;
+        }
+
+        $parts = explode('.', $cleanHost);
         if (count($parts) >= 3) {
             return $parts[0];
         }

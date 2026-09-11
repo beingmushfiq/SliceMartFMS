@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -82,6 +83,13 @@ final class Product extends Model
     use HasFactory;
 
     use SoftDeletes;
+
+    /**
+     * @var list<string>
+     */
+    protected $appends = [
+        'image_url',
+    ];
 
     /**
      * `tenant_id` is deliberately absent: it is stamped by BelongsToTenant and
@@ -210,7 +218,34 @@ final class Product extends Model
      */
     public function images(): HasMany
     {
-        return $this->hasMany(ProductImage::class, 'product_id');
+        return $this->hasMany(ProductImage::class, 'product_id')->orderBy('sort_order', 'asc');
+    }
+
+    /**
+     * Primary catalogue image for this product.
+     *
+     * @return HasOne<ProductImage, $this>
+     */
+    public function primaryImage(): HasOne
+    {
+        return $this->hasOne(ProductImage::class, 'product_id')->where('is_primary', true);
+    }
+
+    /**
+     * Resolved primary or fallback image URL for storefront/catalogue display.
+     */
+    public function getImageUrlAttribute(): ?string
+    {
+        if ($this->relationLoaded('images') && $this->images->isNotEmpty()) {
+            $primary = $this->images->firstWhere('is_primary', true) ?? $this->images->first();
+            return $primary?->url;
+        }
+
+        if ($this->relationLoaded('primaryImage') && $this->primaryImage) {
+            return $this->primaryImage->url;
+        }
+
+        return $this->online_meta['image_url'] ?? null;
     }
 
     /**

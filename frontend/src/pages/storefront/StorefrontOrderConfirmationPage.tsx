@@ -19,35 +19,49 @@ export const StorefrontOrderConfirmationPage: React.FC = () => {
 
   return (
     <div className="max-w-xl mx-auto py-8">
-      <div className="rounded-3xl border border-emerald-500/30 bg-zinc-900/60 p-8 sm:p-10 text-center shadow-2xl space-y-6">
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 mx-auto ring-8 ring-emerald-500/5 shadow-inner">
+      <div
+        style={{ borderColor: 'var(--store-primary-border, rgba(16,185,129,0.3))' }}
+        className="rounded-3xl border bg-white dark:bg-zinc-900/60 p-8 sm:p-10 text-center shadow-xs space-y-6"
+      >
+        <div
+          style={{
+            backgroundColor: 'var(--store-primary-subtle, rgba(16,185,129,0.1))',
+            color: 'var(--store-primary, #10b981)',
+          }}
+          className="flex h-20 w-20 items-center justify-center rounded-full mx-auto shadow-inner"
+        >
           <CheckCircle className="h-10 w-10" />
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
             Order Confirmed!
           </h1>
-          <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+          <p className="text-xs text-slate-500 dark:text-zinc-400 max-w-sm mx-auto">
             Thank you for ordering with {config.name}. Your order has been dispatched directly to our production queue.
           </p>
         </div>
 
         {order && (
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950/80 p-5 text-left space-y-3">
-            <div className="flex justify-between items-center text-xs border-b border-zinc-800/80 pb-2.5">
-              <span className="text-zinc-500">Order Number</span>
-              <span className="font-mono font-bold text-emerald-400">{order.order_number}</span>
+          <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950/80 p-5 text-left space-y-3">
+            <div className="flex justify-between items-center text-xs border-b border-slate-200/80 dark:border-zinc-800/80 pb-2.5">
+              <span className="text-slate-500 dark:text-zinc-500">Order Number</span>
+              <span
+                style={{ color: 'var(--store-primary, #10b981)' }}
+                className="font-mono font-bold"
+              >
+                {order.order_number}
+              </span>
             </div>
-            <div className="flex justify-between items-center text-xs border-b border-zinc-800/80 pb-2.5">
-              <span className="text-zinc-500">Total Amount</span>
-              <span className="font-bold text-zinc-100">
+            <div className="flex justify-between items-center text-xs border-b border-slate-200/80 dark:border-zinc-800/80 pb-2.5">
+              <span className="text-slate-500 dark:text-zinc-500">Total Amount</span>
+              <span className="font-bold text-slate-900 dark:text-zinc-100">
                 {currency} {parseFloat(order.total_amount).toFixed(2)}
               </span>
             </div>
             <div className="flex justify-between items-center text-xs">
-              <span className="text-zinc-500">Payment Status</span>
-              <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-400">
+              <span className="text-slate-500 dark:text-zinc-500">Payment Status</span>
+              <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
                 {order.payment_method.toUpperCase()} (Pending on Delivery)
               </span>
             </div>
@@ -64,7 +78,12 @@ export const StorefrontOrderConfirmationPage: React.FC = () => {
               )}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center justify-center gap-2 w-full rounded-xl border border-emerald-500/30 bg-emerald-950/40 py-2.5 text-xs font-bold text-emerald-300 hover:bg-emerald-900/40 hover:text-white transition-all shadow-sm"
+              style={{
+                backgroundColor: 'var(--store-primary-subtle, rgba(16,185,129,0.1))',
+                borderColor: 'var(--store-primary-border, rgba(16,185,129,0.3))',
+                color: 'var(--store-primary, #10b981)',
+              }}
+              className="inline-flex items-center justify-center gap-2 w-full rounded-xl border py-2.5 text-xs font-bold hover:opacity-90 transition-all shadow-xs"
             >
               <span>💬 Chat on WhatsApp for Live Order Updates</span>
             </a>
@@ -72,7 +91,11 @@ export const StorefrontOrderConfirmationPage: React.FC = () => {
 
           <Link
             to={`/store/${subdomain}`}
-            className="inline-flex items-center justify-center gap-2 w-full rounded-xl bg-emerald-500 py-3 text-xs font-bold text-zinc-950 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400 transition-all cursor-pointer"
+            style={{
+              backgroundColor: 'var(--store-primary, #10b981)',
+              color: 'var(--store-primary-fg, #ffffff)',
+            }}
+            className="inline-flex items-center justify-center gap-2 w-full rounded-xl py-3 text-xs font-bold shadow-lg transition-all cursor-pointer hover:opacity-90"
           >
             <span>Continue Shopping</span>
             <ArrowRight className="h-4 w-4" />

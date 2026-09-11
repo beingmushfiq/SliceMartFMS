@@ -110,6 +110,19 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 ->middleware('permission:catalog.product.update')->name('update');
             Route::delete('{product:uuid}', [App\Modules\Catalogue\Controllers\ProductController::class, 'destroy'])
                 ->middleware('permission:catalog.product.delete')->name('destroy');
+
+            Route::prefix('{product:uuid}/images')->name('images.')->group(static function (): void {
+                Route::get('/', [App\Modules\Catalogue\Controllers\ProductImageController::class, 'index'])
+                    ->middleware('permission:catalog.product.view')->name('index');
+                Route::post('/', [App\Modules\Catalogue\Controllers\ProductImageController::class, 'store'])
+                    ->middleware('permission:catalog.product.update')->name('store');
+                Route::delete('{image}', [App\Modules\Catalogue\Controllers\ProductImageController::class, 'destroy'])
+                    ->middleware('permission:catalog.product.update')->name('destroy');
+                Route::patch('{image}/primary', [App\Modules\Catalogue\Controllers\ProductImageController::class, 'setPrimary'])
+                    ->middleware('permission:catalog.product.update')->name('primary');
+                Route::post('reorder', [App\Modules\Catalogue\Controllers\ProductImageController::class, 'reorder'])
+                    ->middleware('permission:catalog.product.update')->name('reorder');
+            });
         });
 
         Route::prefix('bill-of-materials')->name('bill-of-materials.')->group(static function (): void {

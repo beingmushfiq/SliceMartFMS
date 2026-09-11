@@ -18,6 +18,10 @@ import {
   Check,
   RotateCcw,
   ChevronLeft,
+  Copy,
+  Eye,
+  Download,
+  X,
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
 import { Button } from '../../components/ui/Button';
@@ -153,6 +157,99 @@ export const SeoDiscoverabilityWorkspace: React.FC<SeoDiscoverabilityWorkspacePr
   const [pingUrls, setPingUrls] = useState('');
   const [pinging, setPinging] = useState(false);
   const [pingStatus, setPingStatus] = useState<string | null>(null);
+
+  // XML Inspector Modal State
+  const [previewModal, setPreviewModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    path: string;
+    content: string;
+    loading: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    path: '',
+    content: '',
+    loading: false,
+  });
+  const [copiedPath, setCopiedPath] = useState<string | null>(null);
+  const [sitemapStatuses, setSitemapStatuses] = useState<Record<string, 'live' | 'checking' | 'error'>>({});
+
+  useEffect(() => {
+    if (activeTab !== 'indexnow') return;
+
+    const paths = ['/sitemap.xml', '/sitemap-products.xml', '/sitemap-categories.xml', '/sitemap-pages.xml', '/robots.txt'];
+
+    const run = async () => {
+      const checking: Record<string, 'live' | 'checking' | 'error'> = {};
+      for (const p of paths) {
+        checking[p] = 'checking';
+      }
+      setSitemapStatuses({ ...checking });
+
+      const newStatuses: Record<string, 'live' | 'checking' | 'error'> = { ...checking };
+      await Promise.all(
+        paths.map(async (p) => {
+          try {
+            const res = await fetch(p);
+            newStatuses[p] = res.ok ? 'live' : 'error';
+          } catch {
+            newStatuses[p] = 'error';
+          }
+        })
+      );
+      setSitemapStatuses({ ...newStatuses });
+    };
+
+    void run();
+  }, [activeTab]);
+
+  const handleInspectXml = async (title: string, path: string) => {
+    setPreviewModal({
+      isOpen: true,
+      title,
+      path,
+      content: '',
+      loading: true,
+    });
+    try {
+      const res = await fetch(path);
+      const text = await res.text();
+      setPreviewModal((prev) => ({
+        ...prev,
+        content: text,
+        loading: false,
+      }));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to fetch content';
+      setPreviewModal((prev) => ({
+        ...prev,
+        content: `Error loading content: ${msg}`,
+        loading: false,
+      }));
+    }
+  };
+
+  const handleCopyUrl = (path: string) => {
+    const fullUrl = `${window.location.origin}${path}`;
+    void navigator.clipboard.writeText(fullUrl);
+    setCopiedPath(path);
+    notify.success(`Copied ${path} link to clipboard`);
+    setTimeout(() => setCopiedPath(null), 2500);
+  };
+
+  const handleDownloadXml = (_title: string, path: string, content: string) => {
+    const blob = new Blob([content], { type: path.endsWith('.txt') ? 'text/plain' : 'application/xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = path.replace(/^\//, '');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    notify.success(`Downloaded ${path}`);
+  };
 
   const fetchAllData = async () => {
     setLoading(true);
@@ -1090,30 +1187,79 @@ export const SeoDiscoverabilityWorkspace: React.FC<SeoDiscoverabilityWorkspacePr
               Standard XML sitemaps partitioned for optimal crawl performance with Google Search Console and Bing Webmaster Tools.
             </p>
 
-            <div className="space-y-2.5 text-xs">
+            <div className="space-y-2 text-xs">
               {[
                 { title: 'Master Sitemap Index', path: '/sitemap.xml', desc: 'Auto-aggregates all category and product sub-sitemaps' },
                 { title: 'Products Sitemap', path: '/sitemap-products.xml', desc: 'Complete catalog of active online SKUs with images' },
                 { title: 'Categories Sitemap', path: '/sitemap-categories.xml', desc: 'All public collections and departments' },
                 { title: 'CMS Pages Sitemap', path: '/sitemap-pages.xml', desc: 'Custom storefront and legal pages' },
                 { title: 'Robots.txt Directive', path: '/robots.txt', desc: 'Dynamic crawler whitelist & sitemap link' },
-              ].map((s, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-surface-sunken/50 border border-default">
-                  <div>
-                    <span className="font-bold text-default block">{s.title}</span>
-                    <span className="text-[11px] font-mono text-muted">{s.path}</span>
+              ].map((s, idx) => {
+                const status = sitemapStatuses[s.path] || 'checking';
+                return (
+                  <div key={idx} className="grid grid-cols-[1fr_auto] items-center gap-4 px-3.5 py-2.5 rounded-xl bg-surface-sunken/50 border border-default hover:border-default/70 transition-colors">
+                    {/* Left: info */}
+                    <div className="min-w-0 space-y-0.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-semibold text-default truncate">{s.title}</span>
+                        {status === 'live' && (
+                          <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            Live
+                          </span>
+                        )}
+                        {status === 'checking' && (
+                          <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium bg-slate-500/10 text-slate-500 border border-slate-500/20 shrink-0">
+                            Checking…
+                          </span>
+                        )}
+                        {status === 'error' && (
+                          <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 shrink-0">
+                            Error
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="font-mono text-[10px] text-primary/70 shrink-0">{s.path}</span>
+                        <span className="text-muted/40 shrink-0">·</span>
+                        <span className="text-[10px] text-muted truncate">{s.desc}</span>
+                      </div>
+                    </div>
+
+                    {/* Right: actions — always in one row */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleCopyUrl(s.path)}
+                        title="Copy URL"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium text-muted hover:text-default hover:bg-surface border border-transparent hover:border-default transition-all cursor-pointer"
+                      >
+                        {copiedPath === s.path ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
+                        <span>{copiedPath === s.path ? 'Copied' : 'Copy URL'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleInspectXml(s.title, s.path)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-default bg-surface-sunken hover:bg-surface-raised border border-default transition-all cursor-pointer"
+                      >
+                        <Eye className="size-3" />
+                        <span>Inspect</span>
+                      </button>
+
+                      <a
+                        href={s.path}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-primary bg-primary/8 hover:bg-primary/15 border border-primary/15 transition-all shrink-0"
+                      >
+                        <span>View Raw</span>
+                        <ExternalLink className="size-3" />
+                      </a>
+                    </div>
                   </div>
-                  <a
-                    href={s.path}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-                  >
-                    <span>View XML</span>
-                    <ExternalLink className="size-3" />
-                  </a>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1218,6 +1364,79 @@ export const SeoDiscoverabilityWorkspace: React.FC<SeoDiscoverabilityWorkspacePr
                   <li>Broadcast new products to IndexNow immediately upon publishing.</li>
                 </ul>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* XML / Text Inspector Modal */}
+      {previewModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="w-full max-w-3xl rounded-2xl border border-default bg-surface shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between p-4 border-b border-default bg-surface-sunken/30 flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <FileCode className="size-4 text-primary" />
+                <div>
+                  <h3 className="text-sm font-bold text-default">{previewModal.title}</h3>
+                  <span className="text-[11px] font-mono text-muted">{window.location.origin}{previewModal.path}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(previewModal.content);
+                    notify.success('Copied content to clipboard');
+                  }}
+                  disabled={previewModal.loading}
+                >
+                  <Copy className="size-3 mr-1" />
+                  <span>Copy</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDownloadXml(previewModal.title, previewModal.path, previewModal.content)}
+                  disabled={previewModal.loading}
+                >
+                  <Download className="size-3 mr-1" />
+                  <span>Download</span>
+                </Button>
+                <a
+                  href={previewModal.path}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-default bg-surface hover:bg-surface-sunken text-default text-xs font-semibold"
+                >
+                  <span>Open Tab</span>
+                  <ExternalLink className="size-3" />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewModal((prev) => ({ ...prev, isOpen: false }))}
+                  className="p-1 rounded-lg text-muted hover:text-default hover:bg-surface-sunken cursor-pointer transition-colors ml-2"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-4 flex-1 overflow-auto bg-slate-950 text-emerald-400 font-mono text-xs leading-relaxed selection:bg-emerald-800 selection:text-white min-h-64">
+              {previewModal.loading ? (
+                <div className="flex h-48 items-center justify-center text-muted">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+                </div>
+              ) : (
+                <pre className="whitespace-pre-wrap break-all">{previewModal.content}</pre>
+              )}
+            </div>
+
+            <div className="p-3 border-t border-default bg-surface-sunken/40 flex items-center justify-between text-[11px] text-muted">
+              <span>Path: {previewModal.path}</span>
+              <span>Characters: {previewModal.content.length}</span>
             </div>
           </div>
         </div>

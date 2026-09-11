@@ -50,27 +50,57 @@ class SeoMetadataService
      */
     public function resolveBaseUrl(Tenant $tenant, ?Storefront $storefront = null): string
     {
+        $settings = TenantSeoSetting::withoutTenantScope()
+            ->where('tenant_id', $tenant->id)
+            ->first();
+
+        if (! empty($settings?->canonical_base_url)) {
+            return rtrim($settings->canonical_base_url, '/');
+        }
+
+        $subdomain = $storefront?->subdomain ?? $tenant->subdomain ?? 'store';
+
         $customDomain = TenantDomain::withoutTenantScope()
             ->where('tenant_id', $tenant->id)
             ->where('verification_status', 'verified')
             ->where('is_primary', true)
             ->first();
 
+        $isDevEnvironment = app()->environment('local', 'testing');
+        $requestHost = request()->getHost();
+        $isLocalRequest = in_array($requestHost, ['localhost', '127.0.0.1'], true)
+            || str_contains((string) request()->header('X-Forwarded-Host', ''), 'localhost')
+            || str_contains((string) request()->header('Origin', ''), 'localhost')
+            || str_contains((string) request()->header('Referer', ''), 'localhost');
+
         if ($customDomain) {
-            return 'https://' . strtolower($customDomain->domain);
+            $domain = strtolower($customDomain->domain);
+            $isMockPlatformDomain = str_ends_with($domain, '.devcenterpoint.com') || $domain === 'devcenterpoint.com';
+
+            if (! $isMockPlatformDomain || (! $isDevEnvironment && ! $isLocalRequest)) {
+                return 'https://' . $domain;
+            }
         }
 
-        $subdomain = $storefront?->subdomain ?? $tenant->subdomain ?? 'store';
-        $appUrl = config('app.url', 'http://localhost:5173');
+        // In local development or local request, resolve to reachable local URL
+        if ($isLocalRequest || $isDevEnvironment) {
+            $frontendPort = 5173;
+            $origin = request()->header('Origin') ?: request()->header('Referer');
+            if ($origin) {
+                $parsedOrigin = parse_url($origin);
+                if (! empty($parsedOrigin['port'])) {
+                    $frontendPort = (int) $parsedOrigin['port'];
+                }
+            }
+
+            return "http://localhost:{$frontendPort}/store/{$subdomain}";
+        }
+
+        $appUrl = config('app.url', 'https://devcenterpoint.com');
         $parsed = parse_url($appUrl);
         $scheme = $parsed['scheme'] ?? 'https';
         $host = $parsed['host'] ?? 'devcenterpoint.com';
         $port = isset($parsed['port']) && ! in_array($parsed['port'], [80, 443]) ? ':' . $parsed['port'] : '';
-
-        // If localhost or dev port, use path /store/:subdomain
-        if (str_contains($host, 'localhost') || str_contains($host, '127.0.0.1')) {
-            return "{$scheme}://{$host}{$port}/store/{$subdomain}";
-        }
 
         return "{$scheme}://{$subdomain}.{$host}{$port}";
     }

@@ -199,26 +199,26 @@ export const StorefrontAccountPage: React.FC = () => {
     return (
       <div className="max-w-5xl mx-auto py-6 space-y-8">
         {/* Account Header Card */}
-        <div className="rounded-3xl border border-zinc-800/80 bg-linear-to-r from-zinc-900 via-zinc-900 to-zinc-950 p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-2xl">
+        <div className="rounded-3xl border border-slate-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-xs">
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-xl">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold text-xl">
               {customer.name.charAt(0).toUpperCase()}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-white">{customer.name}</h1>
-                <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-400 border border-emerald-500/20">
+                <h1 className="text-xl font-bold text-slate-900 dark:text-white">{customer.name}</h1>
+                <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                   Verified Shopper
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-zinc-400">
+              <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-slate-500 dark:text-zinc-400">
                 <span className="flex items-center gap-1">
-                  <Phone className="h-3 w-3 text-zinc-500" />
+                  <Phone className="h-3 w-3 text-slate-400 dark:text-zinc-500" />
                   {customer.phone}
                 </span>
                 {customer.email && (
                   <span className="flex items-center gap-1">
-                    <Mail className="h-3 w-3 text-zinc-500" />
+                    <Mail className="h-3 w-3 text-slate-400 dark:text-zinc-500" />
                     {customer.email}
                   </span>
                 )}
@@ -227,8 +227,9 @@ export const StorefrontAccountPage: React.FC = () => {
           </div>
 
           <button
+            type="button"
             onClick={logout}
-            className="inline-flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 transition-all shadow-sm"
+            className="inline-flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-xs font-semibold text-rose-600 dark:text-rose-300 hover:bg-rose-500/20 transition-all shadow-xs cursor-pointer"
           >
             <LogOut className="h-4 w-4" />
             <span>Sign Out</span>
@@ -239,28 +240,28 @@ export const StorefrontAccountPage: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <ShoppingBag className="h-5 w-5 text-emerald-400" />
-              <h2 className="text-base font-bold text-zinc-100">Your Order History</h2>
+              <ShoppingBag className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              <h2 className="text-base font-bold text-slate-900 dark:text-zinc-100">Your Order History</h2>
             </div>
             <Link
               to={`/store/${subdomain}/track`}
-              className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+              className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors"
             >
               Track by Reference Number &rarr;
             </Link>
           </div>
 
           {loadingOrders ? (
-            <div className="flex h-48 items-center justify-center rounded-3xl border border-zinc-800/80 bg-zinc-900/30">
+            <div className="flex h-48 items-center justify-center rounded-3xl border border-slate-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/30">
               <div className="h-7 w-7 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
             </div>
           ) : orders.length === 0 ? (
-            <div className="rounded-3xl border border-zinc-800/80 bg-zinc-900/20 p-12 text-center space-y-4">
-              <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-800 text-zinc-400">
+            <div className="rounded-3xl border border-slate-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/20 p-12 text-center space-y-4 shadow-xs">
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-400">
                 <Package className="h-6 w-6" />
               </div>
-              <h3 className="text-sm font-bold text-white">No Orders Placed Yet</h3>
-              <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">No Orders Placed Yet</h3>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 max-w-sm mx-auto">
                 Explore our newest energy-efficient infrared cookers and precision gas stoves straight from the factory assembly line.
               </p>
               <Link
@@ -276,27 +277,27 @@ export const StorefrontAccountPage: React.FC = () => {
               {orders.map((order) => (
                 <div
                   key={order.id}
-                  className="rounded-2xl border border-zinc-800/80 bg-zinc-900/40 p-5 space-y-4 hover:border-zinc-700/80 transition-all shadow-md"
+                  className="rounded-2xl border border-slate-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 p-5 space-y-4 hover:border-slate-300 dark:hover:border-zinc-700/80 transition-all shadow-xs"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800/60 pb-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-zinc-800/60 pb-3">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-bold text-white">
+                        <span className="font-mono text-sm font-bold text-slate-900 dark:text-white">
                           {order.order_number}
                         </span>
                         <span
                           className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                             order.status === 'delivered'
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                               : order.status === 'in_transit' || order.status === 'dispatched'
-                              ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20'
-                              : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                              ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20'
+                              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
                           }`}
                         >
                           {order.status}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+                      <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
                         <Calendar className="h-3 w-3" />
                         <span>Placed on {new Date(order.order_date).toLocaleDateString()}</span>
                       </div>
@@ -304,14 +305,14 @@ export const StorefrontAccountPage: React.FC = () => {
 
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <span className="text-[11px] text-zinc-500 block">Total Amount</span>
-                        <span className="text-sm font-bold text-emerald-400 font-mono">
+                        <span className="text-[11px] text-slate-500 dark:text-zinc-500 block">Total Amount</span>
+                        <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono">
                           {formatCurrency(order.total_amount)}
                         </span>
                       </div>
                       <Link
                         to={`/store/${subdomain}/track?order=${encodeURIComponent(order.order_number)}`}
-                        className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:text-white hover:border-emerald-500 transition-all shadow-sm"
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-zinc-200 hover:text-slate-900 dark:hover:text-white hover:border-emerald-500 transition-all shadow-2xs"
                       >
                         <span>Track</span>
                         <ChevronRight className="h-3.5 w-3.5" />
@@ -321,13 +322,13 @@ export const StorefrontAccountPage: React.FC = () => {
 
                   {/* Items summary */}
                   {order.items && order.items.length > 0 && (
-                    <div className="text-xs text-zinc-400 space-y-1">
+                    <div className="text-xs text-slate-600 dark:text-zinc-400 space-y-1">
                       {order.items.map((item) => (
                         <div key={item.id} className="flex justify-between items-center py-0.5">
                           <span>
                             {item.quantity}x {item.product?.name || 'Item'}
                           </span>
-                          <span className="font-mono text-zinc-300">
+                          <span className="font-mono text-slate-900 dark:text-zinc-300">
                             {formatCurrency(item.line_total)}
                           </span>
                         </div>
@@ -348,39 +349,41 @@ export const StorefrontAccountPage: React.FC = () => {
     <div className="max-w-md mx-auto py-12 space-y-6">
       {/* Brand Header */}
       <div className="text-center space-y-2">
-        <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+        <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
           <UserIcon className="h-6 w-6" />
         </div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">Customer Portal</h1>
-        <p className="text-xs text-zinc-400">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Customer Portal</h1>
+        <p className="text-xs text-slate-500 dark:text-zinc-400">
           Sign in or register to view previous orders, save addresses, and track shipments.
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="grid grid-cols-2 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-1">
+      <div className="grid grid-cols-2 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-900/60 p-1">
         <button
+          type="button"
           onClick={() => {
             setActiveTab('login');
             setErrorMessage(null);
           }}
-          className={`rounded-xl py-2 text-xs font-bold transition-all ${
+          className={`rounded-xl py-2 text-xs font-bold transition-all cursor-pointer ${
             activeTab === 'login'
-              ? 'bg-emerald-500 text-zinc-950 shadow-md'
-              : 'text-zinc-400 hover:text-white'
+              ? 'bg-white dark:bg-emerald-500 text-slate-900 dark:text-zinc-950 shadow-xs'
+              : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
           Sign In
         </button>
         <button
+          type="button"
           onClick={() => {
             setActiveTab('register');
             setErrorMessage(null);
           }}
-          className={`rounded-xl py-2 text-xs font-bold transition-all ${
+          className={`rounded-xl py-2 text-xs font-bold transition-all cursor-pointer ${
             activeTab === 'register'
-              ? 'bg-emerald-500 text-zinc-950 shadow-md'
-              : 'text-zinc-400 hover:text-white'
+              ? 'bg-white dark:bg-emerald-500 text-slate-900 dark:text-zinc-950 shadow-xs'
+              : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
           Create Account
@@ -389,48 +392,48 @@ export const StorefrontAccountPage: React.FC = () => {
 
       {/* Error & Success Alerts */}
       {errorMessage && (
-        <div className="flex items-center gap-2 rounded-2xl border border-rose-500/30 bg-rose-950/40 p-3.5 text-xs text-rose-300">
+        <div className="flex items-center gap-2 rounded-2xl border border-rose-500/30 bg-rose-50 dark:bg-rose-950/40 p-3.5 text-xs text-rose-600 dark:text-rose-300">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
       {successMessage && (
-        <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-950/40 p-3.5 text-xs text-emerald-300">
+        <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/40 p-3.5 text-xs text-emerald-700 dark:text-emerald-300">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           <span>{successMessage}</span>
         </div>
       )}
 
       {/* Form Container */}
-      <div className="rounded-3xl border border-zinc-800/80 bg-zinc-900/40 p-6 sm:p-8 shadow-2xl">
+      <div className="rounded-3xl border border-slate-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 p-6 sm:p-8 shadow-xs">
         {activeTab === 'login' ? (
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-300">Mobile Phone Number</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Mobile Phone Number</label>
               <div className="relative">
-                <Phone className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
+                <Phone className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 dark:text-zinc-500" />
                 <input
                   type="tel"
                   required
                   placeholder="+8801700000000"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950/80 pl-10 pr-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-300">Password</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Password</label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
+                <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 dark:text-zinc-500" />
                 <input
                   type="password"
                   required
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950/80 pl-10 pr-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
                 />
               </div>
             </div>
@@ -438,7 +441,7 @@ export const StorefrontAccountPage: React.FC = () => {
             <button
               type="submit"
               disabled={authLoading}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 text-xs font-bold text-zinc-950 hover:bg-emerald-400 disabled:opacity-50 transition-all shadow-lg shadow-emerald-500/20"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 text-xs font-bold text-zinc-950 hover:bg-emerald-400 disabled:opacity-50 transition-all shadow-lg shadow-emerald-500/20 cursor-pointer"
             >
               {authLoading ? (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-950 border-t-transparent" />
@@ -453,53 +456,53 @@ export const StorefrontAccountPage: React.FC = () => {
         ) : (
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-300">Full Name</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Full Name</label>
               <div className="relative">
-                <UserIcon className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
+                <UserIcon className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 dark:text-zinc-500" />
                 <input
                   type="text"
                   required
                   placeholder="e.g. John Doe"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950/80 pl-10 pr-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-300">Mobile Phone Number</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Mobile Phone Number</label>
               <div className="relative">
-                <Phone className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
+                <Phone className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 dark:text-zinc-500" />
                 <input
                   type="tel"
                   required
                   placeholder="+8801700000000"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950/80 pl-10 pr-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-300">Email Address (Optional)</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Email Address (Optional)</label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
+                <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 dark:text-zinc-500" />
                 <input
                   type="email"
                   placeholder="john@example.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950/80 pl-10 pr-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-300">Create Password</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Create Password</label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
+                <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 dark:text-zinc-500" />
                 <input
                   type="password"
                   required
@@ -507,7 +510,7 @@ export const StorefrontAccountPage: React.FC = () => {
                   placeholder="At least 6 characters"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950/80 pl-10 pr-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
                 />
               </div>
             </div>
@@ -515,7 +518,7 @@ export const StorefrontAccountPage: React.FC = () => {
             <button
               type="submit"
               disabled={authLoading}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 text-xs font-bold text-zinc-950 hover:bg-emerald-400 disabled:opacity-50 transition-all shadow-lg shadow-emerald-500/20"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 text-xs font-bold text-zinc-950 hover:bg-emerald-400 disabled:opacity-50 transition-all shadow-lg shadow-emerald-500/20 cursor-pointer"
             >
               {authLoading ? (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-950 border-t-transparent" />
