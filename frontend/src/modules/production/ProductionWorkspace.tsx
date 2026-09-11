@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   ClipboardList,
   Factory,
@@ -9,6 +10,8 @@ import {
   Zap,
   SlidersHorizontal,
   Workflow,
+  BookOpen,
+  Boxes,
 } from 'lucide-react';
 import { ProductionPlansSection } from './sections/ProductionPlansSection';
 import { ProductionBatchesSection } from './sections/ProductionBatchesSection';
@@ -39,7 +42,7 @@ const tabs: TabConfig[] = [
     label: 'Production Plans',
     badge: 'Step 1',
     icon: ClipboardList,
-    description: 'Master manufacturing schedules, BOM requirements and multi-product production planning',
+    description: 'Master manufacturing schedules, product recipe formulas and multi-item production planning',
     pillar: 1,
   },
   {
@@ -48,7 +51,7 @@ const tabs: TabConfig[] = [
     label: 'Production Batches',
     badge: 'Step 2',
     icon: Factory,
-    description: 'Shop floor batch execution, raw material issue, output recording & yield analytics',
+    description: 'Shop floor batch execution, raw material requests, output recording & yield checks',
     pillar: 1,
   },
   {
@@ -57,7 +60,7 @@ const tabs: TabConfig[] = [
     label: 'Worker Output & Wages',
     badge: 'Step 3',
     icon: Users,
-    description: 'Daily touch entry for worker output, piece-rate tracking & supervisor verification',
+    description: 'Daily touch entry for worker production output and output-based wage calculations',
     pillar: 2,
   },
 ];
@@ -116,6 +119,27 @@ export default function ProductionWorkspace() {
 
           {/* Quick Action Utilities */}
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            {/* Cross-Module Breadcrumb Links */}
+            <Link
+              to="/catalogue?tab=bom"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs hover:border-primary/50 transition-colors"
+              title="View and edit product formulas & bills of materials"
+            >
+              <BookOpen className="size-3.5 text-primary" />
+              <span className="hidden lg:inline">Product Recipes (BOM)</span>
+              <span className="lg:hidden">Recipes</span>
+            </Link>
+
+            <Link
+              to="/inventory"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs hover:border-primary/50 transition-colors"
+              title="Check live raw material stock in warehouse"
+            >
+              <Boxes className="size-3.5 text-primary" />
+              <span className="hidden lg:inline">Warehouse Stock</span>
+              <span className="lg:hidden">Stock</span>
+            </Link>
+
             <Button
               variant="secondary"
               size="sm"
@@ -172,7 +196,7 @@ export default function ProductionWorkspace() {
                     </span>
                   </div>
                   <span className="text-[10px] text-muted">
-                    BOM schedules, material issuance & shopfloor batches
+                    Recipe schedules, material requests & shopfloor batches
                   </span>
                 </div>
               </div>

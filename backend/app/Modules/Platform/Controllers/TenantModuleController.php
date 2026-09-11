@@ -27,12 +27,12 @@ final class TenantModuleController extends Controller
         ],
         'items' => [
             'overview'   => ['dashboard', 'reports'],
-            'crm'        => ['crm-leads', 'salesmen-directory', 'sales-targets', 'sales-incentives'],
+            'crm'        => ['crm-leads'],
             'sales'      => ['sales', 'pos', 'ecommerce'],
             'supply'     => ['catalogue', 'purchasing', 'inventory', 'delivery'],
             'production' => ['production', 'qc'],
-            'finance'    => ['finance', 'finance-due', 'assets'],
-            'hr'         => ['hr-employees', 'hr-attendance', 'hr-performance', 'hr-payroll', 'hr-departments'],
+            'finance'    => ['finance', 'assets'],
+            'hr'         => ['hr'],
             'system'     => ['roles', 'audit', 'settings'],
         ],
     ];

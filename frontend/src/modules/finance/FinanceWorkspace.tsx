@@ -21,6 +21,9 @@ import {
   Zap,
   CheckCircle2,
   ArrowRight,
+  ArrowDownRight,
+  ArrowUpRight,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { useCurrency } from '../../hooks/useCurrency';
@@ -38,10 +41,16 @@ import type {
 } from '../../types/api/finance';
 import { DueCollectionSection } from './sections/DueCollectionSection';
 import { notify } from '../../components/ui/Toast';
+import { MoneyOutModal } from './modals/MoneyOutModal';
+import type { MoneyOutSuccessPayload } from './modals/MoneyOutModal';
+import { MoneyInModal } from './modals/MoneyInModal';
+import type { MoneyInSuccessPayload } from './modals/MoneyInModal';
+import { TransferMoneyModal } from './modals/TransferMoneyModal';
+import type { TransferMoneySuccessPayload } from './modals/TransferMoneyModal';
 
 export type FinanceTab =
   'coa' | 'journal' | 'banking' | 'expenses' | 'costing' | 'statements' | 'due-collection';
-export type FinanceCategory = 'accounting' | 'treasury' | 'costing';
+export type FinanceCategory = 'operations' | 'reports' | 'costing';
 
 interface CategoryConfig {
   id: FinanceCategory;
@@ -55,31 +64,31 @@ interface CategoryConfig {
 
 const CATEGORIES: CategoryConfig[] = [
   {
-    id: 'accounting',
-    label: 'General Ledger & Accounts',
-    tagline: 'Double-entry journals, COA & financial statements',
+    id: 'operations',
+    label: 'Daily Cash & Operations',
+    tagline: 'Live bank balances, operating expenses & customer collections',
     shortcut: '1',
-    icon: BookOpen,
-    tabs: ['journal', 'coa', 'statements'],
-    defaultTab: 'journal',
+    icon: Landmark,
+    tabs: ['banking', 'expenses', 'due-collection'],
+    defaultTab: 'banking',
   },
   {
-    id: 'treasury',
-    label: 'Treasury & Collections',
-    tagline: 'Due aging, receivables & bank accounts',
+    id: 'reports',
+    label: 'Reports & Accounting Records',
+    tagline: 'Profit & Loss, balance sheet & general ledger audit',
     shortcut: '2',
-    icon: Landmark,
-    tabs: ['due-collection', 'banking'],
-    defaultTab: 'due-collection',
+    icon: TrendingUp,
+    tabs: ['statements', 'journal', 'coa'],
+    defaultTab: 'statements',
   },
   {
     id: 'costing',
-    label: 'Cost Rollup & Expenses',
-    tagline: 'Operational disbursements & multi-component costing',
+    label: 'Manufacturing Cost Rollup',
+    tagline: 'Standard unit costing (BOM materials + piece-rate labour + overhead)',
     shortcut: '3',
     icon: Calculator,
-    tabs: ['expenses', 'costing'],
-    defaultTab: 'expenses',
+    tabs: ['costing'],
+    defaultTab: 'costing',
   },
 ];
 
@@ -96,63 +105,63 @@ interface FinanceTabConfig {
 
 const FINANCE_TAB_CONFIGS: FinanceTabConfig[] = [
   {
-    id: 'journal',
-    label: 'General Ledger & Journals',
-    shortLabel: 'Journals',
-    category: 'accounting',
-    icon: BookOpen,
-    description: 'Double-entry general ledger with balanced debit/credit voucher postings, line audits & source trace',
-    highlights: ['Balanced Debits & Credits', 'Voucher Line Inspection', 'Reversal & Duplicate Workflows'],
+    id: 'banking',
+    label: 'Cash & Bank Accounts',
+    shortLabel: 'Cash & Banks',
+    category: 'operations',
+    icon: Landmark,
+    description: 'Live cash drawer balances, bank accounts, fund transfers and deposits',
+    highlights: ['Operating Bank Accounts', 'Cash-in-Transit Buffers', 'Instant Fund Movement'],
   },
   {
-    id: 'coa',
-    label: 'Chart of Accounts',
-    shortLabel: 'COA',
-    category: 'accounting',
-    icon: Scale,
-    description: 'Hierarchical account structure (Asset, Liability, Equity, Income, Expense) with normal balance rules',
-    highlights: ['Multi-Tier Account Hierarchy', 'Normal Balance Validation', 'Real-time Balance Aggregations'],
+    id: 'expenses',
+    label: 'Operating Expenses & Bills',
+    shortLabel: 'Expenses & Bills',
+    category: 'operations',
+    icon: ReceiptText,
+    description: 'Operational spending vouchers (Power, Rent, Courier, Supplies) with 1-click recording',
+    highlights: ['Disbursement Vouchers', 'Auto Double-Entry Posting', 'Category Breakdowns'],
+  },
+  {
+    id: 'due-collection',
+    label: 'Customer Dues & Aging',
+    shortLabel: 'Customer Dues',
+    category: 'operations',
+    icon: Coins,
+    description: 'Customer receivable aging analysis (0-30, 31-60, 61-90, 90+ days) with 1-click collections',
+    highlights: ['Aging Bucket Analysis', '1-Click Fast Collection', 'Customer Credit Limits'],
   },
   {
     id: 'statements',
-    label: 'Financial Statements & P&L',
-    shortLabel: 'Statements',
-    category: 'accounting',
+    label: 'Financial Statements (P&L)',
+    shortLabel: 'Financial Statements',
+    category: 'reports',
     icon: TrendingUp,
     description: 'Automated Balance Sheet, Income Statement (P&L), and Trial Balance generated from posted journals',
     highlights: ['Balance Sheet Snapshot', 'Income Statement P&L', 'Full Trial Balance Rec'],
   },
   {
-    id: 'due-collection',
-    label: 'Due Collections & Aging',
-    shortLabel: 'Due Aging',
-    category: 'treasury',
-    icon: Coins,
-    description: 'Customer receivable aging analysis (0-30, 31-60, 61-90, 90+ days), credit limits & payment recovery',
-    highlights: ['Aging Bucket Analysis', 'Customer Credit Limits', 'Fast Due Collection Log'],
+    id: 'journal',
+    label: 'General Ledger & Audit Trail',
+    shortLabel: 'General Ledger',
+    category: 'reports',
+    icon: BookOpen,
+    description: 'Double-entry general ledger with balanced debit/credit voucher postings, line audits & source trace',
+    highlights: ['Complete Audit Trail', 'Voucher Line Inspection', '1-Click Reversal Entries'],
   },
   {
-    id: 'banking',
-    label: 'Banking & Treasury',
-    shortLabel: 'Banking',
-    category: 'treasury',
-    icon: Landmark,
-    description: 'Company bank accounts, cash registers, account balances and bank reconciliation status',
-    highlights: ['Operating Bank Accounts', 'Cash-in-Transit Buffers', 'Reconciliation Audit'],
-  },
-  {
-    id: 'expenses',
-    label: 'Operating Expenses',
-    shortLabel: 'Expenses',
-    category: 'costing',
-    icon: ReceiptText,
-    description: 'Operational expense vouchers with departmental cost centers, payee records and approval logs',
-    highlights: ['Disbursement Vouchers', 'Cost Center Allocations', 'Duplicate Voucher Clone'],
+    id: 'coa',
+    label: 'Chart of Accounts (COA)',
+    shortLabel: 'Chart of Accounts',
+    category: 'reports',
+    icon: Scale,
+    description: 'Hierarchical account structure (Asset, Liability, Equity, Income, Expense) with normal balance rules',
+    highlights: ['Multi-Tier Account Hierarchy', 'Normal Balance Validation', 'Real-time Balance Aggregations'],
   },
   {
     id: 'costing',
-    label: 'Product Cost Rollup',
-    shortLabel: 'Cost Rollup',
+    label: 'Product Manufacturing Cost',
+    shortLabel: 'Product Costing',
     category: 'costing',
     icon: Calculator,
     description: 'Multi-component production cost rollup (Raw Materials, Direct Labour, Machine Overhead, Energy)',
@@ -199,26 +208,26 @@ function createManualJournalEntry(
 
 export const FinanceWorkspace: React.FC = () => {
   const { formatCurrency } = useCurrency();
-  const [activeTab, setActiveTab] = useWorkspaceTab<FinanceTab>('journal', [
-    'coa',
-    'journal',
+  const [activeTab, setActiveTab] = useWorkspaceTab<FinanceTab>('banking', [
     'banking',
     'expenses',
-    'costing',
-    'statements',
     'due-collection',
+    'statements',
+    'journal',
+    'coa',
+    'costing',
   ] as const);
 
   const [quickJumpOpen, setQuickJumpOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const quickJumpRef = useRef<HTMLDivElement>(null);
 
-  const activeCategory = CATEGORIES.find((cat) => cat.tabs.includes(activeTab))?.id ?? 'accounting';
+  const activeCategory = CATEGORIES.find((cat) => cat.tabs.includes(activeTab))?.id ?? 'operations';
 
   const lastActivePerCategory = useRef<Record<FinanceCategory, FinanceTab>>({
-    accounting: 'journal',
-    treasury: 'due-collection',
-    costing: 'expenses',
+    operations: 'banking',
+    reports: 'statements',
+    costing: 'costing',
   });
 
   useEffect(() => {
@@ -232,7 +241,7 @@ export const FinanceWorkspace: React.FC = () => {
   const [selectedJournalIds, setSelectedJournalIds] = useState<Set<number>>(new Set());
   const journalHeaderRef = useRef<HTMLInputElement>(null);
 
-  // Global Keyboard Shortcuts (1, 2, 3 to switch domain pillars)
+  // Global Keyboard Shortcuts (1: Daily Operations, 2: Reports & Books, 3: Costing)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -245,13 +254,13 @@ export const FinanceWorkspace: React.FC = () => {
 
       if (e.key === '1') {
         e.preventDefault();
-        setActiveTab('journal');
+        setActiveTab('banking');
       } else if (e.key === '2') {
         e.preventDefault();
-        setActiveTab('due-collection');
+        setActiveTab('statements');
       } else if (e.key === '3') {
         e.preventDefault();
-        setActiveTab('expenses');
+        setActiveTab('costing');
       }
     };
 
@@ -509,7 +518,7 @@ export const FinanceWorkspace: React.FC = () => {
   };
 
   // Bank Accounts State
-  const [bankAccounts] = useState<BankAccount[]>([
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([
     {
       id: 1,
       uuid: 'ba-01',
@@ -691,7 +700,43 @@ export const FinanceWorkspace: React.FC = () => {
     });
   };
 
-  // New Journal Entry Modal State
+  // Action Modals State (Money Out, Money In, Move Money)
+  const [showMoneyOutModal, setShowMoneyOutModal] = useState(false);
+  const [showMoneyInModal, setShowMoneyInModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [moneyInPrefill, setMoneyInPrefill] = useState<{
+    customerName?: string;
+    dueAmount?: string | number;
+    invoiceNumber?: string;
+  }>({});
+  const [transferPrefill, setTransferPrefill] = useState<{
+    fromId?: number;
+    toId?: number;
+  }>({});
+  const [expenseCategoryFilter, setExpenseCategoryFilter] = useState<string>('all');
+
+  const handleMoneyOutSuccess = (payload: MoneyOutSuccessPayload) => {
+    if (payload.expense) {
+      setExpenses((prev) => [payload.expense!, ...prev]);
+    }
+    setJournalEntries((prev) => [payload.journalEntry, ...prev]);
+    setAccounts(payload.updatedAccounts);
+    setBankAccounts(payload.updatedBankAccounts);
+  };
+
+  const handleMoneyInSuccess = (payload: MoneyInSuccessPayload) => {
+    setJournalEntries((prev) => [payload.journalEntry, ...prev]);
+    setAccounts(payload.updatedAccounts);
+    setBankAccounts(payload.updatedBankAccounts);
+  };
+
+  const handleTransferSuccess = (payload: TransferMoneySuccessPayload) => {
+    setJournalEntries((prev) => [payload.journalEntry, ...prev]);
+    setAccounts(payload.updatedAccounts);
+    setBankAccounts(payload.updatedBankAccounts);
+  };
+
+  // Adjusting Journal Modal State
   const [showNewJournalModal, setShowNewJournalModal] = useState(false);
   const [newNarration, setNewNarration] = useState('');
   const [viewingEntry, setViewingEntry] = useState<JournalEntry | null>(null);
@@ -701,6 +746,28 @@ export const FinanceWorkspace: React.FC = () => {
     { account_id: 101, debit: '0.00', credit: '0.00', narration: '' },
     { account_id: 401, debit: '0.00', credit: '0.00', narration: '' },
   ]);
+
+  const applyJournalTemplate = (template: 'depreciation' | 'capital' | 'drawings') => {
+    if (template === 'depreciation') {
+      setNewNarration('Monthly Machine & Asset Depreciation Allocation');
+      setNewLines([
+        { account_id: 501, debit: '4500.00', credit: '0.00', narration: 'Dr: Depreciation Expense' },
+        { account_id: 101, debit: '0.00', credit: '4500.00', narration: 'Cr: Accumulated Depreciation Offset' },
+      ]);
+    } else if (template === 'capital') {
+      setNewNarration('Owner / Shareholder Equity Capital Deposit');
+      setNewLines([
+        { account_id: 102, debit: '100000.00', credit: '0.00', narration: 'Dr: Bank Operating Account' },
+        { account_id: 301, debit: '0.00', credit: '100000.00', narration: 'Cr: Shareholders Equity / Capital' },
+      ]);
+    } else if (template === 'drawings') {
+      setNewNarration('Owner Profit Drawing / Capital Withdrawal');
+      setNewLines([
+        { account_id: 301, debit: '50000.00', credit: '0.00', narration: 'Dr: Owner Drawings (Equity Contra)' },
+        { account_id: 102, debit: '0.00', credit: '50000.00', narration: 'Cr: Bank Operating Account' },
+      ]);
+    }
+  };
 
   const totalNewDebit = newLines.reduce((acc, l) => acc + (parseFloat(l.debit) || 0), 0);
   const totalNewCredit = newLines.reduce((acc, l) => acc + (parseFloat(l.credit) || 0), 0);
@@ -816,50 +883,50 @@ export const FinanceWorkspace: React.FC = () => {
     count: string | number;
   }> = [
     {
-      id: 'journal',
-      label: 'General Ledger & Journals',
-      category: 'accounting',
-      icon: BookOpen,
-      count: journalEntries.length,
-    },
-    {
-      id: 'coa',
-      label: 'Chart of Accounts',
-      category: 'accounting',
-      icon: Scale,
-      count: accounts.length,
-    },
-    {
-      id: 'statements',
-      label: 'Financial Statements & P&L',
-      category: 'accounting',
-      icon: TrendingUp,
-      count: 'Live',
-    },
-    {
-      id: 'due-collection',
-      label: 'Due Collections & Aging',
-      category: 'treasury',
-      icon: Coins,
-      count: 'Aging',
-    },
-    {
       id: 'banking',
-      label: 'Banking & Treasury',
-      category: 'treasury',
+      label: 'Cash & Bank Accounts',
+      category: 'operations',
       icon: Landmark,
       count: bankAccounts.length,
     },
     {
       id: 'expenses',
-      label: 'Operating Expenses',
-      category: 'costing',
+      label: 'Operating Expenses & Bills',
+      category: 'operations',
       icon: ReceiptText,
       count: expenses.length,
     },
     {
+      id: 'due-collection',
+      label: 'Customer Dues & Aging',
+      category: 'operations',
+      icon: Coins,
+      count: 'Aging',
+    },
+    {
+      id: 'statements',
+      label: 'Financial Statements (P&L)',
+      category: 'reports',
+      icon: TrendingUp,
+      count: 'Live',
+    },
+    {
+      id: 'journal',
+      label: 'General Ledger & Audit Trail',
+      category: 'reports',
+      icon: BookOpen,
+      count: journalEntries.length,
+    },
+    {
+      id: 'coa',
+      label: 'Chart of Accounts (COA)',
+      category: 'reports',
+      icon: Scale,
+      count: accounts.length,
+    },
+    {
       id: 'costing',
-      label: 'Product Cost Rollup',
+      label: 'Product Manufacturing Cost',
       category: 'costing',
       icon: Calculator,
       count: productCosts.length,
@@ -881,26 +948,65 @@ export const FinanceWorkspace: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-primary bg-primary-subtle px-2.5 py-0.5 rounded-full border border-primary/20">
-              Finance & Accounting
+              Finance & Cash Management
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-default">
-            General Ledger & Cost Rollup Hub
+            Treasury & Financial Operations
           </h1>
           <p className="mt-1.5 text-xs text-muted max-w-2xl leading-relaxed">
-            Double-entry General Ledger, Chart of Accounts, Bank Reconciliations & Multi-Component
-            Production Cost Rollups
+            Live Cash & Bank Balances, Operating Expenses, Customer Collections, and Automated Double-Entry Books
           </p>
         </div>
         <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          {/* Money Out */}
           <button
             type="button"
-            onClick={() => setIsGuideOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl border border-primary/30 bg-primary-subtle hover:bg-primary/10 text-primary transition-all shadow-2xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            title="Open Finance Capabilities and Accounting Architecture Guide"
+            onClick={() => setShowMoneyOutModal(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl shadow-xs transition text-xs cursor-pointer"
+            title="Record an operating expense, pay a supplier bill, or owner withdrawal"
           >
-            <Compass className="size-3.5 text-primary" />
-            <span>Explore Capabilities</span>
+            <ArrowDownRight className="size-4" />
+            <span>💸 Money Out</span>
+          </button>
+
+          {/* Money In */}
+          <button
+            type="button"
+            onClick={() => {
+              setMoneyInPrefill({});
+              setShowMoneyInModal(true);
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-xs transition text-xs cursor-pointer"
+            title="Collect customer dues, record scrap sales, or deposit owner capital"
+          >
+            <ArrowUpRight className="size-4" />
+            <span>💰 Money In</span>
+          </button>
+
+          {/* Move Money */}
+          <button
+            type="button"
+            onClick={() => {
+              setTransferPrefill({});
+              setShowTransferModal(true);
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-xs transition text-xs cursor-pointer"
+            title="Transfer funds between Bank accounts and Cash on hand"
+          >
+            <ArrowLeftRight className="size-4" />
+            <span>🔄 Move Money</span>
+          </button>
+
+          {/* Advanced Journal */}
+          <button
+            type="button"
+            onClick={() => setShowNewJournalModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 border border-default bg-surface hover:bg-surface-sunken text-default font-semibold rounded-xl transition text-xs cursor-pointer"
+            title="For Certified Accountants: Post manual double-entry adjusting vouchers"
+          >
+            <BookOpen className="size-3.5 text-muted" />
+            <span>⚖️ Adjusting Journal</span>
           </button>
 
           {activeTab === 'coa' && (
@@ -909,16 +1015,20 @@ export const FinanceWorkspace: React.FC = () => {
                 resetAccountForm();
                 setShowNewAccountModal(true);
               }}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs cursor-pointer"
             >
               <span>+</span> New Account
             </button>
           )}
+
           <button
-            onClick={() => setShowNewJournalModal(true)}
-            className="px-4 py-2 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+            type="button"
+            onClick={() => setIsGuideOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-primary/30 bg-primary-subtle hover:bg-primary/10 text-primary transition-all shadow-2xs cursor-pointer"
+            title="Open Finance Capabilities and Architecture Guide"
           >
-            <span>+</span> Post Journal Entry
+            <Compass className="size-3.5 text-primary" />
+            <span>Guide</span>
           </button>
         </div>
       </div>
@@ -930,10 +1040,14 @@ export const FinanceWorkspace: React.FC = () => {
             Total Liquid Assets
           </div>
           <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-2 font-mono">
-            {formatCurrency(970000)}
+            {formatCurrency(
+              accounts
+                .filter((a) => a.account_type === 'asset' && (a.account_subtype === 'cash' || a.account_subtype === 'bank'))
+                .reduce((sum, a) => sum + parseFloat(a.current_balance || '0'), 0)
+            )}
           </div>
           <div className="text-[11px] text-muted mt-1">
-            Cash ({formatCurrency(125000)}) + Bank ({formatCurrency(845000)})
+            Cash ({formatCurrency(accounts.filter((a) => a.account_subtype === 'cash').reduce((sum, a) => sum + parseFloat(a.current_balance || '0'), 0))}) + Bank ({formatCurrency(accounts.filter((a) => a.account_subtype === 'bank').reduce((sum, a) => sum + parseFloat(a.current_balance || '0'), 0))})
           </div>
         </div>
 
@@ -942,7 +1056,7 @@ export const FinanceWorkspace: React.FC = () => {
             Total Receivables
           </div>
           <div className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-2 font-mono">
-            {formatCurrency(340000)}
+            {formatCurrency(accounts.find((a) => a.account_code === '1050')?.current_balance || '340000')}
           </div>
           <div className="text-[11px] text-muted mt-1">Accounts Receivable (GL 1050)</div>
         </div>
@@ -952,7 +1066,7 @@ export const FinanceWorkspace: React.FC = () => {
             Total Payables
           </div>
           <div className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-2 font-mono">
-            {formatCurrency(210000)}
+            {formatCurrency(accounts.find((a) => a.account_code === '2010')?.current_balance || '210000')}
           </div>
           <div className="text-[11px] text-muted mt-1">Supplier Bills & Logistics</div>
         </div>
@@ -962,7 +1076,7 @@ export const FinanceWorkspace: React.FC = () => {
             Recognized Sales Revenue
           </div>
           <div className="text-2xl font-extrabold text-primary mt-2 font-mono">
-            {formatCurrency(950000)}
+            {formatCurrency(accounts.find((a) => a.account_code === '4010')?.current_balance || '950000')}
           </div>
           <div className="text-[11px] text-muted mt-1">Current Fiscal Period</div>
         </div>
@@ -1114,12 +1228,12 @@ export const FinanceWorkspace: React.FC = () => {
             role="tablist"
             aria-label="All 7 Financial Views"
           >
-            {/* Cluster 1: General Ledger & Accounts */}
+            {/* Cluster 1: Daily Cash & Operations */}
             <div className="flex items-center gap-1.5 bg-surface/60 p-1 rounded-xl border border-default/40">
               <span className="text-[10px] font-mono uppercase font-bold text-muted px-2 py-0.5 select-none">
-                GL:
+                Operations:
               </span>
-              {FINANCE_TAB_CONFIGS.filter((t) => t.category === 'accounting').map((tab) => {
+              {FINANCE_TAB_CONFIGS.filter((t) => t.category === 'operations').map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
                 return (
@@ -1145,12 +1259,12 @@ export const FinanceWorkspace: React.FC = () => {
 
             <div className="h-4 w-px bg-default/60 hidden sm:block" />
 
-            {/* Cluster 2: Treasury & Collections */}
+            {/* Cluster 2: Reports & Books */}
             <div className="flex items-center gap-1.5 bg-surface/60 p-1 rounded-xl border border-default/40">
               <span className="text-[10px] font-mono uppercase font-bold text-muted px-2 py-0.5 select-none">
-                Treasury:
+                Reports:
               </span>
-              {FINANCE_TAB_CONFIGS.filter((t) => t.category === 'treasury').map((tab) => {
+              {FINANCE_TAB_CONFIGS.filter((t) => t.category === 'reports').map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
                 return (
@@ -1176,7 +1290,7 @@ export const FinanceWorkspace: React.FC = () => {
 
             <div className="h-4 w-px bg-default/60 hidden sm:block" />
 
-            {/* Cluster 3: Cost Rollup & Expenses */}
+            {/* Cluster 3: Manufacturing Costing */}
             <div className="flex items-center gap-1.5 bg-surface/60 p-1 rounded-xl border border-default/40">
               <span className="text-[10px] font-mono uppercase font-bold text-muted px-2 py-0.5 select-none">
                 Costing:
@@ -1608,107 +1722,303 @@ export const FinanceWorkspace: React.FC = () => {
 
       {/* Tab 3: Banking & Treasury */}
       {activeTab === 'banking' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {bankAccounts.map((ba) => (
-            <div
-              key={ba.id}
-              className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 space-y-4"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100">
-                    {ba.bank_name}
-                  </h3>
-                  <p className="text-xs text-gray-500">
-                    {ba.account_name} ({ba.branch_name})
-                  </p>
-                </div>
-                <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
-                  {ba.currency_code}
-                </span>
-              </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Account Number:</span>
-                  <span className="font-mono font-semibold text-gray-900 dark:text-gray-100">
-                    {ba.account_number}
-                  </span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Routing Number:</span>
-                  <span className="font-mono text-gray-900 dark:text-gray-100">
-                    {ba.routing_number}
-                  </span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">SWIFT Code:</span>
-                  <span className="font-mono text-gray-900 dark:text-gray-100">
-                    {ba.swift_code}
-                  </span>
-                </div>
-              </div>
-              <div className="flex justify-between items-center pt-2">
-                <span className="text-sm text-gray-500">Current Balance:</span>
-                <span className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-                  {formatCurrency(ba.current_balance)}
-                </span>
-              </div>
+        <div className="space-y-5">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 rounded-2xl bg-surface border border-default shadow-xs">
+            <div>
+              <h3 className="text-sm font-bold text-default flex items-center gap-2">
+                <Landmark className="size-4 text-primary" />
+                <span>Liquid Cash & Operating Bank Accounts</span>
+              </h3>
+              <p className="text-xs text-muted">
+                Active cash drawers, current accounts, and funds available for immediate business operations
+              </p>
             </div>
-          ))}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setTransferPrefill({});
+                  setShowTransferModal(true);
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
+              >
+                <ArrowLeftRight className="size-3.5" />
+                <span>+ Transfer Money</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  resetAccountForm();
+                  setShowNewAccountModal(true);
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl border border-default bg-surface-sunken hover:bg-surface text-default transition cursor-pointer"
+              >
+                <Plus className="size-3.5" />
+                <span>+ Add Account</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Cash on Hand Card */}
+            {accounts
+              .filter((a) => a.account_subtype === 'cash')
+              .map((cashAcc) => (
+                <div
+                  key={`cash-${cashAcc.id}`}
+                  className="bg-surface rounded-2xl p-5 shadow-xs border border-emerald-500/30 dark:border-emerald-500/20 space-y-4 relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-base text-default">{cashAcc.name}</h4>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                          CASH REGISTER
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted">GL Code: {cashAcc.account_code} — On-Premises Petty Cash</p>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 bg-surface-sunken rounded-xl space-y-1.5 border border-default">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted">Account Classification:</span>
+                      <span className="font-medium text-default capitalize">Current Asset (Liquid)</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted">Reconciliation Status:</span>
+                      <span className="font-medium text-emerald-600 dark:text-emerald-400">Balanced & Verified</span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-1 border-t border-default">
+                    <div>
+                      <div className="text-[11px] text-muted">Available Cash Balance</div>
+                      <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
+                        {formatCurrency(cashAcc.current_balance || '0')}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTransferPrefill({ fromId: cashAcc.id });
+                          setShowTransferModal(true);
+                        }}
+                        className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-default bg-surface hover:bg-surface-sunken text-default transition cursor-pointer"
+                        title="Deposit cash into a bank account"
+                      >
+                        Deposit to Bank
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTransferPrefill({ toId: cashAcc.id });
+                          setShowTransferModal(true);
+                        }}
+                        className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition cursor-pointer"
+                        title="Withdraw cash from bank into cash on hand"
+                      >
+                        Add Cash
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+            {/* Bank Accounts Cards */}
+            {bankAccounts.map((ba) => {
+              const matchedAccount = accounts.find((a) =>
+                a.name.toLowerCase().includes(ba.bank_name.toLowerCase().split(' ')[0] || '')
+              );
+              return (
+                <div
+                  key={ba.id}
+                  className="bg-surface rounded-2xl p-5 shadow-xs border border-default space-y-4 relative overflow-hidden hover:border-primary/40 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-base text-default">{ba.bank_name}</h4>
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-primary/10 text-primary border border-primary/20">
+                          {ba.currency_code}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted">
+                        {ba.account_name} ({ba.branch_name})
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 bg-surface-sunken rounded-xl space-y-1.5 border border-default">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted">Account Number:</span>
+                      <span className="font-mono font-semibold text-default">{ba.account_number}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted">Routing Number:</span>
+                      <span className="font-mono text-default">{ba.routing_number}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted">SWIFT / BIC:</span>
+                      <span className="font-mono text-default">{ba.swift_code}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-1 border-t border-default">
+                    <div>
+                      <div className="text-[11px] text-muted">Current Ledger Balance</div>
+                      <div className="text-2xl font-extrabold text-primary font-mono">
+                        {formatCurrency(ba.current_balance)}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (matchedAccount) setTransferPrefill({ fromId: matchedAccount.id });
+                          setShowTransferModal(true);
+                        }}
+                        className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-default bg-surface hover:bg-surface-sunken text-default transition cursor-pointer"
+                        title="Transfer money out of this account"
+                      >
+                        Transfer Out
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (matchedAccount) setTransferPrefill({ toId: matchedAccount.id });
+                          setShowTransferModal(true);
+                        }}
+                        className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-primary hover:bg-primary-hover text-white transition cursor-pointer"
+                        title="Transfer money into this account"
+                      >
+                        Deposit In
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
       {/* Tab 4: Expenses & Claims */}
       {activeTab === 'expenses' && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <table className="w-full text-left text-sm text-gray-600 dark:text-gray-300">
-            <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-700 dark:text-gray-200 uppercase text-xs">
-              <tr>
-                <th className="px-6 py-3">Expense Date</th>
-                <th className="px-6 py-3">Category</th>
-                <th className="px-6 py-3">Payee Name</th>
-                <th className="px-6 py-3">Description</th>
-                <th className="px-6 py-3">Payment Method</th>
-                <th className="px-6 py-3 text-right">Amount (BDT)</th>
-                <th className="px-6 py-3 text-center">Status</th>
-                <th className="px-6 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {expenses.map((exp) => (
-                <tr key={exp.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                  <td className="px-6 py-4">{exp.expense_date}</td>
-                  <td className="px-6 py-4 font-semibold text-gray-900 dark:text-gray-100">
-                    {exp.category?.name}
-                  </td>
-                  <td className="px-6 py-4">{exp.payee_name || '—'}</td>
-                  <td className="px-6 py-4 max-w-xs truncate text-gray-500">{exp.description}</td>
-                  <td className="px-6 py-4 capitalize text-xs">
-                    {exp.payment_method.replace('_', ' ')}
-                  </td>
-                  <td className="px-6 py-4 text-right font-mono font-bold text-gray-900 dark:text-gray-100">
-                    {formatCurrency(exp.amount)}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
-                      {exp.status.toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right whitespace-nowrap">
-                    <button
-                      type="button"
-                      onClick={() => handleDuplicateExpense(exp)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/10 rounded-lg transition cursor-pointer"
-                      title="Duplicate Expense Voucher"
-                    >
-                      <Copy className="size-3.5" />
-                      <span>Duplicate</span>
-                    </button>
-                  </td>
-                </tr>
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 rounded-2xl bg-surface border border-default shadow-xs">
+            <div>
+              <h3 className="text-sm font-bold text-default flex items-center gap-2">
+                <ReceiptText className="size-4 text-rose-500" />
+                <span>Operating Expenses & Disbursements</span>
+              </h3>
+              <p className="text-xs text-muted">
+                Daily operational costs (power, rent, courier, factory consumables) recorded with automatic General Ledger vouchers
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowMoneyOutModal(true)}
+              className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition cursor-pointer self-start sm:self-auto"
+            >
+              <ArrowDownRight className="size-3.5" />
+              <span>+ Record Expense</span>
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {['all', 'UTIL', 'LOG', 'RENT', 'SUPP'].map((catCode) => (
+                <button
+                  key={catCode}
+                  type="button"
+                  onClick={() => setExpenseCategoryFilter(catCode)}
+                  className={cn(
+                    'px-3 py-1 rounded-xl text-xs font-medium transition-colors cursor-pointer',
+                    expenseCategoryFilter === catCode
+                      ? 'bg-primary text-primary-fg font-semibold shadow-xs'
+                      : 'bg-surface-sunken text-muted hover:text-default border border-default'
+                  )}
+                >
+                  {catCode === 'all'
+                    ? 'All Categories'
+                    : catCode === 'UTIL'
+                    ? 'Power & Utilities'
+                    : catCode === 'LOG'
+                    ? 'Courier & Delivery'
+                    : catCode === 'RENT'
+                    ? 'Rent'
+                    : 'Factory Supplies'}
+                </button>
               ))}
-            </tbody>
-          </table>
+            </div>
+
+            <div className="text-xs text-muted font-mono">
+              Total Recorded:{' '}
+              <strong className="text-default font-bold">
+                {formatCurrency(
+                  expenses
+                    .filter((e) => expenseCategoryFilter === 'all' || e.category?.code === expenseCategoryFilter)
+                    .reduce((sum, e) => sum + parseFloat(e.amount || '0'), 0)
+                )}
+              </strong>
+            </div>
+          </div>
+
+          <div className="bg-surface rounded-2xl shadow-xs border border-default overflow-hidden">
+            <table className="w-full text-left text-xs text-default">
+              <thead className="bg-surface-sunken/70 text-muted uppercase text-[11px] font-semibold tracking-wider border-b border-default">
+                <tr>
+                  <th className="px-5 py-3.5">Expense Date</th>
+                  <th className="px-5 py-3.5">Category</th>
+                  <th className="px-5 py-3.5">Payee Name</th>
+                  <th className="px-5 py-3.5">Description</th>
+                  <th className="px-5 py-3.5">Payment Method</th>
+                  <th className="px-5 py-3.5 text-right">Amount (BDT)</th>
+                  <th className="px-5 py-3.5 text-center">Status</th>
+                  <th className="px-5 py-3.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-default">
+                {expenses
+                  .filter((e) => expenseCategoryFilter === 'all' || e.category?.code === expenseCategoryFilter)
+                  .map((exp) => (
+                    <tr key={exp.id} className="hover:bg-surface-sunken/40 transition">
+                      <td className="px-5 py-3.5 font-mono text-muted">{exp.expense_date}</td>
+                      <td className="px-5 py-3.5 font-semibold text-default">
+                        {exp.category?.name}
+                      </td>
+                      <td className="px-5 py-3.5 text-default">{exp.payee_name || '—'}</td>
+                      <td className="px-5 py-3.5 max-w-xs truncate text-muted">{exp.description}</td>
+                      <td className="px-5 py-3.5 capitalize text-muted">
+                        {exp.payment_method.replace('_', ' ')}
+                      </td>
+                      <td className="px-5 py-3.5 text-right font-mono font-bold text-default">
+                        {formatCurrency(exp.amount)}
+                      </td>
+                      <td className="px-5 py-3.5 text-center">
+                        <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                          {exp.status.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => handleDuplicateExpense(exp)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/10 rounded-lg transition cursor-pointer"
+                          title="Duplicate Expense Voucher"
+                        >
+                          <Copy className="size-3.5" />
+                          <span>Duplicate</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -1906,20 +2216,35 @@ export const FinanceWorkspace: React.FC = () => {
       )}
 
       {/* Tab: Due Collection & Receivables */}
-      {activeTab === 'due-collection' && <DueCollectionSection />}
+      {activeTab === 'due-collection' && (
+        <DueCollectionSection
+          onCollect={(inv) => {
+            setMoneyInPrefill({
+              customerName: inv.customer_name,
+              dueAmount: inv.due_amount,
+              invoiceNumber: inv.invoice_number,
+            });
+            setShowMoneyInModal(true);
+          }}
+          onQuickCollect={() => {
+            setMoneyInPrefill({});
+            setShowMoneyInModal(true);
+          }}
+        />
+      )}
 
-      {/* Post Journal Entry Modal */}
+      {/* Post Adjusting Journal Entry Modal (for Certified Accountants) */}
       {showNewJournalModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-surface border border-default rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-6">
+          <div className="bg-surface border border-default rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-5">
             <div className="flex items-center justify-between border-b border-default pb-4">
               <div>
                 <h3 className="text-base sm:text-lg font-bold text-default flex items-center gap-2">
                   <BookOpen className="size-5 text-primary" />
-                  <span>Post Double-Entry Journal Voucher</span>
+                  <span>Adjusting Journal Voucher (for Accountants)</span>
                 </h3>
                 <p className="text-xs text-muted mt-0.5">
-                  Record balanced debit and credit allocations into the general ledger
+                  Record balanced multi-split adjusting entries, asset depreciation, or year-end corrections
                 </p>
               </div>
               <button
@@ -1927,6 +2252,32 @@ export const FinanceWorkspace: React.FC = () => {
                 className="text-muted hover:text-default p-1 rounded-lg transition"
               >
                 <X className="size-5" />
+              </button>
+            </div>
+
+            {/* Quick Adjustment Templates */}
+            <div className="flex flex-wrap items-center gap-2 p-2.5 bg-surface-sunken rounded-xl border border-default text-xs">
+              <span className="font-semibold text-muted text-[11px] uppercase tracking-wider">Quick Templates:</span>
+              <button
+                type="button"
+                onClick={() => applyJournalTemplate('depreciation')}
+                className="px-2.5 py-1 bg-surface hover:bg-surface-sunken border border-default rounded-lg text-default text-xs font-medium cursor-pointer transition"
+              >
+                + Machine Depreciation
+              </button>
+              <button
+                type="button"
+                onClick={() => applyJournalTemplate('capital')}
+                className="px-2.5 py-1 bg-surface hover:bg-surface-sunken border border-default rounded-lg text-default text-xs font-medium cursor-pointer transition"
+              >
+                + Capital Injection
+              </button>
+              <button
+                type="button"
+                onClick={() => applyJournalTemplate('drawings')}
+                className="px-2.5 py-1 bg-surface hover:bg-surface-sunken border border-default rounded-lg text-default text-xs font-medium cursor-pointer transition"
+              >
+                + Owner Drawings
               </button>
             </div>
 
@@ -1939,7 +2290,7 @@ export const FinanceWorkspace: React.FC = () => {
                   type="text"
                   value={newNarration}
                   onChange={(e) => setNewNarration(e.target.value)}
-                  placeholder="e.g. Counter cash sales deposit or monthly rent allocation"
+                  placeholder="e.g. Monthly asset depreciation or year-end equity adjustment"
                   required
                   className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-xs sm:text-sm focus:border-primary focus:outline-none"
                 />
@@ -2075,6 +2426,38 @@ export const FinanceWorkspace: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Money Out Modal */}
+      <MoneyOutModal
+        open={showMoneyOutModal}
+        onClose={() => setShowMoneyOutModal(false)}
+        accounts={accounts}
+        bankAccounts={bankAccounts}
+        onSuccess={handleMoneyOutSuccess}
+      />
+
+      {/* Money In Modal */}
+      <MoneyInModal
+        open={showMoneyInModal}
+        onClose={() => setShowMoneyInModal(false)}
+        accounts={accounts}
+        bankAccounts={bankAccounts}
+        initialCustomerName={moneyInPrefill.customerName}
+        initialDueAmount={moneyInPrefill.dueAmount}
+        initialInvoiceNumber={moneyInPrefill.invoiceNumber}
+        onSuccess={handleMoneyInSuccess}
+      />
+
+      {/* Move Money Transfer Modal */}
+      <TransferMoneyModal
+        open={showTransferModal}
+        onClose={() => setShowTransferModal(false)}
+        accounts={accounts}
+        bankAccounts={bankAccounts}
+        initialFromAccountId={transferPrefill.fromId}
+        initialToAccountId={transferPrefill.toId}
+        onSuccess={handleTransferSuccess}
+      />
 
       {/* View Journal Entry Modal */}
       {viewingEntry && (

@@ -12,6 +12,7 @@ import {
   Compass,
   ArrowRight,
   Zap,
+  Sparkles,
 } from 'lucide-react';
 import { PurchaseOrdersSection } from './sections/PurchaseOrdersSection';
 import { GoodsReceiptsSection } from './sections/GoodsReceiptsSection';
@@ -52,26 +53,26 @@ interface CategoryConfig {
 const CATEGORIES: CategoryConfig[] = [
   {
     id: 'sourcing',
-    label: 'Upstream Sourcing & POs',
+    label: 'Requests & Purchase Orders',
     shortcut: '1',
     icon: ShoppingCart,
-    description: 'Internal demand requisitions, supplier RFQ quotes and official purchase order commitments',
+    description: 'Internal supply requests, vendor quotes and official purchase order commitments',
     defaultTab: 'orders',
   },
   {
     id: 'fulfillment',
-    label: 'Inbound Gate & Settlement',
+    label: 'Receiving & Supplier Bills',
     shortcut: '2',
     icon: PackageCheck,
-    description: 'Warehouse GRN intake, 3-way matching, batch tagging and accounts payable supplier bills',
+    description: 'Warehouse delivery receipts, quality intake checks and supplier invoices',
     defaultTab: 'receipts',
   },
   {
     id: 'returns',
-    label: 'Reversals & Debit Notes',
+    label: 'Returns & Supplier Credits',
     shortcut: '3',
     icon: Undo2,
-    description: 'Non-conforming material rejection, debit note generation and supplier credit tracking',
+    description: 'Defective material returns, debit note records and vendor credit refunds',
     defaultTab: 'returns',
   },
 ];
@@ -80,12 +81,12 @@ const tabs: TabConfig[] = [
   {
     id: 'requisitions',
     category: 'sourcing',
-    label: 'Purchase Requisitions',
-    shortLabel: 'Requisitions',
+    label: 'Purchase Requests',
+    shortLabel: 'Requests',
     step: 1,
     icon: FileSpreadsheet,
-    description: 'Internal shopfloor & departmental supply requests with multi-tier approval workflows',
-    highlights: ['Department Requests', 'Budget Validation', 'Multi-tier Approval'],
+    description: 'Internal department supply requests with management approval workflows',
+    highlights: ['Department Requests', 'Budget Check', 'Approval Sign-off'],
   },
   {
     id: 'orders',
@@ -94,38 +95,38 @@ const tabs: TabConfig[] = [
     shortLabel: 'Orders',
     step: 2,
     icon: ShoppingCart,
-    description: 'Official supplier contracts, multi-currency purchasing commitments & delivery schedules',
-    highlights: ['Vendor Commitments', 'Multi-Currency', 'Thermal PO Slips'],
+    description: 'Official supplier purchase contracts, agreed prices and expected delivery dates',
+    highlights: ['Supplier Contracts', 'Agreed Pricing', 'Printable PO Slips'],
   },
   {
     id: 'receipts',
     category: 'fulfillment',
-    label: 'Goods Receipts (GRN)',
-    shortLabel: 'Goods Receipts',
+    label: 'Received Goods & Receipts (GRN)',
+    shortLabel: 'Received Goods',
     step: 3,
     icon: PackageCheck,
-    description: 'Warehouse gate receiving, 3-way line matching, lot assignment & instant inventory posting',
-    highlights: ['Gate Inwarding', '3-Way Matching', 'Batch/Lot Assignment'],
+    description: 'Warehouse gate receiving, item count checks, batch tags and stock addition',
+    highlights: ['Gate Inwarding', 'Quantity Verification', 'Instant Stock Addition'],
   },
   {
     id: 'bills',
     category: 'fulfillment',
-    label: 'Purchase Bills (AP)',
-    shortLabel: 'Bills & Invoices',
+    label: 'Supplier Bills & Invoices',
+    shortLabel: 'Supplier Bills',
     step: 4,
     icon: Receipt,
-    description: 'Supplier invoice verification, payment due tracking & accounts payable settlement',
-    highlights: ['AP Aging & Due', 'Tax Matching', 'Payment Settlement'],
+    description: 'Supplier invoices, due date tracking, tax validation and payment records',
+    highlights: ['Due Date Tracking', 'Tax Validation', 'Payment Settlement'],
   },
   {
     id: 'returns',
     category: 'returns',
-    label: 'Purchase Returns',
+    label: 'Damaged Returns to Supplier',
     shortLabel: 'Returns',
     badge: 'Debit Notes',
     icon: Undo2,
-    description: 'Debit notes and rejected goods return to supplier with automatic inventory deduction',
-    highlights: ['Vendor Debit Notes', 'Scrap/Defect Reversal', 'Ledger Adjustment'],
+    description: 'Return damaged or non-conforming items to supplier with debit note generation',
+    highlights: ['Supplier Debit Notes', 'Damaged Item Return', 'Stock Balance Update'],
   },
 ];
 
@@ -326,6 +327,72 @@ export default function PurchasingWorkspace() {
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Non-Technical Workflow Guide: Recommended Procurement Order */}
+      <div className="bg-surface rounded-2xl border border-default p-3 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="size-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+            <Sparkles className="size-4 text-primary" />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-default flex items-center gap-1.5">
+              <span>Standard Purchasing Flow</span>
+              <span className="text-[10px] text-muted font-normal">(4-step cycle from internal request to vendor billing)</span>
+            </div>
+            <p className="text-[11px] text-muted">Click any step to jump straight to that operational screen:</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 flex-wrap w-full md:w-auto">
+          <button
+            type="button"
+            onClick={() => setActiveTab('requisitions')}
+            className={cn(
+              'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1',
+              activeTab === 'requisitions' ? 'bg-primary text-primary-fg' : 'bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default'
+            )}
+          >
+            <span className="size-4 rounded-full bg-black/20 flex items-center justify-center text-[10px]">1</span>
+            <span>Requests</span>
+          </button>
+          <ArrowRight className="size-3 text-muted/50 hidden sm:inline" />
+          <button
+            type="button"
+            onClick={() => setActiveTab('orders')}
+            className={cn(
+              'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1',
+              activeTab === 'orders' ? 'bg-primary text-primary-fg' : 'bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default'
+            )}
+          >
+            <span className="size-4 rounded-full bg-black/20 flex items-center justify-center text-[10px]">2</span>
+            <span>Purchase Orders</span>
+          </button>
+          <ArrowRight className="size-3 text-muted/50 hidden sm:inline" />
+          <button
+            type="button"
+            onClick={() => setActiveTab('receipts')}
+            className={cn(
+              'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1',
+              activeTab === 'receipts' ? 'bg-primary text-primary-fg' : 'bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default'
+            )}
+          >
+            <span className="size-4 rounded-full bg-black/20 flex items-center justify-center text-[10px]">3</span>
+            <span>Receive Goods</span>
+          </button>
+          <ArrowRight className="size-3 text-muted/50 hidden sm:inline" />
+          <button
+            type="button"
+            onClick={() => setActiveTab('bills')}
+            className={cn(
+              'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1',
+              activeTab === 'bills' ? 'bg-primary text-primary-fg' : 'bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default'
+            )}
+          >
+            <span className="size-4 rounded-full bg-black/20 flex items-center justify-center text-[10px]">4</span>
+            <span>Supplier Bills</span>
+          </button>
         </div>
       </div>
 

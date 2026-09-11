@@ -93,19 +93,19 @@ const MODULE_DESCRIPTIONS: Record<string, string> = {
 };
 
 const DEFAULT_MODULES: ModuleItem[] = [
-  { module_key: 'inventory', label: 'Stock & Inventory', enabled: true, plan_allowed: true, config: {} },
-  { module_key: 'purchasing', label: 'Procurement (PO)', enabled: true, plan_allowed: true, config: {} },
-  { module_key: 'delivery', label: 'Logistics & Courier', enabled: true, plan_allowed: true, config: {} },
-  { module_key: 'production', label: 'Production Chain', enabled: true, plan_allowed: true, config: {} },
+  { module_key: 'inventory', label: 'Warehouse & Stock', enabled: true, plan_allowed: true, config: {} },
+  { module_key: 'purchasing', label: 'Purchasing & Sourcing', enabled: true, plan_allowed: true, config: {} },
+  { module_key: 'delivery', label: 'Delivery & Couriers', enabled: true, plan_allowed: true, config: {} },
+  { module_key: 'production', label: 'Production Lines', enabled: true, plan_allowed: true, config: {} },
   { module_key: 'qc', label: 'Quality Control (QC)', enabled: true, plan_allowed: true, config: {} },
   { module_key: 'sales', label: 'Sales & Invoices', enabled: true, plan_allowed: true, config: {} },
   { module_key: 'pos', label: 'Point of Sale (POS)', enabled: true, plan_allowed: true, config: {} },
-  { module_key: 'ecommerce', label: 'Storefront & E-Commerce', enabled: true, plan_allowed: true, config: {} },
-  { module_key: 'crm', label: 'CRM & Leads', enabled: true, plan_allowed: true, config: {} },
+  { module_key: 'ecommerce', label: 'Online Store CMS', enabled: true, plan_allowed: true, config: {} },
+  { module_key: 'crm', label: 'Customer Leads & CRM', enabled: true, plan_allowed: true, config: {} },
   { module_key: 'finance', label: 'Finance & Accounts', enabled: true, plan_allowed: true, config: {} },
   { module_key: 'assets', label: 'Asset Management', enabled: true, plan_allowed: true, config: {} },
-  { module_key: 'hr', label: 'Workforce & HR', enabled: true, plan_allowed: true, config: {} },
-  { module_key: 'reports', label: 'Reports & BI (RMS)', enabled: true, plan_allowed: true, config: {} },
+  { module_key: 'hr', label: 'Team & Workforce', enabled: true, plan_allowed: true, config: {} },
+  { module_key: 'reports', label: 'Business Reports & Analytics', enabled: true, plan_allowed: true, config: {} },
 ];
 
 export const ModuleManagerSection: React.FC = () => {

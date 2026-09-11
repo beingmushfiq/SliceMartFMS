@@ -22,6 +22,8 @@ import {
   X,
   FileSpreadsheet,
   TrendingUp,
+  Truck,
+  FileText,
 } from 'lucide-react';
 import type { SalesOrder, SalesOrderStatus, SalesOrderPaymentStatus } from '../../../types/api/sales';
 import type { Product } from '../../../types/api/catalog';
@@ -1042,6 +1044,28 @@ export function SalesOrdersSection({ onNavigateToTab }: SalesOrdersSectionProps 
                           >
                             <Eye className="size-3" />
                             <span>View</span>
+                          </button>
+                        )}
+                        {onNavigateToTab && (order.status === 'confirmed' || order.status === 'allocated' || order.status === 'packed') && (
+                          <button
+                            type="button"
+                            onClick={() => onNavigateToTab('deliveries')}
+                            className="rounded-lg bg-cyan-500/10 border border-cyan-500/20 px-2 py-1 text-[11px] font-semibold text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/20 cursor-pointer transition-colors flex items-center gap-1"
+                            title="Jump to Deliveries tab to dispatch this order"
+                          >
+                            <Truck className="size-3" />
+                            <span>Dispatch</span>
+                          </button>
+                        )}
+                        {onNavigateToTab && (order.status === 'dispatched' || order.status === 'delivered') && (
+                          <button
+                            type="button"
+                            onClick={() => onNavigateToTab('invoices')}
+                            className="rounded-lg bg-blue-500/10 border border-blue-500/20 px-2 py-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 cursor-pointer transition-colors flex items-center gap-1"
+                            title="Jump to Invoices tab for billing"
+                          >
+                            <FileText className="size-3" />
+                            <span>Invoice</span>
                           </button>
                         )}
                         <button

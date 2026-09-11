@@ -137,12 +137,12 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
   },
   {
     id: 'crm-leads',
-    title: 'Commercial CRM & Targets',
-    description: 'Field salesmen pipeline, lead qualification, monthly sales quotas & commissions',
+    title: 'Customer Leads & CRM',
+    description: 'Customer pipeline, lead qualification, monthly sales quotas & team commissions',
     to: '/sales?tab=leads',
     icon: Kanban,
     domain: 'commercial',
-    moduleKey: 'sales',
+    moduleKey: 'crm',
     permission: ['sales.lead.view', 'crm.lead.view', 'sales.order.view'],
     pulseMetric: { value: '28 Leads', label: 'In Negotiation', tone: 'default' },
     quickActions: [
@@ -173,9 +173,9 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
   // ── Supply Chain & Inventory ─────────────────────────────────
   {
     id: 'master-catalogue',
-    title: 'Master Catalogue & BOM',
+    title: 'Product Catalog & Recipes',
     description:
-      'Product definitions, variants, raw materials, SKUs, and multi-level Bills of Materials',
+      'Product definitions, variants, raw materials, SKUs, and product recipes (BOM)',
     to: '/catalogue',
     icon: Boxes,
     domain: 'supply',
@@ -189,13 +189,13 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
         icon: Plus,
         permission: 'catalog.product.create',
       },
-      { label: 'Bill of Materials', to: '/catalogue?tab=bom', permission: 'catalog.bom.view' },
+      { label: 'Product Recipes (BOM)', to: '/catalogue?tab=bom', permission: 'catalog.bom.view' },
       { label: 'Categories', to: '/catalogue?tab=categories', permission: 'catalog.category.view' },
     ],
   },
   {
     id: 'inventory-stock',
-    title: 'Warehouse & Stock Ledger',
+    title: 'Warehouse & Live Stock',
     description:
       'Multi-warehouse bin levels, internal transfers, low-stock alerts & stock reconciliation',
     to: '/inventory',
@@ -225,14 +225,14 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
   },
   {
     id: 'procurement-po',
-    title: 'Procurement & Purchasing',
-    description: 'Purchase requisitions, vendor Purchase Orders, GRN receipt logs & bill audits',
+    title: 'Purchasing & Sourcing',
+    description: 'Purchase requisitions, supplier Purchase Orders, goods receipt logs & bill audits',
     to: '/purchasing',
     icon: ClipboardList,
     domain: 'supply',
     moduleKey: 'purchasing',
     permission: ['purchasing.order.view', 'purchasing.requisition.view', 'purchasing.grn.view'],
-    pulseMetric: { value: '3 Incoming', label: 'GRNs Expected', tone: 'info' },
+    pulseMetric: { value: '3 Incoming', label: 'Receipts Expected', tone: 'info' },
     quickActions: [
       {
         label: 'Create PO',
@@ -241,7 +241,7 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
         permission: 'purchasing.order.create',
       },
       {
-        label: 'Goods Receipts (GRN)',
+        label: 'Goods Receipts',
         to: '/purchasing?tab=grn',
         permission: 'purchasing.grn.view',
       },
@@ -254,9 +254,9 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
   },
   {
     id: 'logistics-courier',
-    title: 'Logistics, Delivery & COD',
+    title: 'Delivery & Couriers',
     description:
-      'Courier integrations (Steadfast, RedX, Pathao), run-sheets, delivery orders & cash collections',
+      'Courier integrations (Steadfast, RedX, Pathao), driver delivery runsheets & cash collections',
     to: '/logistics',
     icon: Truck,
     domain: 'supply',
@@ -469,30 +469,30 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
   // ── Governance, Intelligence & Settings ──────────────────────
   {
     id: 'reports-rms',
-    title: 'Reports & RMS BI Suite',
+    title: 'Business Reports & Analytics',
     description:
-      'Multi-dimensional analytics, production yield reports, financial P&L and exportable sheets',
+      'Multi-dimensional business analytics, production yield reports, financial P&L and exportable sheets',
     to: '/reports',
     icon: FileSpreadsheet,
     domain: 'governance',
     moduleKey: 'reports',
     permission: ['reports.report.view', 'reports.dashboard.view', 'reports.analytics.view'],
-    pulseMetric: { value: 'Live BI', label: 'Executive Analytics', tone: 'info' },
+    pulseMetric: { value: 'Live Reports', label: 'Executive Analytics', tone: 'info' },
     quickActions: [
       { label: 'Production Report', to: '/reports?category=production' },
-      { label: 'Sales Ledger BI', to: '/reports?category=sales' },
+      { label: 'Sales Reports', to: '/reports?category=sales' },
       { label: 'Financial Summary', to: '/reports?category=finance' },
     ],
   },
   {
     id: 'rbac-roles',
-    title: 'Roles & RBAC Permissions',
-    description: 'Granular role definitions, system permission matrix & user assignment',
+    title: 'Staff Roles & Permissions',
+    description: 'Custom staff roles, user access levels, feature permissions & security policies',
     to: '/settings/roles',
     icon: Shield,
     domain: 'governance',
     permission: ['core.role.view', 'core.role.manage'],
-    pulseMetric: { value: 'Secure', label: 'Role Scoped', tone: 'success' },
+    pulseMetric: { value: 'Secure', label: 'Staff Roles Scoped', tone: 'success' },
     quickActions: [
       {
         label: 'New Custom Role',
@@ -505,17 +505,17 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
   },
   {
     id: 'audit-logs',
-    title: 'Activity Log & Diff Trail',
+    title: 'Audit Trail & Change History',
     description:
-      'Immutable operational audit trail, before/after record snapshots & login security history',
+      'Audit log of all user actions, record change history & staff sign-in security trail',
     to: '/activity-logs',
     icon: ShieldCheck,
     domain: 'governance',
     permission: ['core.audit_log.view'],
     pulseMetric: { value: 'Real-time', label: 'Security Stream', tone: 'info' },
     quickActions: [
-      { label: 'Security Logs', to: '/activity-logs?filter=auth' },
-      { label: 'Data Mutations', to: '/activity-logs?filter=mutation' },
+      { label: 'Sign-in Logs', to: '/activity-logs?filter=auth' },
+      { label: 'Data Changes', to: '/activity-logs?filter=mutation' },
     ],
   },
   {

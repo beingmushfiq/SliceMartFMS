@@ -7,6 +7,7 @@ import {
   Search,
   RefreshCw,
   Building2,
+  Coins,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
@@ -96,7 +97,12 @@ export interface DueInvoiceItem {
   status: string;
 }
 
-export function DueCollectionSection() {
+export interface DueCollectionSectionProps {
+  onCollect?: (item: DueInvoiceItem) => void;
+  onQuickCollect?: () => void;
+}
+
+export function DueCollectionSection({ onCollect, onQuickCollect }: DueCollectionSectionProps = {}) {
   const { formatCurrency } = useCurrency();
   const [search, setSearch] = useState('');
   const [agingFilter, setAgingFilter] = useState<'all' | '0-30' | '31-60' | '61-90' | '90+'>('all');
@@ -178,16 +184,29 @@ export function DueCollectionSection() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface px-3 text-xs font-medium text-muted hover:text-default disabled:opacity-50 transition-colors cursor-pointer"
-          title="Refresh Receivables"
-        >
-          <RefreshCw className={`size-3.5 ${isFetching ? 'animate-spin' : ''}`} />
-          <span>Refresh</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {onQuickCollect && (
+            <button
+              type="button"
+              onClick={onQuickCollect}
+              className="flex h-9 items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 text-xs font-semibold shadow-xs transition cursor-pointer"
+            >
+              <Coins className="size-3.5" />
+              <span>+ Record Collection</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface px-3 text-xs font-medium text-muted hover:text-default disabled:opacity-50 transition-colors cursor-pointer"
+            title="Refresh Receivables"
+          >
+            <RefreshCw className={`size-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
+        </div>
       </div>
 
       {/* KPI Cards Grid */}
@@ -320,6 +339,7 @@ export function DueCollectionSection() {
                 <th className="px-4 py-3.5">Paid (৳)</th>
                 <th className="px-4 py-3.5">Outstanding Due (৳)</th>
                 <th className="px-4 py-3.5">Aging</th>
+                <th className="px-4 py-3.5 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-default">
@@ -361,6 +381,18 @@ export function DueCollectionSection() {
                     >
                       {inv.overdue_days === 0 ? 'Due Today' : `${inv.overdue_days} Days Overdue`}
                     </span>
+                  </td>
+
+                  <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => onCollect?.(inv)}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
+                      title={`Collect due payment from ${inv.customer_name}`}
+                    >
+                      <Coins className="size-3.5" />
+                      <span>Collect Due</span>
+                    </button>
                   </td>
                 </tr>
               ))}

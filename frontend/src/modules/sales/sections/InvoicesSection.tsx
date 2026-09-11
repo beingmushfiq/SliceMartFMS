@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Ban, CheckCircle2, Clock, Printer, RefreshCw, Search, Sliders, FileText } from 'lucide-react';
+import { Ban, CheckCircle2, Clock, Printer, RefreshCw, Search, Sliders, FileText, DollarSign, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Invoice } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
@@ -8,7 +9,11 @@ import { InvoiceTemplateBuilder } from '../components/InvoiceTemplateBuilder';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
 
-export function InvoicesSection() {
+interface InvoicesSectionProps {
+  onNavigateToTab?: (tab: string) => void;
+}
+
+export function InvoicesSection({ onNavigateToTab }: InvoicesSectionProps = {}) {
   const { formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -240,6 +245,27 @@ export function InvoicesSection() {
                           >
                             {approveMutation.isPending ? 'Posting...' : 'Post'}
                           </button>
+                        )}
+                        {onNavigateToTab && inv.status === 'posted' && (
+                          <button
+                            type="button"
+                            onClick={() => onNavigateToTab('payments')}
+                            className="inline-flex items-center gap-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors cursor-pointer"
+                            title="Collect payment from customer"
+                          >
+                            <DollarSign className="size-3" />
+                            <span>Collect</span>
+                          </button>
+                        )}
+                        {(inv.status === 'posted' || inv.status === 'paid') && (
+                          <Link
+                            to="/finance?tab=gl"
+                            className="inline-flex items-center gap-1 rounded-xl bg-surface-sunken border border-default px-2 py-1 text-[11px] font-medium text-muted hover:text-primary hover:border-primary/40 transition-colors"
+                            title="View posted accounting journals in General Ledger"
+                          >
+                            <BookOpen className="size-3" />
+                            <span>Ledger</span>
+                          </Link>
                         )}
                         {inv.status !== 'void' && (
                           <button

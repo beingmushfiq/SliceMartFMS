@@ -43,16 +43,16 @@ interface CategoryConfig {
 const CATEGORIES: CategoryConfig[] = [
   {
     id: 'people',
-    label: 'People & Organization',
-    tagline: 'Staff directory, designations & worker piece-rate performance',
+    label: 'Team Members & Structure',
+    tagline: 'Employee profiles, departments & factory worker output wages',
     icon: Users,
     tabs: ['employees', 'departments', 'performance'],
     defaultTab: 'employees',
   },
   {
     id: 'compensation',
-    label: 'Payroll & Attendance',
-    tagline: 'Monthly payroll runs, shift rosters & leave quota requests',
+    label: 'Payroll & Time Off',
+    tagline: 'Salary payouts, daily attendance & leave requests',
     icon: Wallet,
     tabs: ['payroll', 'attendance', 'leaves'],
     defaultTab: 'payroll',
@@ -425,19 +425,18 @@ export const HrWorkspace: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <span>👥</span> Human Resources, Attendance & Piece-Rate Payroll
+            <span>👥</span> Team, Attendance & Payroll
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Employee Directory, Shift & Grace Period Attendance, Phase 3 Piece-Rate Output
-            Consumption & Immutable Locked Payroll Runs
+            Employee Directory, Shift Attendance, Factory Worker Output Tracking & Monthly Salary Payouts
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowOnboardModal(true)}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow transition flex items-center gap-1 text-sm"
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow transition flex items-center gap-1 text-sm cursor-pointer"
           >
-            <span>+</span> Onboard Employee
+            <span>+</span> Add Employee
           </button>
         </div>
       </div>
@@ -452,7 +451,7 @@ export const HrWorkspace: React.FC = () => {
             {employees.length} Personnel
           </div>
           <div className="text-xs text-gray-400 mt-1">
-            {pieceRateCount} Piece-Rate | {salariedCount} Salaried
+            {pieceRateCount} Production Output | {salariedCount} Monthly Salary
           </div>
         </div>
 
@@ -550,12 +549,12 @@ export const HrWorkspace: React.FC = () => {
           {/* Sub-Tabs for Active Category */}
           <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 px-1 scrollbar-none min-w-0">
             {[
-              { id: 'payroll', label: 'Payroll Runs & Payslips', category: 'compensation', icon: Wallet, count: payslips.length },
-              { id: 'attendance', label: 'Shifts & Attendance', category: 'compensation', icon: Clock, count: attendances.length },
-              { id: 'leaves', label: 'Leave Management', category: 'compensation', icon: CalendarCheck, count: leaveRequests.length },
-              { id: 'employees', label: 'Employee Directory', category: 'people', icon: Users, count: employees.length },
-              { id: 'departments', label: 'Departments & Setup', category: 'people', icon: Building2, count: departments.length },
-              { id: 'performance', label: 'Worker Performance', category: 'people', icon: Zap, count: 4 },
+              { id: 'payroll', label: 'Salary Payouts & Payslips', category: 'compensation', icon: Wallet, count: payslips.length },
+              { id: 'attendance', label: 'Daily Attendance & Shifts', category: 'compensation', icon: Clock, count: attendances.length },
+              { id: 'leaves', label: 'Leave & Time Off', category: 'compensation', icon: CalendarCheck, count: leaveRequests.length },
+              { id: 'employees', label: 'Staff Directory', category: 'people', icon: Users, count: employees.length },
+              { id: 'departments', label: 'Departments & Roles', category: 'people', icon: Building2, count: departments.length },
+              { id: 'performance', label: 'Factory Output & Wages', category: 'people', icon: Zap, count: 4 },
             ]
               .filter((tab) => tab.category === activeCategory)
               .map((tab) => {

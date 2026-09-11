@@ -17,19 +17,19 @@ use Illuminate\Support\Facades\DB;
 final class TenantCapabilityManifest
 {
     public const ALL_MODULE_KEYS = [
-        'production' => ['label' => 'Production Chain', 'default' => true],
-        'inventory' => ['label' => 'Stock & Inventory', 'default' => true],
-        'purchasing' => ['label' => 'Procurement (PO)', 'default' => true],
+        'production' => ['label' => 'Production Lines', 'default' => true],
+        'inventory' => ['label' => 'Warehouse & Stock', 'default' => true],
+        'purchasing' => ['label' => 'Purchasing & Sourcing', 'default' => true],
         'sales' => ['label' => 'Sales & Invoices', 'default' => true],
         'pos' => ['label' => 'Point of Sale (POS)', 'default' => true],
-        'ecommerce' => ['label' => 'Storefront & E-Commerce', 'default' => true],
-        'delivery' => ['label' => 'Logistics & Courier', 'default' => true],
+        'ecommerce' => ['label' => 'Online Store CMS', 'default' => true],
+        'delivery' => ['label' => 'Delivery & Couriers', 'default' => true],
         'finance' => ['label' => 'Finance & Accounts', 'default' => true],
-        'assets' => ['label' => 'Asset Management & Maintenance', 'default' => true],
-        'hr' => ['label' => 'Workforce & HR', 'default' => true],
+        'assets' => ['label' => 'Asset Management & Machinery', 'default' => true],
+        'hr' => ['label' => 'Team & Workforce', 'default' => true],
         'qc' => ['label' => 'Quality Control (QC)', 'default' => true],
-        'reports' => ['label' => 'Reports & BI (RMS)', 'default' => true],
-        'crm' => ['label' => 'CRM & Leads', 'default' => true],
+        'reports' => ['label' => 'Business Reports & Analytics', 'default' => true],
+        'crm' => ['label' => 'Customer Leads & CRM', 'default' => true],
     ];
 
     public static function forTenant(int $tenantId, bool $bustCache = false): array

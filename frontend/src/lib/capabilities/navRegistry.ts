@@ -1,25 +1,18 @@
 import {
-  Award,
-  BarChart3,
   Boxes,
-  Briefcase,
   Building2,
   ClipboardList,
-  Clock,
   Coins,
-  DollarSign,
   Factory,
   FileSpreadsheet,
   LayoutDashboard,
   Microscope,
-  Receipt,
   Settings,
   Shield,
   ShieldCheck,
   ShoppingBag,
   ShoppingCart,
   Store,
-  Target,
   Truck,
   UserCheck,
   Users,
@@ -76,7 +69,7 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
       {
         id: 'reports',
         moduleKey: 'reports',
-        defaultLabel: 'Reports & BI (RMS)',
+        defaultLabel: 'Business Reports & Analytics',
         to: '/reports',
         icon: FileSpreadsheet,
         permission: [
@@ -90,49 +83,22 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
   },
 
   // ── 2. CRM & Sales Force ─────────────────────────────────────────────────
-  // Lead generation and pipeline comes BEFORE order capture.
-  // A salesman generates a lead → qualifies it → converts it to a sales order.
   {
     id: 'crm',
-    title: 'CRM & Sales Force',
+    title: 'CRM & Customer Pipeline',
     items: [
       {
         id: 'crm-leads',
-        moduleKey: 'sales',
-        defaultLabel: 'Commercial Leads',
+        moduleKey: 'crm',
+        defaultLabel: 'Customer Leads & CRM',
         to: '/sales?tab=leads',
         icon: UserCheck,
         permission: ['sales.lead.view', 'crm.lead.view', 'sales.order.view'],
-      },
-      {
-        id: 'salesmen-directory',
-        moduleKey: 'sales',
-        defaultLabel: 'Salesmen Directory',
-        to: '/sales?tab=salesmen',
-        icon: Users,
-        permission: ['sales.order.view', 'hr.employee.view'],
-      },
-      {
-        id: 'sales-targets',
-        moduleKey: 'sales',
-        defaultLabel: 'Monthly Sales Targets',
-        to: '/sales?tab=targets',
-        icon: Target,
-        permission: ['sales.order.view', 'sales.target.view'],
-      },
-      {
-        id: 'sales-incentives',
-        moduleKey: 'sales',
-        defaultLabel: 'Incentive Policies',
-        to: '/sales?tab=incentives',
-        icon: Award,
-        permission: ['sales.order.view', 'sales.incentive.view'],
       },
     ],
   },
 
   // ── 3. Sales & Commercials ───────────────────────────────────────────────
-  // Order capture, invoicing, POS counter sales, and the live web storefront.
   {
     id: 'sales',
     title: 'Sales & Commercials',
@@ -162,7 +128,7 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
       {
         id: 'ecommerce',
         moduleKey: 'ecommerce',
-        defaultLabel: 'Storefront CMS',
+        defaultLabel: 'Online Store CMS',
         to: '/storefront',
         icon: Store,
         permission: ['ecommerce.storefront.view', 'ecommerce.storefront.manage'],
@@ -173,7 +139,6 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
   },
 
   // ── 4. Inventory & Supply ────────────────────────────────────────────────
-  // Once an order is captured, materials need to be sourced & stocked.
   {
     id: 'supply',
     title: 'Inventory & Supply',
@@ -182,7 +147,7 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
         id: 'catalogue',
         moduleKey: 'inventory',
         labelKey: 'catalogue',
-        defaultLabel: 'Catalogue & Master',
+        defaultLabel: 'Product Catalog & Recipes',
         to: '/catalogue',
         icon: Boxes,
         permission: [
@@ -198,7 +163,7 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
       {
         id: 'purchasing',
         moduleKey: 'purchasing',
-        defaultLabel: 'Procurement (PO)',
+        defaultLabel: 'Purchasing & Sourcing',
         to: '/purchasing',
         icon: ClipboardList,
         permission: [
@@ -213,7 +178,7 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
         id: 'inventory',
         moduleKey: 'inventory',
         labelKey: 'warehouse',
-        defaultLabel: 'Stock & Inventory',
+        defaultLabel: 'Warehouse & Stock',
         to: '/inventory',
         icon: Warehouse,
         permission: [
@@ -227,7 +192,7 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
       {
         id: 'delivery',
         moduleKey: 'delivery',
-        defaultLabel: 'Logistics & Courier',
+        defaultLabel: 'Delivery & Couriers',
         to: '/logistics',
         icon: Truck,
         permission: [
@@ -241,7 +206,6 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
   },
 
   // ── 5. Production & Quality ──────────────────────────────────────────────
-  // Materials are converted into finished goods on the factory floor.
   {
     id: 'production',
     title: 'Production & Quality',
@@ -250,7 +214,7 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
         id: 'production',
         moduleKey: 'production',
         labelKey: 'production',
-        defaultLabel: 'Production Chain',
+        defaultLabel: 'Production Lines',
         to: '/production',
         icon: Factory,
         permission: ['production.batch.view', 'production.plan.view', 'production.worker_entry.view'],
@@ -267,7 +231,6 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
   },
 
   // ── 6. Finance & Accounts ────────────────────────────────────────────────
-  // Record all financial transactions: revenue, expenses, receivables, assets.
   {
     id: 'finance',
     title: 'Finance & Accounts',
@@ -287,14 +250,6 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
         ],
       },
       {
-        id: 'finance-due',
-        moduleKey: 'finance',
-        defaultLabel: 'Due & Collection',
-        to: '/finance?tab=due-collection',
-        icon: DollarSign,
-        permission: ['finance.account.view', 'sales.invoice.view'],
-      },
-      {
         id: 'assets',
         moduleKey: 'assets',
         defaultLabel: 'Asset Management',
@@ -306,77 +261,48 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
   },
 
   // ── 7. Workforce & HR ────────────────────────────────────────────────────
-  // People operations: hire, clock in, measure output, pay.
   {
     id: 'hr',
-    title: 'Workforce & HR',
+    title: 'Team & Workforce',
     items: [
       {
-        id: 'hr-employees',
+        id: 'hr',
         moduleKey: 'hr',
-        defaultLabel: 'Workforce Directory',
-        to: '/hr?tab=employees',
+        defaultLabel: 'Team & Workforce',
+        to: '/hr',
         icon: Users,
-        permission: ['hr.employee.view'],
-      },
-      {
-        id: 'hr-attendance',
-        moduleKey: 'hr',
-        defaultLabel: 'Shifts & Attendance',
-        to: '/hr?tab=attendance',
-        icon: Clock,
-        permission: ['hr.attendance.view'],
-      },
-      {
-        id: 'hr-performance',
-        moduleKey: 'hr',
-        defaultLabel: 'Worker Performance',
-        to: '/hr?tab=performance',
-        icon: BarChart3,
-        permission: ['hr.employee.view', 'production.worker_entry.view'],
-      },
-      {
-        id: 'hr-payroll',
-        moduleKey: 'hr',
-        defaultLabel: 'Payroll & Payslips',
-        to: '/hr?tab=payroll',
-        icon: Receipt,
-        permission: ['hr.payroll.view', 'hr.payslip.view'],
-      },
-      {
-        id: 'hr-departments',
-        moduleKey: 'hr',
-        defaultLabel: 'Departments & Setup',
-        to: '/hr?tab=departments',
-        icon: Briefcase,
-        permission: ['hr.employee.view'],
+        permission: [
+          'hr.employee.view',
+          'hr.attendance.view',
+          'hr.payroll.view',
+          'production.worker_entry.view',
+        ],
       },
     ],
   },
 
   // ── 8. Intelligence & System ─────────────────────────────────────────────
-  // Access control, audit trails, and global configuration.
   {
     id: 'system',
     title: 'Intelligence & System',
     items: [
       {
         id: 'roles',
-        defaultLabel: 'Roles & RBAC',
+        defaultLabel: 'Staff Roles & Permissions',
         to: '/settings/roles',
         icon: Shield,
         permission: ['core.role.view', 'core.role.manage', 'core.permission.view'],
       },
       {
         id: 'audit',
-        defaultLabel: 'Activity Log & Diffs',
+        defaultLabel: 'Audit Trail & Change History',
         to: '/activity-logs',
         icon: ShieldCheck,
         permission: ['core.audit_log.view'],
       },
       {
         id: 'settings',
-        defaultLabel: 'Settings Center',
+        defaultLabel: 'System Settings',
         to: '/settings',
         icon: Settings,
         permission: ['core.setting.view', 'core.setting.manage', 'core.setting.configure'],

@@ -73,8 +73,8 @@ interface CategoryConfig {
 const CATEGORIES: CategoryConfig[] = [
   {
     id: 'products',
-    label: 'Product & SKU Catalog',
-    subtitle: 'Items, Categories, Brands & Units',
+    label: 'Products & Inventory Items',
+    subtitle: 'Items, Categories, Brands & Measurement Units',
     defaultTab: 'products',
     badge: '4 Capabilities',
     icon: Package,
@@ -82,8 +82,8 @@ const CATEGORIES: CategoryConfig[] = [
   },
   {
     id: 'engineering',
-    label: 'Engineering & Recipes',
-    subtitle: 'BOM & Assembly Structures',
+    label: 'Recipes & Formulas',
+    subtitle: 'Production Recipes & Raw Material Lists',
     defaultTab: 'bom',
     badge: '1 Capability',
     icon: FileCode,
@@ -91,8 +91,8 @@ const CATEGORIES: CategoryConfig[] = [
   },
   {
     id: 'directories',
-    label: 'Facilities & Directory',
-    subtitle: 'Warehouses & Stakeholder Directory',
+    label: 'Locations & Contacts',
+    subtitle: 'Warehouses, Customers & Suppliers',
     defaultTab: 'warehouses',
     badge: '2 Capabilities',
     icon: Warehouse,
@@ -104,65 +104,65 @@ const TABS: TabConfig[] = [
   // Products & Taxonomy
   {
     id: 'products',
-    label: 'Products & SKUs',
+    label: 'Products & Items',
     category: 'products',
     icon: Package,
-    description: 'Finished goods, raw materials, parts and catalog items with variants',
-    highlights: ['Multi-type catalog items', 'Thermal barcode printing', 'Storefront SEO & pricing'],
+    description: 'Finished goods, raw materials, parts and catalog items ready for sale or production',
+    highlights: ['Multi-type catalog items', 'Barcode label printing', 'Storefront visibility & pricing'],
   },
   {
     id: 'categories',
     label: 'Categories',
     category: 'products',
     icon: Tag,
-    description: 'Taxonomy hierarchy for product catalog classification',
-    highlights: ['Multi-level tree nesting', 'Category code indexing', 'Storefront navigation'],
+    description: 'Group your products into neat departments and collections',
+    highlights: ['Multi-level subcategories', 'Category codes', 'Online storefront navigation'],
   },
   {
     id: 'brands',
     label: 'Brands',
     category: 'products',
     icon: Boxes,
-    description: 'Product brand lines, manufacturers and trademark portfolios',
+    description: 'Manage manufacturer brands, partner trademarks and logos',
     highlights: ['Brand portfolio registry', 'Manufacturer logos', 'Trademark management'],
   },
   {
     id: 'units',
-    label: 'Units of Measure',
+    label: 'Measurement Units',
     category: 'products',
     icon: Ruler,
-    description: 'Measurement standards, base units and precision conversion ratios',
-    highlights: ['Piece, weight, volume', 'Conversion multipliers', 'Precision decimals'],
+    description: 'Counting units (pcs, kg, liters, boxes) and how they convert',
+    highlights: ['Piece, weight, volume', 'Box-to-piece conversions', 'Decimal precision'],
   },
 
-  // Engineering
+  // Engineering / Recipes
   {
     id: 'bom',
-    label: 'Bill of Materials',
+    label: 'Product Recipes (BOM)',
     category: 'engineering',
     icon: FileCode,
-    badge: 'Formulas',
-    description: 'Manufacturing recipes, multi-level BOMs and assembly specifications',
-    highlights: ['Multi-tier assembly trees', 'Scrap yield tolerances', 'Work center routing'],
+    badge: 'Recipes',
+    description: 'List of raw ingredients and packaging needed to make each finished item',
+    highlights: ['Ingredient quantities', 'Expected wastage allowance', 'Production step sequence'],
   },
 
   // Facilities & Directories
   {
     id: 'warehouses',
-    label: 'Warehouses & Depots',
+    label: 'Warehouses & Locations',
     category: 'directories',
     icon: Warehouse,
-    description: 'Storage facilities, distribution centers and location bin maps',
-    highlights: ['Multi-facility tracking', 'Depot zones & bins', 'Stock transfer nodes'],
+    description: 'Storage facilities, distribution hubs, storage rooms and racks',
+    highlights: ['Multiple storage buildings', 'Room & shelf zones', 'Stock transfer hubs'],
   },
   {
     id: 'parties',
-    label: 'Parties & Stakeholders',
+    label: 'Customers & Suppliers',
     category: 'directories',
     icon: Users,
-    badge: 'CRM',
-    description: 'Customers, suppliers, distributors, dealers and logistics partners',
-    highlights: ['Suppliers & customers', 'Tax IDs & payment terms', 'Billing & shipping addresses'],
+    badge: 'Directory',
+    description: 'All your business contacts: buyers, vendors, dealers and delivery partners',
+    highlights: ['Suppliers & buyers', 'Tax IDs & payment terms', 'Billing & shipping addresses'],
   },
 ];
 
@@ -347,6 +347,72 @@ export default function CatalogueWorkspace() {
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Non-Technical Workflow Guide: What to configure first */}
+      <div className="bg-surface rounded-2xl border border-default p-3 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="size-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+            <Sparkles className="size-4 text-primary" />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-default flex items-center gap-1.5">
+              <span>Recommended Setup Order</span>
+              <span className="text-[10px] text-muted font-normal">(Follow these 4 steps to set up your catalog)</span>
+            </div>
+            <p className="text-[11px] text-muted">Click any step below to jump straight to that setup screen:</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 flex-wrap w-full md:w-auto">
+          <button
+            type="button"
+            onClick={() => setActiveTab('units')}
+            className={cn(
+              'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1',
+              activeTab === 'units' ? 'bg-primary text-primary-fg' : 'bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default'
+            )}
+          >
+            <span className="size-4 rounded-full bg-black/20 flex items-center justify-center text-[10px]">1</span>
+            <span>Units</span>
+          </button>
+          <ArrowRight className="size-3 text-muted/50 hidden sm:inline" />
+          <button
+            type="button"
+            onClick={() => setActiveTab('categories')}
+            className={cn(
+              'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1',
+              activeTab === 'categories' ? 'bg-primary text-primary-fg' : 'bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default'
+            )}
+          >
+            <span className="size-4 rounded-full bg-black/20 flex items-center justify-center text-[10px]">2</span>
+            <span>Categories</span>
+          </button>
+          <ArrowRight className="size-3 text-muted/50 hidden sm:inline" />
+          <button
+            type="button"
+            onClick={() => setActiveTab('products')}
+            className={cn(
+              'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1',
+              activeTab === 'products' ? 'bg-primary text-primary-fg' : 'bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default'
+            )}
+          >
+            <span className="size-4 rounded-full bg-black/20 flex items-center justify-center text-[10px]">3</span>
+            <span>Products</span>
+          </button>
+          <ArrowRight className="size-3 text-muted/50 hidden sm:inline" />
+          <button
+            type="button"
+            onClick={() => setActiveTab('bom')}
+            className={cn(
+              'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1',
+              activeTab === 'bom' ? 'bg-primary text-primary-fg' : 'bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default'
+            )}
+          >
+            <span className="size-4 rounded-full bg-black/20 flex items-center justify-center text-[10px]">4</span>
+            <span>Recipes (BOM)</span>
+          </button>
         </div>
       </div>
 
