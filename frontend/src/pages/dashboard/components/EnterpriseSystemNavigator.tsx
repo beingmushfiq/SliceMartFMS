@@ -14,7 +14,6 @@ import {
   Truck,
   Factory,
   Microscope,
-  Wrench,
   Coins,
   DollarSign,
   Building2,
@@ -327,31 +326,6 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
       { label: 'QC Specs', to: '/qc?tab=parameters', permission: 'qc.parameter.view' },
     ],
   },
-  {
-    id: 'machinery-maintenance',
-    title: 'Machine Maintenance',
-    description: 'Factory machinery preventive maintenance, work order repairs & spare parts usage',
-    to: '/assets?tab=maintenance',
-    icon: Wrench,
-    domain: 'manufacturing',
-    moduleKey: 'maintenance',
-    permission: ['assets.asset.view', 'assets.maintenance.view'],
-    pulseMetric: { value: '100% Up', label: 'Assembly Lines', tone: 'success' },
-    quickActions: [
-      {
-        label: 'Log Service',
-        to: '/assets?action=log-service',
-        icon: Plus,
-        permission: 'assets.maintenance.create',
-      },
-      {
-        label: 'Maintenance Log',
-        to: '/assets?tab=maintenance',
-        permission: 'assets.maintenance.view',
-      },
-    ],
-  },
-
   // ── Finance & Treasury ───────────────────────────────────────
   {
     id: 'finance-gl',
@@ -396,15 +370,16 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
     ],
   },
   {
-    id: 'fixed-assets',
-    title: 'Fixed Assets Management',
-    description: 'Capital equipment, depreciation schedules, factory machines & physical tagging',
+    id: 'asset-management',
+    title: 'Asset Management',
+    description:
+      'Capital equipment register, plant machinery health, preventive maintenance work orders & monthly depreciation',
     to: '/assets',
     icon: Building2,
     domain: 'finance',
     moduleKey: 'assets',
-    permission: ['assets.asset.view'],
-    pulseMetric: { value: '18 Machines', label: 'Capital Assets', tone: 'default' },
+    permission: ['assets.asset.view', 'assets.maintenance.view'],
+    pulseMetric: { value: '100% Up', label: 'Plant Equipment', tone: 'success' },
     quickActions: [
       {
         label: 'Register Asset',
@@ -412,6 +387,13 @@ const SUBSYSTEM_ITEMS: SubsystemItem[] = [
         icon: Plus,
         permission: 'assets.asset.create',
       },
+      {
+        label: 'Log Service Order',
+        to: '/assets?tab=maintenance&action=log-service',
+        icon: Plus,
+        permission: 'assets.maintenance.create',
+      },
+      { label: 'Work Orders', to: '/assets?tab=maintenance' },
       { label: 'Depreciation Book', to: '/assets?tab=depreciation' },
     ],
   },

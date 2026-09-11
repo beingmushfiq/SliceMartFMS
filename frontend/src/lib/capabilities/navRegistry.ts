@@ -24,7 +24,6 @@ import {
   UserCheck,
   Users,
   Warehouse,
-  Wrench,
 } from 'lucide-react';
 
 export interface DynamicNavItem {
@@ -264,14 +263,6 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
         icon: Microscope,
         permission: ['qc.inspection.view', 'qc.parameter.view', 'qc.wastage.view'],
       },
-      {
-        id: 'maintenance',
-        moduleKey: 'maintenance',
-        defaultLabel: 'Machine Maintenance',
-        to: '/assets?tab=maintenance',
-        icon: Wrench,
-        permission: ['assets.asset.view', 'assets.maintenance.view'],
-      },
     ],
   },
 
@@ -306,7 +297,7 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
       {
         id: 'assets',
         moduleKey: 'assets',
-        defaultLabel: 'Fixed Assets',
+        defaultLabel: 'Asset Management',
         to: '/assets',
         icon: Building2,
         permission: ['assets.asset.view', 'assets.maintenance.view'],

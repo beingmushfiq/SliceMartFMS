@@ -84,12 +84,12 @@ const MODULE_DESCRIPTIONS: Record<string, string> = {
   ecommerce: 'Customer-facing headless online shop, product catalog sync, and WhatsApp checkout.',
   delivery: '3PL courier integration (Pathao, Steadfast, RedX), delivery runsheets, and COD.',
   finance: 'Double-entry accounts, journals, expense categorization, and banking ledgers.',
-  assets: 'Equipment registry, depreciation schedules, and meter reading logs.',
+  assets:
+    'Enterprise asset registry, plant machinery health, preventive maintenance work orders, and depreciation schedules.',
   hr: 'Employee directory, department designations, attendance tracking, and payroll.',
   qc: 'Quality inspection parameters, defect classifications, and scrap/loss analysis.',
   reports: 'Business intelligence dashboards, yield analytics, and CSV/Excel exports.',
   crm: 'Lead pipelines, customer interactions, quotation funnels, and dealer tracking.',
-  maintenance: 'Machine service schedules, downtime logs, and spare part replacement orders.',
 };
 
 const DEFAULT_MODULES: ModuleItem[] = [
@@ -98,13 +98,12 @@ const DEFAULT_MODULES: ModuleItem[] = [
   { module_key: 'delivery', label: 'Logistics & Courier', enabled: true, plan_allowed: true, config: {} },
   { module_key: 'production', label: 'Production Chain', enabled: true, plan_allowed: true, config: {} },
   { module_key: 'qc', label: 'Quality Control (QC)', enabled: true, plan_allowed: true, config: {} },
-  { module_key: 'maintenance', label: 'Machine Maintenance', enabled: true, plan_allowed: true, config: {} },
   { module_key: 'sales', label: 'Sales & Invoices', enabled: true, plan_allowed: true, config: {} },
   { module_key: 'pos', label: 'Point of Sale (POS)', enabled: true, plan_allowed: true, config: {} },
   { module_key: 'ecommerce', label: 'Storefront & E-Commerce', enabled: true, plan_allowed: true, config: {} },
   { module_key: 'crm', label: 'CRM & Leads', enabled: true, plan_allowed: true, config: {} },
   { module_key: 'finance', label: 'Finance & Accounts', enabled: true, plan_allowed: true, config: {} },
-  { module_key: 'assets', label: 'Fixed Assets', enabled: true, plan_allowed: true, config: {} },
+  { module_key: 'assets', label: 'Asset Management', enabled: true, plan_allowed: true, config: {} },
   { module_key: 'hr', label: 'Workforce & HR', enabled: true, plan_allowed: true, config: {} },
   { module_key: 'reports', label: 'Reports & BI (RMS)', enabled: true, plan_allowed: true, config: {} },
 ];

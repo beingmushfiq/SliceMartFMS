@@ -25,12 +25,11 @@ final class TenantCapabilityManifest
         'ecommerce' => ['label' => 'Storefront & E-Commerce', 'default' => true],
         'delivery' => ['label' => 'Logistics & Courier', 'default' => true],
         'finance' => ['label' => 'Finance & Accounts', 'default' => true],
-        'assets' => ['label' => 'Fixed Assets & Maintenance', 'default' => true],
+        'assets' => ['label' => 'Asset Management & Maintenance', 'default' => true],
         'hr' => ['label' => 'Workforce & HR', 'default' => true],
         'qc' => ['label' => 'Quality Control (QC)', 'default' => true],
         'reports' => ['label' => 'Reports & BI (RMS)', 'default' => true],
         'crm' => ['label' => 'CRM & Leads', 'default' => true],
-        'maintenance' => ['label' => 'Machine Maintenance', 'default' => true],
     ];
 
     public static function forTenant(int $tenantId, bool $bustCache = false): array

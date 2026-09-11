@@ -30,7 +30,7 @@ final class TenantModuleController extends Controller
             'crm'        => ['crm-leads', 'salesmen-directory', 'sales-targets', 'sales-incentives'],
             'sales'      => ['sales', 'pos', 'ecommerce'],
             'supply'     => ['catalogue', 'purchasing', 'inventory', 'delivery'],
-            'production' => ['production', 'qc', 'maintenance'],
+            'production' => ['production', 'qc'],
             'finance'    => ['finance', 'finance-due', 'assets'],
             'hr'         => ['hr-employees', 'hr-attendance', 'hr-performance', 'hr-payroll', 'hr-departments'],
             'system'     => ['roles', 'audit', 'settings'],
