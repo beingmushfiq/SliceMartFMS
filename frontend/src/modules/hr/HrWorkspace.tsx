@@ -53,6 +53,7 @@ import { SalaryStructuresSection } from './sections/SalaryStructuresSection';
 import { SalaryAdvancesSection } from './sections/SalaryAdvancesSection';
 import { BadgePunchTerminalModal } from './components/BadgePunchTerminalModal';
 import { CreatePayslipModal } from './components/CreatePayslipModal';
+import { useDocumentPrint, EmployeeIdBadgeDocument } from '../../components/print';
 
 export type HrTab =
   | 'employees'
@@ -106,6 +107,7 @@ function generateRandomPassword(): string {
 
 export const HrWorkspace: React.FC = () => {
   const { formatCurrency } = useCurrency();
+  const { printDocument, isPrinting: isPrintingBadge } = useDocumentPrint();
   const [activeTab, setActiveTab] = useWorkspaceTab<HrTab>(
     'payroll',
     [
@@ -4035,11 +4037,20 @@ export const HrWorkspace: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => window.print()}
-                className="flex-1 px-3 py-2 text-xs bg-primary hover:bg-primary/90 text-primary-fg font-bold rounded-xl shadow cursor-pointer flex items-center justify-center gap-1"
+                onClick={() => {
+                  printDocument(
+                    <EmployeeIdBadgeDocument employee={selectedEmployeeForBadge} />,
+                    {
+                      documentTitle: `Security_Badge_${selectedEmployeeForBadge.employee_code}.pdf`,
+                      pageClass: 'print-page-id-card',
+                    }
+                  );
+                }}
+                disabled={isPrintingBadge}
+                className="flex-1 px-3 py-2 text-xs bg-primary hover:bg-primary/90 text-primary-fg font-bold rounded-xl shadow cursor-pointer flex items-center justify-center gap-1 disabled:opacity-50"
               >
                 <Printer className="size-3.5" />
-                <span>Print Badge</span>
+                <span>{isPrintingBadge ? 'Preparing Badge...' : 'Print Badge'}</span>
               </button>
             </div>
           </div>
