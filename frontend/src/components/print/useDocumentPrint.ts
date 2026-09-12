@@ -37,6 +37,11 @@ export function useDocumentPrint() {
       }
 
       const container = getOrCreatePrintRoot();
+      // The page class (e.g. print-page-a4, print-page-thermal-80) belongs on
+      // #print-root — it is the only place. Document component roots must NOT
+      // redeclare the same page class on an inner element: a descendant `page:`
+      // value creates a named-page context boundary that forces a blank
+      // transitional page before/after the content block in all browsers.
       container.className = `print-doc ${options.pageClass || 'print-page-a4'}`;
 
       if (options.onBeforePrint) {
@@ -50,7 +55,8 @@ export function useDocumentPrint() {
       // Render the component into the isolated print-root
       printReactRoot.render(component);
 
-      // Give browser time to lay out CSS and SVG barcodes
+      // Give browser time to lay out CSS, fonts, and SVG barcodes.
+      // 400 ms is the minimum safe value for Code128 / QR SVG generation.
       setTimeout(() => {
         document.body.classList.add('printing-active');
 
@@ -72,7 +78,7 @@ export function useDocumentPrint() {
           console.error('Browser print execution failed:', e);
           cleanup();
         }
-      }, 250);
+      }, 400);
     },
     []
   );

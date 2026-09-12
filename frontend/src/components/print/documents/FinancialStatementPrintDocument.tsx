@@ -120,7 +120,7 @@ export const FinancialStatementPrintDocument: React.FC<FinancialStatementPrintDo
   }, [data.reportCode]);
 
   return (
-    <div className="print-doc w-full text-slate-900 bg-white text-[8.5pt] leading-normal font-sans print-page-a4 p-6 sm:p-8">
+    <div className="print-doc w-full text-slate-900 bg-white text-[8.5pt] leading-normal font-sans">
       {/* Official Header */}
       <div className="flex items-start justify-between border-b-2 border-slate-900 pb-3 mb-3">
         <div className="max-w-[58%]">

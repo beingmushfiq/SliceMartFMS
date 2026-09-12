@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Printer,
   FileDown,
@@ -58,7 +58,7 @@ export function PrintPreviewModal({
   if (!isOpen) return null;
 
   const handlePrint = () => {
-    printDocument(<div>{children}</div>, {
+    printDocument(children as React.ReactElement, {
       documentTitle: documentNumber ? `${documentNumber}.pdf` : `${title}.pdf`,
       pageClass,
     });

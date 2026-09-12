@@ -47,9 +47,7 @@ export function ReportPrintDocument({
 
   return (
     <div
-      className={`print-doc w-full text-slate-900 bg-white text-[8.5pt] leading-normal font-sans ${
-        isLandscape ? 'print-page-a4-landscape' : 'print-page-a4'
-      }`}
+      className={`print-doc w-full text-slate-900 bg-white text-[8.5pt] leading-normal font-sans`}
     >
       {/* Header */}
       <div className="flex items-start justify-between border-b-2 border-slate-900 pb-3 mb-3">
@@ -180,7 +178,7 @@ export function ReportPrintDocument({
       </div>
 
       {/* Report Sign-off & Audit Signatures */}
-      <div className="grid grid-cols-3 gap-6 pt-8 mt-6 border-t border-slate-200 text-center text-[7.5pt] break-inside-avoid">
+      <div className="grid grid-cols-3 gap-6 pt-4 mt-3 border-t border-slate-200 text-center text-[7.5pt] break-inside-avoid">
         <div>
           <div className="border-t border-slate-400 pt-1 font-semibold text-slate-800">
             Report Prepared By

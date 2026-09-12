@@ -186,7 +186,7 @@ export function PurchaseOrderDocument({ po, businessConfig }: PurchaseOrderDocum
       </div>
 
       {/* Signatures */}
-      <div className="grid grid-cols-3 gap-6 pt-12 mt-6 border-t border-slate-200 text-center text-[7.5pt] break-inside-avoid">
+      <div className="grid grid-cols-3 gap-6 pt-6 mt-3 border-t border-slate-200 text-center text-[7.5pt] break-inside-avoid">
         <div>
           <div className="border-t border-slate-400 pt-1 font-semibold text-slate-800">
             Procurement Officer

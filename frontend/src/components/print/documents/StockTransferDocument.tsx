@@ -132,7 +132,7 @@ export function StockTransferDocument({ transfer, businessConfig }: StockTransfe
       </div>
 
       {/* Signatures */}
-      <div className="grid grid-cols-3 gap-6 pt-12 mt-8 border-t border-slate-200 text-center text-[7.5pt] break-inside-avoid">
+      <div className="grid grid-cols-3 gap-6 pt-6 mt-4 border-t border-slate-200 text-center text-[7.5pt] break-inside-avoid">
         <div>
           <div className="border-t border-slate-400 pt-1 font-semibold text-slate-800">
             Dispatching Storekeeper
