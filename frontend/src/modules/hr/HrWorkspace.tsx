@@ -28,8 +28,8 @@ import {
   MinusSquare,
   AlertTriangle,
   ShieldCheck,
-  MoreHorizontal,
   KeyRound,
+  ChevronDown,
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
 import { hrApi } from './services/hrApi';
@@ -2627,7 +2627,7 @@ export const HrWorkspace: React.FC = () => {
               <table className="w-full text-left text-xs text-default border-collapse">
                 <thead className="bg-surface-sunken text-muted uppercase text-2xs font-bold border-b border-default/60">
                   <tr>
-                    <th className="w-10 px-3 py-3 text-center">
+                    <th className="w-9 px-2 py-3 text-center">
                       <button
                         type="button"
                         onClick={toggleSelectAllEmp}
@@ -2648,15 +2648,15 @@ export const HrWorkspace: React.FC = () => {
                         )}
                       </button>
                     </th>
-                    <th className="w-24 px-3 py-3 whitespace-nowrap">Code</th>
-                    <th className="px-3 py-3 whitespace-nowrap">Employee</th>
-                    <th className="px-3 py-3 whitespace-nowrap">Department & Role</th>
-                    <th className="px-3 py-3 whitespace-nowrap">ERP Access</th>
-                    <th className="px-3 py-3 whitespace-nowrap">Phone</th>
-                    <th className="px-3 py-3 text-center whitespace-nowrap">Type</th>
-                    <th className="px-3 py-3 whitespace-nowrap">Shift</th>
-                    <th className="px-3 py-3 text-center whitespace-nowrap">Status</th>
-                    <th className="w-44 px-3 py-3 text-right whitespace-nowrap">Actions</th>
+                    <th className="w-20 px-2 py-3 whitespace-nowrap">Code</th>
+                    <th className="px-2.5 py-3 whitespace-nowrap">Employee</th>
+                    <th className="px-2.5 py-3 whitespace-nowrap">Department & Role</th>
+                    <th className="px-2.5 py-3 whitespace-nowrap">ERP Access</th>
+                    <th className="px-2 py-3 whitespace-nowrap">Phone</th>
+                    <th className="px-2 py-3 text-center whitespace-nowrap">Type</th>
+                    <th className="px-2 py-3 whitespace-nowrap">Shift</th>
+                    <th className="px-2 py-3 text-center whitespace-nowrap">Status</th>
+                    <th className="w-36 px-2 py-3 text-right whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-default/40">
@@ -2667,7 +2667,7 @@ export const HrWorkspace: React.FC = () => {
                         key={emp.id}
                         className={`transition ${isChecked ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-surface-sunken/40'}`}
                       >
-                        <td className="w-10 px-3 py-2.5 text-center">
+                        <td className="w-9 px-2 py-2.5 text-center">
                           <button
                             type="button"
                             onClick={() => toggleSelectEmp(emp.id)}
@@ -2681,24 +2681,42 @@ export const HrWorkspace: React.FC = () => {
                             )}
                           </button>
                         </td>
-                        <td className="w-24 px-3 py-2.5 font-mono font-bold text-primary whitespace-nowrap">
-                          {emp.employee_code}
+                        <td className="w-20 px-2 py-2.5 font-mono font-bold text-primary whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => setViewingEmployeeProfile(emp)}
+                            className="hover:underline cursor-pointer text-left font-mono"
+                            title="View employee profile"
+                          >
+                            {emp.employee_code}
+                          </button>
                         </td>
-                        <td className="px-3 py-2.5 whitespace-nowrap">
-                          <div className="flex items-center gap-2.5">
-                            <div className="size-8 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-xs shrink-0">
+                        <td className="px-2.5 py-2.5 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setViewingEmployeeProfile(emp)}
+                              className="size-7 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-xs shrink-0 hover:ring-2 hover:ring-primary/40 transition cursor-pointer"
+                              title="View employee profile"
+                            >
                               {emp.first_name?.[0] || emp.display_name?.[0] || 'E'}
                               {emp.last_name?.[0] || ''}
-                            </div>
+                            </button>
                             <div className="min-w-0">
-                              <div className="font-semibold text-default truncate">{emp.display_name}</div>
+                              <button
+                                type="button"
+                                onClick={() => setViewingEmployeeProfile(emp)}
+                                className="font-semibold text-default hover:text-primary transition truncate block text-left cursor-pointer"
+                              >
+                                {emp.display_name}
+                              </button>
                               <div className="text-3xs text-muted">
                                 {emp.date_of_joining ? `Joined ${emp.date_of_joining.split('T')[0]}` : 'Active Staff'}
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-3 py-2.5">
+                        <td className="px-2.5 py-2.5">
                           <div className="font-medium text-default whitespace-nowrap">
                             {emp.department?.name || 'General Operations'}
                           </div>
@@ -2709,12 +2727,12 @@ export const HrWorkspace: React.FC = () => {
                                 : 'Staff Member')}
                           </div>
                         </td>
-                        <td className="px-3 py-2.5">
+                        <td className="px-2.5 py-2.5">
                           {emp.has_user_account || emp.user_id ? (
                             <div className="space-y-0.5">
                               <div className="flex items-center gap-1.5 whitespace-nowrap">
                                 <span className="size-1.5 rounded-full bg-emerald-500 shrink-0 inline-block" />
-                                <span className="text-xs font-semibold text-default truncate max-w-40">
+                                <span className="text-xs font-semibold text-default truncate max-w-36" title={emp.user?.email || emp.email || 'Active User'}>
                                   {emp.user?.email || emp.email || 'Active User'}
                                 </span>
                               </div>
@@ -2740,10 +2758,10 @@ export const HrWorkspace: React.FC = () => {
                             </div>
                           )}
                         </td>
-                        <td className="px-3 py-2.5 font-mono text-xs text-muted whitespace-nowrap">
+                        <td className="px-2 py-2.5 font-mono text-xs text-muted whitespace-nowrap">
                           {emp.phone || '—'}
                         </td>
-                        <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                        <td className="px-2 py-2.5 text-center whitespace-nowrap">
                           <span
                             className={`inline-flex items-center px-2 py-0.5 text-2xs font-semibold rounded-full capitalize ${
                               emp.employment_type === 'piece_rate'
@@ -2756,10 +2774,10 @@ export const HrWorkspace: React.FC = () => {
                             {emp.employment_type.replace(/_/g, ' ')}
                           </span>
                         </td>
-                        <td className="px-3 py-2.5 text-xs text-muted whitespace-nowrap">
+                        <td className="px-2 py-2.5 text-xs text-muted whitespace-nowrap">
                           {emp.default_shift?.name || 'Standard Shift'}
                         </td>
-                        <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                        <td className="px-2 py-2.5 text-center whitespace-nowrap">
                           <span
                             className={`inline-flex items-center px-2 py-0.5 text-2xs font-bold rounded-full ${
                               emp.is_active
@@ -2770,27 +2788,18 @@ export const HrWorkspace: React.FC = () => {
                             {emp.is_active ? 'ACTIVE' : 'INACTIVE'}
                           </span>
                         </td>
-                        <td className="w-44 px-3 py-2.5 text-right whitespace-nowrap">
+                        <td className="w-36 px-2 py-2.5 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1.5 relative">
                             <button
                               type="button"
                               onClick={() => setViewingEmployeeProfile(emp)}
-                              className="px-2 py-1 text-2xs bg-surface border border-default hover:bg-surface-sunken text-default rounded-lg font-semibold transition cursor-pointer"
+                              className="px-2.5 py-1 text-xs bg-surface border border-default hover:bg-surface-sunken text-default rounded-lg font-medium transition cursor-pointer"
                               title="View complete employee record"
                             >
                               Profile
                             </button>
 
-                            <button
-                              type="button"
-                              onClick={() => setSelectedEmployeeForBadge(emp)}
-                              className="px-2 py-1 text-2xs bg-primary/10 hover:bg-primary/20 text-primary rounded-lg font-semibold border border-primary/20 transition cursor-pointer flex items-center gap-1"
-                              title="Generate and print Security ID Card"
-                            >
-                              <span>🪪 ID Badge</span>
-                            </button>
-
-                            {/* More Options Dropdown Button */}
+                            {/* Prominent Actions Dropdown Button */}
                             <div className="relative inline-block text-left">
                               <button
                                 type="button"
@@ -2798,23 +2807,36 @@ export const HrWorkspace: React.FC = () => {
                                   e.stopPropagation();
                                   setOpenActionMenuId(openActionMenuId === emp.id ? null : emp.id);
                                 }}
-                                className={`p-1 rounded-lg border transition cursor-pointer ${
+                                className={`px-2.5 py-1 text-xs rounded-lg border font-medium transition cursor-pointer flex items-center gap-1 shadow-2xs ${
                                   openActionMenuId === emp.id
                                     ? 'border-primary bg-primary/10 text-primary'
-                                    : 'border-default bg-surface hover:bg-surface-sunken text-muted hover:text-default'
+                                    : 'border-default bg-surface hover:bg-surface-sunken text-default'
                                 }`}
-                                title="More options (Access, Status, Delete)"
+                                title={`More actions for ${emp.display_name}`}
                                 aria-label={`More options for ${emp.display_name}`}
                               >
-                                <MoreHorizontal className="size-3.5" />
+                                <span>Actions</span>
+                                <ChevronDown className="size-3 text-muted" />
                               </button>
 
                               {/* Floating Dropdown Menu */}
                               {openActionMenuId === emp.id && (
                                 <div
                                   data-action-menu
-                                  className="absolute right-0 z-50 mt-1 w-48 rounded-xl bg-surface border border-default p-1 shadow-xl animate-in fade-in zoom-in-95 duration-100 text-left"
+                                  className="absolute right-0 z-50 mt-1.5 w-52 rounded-xl bg-surface border border-default p-1 shadow-xl animate-in fade-in zoom-in-95 duration-100 text-left"
                                 >
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionMenuId(null);
+                                      setSelectedEmployeeForBadge(emp);
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                                  >
+                                    <Printer className="size-3.5 text-primary shrink-0" />
+                                    <span>Print ID Badge</span>
+                                  </button>
+
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -2835,8 +2857,8 @@ export const HrWorkspace: React.FC = () => {
                                     }}
                                     className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
                                   >
-                                    <ShieldCheck className="size-3.5 text-primary shrink-0" />
-                                    <span>{emp.is_active ? 'Deactivate' : 'Activate'}</span>
+                                    <ShieldCheck className="size-3.5 text-emerald-600 shrink-0" />
+                                    <span>{emp.is_active ? 'Deactivate Employee' : 'Activate Employee'}</span>
                                   </button>
 
                                   <div className="my-1 border-t border-default/50" />

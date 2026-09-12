@@ -73,14 +73,17 @@ describe('HrWorkspace Component & Action Controls', () => {
     expect(screen.getByText(/Employee Document Vault & Compliance/i)).toBeInTheDocument();
   });
 
-  it('renders ID Badge button and opens security pass modal', () => {
+  it('renders ID Badge action in menu and opens security pass modal', () => {
     renderWithProviders(['/hr?tab=employees']);
 
-    const badgeButtons = screen.getAllByRole('button', { name: /ID Badge/i });
-    expect(badgeButtons.length).toBeGreaterThanOrEqual(1);
-    expect(badgeButtons[0]).toBeDefined();
+    const moreButtons = screen.getAllByRole('button', { name: /^More options for/i });
+    expect(moreButtons.length).toBeGreaterThanOrEqual(1);
 
-    fireEvent.click(badgeButtons[0]!);
+    fireEvent.click(moreButtons[0]!);
+    const printBadgeBtn = screen.getByRole('button', { name: /Print ID Badge/i });
+    expect(printBadgeBtn).toBeInTheDocument();
+
+    fireEvent.click(printBadgeBtn);
     expect(screen.getByText(/Workforce Security ID Card/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Print Badge/i })).toBeInTheDocument();
   });
