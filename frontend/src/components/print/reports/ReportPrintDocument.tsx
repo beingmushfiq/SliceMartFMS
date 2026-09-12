@@ -34,9 +34,7 @@ export function ReportPrintDocument({
   columns,
   data,
   summaryCards,
-  orientation = 'portrait',
 }: ReportPrintDocumentProps) {
-  const isLandscape = orientation === 'landscape';
   const companyInitials = (businessConfig.name || 'ERP')
     .split(' ')
     .map((w) => w[0])
