@@ -25,8 +25,11 @@ import {
   Trash2,
   CheckSquare,
   Square,
+  MinusSquare,
   AlertTriangle,
   ShieldCheck,
+  MoreHorizontal,
+  KeyRound,
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
 import { hrApi } from './services/hrApi';
@@ -557,6 +560,19 @@ export const HrWorkspace: React.FC = () => {
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
   const [lastSyncedTime, setLastSyncedTime] = useState<string | null>(null);
   const [isSyncingAll, setIsSyncingAll] = useState(false);
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (openActionMenuId === null) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target?.closest('[data-action-menu]')) {
+        setOpenActionMenuId(null);
+      }
+    };
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, [openActionMenuId]);
 
   // Delete Confirmation Modal State
   const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -1291,6 +1307,19 @@ export const HrWorkspace: React.FC = () => {
     } finally {
       setIsBulkProcessing(false);
     }
+  };
+
+  const handleBulkPrintBadges = () => {
+    const selectedEmployees = employees.filter((e) => selectedEmpIds.includes(e.id));
+    if (selectedEmployees.length === 0) return;
+    printDocument(
+      <EmployeeIdBadgeDocument employees={selectedEmployees} />,
+      {
+        documentTitle: `Staff-ID-Badges-Batch-${new Date().toISOString().slice(0, 10)}`,
+        pageClass: 'print-page-id-card',
+      }
+    );
+    notify.success(`Prepared ${selectedEmployees.length} ID badges for print preview.`);
   };
 
   const handleBulkStatusAttendances = async (status: 'present' | 'absent' | 'late') => {
@@ -2459,7 +2488,36 @@ export const HrWorkspace: React.FC = () => {
               </select>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Bulk Selection Toggle in Toolbar */}
+              <button
+                type="button"
+                onClick={toggleSelectAllEmp}
+                className={`px-3 py-2 border rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs cursor-pointer font-semibold ${
+                  selectedEmpIds.length > 0
+                    ? 'bg-primary/10 hover:bg-primary/20 border-primary/30 text-primary'
+                    : 'bg-surface hover:bg-surface-sunken border-default text-default'
+                }`}
+                title={
+                  selectedEmpIds.length === filteredEmployees.length && filteredEmployees.length > 0
+                    ? 'Deselect All'
+                    : 'Select All Filtered'
+                }
+              >
+                {selectedEmpIds.length > 0 && selectedEmpIds.length === filteredEmployees.length ? (
+                  <CheckSquare className="size-3.5 text-primary" />
+                ) : selectedEmpIds.length > 0 ? (
+                  <MinusSquare className="size-3.5 text-primary" />
+                ) : (
+                  <Square className="size-3.5 text-muted" />
+                )}
+                <span>
+                  {selectedEmpIds.length > 0
+                    ? `${selectedEmpIds.length}/${filteredEmployees.length} Selected`
+                    : `Select All (${filteredEmployees.length})`}
+                </span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => loadHrData()}
@@ -2501,16 +2559,16 @@ export const HrWorkspace: React.FC = () => {
 
           {/* Floating Bulk Actions Ribbon for Employees */}
           {selectedEmpIds.length > 0 && (
-            <div className="sticky top-2 z-20 flex items-center justify-between gap-3 p-3.5 rounded-xl border border-primary/30 bg-surface shadow-lg backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="sticky top-2 z-30 flex items-center justify-between gap-3 p-3.5 rounded-xl border border-primary/30 bg-surface/95 backdrop-blur-md shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="flex items-center gap-3">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-white shadow-xs">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-fg shadow-xs">
                   {selectedEmpIds.length}
                 </span>
                 <div>
                   <p className="text-xs font-bold text-default">
                     {selectedEmpIds.length} Employee{selectedEmpIds.length > 1 ? 's' : ''} Selected
                   </p>
-                  <p className="text-[11px] text-muted">Perform bulk status changes or batch profile deletion</p>
+                  <p className="text-[11px] text-muted">Execute bulk status modification, badge generation, or profile removal</p>
                 </div>
               </div>
 
@@ -2536,6 +2594,16 @@ export const HrWorkspace: React.FC = () => {
                 <button
                   type="button"
                   disabled={isBulkProcessing}
+                  onClick={handleBulkPrintBadges}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                  title="Print official ID badges for all selected employees"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  Print Badges ({selectedEmpIds.length})
+                </button>
+                <button
+                  type="button"
+                  disabled={isBulkProcessing}
                   onClick={() => setDeleteConfirm({ open: true, type: 'employee', isBulk: true })}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
                 >
@@ -2554,180 +2622,252 @@ export const HrWorkspace: React.FC = () => {
           )}
 
           {/* Employees Table */}
-          <div className="bg-surface rounded-2xl shadow-2xs border border-default overflow-hidden">
-            <table className="w-full text-left text-sm text-default">
-              <thead className="bg-surface-sunken text-muted uppercase text-2xs font-bold border-b border-default">
-                <tr>
-                  <th className="px-4 py-3 w-10 text-center">
-                    <button
-                      type="button"
-                      onClick={toggleSelectAllEmp}
-                      className="text-muted hover:text-primary transition-colors cursor-pointer"
-                      title="Select All"
-                    >
-                      {selectedEmpIds.length === filteredEmployees.length && filteredEmployees.length > 0 ? (
-                        <CheckSquare className="w-4 h-4 text-primary" />
-                      ) : (
-                        <Square className="w-4 h-4 text-muted/60" />
-                      )}
-                    </button>
-                  </th>
-                  <th className="px-6 py-3">Code</th>
-                  <th className="px-6 py-3">Full Name</th>
-                  <th className="px-6 py-3">Department & Designation</th>
-                  <th className="px-6 py-3">ERP Access & Role</th>
-                  <th className="px-6 py-3">Phone</th>
-                  <th className="px-6 py-3">Employment Type</th>
-                  <th className="px-6 py-3">Shift</th>
-                  <th className="px-6 py-3 text-center">Status</th>
-                  <th className="px-6 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-default">
-                {filteredEmployees.map((emp) => {
-                  const isChecked = selectedEmpIds.includes(emp.id);
-                  return (
-                    <tr
-                      key={emp.id}
-                      className={`transition ${isChecked ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-surface-sunken/50'}`}
-                    >
-                      <td className="px-4 py-4 text-center">
-                        <button
-                          type="button"
-                          onClick={() => toggleSelectEmp(emp.id)}
-                          className="text-muted hover:text-primary transition-colors cursor-pointer"
-                        >
-                          {isChecked ? (
-                            <CheckSquare className="w-4 h-4 text-primary" />
-                          ) : (
-                            <Square className="w-4 h-4 text-muted/60" />
-                          )}
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 font-mono font-bold text-primary">
-                        {emp.employee_code}
-                      </td>
-                      <td className="px-6 py-4 font-semibold text-default">
-                        {emp.display_name}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-default">
-                          {emp.department?.name}
-                        </div>
-                        <div className="text-xs text-muted">{emp.designation?.name}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        {emp.has_user_account || emp.user_id ? (
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-1.5">
-                              <span className="size-2 rounded-full bg-emerald-500 inline-block" />
-                              <span className="text-xs font-semibold text-default">
-                                {emp.user?.email || emp.email || 'Active User'}
-                              </span>
+          <div className="bg-surface rounded-2xl shadow-2xs border border-default/70 overflow-hidden">
+            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-default/30">
+              <table className="w-full text-left text-xs text-default border-collapse">
+                <thead className="bg-surface-sunken text-muted uppercase text-2xs font-bold border-b border-default/60">
+                  <tr>
+                    <th className="w-10 px-3 py-3 text-center">
+                      <button
+                        type="button"
+                        onClick={toggleSelectAllEmp}
+                        className="inline-flex items-center justify-center p-1 rounded hover:bg-default/10 text-muted hover:text-primary transition-colors cursor-pointer"
+                        title={
+                          selectedEmpIds.length === filteredEmployees.length && filteredEmployees.length > 0
+                            ? 'Deselect All'
+                            : 'Select All'
+                        }
+                        aria-label="Select all employees"
+                      >
+                        {selectedEmpIds.length > 0 && selectedEmpIds.length === filteredEmployees.length ? (
+                          <CheckSquare className="w-4 h-4 text-primary" />
+                        ) : selectedEmpIds.length > 0 ? (
+                          <MinusSquare className="w-4 h-4 text-primary" />
+                        ) : (
+                          <Square className="w-4 h-4 text-muted/60" />
+                        )}
+                      </button>
+                    </th>
+                    <th className="w-24 px-3 py-3 whitespace-nowrap">Code</th>
+                    <th className="px-3 py-3 whitespace-nowrap">Employee</th>
+                    <th className="px-3 py-3 whitespace-nowrap">Department & Role</th>
+                    <th className="px-3 py-3 whitespace-nowrap">ERP Access</th>
+                    <th className="px-3 py-3 whitespace-nowrap">Phone</th>
+                    <th className="px-3 py-3 text-center whitespace-nowrap">Type</th>
+                    <th className="px-3 py-3 whitespace-nowrap">Shift</th>
+                    <th className="px-3 py-3 text-center whitespace-nowrap">Status</th>
+                    <th className="w-44 px-3 py-3 text-right whitespace-nowrap">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-default/40">
+                  {filteredEmployees.map((emp) => {
+                    const isChecked = selectedEmpIds.includes(emp.id);
+                    return (
+                      <tr
+                        key={emp.id}
+                        className={`transition ${isChecked ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-surface-sunken/40'}`}
+                      >
+                        <td className="w-10 px-3 py-2.5 text-center">
+                          <button
+                            type="button"
+                            onClick={() => toggleSelectEmp(emp.id)}
+                            className="inline-flex items-center justify-center p-1 rounded hover:bg-default/10 text-muted hover:text-primary transition-colors cursor-pointer"
+                            aria-label={`Select employee ${emp.display_name}`}
+                          >
+                            {isChecked ? (
+                              <CheckSquare className="w-4 h-4 text-primary" />
+                            ) : (
+                              <Square className="w-4 h-4 text-muted/60" />
+                            )}
+                          </button>
+                        </td>
+                        <td className="w-24 px-3 py-2.5 font-mono font-bold text-primary whitespace-nowrap">
+                          {emp.employee_code}
+                        </td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          <div className="flex items-center gap-2.5">
+                            <div className="size-8 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-xs shrink-0">
+                              {emp.first_name?.[0] || emp.display_name?.[0] || 'E'}
+                              {emp.last_name?.[0] || ''}
                             </div>
-                            <div className="flex flex-wrap gap-1">
-                              {emp.roles && emp.roles.length > 0 ? (
-                                emp.roles.map((r) => (
-                                  <span
-                                    key={r.id}
-                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-3xs font-semibold bg-primary/10 text-primary border border-primary/20 capitalize"
+                            <div className="min-w-0">
+                              <div className="font-semibold text-default truncate">{emp.display_name}</div>
+                              <div className="text-3xs text-muted">
+                                {emp.date_of_joining ? `Joined ${emp.date_of_joining.split('T')[0]}` : 'Active Staff'}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <div className="font-medium text-default whitespace-nowrap">
+                            {emp.department?.name || 'General Operations'}
+                          </div>
+                          <div className="text-2xs text-muted whitespace-nowrap">
+                            {emp.designation?.name ||
+                              (emp.roles && emp.roles.length > 0 && emp.roles[0]
+                                ? emp.roles[0].name.replace(/[_-]/g, ' ')
+                                : 'Staff Member')}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          {emp.has_user_account || emp.user_id ? (
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                <span className="size-1.5 rounded-full bg-emerald-500 shrink-0 inline-block" />
+                                <span className="text-xs font-semibold text-default truncate max-w-40">
+                                  {emp.user?.email || emp.email || 'Active User'}
+                                </span>
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {emp.roles && emp.roles.length > 0 ? (
+                                  emp.roles.map((r) => (
+                                    <span
+                                      key={r.id}
+                                      className="inline-flex items-center px-1.5 py-0.5 rounded text-3xs font-semibold bg-primary/10 text-primary border border-primary/20 capitalize whitespace-nowrap"
+                                    >
+                                      {r.name.replace(/[_-]/g, ' ')}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-3xs text-muted italic">No roles</span>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-muted whitespace-nowrap">
+                              <span className="size-1.5 rounded-full bg-muted-foreground/30 shrink-0 inline-block" />
+                              <span className="text-xs italic">No ERP Login</span>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 font-mono text-xs text-muted whitespace-nowrap">
+                          {emp.phone || '—'}
+                        </td>
+                        <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 text-2xs font-semibold rounded-full capitalize ${
+                              emp.employment_type === 'piece_rate'
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                                : emp.employment_type === 'permanent'
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+                                : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
+                            }`}
+                          >
+                            {emp.employment_type.replace(/_/g, ' ')}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-xs text-muted whitespace-nowrap">
+                          {emp.default_shift?.name || 'Standard Shift'}
+                        </td>
+                        <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 text-2xs font-bold rounded-full ${
+                              emp.is_active
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+                                : 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300'
+                            }`}
+                          >
+                            {emp.is_active ? 'ACTIVE' : 'INACTIVE'}
+                          </span>
+                        </td>
+                        <td className="w-44 px-3 py-2.5 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5 relative">
+                            <button
+                              type="button"
+                              onClick={() => setViewingEmployeeProfile(emp)}
+                              className="px-2 py-1 text-2xs bg-surface border border-default hover:bg-surface-sunken text-default rounded-lg font-semibold transition cursor-pointer"
+                              title="View complete employee record"
+                            >
+                              Profile
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setSelectedEmployeeForBadge(emp)}
+                              className="px-2 py-1 text-2xs bg-primary/10 hover:bg-primary/20 text-primary rounded-lg font-semibold border border-primary/20 transition cursor-pointer flex items-center gap-1"
+                              title="Generate and print Security ID Card"
+                            >
+                              <span>🪪 ID Badge</span>
+                            </button>
+
+                            {/* More Options Dropdown Button */}
+                            <div className="relative inline-block text-left">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenActionMenuId(openActionMenuId === emp.id ? null : emp.id);
+                                }}
+                                className={`p-1 rounded-lg border transition cursor-pointer ${
+                                  openActionMenuId === emp.id
+                                    ? 'border-primary bg-primary/10 text-primary'
+                                    : 'border-default bg-surface hover:bg-surface-sunken text-muted hover:text-default'
+                                }`}
+                                title="More options (Access, Status, Delete)"
+                                aria-label={`More options for ${emp.display_name}`}
+                              >
+                                <MoreHorizontal className="size-3.5" />
+                              </button>
+
+                              {/* Floating Dropdown Menu */}
+                              {openActionMenuId === emp.id && (
+                                <div
+                                  data-action-menu
+                                  className="absolute right-0 z-50 mt-1 w-48 rounded-xl bg-surface border border-default p-1 shadow-xl animate-in fade-in zoom-in-95 duration-100 text-left"
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionMenuId(null);
+                                      handleOpenAccessModal(emp);
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
                                   >
-                                    {r.name.replace(/[_-]/g, ' ')}
-                                  </span>
-                                ))
-                              ) : (
-                                <span className="text-3xs text-muted italic">No roles assigned</span>
+                                    <KeyRound className="size-3.5 text-amber-500 shrink-0" />
+                                    <span>ERP Access & Roles</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionMenuId(null);
+                                      handleToggleEmployeeStatus(emp.id);
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                                  >
+                                    <ShieldCheck className="size-3.5 text-primary shrink-0" />
+                                    <span>{emp.is_active ? 'Deactivate' : 'Activate'}</span>
+                                  </button>
+
+                                  <div className="my-1 border-t border-default/50" />
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionMenuId(null);
+                                      setDeleteConfirm({
+                                        open: true,
+                                        type: 'employee',
+                                        id: emp.id,
+                                        name: emp.display_name,
+                                      });
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                                  >
+                                    <Trash2 className="size-3.5 text-rose-600 shrink-0" />
+                                    <span>Delete Employee</span>
+                                  </button>
+                                </div>
                               )}
                             </div>
                           </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5 text-muted">
-                            <span className="size-2 rounded-full bg-muted-foreground/30 inline-block" />
-                            <span className="text-xs italic">No ERP Login</span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 font-mono text-xs text-muted">{emp.phone}</td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`px-2.5 py-1 text-xs font-semibold rounded-full capitalize ${
-                            emp.employment_type === 'piece_rate'
-                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
-                              : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
-                          }`}
-                        >
-                          {emp.employment_type.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-xs text-muted">
-                        {emp.default_shift?.name || 'Standard Shift'}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span
-                          className={`px-2 py-0.5 text-xs font-bold rounded-full ${
-                            emp.is_active
-                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
-                              : 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300'
-                          }`}
-                        >
-                          {emp.is_active ? 'ACTIVE' : 'INACTIVE'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenAccessModal(emp)}
-                            className="px-2 py-1 text-2xs bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 rounded-lg font-semibold border border-amber-500/20 transition cursor-pointer flex items-center gap-1"
-                            title="Manage ERP User Account and Security Roles"
-                          >
-                            <span>🔑 Access</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedEmployeeForBadge(emp)}
-                            className="px-2 py-1 text-2xs bg-primary/10 hover:bg-primary/20 text-primary rounded-lg font-semibold border border-primary/20 transition cursor-pointer flex items-center gap-1"
-                            title="Generate and print Security ID Card"
-                          >
-                            <span>🪪 ID Badge</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setViewingEmployeeProfile(emp)}
-                            className="px-2 py-1 text-2xs bg-surface border border-default hover:bg-surface-sunken text-default rounded-lg font-semibold transition cursor-pointer"
-                            title="View complete employee record"
-                          >
-                            Profile
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleToggleEmployeeStatus(emp.id)}
-                            className="px-2 py-1 text-2xs border border-default hover:bg-surface-sunken text-muted hover:text-default rounded-lg font-medium transition cursor-pointer"
-                          >
-                            {emp.is_active ? 'Deactivate' : 'Activate'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setDeleteConfirm({
-                                open: true,
-                                type: 'employee',
-                                id: emp.id,
-                                name: emp.display_name,
-                              })
-                            }
-                            className="p-1 rounded-lg border border-default hover:bg-rose-50 dark:hover:bg-rose-950/30 text-muted hover:text-rose-600 transition cursor-pointer"
-                            title="Delete Employee"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

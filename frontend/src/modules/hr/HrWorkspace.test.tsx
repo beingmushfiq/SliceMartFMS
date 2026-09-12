@@ -171,5 +171,53 @@ describe('HrWorkspace Component & Action Controls', () => {
     const viewButtons = screen.getAllByRole('button', { name: /View Items/i });
     expect(viewButtons.length).toBeGreaterThanOrEqual(1);
   });
+
+  it('renders bulk selection controls and toggles selection via toolbar and header checkbox', () => {
+    renderWithProviders(['/hr?tab=employees']);
+
+    // Toolbar select all button should be present
+    const toolbarSelectBtn = screen.getByRole('button', { name: /Select All \(\d+\)/i });
+    expect(toolbarSelectBtn).toBeInTheDocument();
+
+    // Table header select all checkbox button
+    const headerCheckbox = screen.getByRole('button', { name: /Select all employees/i });
+    expect(headerCheckbox).toBeInTheDocument();
+
+    // Row selection checkboxes should exist
+    const rowCheckboxes = screen.getAllByRole('button', { name: /^Select employee/i });
+    expect(rowCheckboxes.length).toBeGreaterThanOrEqual(1);
+
+    // Click select all
+    fireEvent.click(toolbarSelectBtn);
+
+    // Ribbon should appear
+    expect(screen.getByText(/Employees Selected/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Mark Active/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Mark Inactive/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Print Badges/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Delete Selected/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Deselect All/i })).toBeInTheDocument();
+  });
+
+  it('renders More options menu for employee rows with clearly labeled Delete Employee action', () => {
+    renderWithProviders(['/hr?tab=employees']);
+
+    const moreButtons = screen.getAllByRole('button', { name: /^More options for/i });
+    expect(moreButtons.length).toBeGreaterThanOrEqual(1);
+
+    // Click More options on the first employee
+    fireEvent.click(moreButtons[0]!);
+
+    // Dropdown should be visible with explicit options
+    expect(screen.getByText(/ERP Access & Roles/i)).toBeInTheDocument();
+    const deleteBtn = screen.getByRole('button', { name: /Delete Employee/i });
+    expect(deleteBtn).toBeInTheDocument();
+
+    // Click Delete Employee
+    fireEvent.click(deleteBtn);
+
+    // Confirmation modal should open with Confirm Delete button
+    expect(screen.getByRole('button', { name: /Confirm Delete/i })).toBeInTheDocument();
+  });
 });
 

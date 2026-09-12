@@ -3,16 +3,21 @@ import type { Employee } from '../../../types/api/hr';
 import { generateBarcodeSvg } from '../../../lib/barcode/engine';
 
 export interface EmployeeIdBadgeDocumentProps {
-  employee: Employee;
+  employee?: Employee;
+  employees?: Employee[];
   companyName?: string;
   issueDate?: string;
 }
 
-export function EmployeeIdBadgeDocument({
+function SingleEmployeeBadge({
   employee,
   companyName = 'SLICE MART FMS',
   issueDate = new Date().toISOString().slice(0, 10),
-}: EmployeeIdBadgeDocumentProps) {
+}: {
+  employee: Employee;
+  companyName?: string;
+  issueDate?: string;
+}) {
   const barcodeSvg = useMemo(() => {
     return generateBarcodeSvg({
       bcid: 'code128',
@@ -40,25 +45,14 @@ export function EmployeeIdBadgeDocument({
   }, [employee.first_name, employee.last_name, employee.display_name]);
 
   return (
-    <div className="print-doc w-full text-slate-900 bg-white font-sans text-[8pt] leading-tight">
-      {/* Cut / Sheet Guide Banner (Visible when printing on A4 sheet) */}
-      <div className="border-b border-dashed border-slate-300 pb-2 mb-6 flex items-center justify-between text-[7pt] text-slate-500">
-        <div className="flex items-center gap-1.5">
-          <span className="font-bold text-slate-700 uppercase tracking-wider">
-            Standard CR80 Pass (54mm × 85.6mm)
-          </span>
-          <span>• Scale: 100% (Do not scale to fit page)</span>
-        </div>
-        <div>Cut along dashed guidelines • Standard PVC/Badge holder size</div>
-      </div>
-
+    <div className="page-break-avoid my-4">
       {/* Side-by-Side Front & Back Card Layout */}
       <div className="flex flex-wrap items-start justify-center gap-8 print:gap-6">
         {/* ───────────────────────────────────────────────────────────────────────────
             FRONT PASS
             ─────────────────────────────────────────────────────────────────────────── */}
         <div className="flex flex-col items-center">
-          <div className="text-[7pt] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+          <div className="text-[7pt] font-bold text-slate-400 uppercase tracking-wider mb-1.5 no-print">
             Card Front (Face)
           </div>
 
@@ -138,7 +132,7 @@ export function EmployeeIdBadgeDocument({
             BACK PASS
             ─────────────────────────────────────────────────────────────────────────── */}
         <div className="flex flex-col items-center">
-          <div className="text-[7pt] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+          <div className="text-[7pt] font-bold text-slate-400 uppercase tracking-wider mb-1.5 no-print">
             Card Back (Reverse)
           </div>
 
@@ -195,6 +189,52 @@ export function EmployeeIdBadgeDocument({
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+export function EmployeeIdBadgeDocument({
+  employee,
+  employees,
+  companyName = 'SLICE MART FMS',
+  issueDate = new Date().toISOString().slice(0, 10),
+}: EmployeeIdBadgeDocumentProps) {
+  const list = useMemo(() => {
+    if (employees && employees.length > 0) return employees;
+    if (employee) return [employee];
+    return [];
+  }, [employee, employees]);
+
+  if (list.length === 0) {
+    return (
+      <div className="p-8 text-center text-slate-500">No employee selected for badge printing.</div>
+    );
+  }
+
+  return (
+    <div className="print-doc w-full text-slate-900 bg-white font-sans text-[8pt] leading-tight">
+      {/* Cut / Sheet Guide Banner (Visible when printing on A4 sheet) */}
+      <div className="border-b border-dashed border-slate-300 pb-2 mb-6 flex items-center justify-between text-[7pt] text-slate-500">
+        <div className="flex items-center gap-1.5">
+          <span className="font-bold text-slate-700 uppercase tracking-wider">
+            Standard CR80 Pass (54mm × 85.6mm)
+          </span>
+          <span>• Scale: 100% (Do not scale to fit page) • Total Passes: {list.length}</span>
+        </div>
+        <div>Cut along guidelines • Standard PVC / ID badge holder size</div>
+      </div>
+
+      <div className="space-y-6">
+        {list.map((emp, idx) => (
+          <div key={emp.id || idx} className={idx > 0 && idx % 2 === 0 ? 'page-break-before' : ''}>
+            <SingleEmployeeBadge
+              employee={emp}
+              companyName={companyName}
+              issueDate={issueDate}
+            />
+          </div>
+        ))}
       </div>
     </div>
   );
