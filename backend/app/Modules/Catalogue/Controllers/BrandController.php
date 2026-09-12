@@ -17,6 +17,8 @@ use App\Modules\Catalogue\Resources\BrandResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 final class BrandController extends Controller
 {
@@ -140,5 +142,158 @@ final class BrandController extends Controller
         $action->execute(['user' => $user, 'brand' => $brand]);
 
         return response()->json(['success' => true, 'data' => null, 'meta' => ['correlation_id' => (string) $request->header('X-Correlation-Id', '')]]);
+    }
+
+    public function bulkImport(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'mode' => ['nullable', 'string', 'in:skip,upsert'],
+            'rows' => ['required', 'array', 'min:1', 'max:1000'],
+            'rows.*.code' => ['nullable', 'string', 'max:32'],
+            'rows.*.name' => ['required', 'string', 'max:191'],
+            'rows.*.logo_path' => ['nullable', 'string', 'max:255'],
+            'rows.*.is_active' => ['nullable', 'boolean'],
+        ]);
+
+        $mode = $validated['mode'] ?? 'skip';
+        $rows = $validated['rows'];
+        $user = $request->user();
+        $userId = $user ? $user->id : null;
+
+        $imported = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = [];
+
+        // Preload existing brands for fast lookup
+        $existingCodes = Brand::query()
+            ->whereNotNull('code')
+            ->pluck('id', 'code')
+            ->mapWithKeys(fn ($id, $code) => [strtolower((string) $code) => $id])
+            ->all();
+
+        $existingNames = Brand::query()
+            ->pluck('id', 'name')
+            ->mapWithKeys(fn ($id, $name) => [strtolower((string) $name) => $id])
+            ->all();
+
+        $chunks = array_chunk($rows, 100);
+
+        foreach ($chunks as $chunkIndex => $chunk) {
+            DB::transaction(function () use (
+                $chunk,
+                $chunkIndex,
+                $mode,
+                $userId,
+                &$existingCodes,
+                &$existingNames,
+                &$imported,
+                &$updated,
+                &$skipped,
+                &$errors
+            ) {
+                foreach ($chunk as $index => $row) {
+                    $rowNum = ($chunkIndex * 100) + $index + 1;
+                    $code = isset($row['code']) && trim((string) $row['code']) !== '' ? trim((string) $row['code']) : null;
+                    $name = trim((string) ($row['name'] ?? ''));
+                    $logoPath = isset($row['logo_path']) && trim((string) $row['logo_path']) !== '' ? trim((string) $row['logo_path']) : null;
+                    $isActive = isset($row['is_active']) ? (bool) $row['is_active'] : true;
+
+                    if ($name === '') {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'name',
+                            'value' => '',
+                            'message' => 'Brand name is required.',
+                        ];
+                        continue;
+                    }
+
+                    $existingId = null;
+                    if ($code && isset($existingCodes[strtolower($code)])) {
+                        $existingId = $existingCodes[strtolower($code)];
+                    } elseif (isset($existingNames[strtolower($name)])) {
+                        $existingId = $existingNames[strtolower($name)];
+                    }
+
+                    if ($existingId !== null) {
+                        if ($mode === 'skip') {
+                            $skipped++;
+                            continue;
+                        }
+
+                        // Upsert
+                        try {
+                            $brand = Brand::find($existingId);
+                            if ($brand) {
+                                $brand->update([
+                                    'name' => $name,
+                                    'logo_path' => $logoPath ?? $brand->logo_path,
+                                    'is_active' => $isActive,
+                                    'updated_by' => $userId,
+                                ]);
+                                $updated++;
+                            } else {
+                                $skipped++;
+                            }
+                            continue;
+                        } catch (\Throwable $e) {
+                            $errors[] = [
+                                'row' => $rowNum,
+                                'field' => 'name',
+                                'value' => $name,
+                                'message' => 'Update failed: ' . $e->getMessage(),
+                            ];
+                            continue;
+                        }
+                    }
+
+                    // Generate code if missing
+                    if (!$code) {
+                        $code = 'BRD-' . str_pad((string) random_int(100, 99999), 5, '0', STR_PAD_LEFT);
+                    }
+
+                    try {
+                        $newBrand = Brand::create([
+                            'uuid' => (string) Str::uuid(),
+                            'code' => $code,
+                            'name' => $name,
+                            'logo_path' => $logoPath,
+                            'is_active' => $isActive,
+                            'created_by' => $userId,
+                            'updated_by' => $userId,
+                        ]);
+
+                        $existingCodes[strtolower($code)] = $newBrand->id;
+                        $existingNames[strtolower($name)] = $newBrand->id;
+                        $imported++;
+                    } catch (\Throwable $e) {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'code',
+                            'value' => $code,
+                            'message' => 'Creation failed: ' . $e->getMessage(),
+                        ];
+                    }
+                }
+            });
+        }
+
+        return response()->json([
+            'success' => count($errors) === 0,
+            'total' => count($rows),
+            'imported' => $imported,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'failed' => count($errors),
+            'errors' => $errors,
+            'message' => sprintf(
+                'Import completed: %d added, %d updated, %d skipped, %d failed.',
+                $imported,
+                $updated,
+                $skipped,
+                count($errors)
+            ),
+        ]);
     }
 }

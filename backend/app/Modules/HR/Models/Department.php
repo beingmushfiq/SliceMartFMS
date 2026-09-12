@@ -24,6 +24,7 @@ class Department extends Model
         'code',
         'name',
         'company_id',
+        'cost_center_code',
         'parent_id',
         'head_employee_id',
         'is_active',

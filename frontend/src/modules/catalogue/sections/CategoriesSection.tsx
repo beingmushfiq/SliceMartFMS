@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Tag, Eye, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Search, Tag, Eye, Edit2, Trash2, Upload, Download } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
 import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
 import { isApiError } from '../../../lib/api/errors';
 import { notify } from '../../../components/ui/Toast';
+import { UniversalImportModal } from '../../../components/import/UniversalImportModal';
+import { categoryImportSchema } from '../schemas/categoryImportSchema';
 import type { Category } from '../../../types/api/catalog';
 
 interface CategoryFormDraft {
@@ -19,6 +21,7 @@ interface CategoryFormDraft {
 export function CategoriesSection() {
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [viewingCategory, setViewingCategory] = useState<Category | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
@@ -105,6 +108,31 @@ export function CategoriesSection() {
 
   const categories = categoriesQuery.data?.data ?? [];
 
+  const handleExportCsv = () => {
+    if (!categories.length) {
+      notify.info('No categories to export.');
+      return;
+    }
+    const headers = ['code', 'name', 'parent', 'is_active'];
+    const rows = categories.map((c) => [
+      c.code,
+      `"${(c.name || '').replace(/"/g, '""')}"`,
+      `"${(c.parent?.name || c.parent_id || '').replace(/"/g, '""')}"`,
+      c.is_active ? 'TRUE' : 'FALSE',
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `categories_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    notify.success(`Exported ${categories.length} categories to CSV.`);
+  };
+
   return (
     <div className="space-y-6">
       {/* Search and Add Top Bar */}
@@ -120,18 +148,38 @@ export function CategoriesSection() {
           />
         </div>
 
-        <Button
-          variant="primary"
-          onClick={() => {
-            setErrorMsg(null);
-            setDraft({ code: '', name: '', parent_id: null, is_active: true });
-            setIsCreateOpen(true);
-          }}
-          className="flex items-center gap-1.5 shadow-xs"
-        >
-          <Plus className="h-4 w-4" />
-          <span>New Category</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsImportOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-muted hover:text-default rounded-xl border border-default bg-surface hover:bg-surface-sunken transition-colors shadow-2xs cursor-pointer"
+            title="Import categories from Excel (.xlsx) or CSV"
+          >
+            <Upload className="size-3.5 text-primary" />
+            <span>Import</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-muted hover:text-default rounded-xl border border-default bg-surface hover:bg-surface-sunken transition-colors shadow-2xs cursor-pointer"
+            title="Export categories to CSV"
+          >
+            <Download className="size-3.5 text-muted" />
+            <span>Export CSV</span>
+          </button>
+          <Button
+            variant="primary"
+            onClick={() => {
+              setErrorMsg(null);
+              setDraft({ code: '', name: '', parent_id: null, is_active: true });
+              setIsCreateOpen(true);
+            }}
+            className="flex items-center gap-1.5 shadow-xs"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New Category</span>
+          </Button>
+        </div>
       </div>
 
       <QueryBoundary
@@ -456,6 +504,16 @@ export function CategoriesSection() {
           </div>
         </Modal>
       )}
+
+      {/* Universal Bulk Import Modal */}
+      <UniversalImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        schema={categoryImportSchema}
+        onImportSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['catalogue', 'categories'] });
+        }}
+      />
     </div>
   );
 }

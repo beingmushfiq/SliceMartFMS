@@ -304,4 +304,161 @@ final class TenantCouponController extends Controller
             'message' => "Coupon '{$code}' deleted.",
         ]);
     }
+
+    /**
+     * Bulk import promotional coupons and discount vouchers.
+     */
+    public function bulkImport(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'rows' => 'required|array|min:1',
+            'mode' => 'nullable|string|in:skip,upsert',
+        ]);
+
+        $rows = $validated['rows'];
+        $mode = $validated['mode'] ?? 'skip';
+
+        $tenantId = \App\Core\Tenancy\TenantContext::current()->tenantId();
+        $userId = Auth::id() ?? 1;
+
+        $imported = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = [];
+
+        $chunks = array_chunk($rows, 100);
+
+        foreach ($chunks as $chunkIndex => $chunk) {
+            DB::transaction(function () use (
+                $chunk,
+                $chunkIndex,
+                $tenantId,
+                $userId,
+                $mode,
+                &$imported,
+                &$updated,
+                &$skipped,
+                &$errors
+            ): void {
+                foreach ($chunk as $i => $row) {
+                    $rowNum = ($chunkIndex * 100) + $i + 1;
+
+                    $code = strtoupper(trim((string) ($row['code'] ?? $row['coupon_code'] ?? '')));
+                    if ($code === '') {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'code',
+                            'message' => 'Coupon code is required.',
+                        ];
+                        continue;
+                    }
+
+                    $name = trim((string) ($row['name'] ?? $row['title'] ?? $code));
+                    $rawType = strtolower(trim((string) ($row['discount_type'] ?? $row['type'] ?? 'percentage')));
+                    $discountType = match ($rawType) {
+                        'fixed', 'fixed_amount', 'flat', 'amount' => 'fixed',
+                        'free_shipping', 'shipping' => 'free_shipping',
+                        default => 'percentage',
+                    };
+
+                    $val = isset($row['discount_value']) ? (float) $row['discount_value'] : (isset($row['value']) ? (float) $row['value'] : (isset($row['discount']) ? (float) $row['discount'] : 0.0));
+                    $discountValue = number_format($val, 4, '.', '');
+
+                    $minOrder = isset($row['min_order_amount']) && is_numeric($row['min_order_amount'])
+                        ? number_format((float) $row['min_order_amount'], 4, '.', '')
+                        : (isset($row['min_spend']) && is_numeric($row['min_spend']) ? number_format((float) $row['min_spend'], 4, '.', '') : null);
+
+                    $maxDiscount = isset($row['max_discount_amount']) && is_numeric($row['max_discount_amount'])
+                        ? number_format((float) $row['max_discount_amount'], 4, '.', '')
+                        : null;
+
+                    $appliesTo = !empty($row['applies_to']) ? (string) $row['applies_to'] : 'order';
+
+                    $usageLimit = isset($row['usage_limit_total']) && is_numeric($row['usage_limit_total'])
+                        ? (int) $row['usage_limit_total']
+                        : (isset($row['usage_limit']) && is_numeric($row['usage_limit']) ? (int) $row['usage_limit'] : null);
+
+                    $limitPerCustomer = isset($row['usage_limit_per_customer']) && is_numeric($row['usage_limit_per_customer'])
+                        ? (int) $row['usage_limit_per_customer']
+                        : 1;
+
+                    $startsAt = !empty($row['starts_at']) ? (string) $row['starts_at'] : (!empty($row['start_date']) ? (string) $row['start_date'] : null);
+                    $endsAt = !empty($row['ends_at']) ? (string) $row['ends_at'] : (!empty($row['expiry_date']) ? (string) $row['expiry_date'] : (!empty($row['end_date']) ? (string) $row['end_date'] : null));
+
+                    $isActive = isset($row['is_active']) ? filter_var($row['is_active'], FILTER_VALIDATE_BOOLEAN) : true;
+
+                    $existing = Coupon::withoutGlobalScope('tenant')
+                        ->where('tenant_id', $tenantId)
+                        ->where('code', $code)
+                        ->first();
+
+                    if ($existing) {
+                        if ($mode === 'skip') {
+                            $skipped++;
+                            continue;
+                        }
+
+                        // Upsert
+                        $existing->update([
+                            'name' => $name,
+                            'discount_type' => $discountType,
+                            'discount_value' => $discountValue,
+                            'min_order_amount' => $minOrder ?? $existing->min_order_amount,
+                            'max_discount_amount' => $maxDiscount ?? $existing->max_discount_amount,
+                            'applies_to' => $appliesTo,
+                            'usage_limit_total' => $usageLimit ?? $existing->usage_limit_total,
+                            'usage_limit_per_customer' => $limitPerCustomer,
+                            'starts_at' => $startsAt ?? $existing->starts_at,
+                            'ends_at' => $endsAt ?? $existing->ends_at,
+                            'is_active' => $isActive,
+                            'updated_by' => $userId,
+                        ]);
+
+                        $updated++;
+                        continue;
+                    }
+
+                    // Insert
+                    Coupon::create([
+                        'uuid' => (string) Str::uuid(),
+                        'tenant_id' => $tenantId,
+                        'code' => $code,
+                        'name' => $name,
+                        'discount_type' => $discountType,
+                        'discount_value' => $discountValue,
+                        'min_order_amount' => $minOrder,
+                        'max_discount_amount' => $maxDiscount,
+                        'applies_to' => $appliesTo,
+                        'usage_limit_total' => $usageLimit,
+                        'usage_limit_per_customer' => $limitPerCustomer,
+                        'used_count' => 0,
+                        'starts_at' => $startsAt,
+                        'ends_at' => $endsAt,
+                        'is_active' => $isActive,
+                        'created_by' => $userId,
+                    ]);
+
+                    $imported++;
+                }
+            });
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Bulk import completed. {$imported} coupon(s) imported, {$updated} updated, {$skipped} skipped.",
+            'imported' => $imported,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'failed' => count($errors),
+            'errors' => $errors,
+            'data' => [
+                'imported_count' => $imported,
+                'updated_count' => $updated,
+                'skipped_count' => $skipped,
+                'failed_count' => count($errors),
+                'errors' => $errors,
+            ],
+        ]);
+    }
 }
+

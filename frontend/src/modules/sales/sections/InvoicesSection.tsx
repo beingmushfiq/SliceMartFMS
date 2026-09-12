@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Ban, CheckCircle2, Clock, Printer, RefreshCw, Search, Sliders, FileText, DollarSign, BookOpen, ArrowLeftRight } from 'lucide-react';
+import { Ban, CheckCircle2, Clock, Printer, RefreshCw, Search, Sliders, FileText, DollarSign, BookOpen, ArrowLeftRight, Upload, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Invoice } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
 import { InvoiceTemplateBuilder } from '../components/InvoiceTemplateBuilder';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
+import { UniversalImportModal } from '../../../components/import/UniversalImportModal';
+import { historicalInvoiceImportSchema } from '../schemas/historicalInvoiceImportSchema';
 
 interface InvoicesSectionProps {
   onNavigateToTab?: (tab: string) => void;
@@ -22,6 +24,45 @@ export function InvoicesSection({ onNavigateToTab }: InvoicesSectionProps = {}) 
   const [voidReason, setVoidReason] = useState('');
   const [previewInvoice, setPreviewInvoice] = useState<Invoice | null>(null);
   const [showDesigner, setShowDesigner] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+
+  const handleExportCsv = () => {
+    if (invoices.length === 0) {
+      toast.info('No invoices to export.');
+      return;
+    }
+    const headers = [
+      'Invoice Number',
+      'Customer Code',
+      'Invoice Date',
+      'Due Date',
+      'Total Amount',
+      'Paid Amount',
+      'Status',
+      'Notes',
+    ];
+    const rows = invoices.map((inv) => [
+      `"${(inv.invoice_number || '').replace(/"/g, '""')}"`,
+      `"${(inv.customer_name || '').replace(/"/g, '""')}"`,
+      inv.invoice_date || '',
+      inv.due_date || '',
+      inv.total_amount || '0.00',
+      inv.paid_amount || '0.00',
+      inv.status || 'posted',
+      `"${(inv.void_reason || '').replace(/"/g, '""')}"`,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `historical_invoices_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${invoices.length} invoices to CSV.`);
+  };
 
   const { data: invoices = [], isLoading, isFetching, refetch } = useQuery<Invoice[]>({
     queryKey: ['sales', 'invoices'],
@@ -151,13 +192,35 @@ export function InvoicesSection({ onNavigateToTab }: InvoicesSectionProps = {}) 
           </button>
         </div>
 
-        <button
-          onClick={() => setShowDesigner(true)}
-          className="flex h-9 items-center gap-1.5 rounded-xl bg-surface-sunken border border-default px-3.5 text-xs font-medium text-default hover:bg-surface hover:text-primary transition-colors cursor-pointer"
-        >
-          <Sliders className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-          Template Designer & Preview
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setIsImportOpen(true)}
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface-sunken px-3 text-xs font-medium text-muted hover:bg-surface hover:text-default transition-colors cursor-pointer"
+            title="Import historical opening invoices from Excel (.xlsx) or CSV"
+          >
+            <Upload className="h-3.5 w-3.5 text-primary" />
+            <span>Import Invoices</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface-sunken px-3 text-xs font-medium text-muted hover:bg-surface hover:text-default transition-colors cursor-pointer"
+            title="Export invoices to CSV"
+          >
+            <Download className="h-3.5 w-3.5 text-muted" />
+            <span>Export CSV</span>
+          </button>
+
+          <button
+            onClick={() => setShowDesigner(true)}
+            className="flex h-9 items-center gap-1.5 rounded-xl bg-surface-sunken border border-default px-3.5 text-xs font-medium text-default hover:bg-surface hover:text-primary transition-colors cursor-pointer"
+          >
+            <Sliders className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+            Template Designer & Preview
+          </button>
+        </div>
       </div>
 
       {/* Invoices Table */}
@@ -354,6 +417,16 @@ export function InvoicesSection({ onNavigateToTab }: InvoicesSectionProps = {}) 
           </div>
         </div>
       )}
+
+      {/* Universal Bulk Import Modal */}
+      <UniversalImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        schema={historicalInvoiceImportSchema}
+        onImportSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['sales', 'invoices'] });
+        }}
+      />
     </div>
   );
 }

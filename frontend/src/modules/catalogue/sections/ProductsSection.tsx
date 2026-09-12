@@ -21,11 +21,14 @@ import {
   Compass,
   Copy,
   Download,
+  Upload,
   AlertTriangle,
   Globe,
   Activity,
   CheckCircle2,
 } from 'lucide-react';
+import { UniversalImportModal } from '../../../components/import/UniversalImportModal';
+import { productImportSchema } from '../schemas/productImportSchema';
 import { cn } from '../../../lib/utils';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
@@ -93,6 +96,7 @@ export function ProductsSection() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
@@ -791,6 +795,15 @@ export function ProductsSection() {
             </>
           ) : (
             <>
+              <button
+                type="button"
+                onClick={() => setIsImportOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-default rounded-lg border border-default bg-surface hover:bg-surface-sunken transition-colors cursor-pointer"
+                title="Import products from Excel (.xlsx) or CSV"
+              >
+                <Upload className="size-3 text-primary" />
+                <span>Import Products</span>
+              </button>
               <button
                 type="button"
                 onClick={handleBulkExportCsv}
@@ -3128,6 +3141,15 @@ export function ProductsSection() {
           }))}
         />
       )}
+      {/* Universal Bulk Import Modal */}
+      <UniversalImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        schema={productImportSchema}
+        onImportSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['catalogue', 'products'] });
+        }}
+      />
     </div>
   );
 }

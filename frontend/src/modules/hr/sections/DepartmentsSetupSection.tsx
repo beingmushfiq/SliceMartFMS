@@ -8,11 +8,17 @@ import {
   RefreshCw,
   X,
   AlertTriangle,
+  Upload,
+  Download,
 } from 'lucide-react';
 import type { Department, Designation, Shift } from '../../../types/api/hr';
 import { Modal } from '../../../components/ui/Modal';
 import { notify } from '../../../components/ui/Toast';
 import { hrApi } from '../services/hrApi';
+import { UniversalImportModal } from '../../../components/import/UniversalImportModal';
+import { departmentImportSchema } from '../schemas/departmentImportSchema';
+import { designationImportSchema } from '../schemas/designationImportSchema';
+import { shiftImportSchema } from '../schemas/shiftImportSchema';
 
 interface Props {
   departments: Department[];
@@ -72,6 +78,8 @@ export function DepartmentsSetupSection({
   const [newShiftGrace, setNewShiftGrace] = useState(15);
   const [newShiftBreak, setNewShiftBreak] = useState(60);
 
+  const [isImportOpen, setIsImportOpen] = useState(false);
+
   // Sync handler
   const handleSyncWithApi = async () => {
     setIsSyncing(true);
@@ -99,6 +107,61 @@ export function DepartmentsSetupSection({
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  const handleExportCsv = () => {
+    let headers: string[] = [];
+    let rows: (string | number)[][] = [];
+    let filename = '';
+
+    if (activeSubTab === 'departments') {
+      headers = ['Code', 'Name', 'Cost Center Code', 'Is Active'];
+      rows = deptList.map((d) => [
+        `"${(d.code || '').replace(/"/g, '""')}"`,
+        `"${(d.name || '').replace(/"/g, '""')}"`,
+        `"${(d.cost_center_code || '').replace(/"/g, '""')}"`,
+        d.is_active ? 'TRUE' : 'FALSE',
+      ]);
+      filename = `departments_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    } else if (activeSubTab === 'designations') {
+      headers = ['Code', 'Name', 'Grade', 'Is Active'];
+      rows = desList.map((d) => [
+        `"${(d.code || '').replace(/"/g, '""')}"`,
+        `"${(d.name || '').replace(/"/g, '""')}"`,
+        `"${(d.grade || '').replace(/"/g, '""')}"`,
+        d.is_active ? 'TRUE' : 'FALSE',
+      ]);
+      filename = `designations_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    } else {
+      headers = ['Code', 'Name', 'Start Time', 'End Time', 'Break Minutes', 'Grace Minutes', 'Crosses Midnight', 'Is Active'];
+      rows = shiftList.map((s) => [
+        `"${(s.code || '').replace(/"/g, '""')}"`,
+        `"${(s.name || '').replace(/"/g, '""')}"`,
+        s.start_time || '09:00:00',
+        s.end_time || '17:00:00',
+        s.break_minutes ?? 60,
+        s.grace_in_minutes ?? 15,
+        s.crosses_midnight ? 'TRUE' : 'FALSE',
+        s.is_active ? 'TRUE' : 'FALSE',
+      ]);
+      filename = `shifts_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    }
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    notify.success(`Exported ${rows.length} ${activeSubTab} to CSV.`);
+  };
+
+  const handleImportSuccess = () => {
+    handleSyncWithApi();
   };
 
   // Bulk Selection Helpers
@@ -416,6 +479,28 @@ export function DepartmentsSetupSection({
               <span>Shift Schedules ({shiftList.length})</span>
             </button>
           </div>
+
+          {/* Export CSV Button */}
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="px-3 py-2 bg-surface hover:bg-surface-sunken text-default text-xs font-semibold rounded-xl border border-default flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+            title={`Export current ${activeSubTab} to CSV`}
+          >
+            <Download className="size-3.5 text-muted" />
+            <span className="hidden md:inline">Export CSV</span>
+          </button>
+
+          {/* Bulk Import Button */}
+          <button
+            type="button"
+            onClick={() => setIsImportOpen(true)}
+            className="px-3 py-2 bg-surface hover:bg-surface-sunken text-default text-xs font-semibold rounded-xl border border-default flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+            title={`Import ${activeSubTab} from Excel (.xlsx) or CSV`}
+          >
+            <Upload className="size-3.5 text-primary" />
+            <span className="hidden md:inline">Import</span>
+          </button>
 
           {/* Sync with API Button */}
           <button
@@ -1037,6 +1122,20 @@ export function DepartmentsSetupSection({
           </div>
         </form>
       </Modal>
+
+      {/* Universal Bulk Import Modal */}
+      <UniversalImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        schema={
+          activeSubTab === 'departments'
+            ? departmentImportSchema
+            : activeSubTab === 'designations'
+            ? designationImportSchema
+            : shiftImportSchema
+        }
+        onSuccess={handleImportSuccess}
+      />
     </div>
   );
 }

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { CreditCard, Search, Plus, CheckCircle2, RefreshCw, Trash2, CheckSquare, Square, AlertTriangle } from 'lucide-react';
+import { CreditCard, Search, Plus, CheckCircle2, RefreshCw, Trash2, CheckSquare, Square, AlertTriangle, Upload, Download } from 'lucide-react';
 import { Modal } from '../../../components/ui/Modal';
 import { notify } from '../../../components/ui/Toast';
 import { hrApi, type ApiPayrollAdvance } from '../services/hrApi';
+import { UniversalImportModal } from '../../../components/import/UniversalImportModal';
+import { salaryAdvanceImportSchema } from '../schemas/salaryAdvanceImportSchema';
 
 export interface AdvanceRecord {
   id: number;
@@ -69,6 +71,7 @@ export const SalaryAdvancesSection: React.FC = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
 
@@ -90,6 +93,42 @@ export const SalaryAdvancesSection: React.FC = () => {
   const [monthlyInstallment, setMonthlyInstallment] = useState('3000');
   const [issueDate, setIssueDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState('');
+
+  const handleExportCsv = () => {
+    const headers = [
+      'Employee Code',
+      'Employee Name',
+      'Advance Number',
+      'Amount',
+      'Monthly Installment',
+      'Recovered Amount',
+      'Issued On',
+      'Status',
+      'Notes',
+    ];
+    const rows = advances.map((a) => [
+      `"${(a.employeeCode || '').replace(/"/g, '""')}"`,
+      `"${(a.employeeName || '').replace(/"/g, '""')}"`,
+      `"${(a.advanceNumber || '').replace(/"/g, '""')}"`,
+      a.amount,
+      a.installmentAmount,
+      a.recoveredAmount,
+      a.issuedOn,
+      a.status,
+      `"${(a.notes || '').replace(/"/g, '""')}"`,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `salary_advances_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    notify.success(`Exported ${advances.length} advance records to CSV.`);
+  };
 
   const loadAdvances = useCallback(async (isManual = false) => {
     if (isManual) setIsSyncing(true);
@@ -434,7 +473,27 @@ export const SalaryAdvancesSection: React.FC = () => {
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           <button
             type="button"
-            onClick={() => void loadAdvances()}
+            onClick={handleExportCsv}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-default bg-surface hover:bg-surface-sunken text-default transition-colors"
+            title="Export salary advance records to CSV"
+          >
+            <Download className="w-3.5 h-3.5 text-muted" />
+            <span>Export CSV</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsImportOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-default bg-surface hover:bg-surface-sunken text-default transition-colors"
+            title="Import salary advances from Excel (.xlsx) or CSV"
+          >
+            <Upload className="w-3.5 h-3.5 text-primary" />
+            <span>Import</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void loadAdvances(true)}
             disabled={isSyncing}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-default bg-surface hover:bg-surface-sunken text-default transition-colors disabled:opacity-50"
             title={lastSynced ? `Last synced: ${lastSynced}` : 'Sync with HR API'}
@@ -721,6 +780,14 @@ export const SalaryAdvancesSection: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Universal Bulk Import Modal */}
+      <UniversalImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        schema={salaryAdvanceImportSchema}
+        onSuccess={() => void loadAdvances(true)}
+      />
     </div>
   );
 };

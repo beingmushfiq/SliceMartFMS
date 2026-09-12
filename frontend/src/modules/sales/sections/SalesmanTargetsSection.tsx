@@ -18,12 +18,16 @@ import {
   XCircle,
   RotateCcw,
   X,
+  Upload,
+  Download,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { KPICard } from '../../../components/ui/KPICard';
 import { Badge } from '../../../components/ui/Badge';
 import { cn } from '../../../lib/utils';
+import { UniversalImportModal } from '../../../components/import/UniversalImportModal';
+import { salesTargetImportSchema } from '../schemas/salesTargetImportSchema';
 import type { SalesmanTarget } from '../../../types/api/sales';
 import type { Employee } from '../../../types/api/hr';
 
@@ -40,6 +44,47 @@ export function SalesmanTargetsSection() {
   const [targetAmount, setTargetAmount] = useState<string>('');
   const [targetName, setTargetName] = useState<string>('');
   const [targetNotes, setTargetNotes] = useState<string>('');
+  const [isImportOpen, setIsImportOpen] = useState(false);
+
+  const handleExportCsv = () => {
+    if (targets.length === 0) {
+      toast.info('No targets to export.');
+      return;
+    }
+    const headers = [
+      'Employee Code',
+      'Employee Name',
+      'Period Month',
+      'Target Name',
+      'Target Amount',
+      'Achieved Amount',
+      'Achievement %',
+      'Status',
+      'Notes',
+    ];
+    const rows = targets.map((t) => [
+      `"${(t.employee_code || '').replace(/"/g, '""')}"`,
+      `"${(t.employee_name || '').replace(/"/g, '""')}"`,
+      t.period_month || selectedMonth,
+      `"${(t.target_name || '').replace(/"/g, '""')}"`,
+      t.target_amount || '0.00',
+      t.achieved_amount || '0.00',
+      t.achievement_percentage || '0.00',
+      t.status || 'active',
+      `"${(t.notes || '').replace(/"/g, '""')}"`,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `salesman_targets_export_${selectedMonth}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${targets.length} targets to CSV.`);
+  };
 
   // Actions menu, View Details modal, and Edit Target modal state
   const [activeMenuTargetId, setActiveMenuTargetId] = useState<number | null>(null);
@@ -274,6 +319,26 @@ export function SalesmanTargetsSection() {
               className="bg-transparent text-xs font-mono font-bold text-default focus:outline-none cursor-pointer"
             />
           </div>
+
+          <button
+            type="button"
+            onClick={() => setIsImportOpen(true)}
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface px-3 text-xs font-medium text-muted hover:text-default transition-colors cursor-pointer"
+            title="Import targets from Excel (.xlsx) or CSV"
+          >
+            <Upload className="size-3.5 text-primary" />
+            <span>Import</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-default bg-surface px-3 text-xs font-medium text-muted hover:text-default transition-colors cursor-pointer"
+            title="Export targets to CSV"
+          >
+            <Download className="size-3.5 text-muted" />
+            <span>Export CSV</span>
+          </button>
 
           <button
             type="button"
@@ -986,6 +1051,16 @@ export function SalesmanTargetsSection() {
         cancelLabel="Cancel"
         variant="danger"
         loading={deleteTargetMutation.isPending}
+      />
+
+      {/* Universal Bulk Import Modal */}
+      <UniversalImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        schema={salesTargetImportSchema}
+        onImportSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['sales', 'targets'] });
+        }}
       />
     </div>
   );

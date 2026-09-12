@@ -18,6 +18,9 @@ use App\Modules\Production\Requests\UpdateProductionPlanRequest;
 use App\Modules\Production\Resources\ProductionPlanResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 final class ProductionPlanController extends Controller
 {
@@ -212,4 +215,241 @@ final class ProductionPlanController extends Controller
             'meta' => ['correlation_id' => (string) $request->header('X-Correlation-Id', '')],
         ]);
     }
+
+    public function bulkImport(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'rows' => 'required|array|min:1',
+            'mode' => 'nullable|string|in:skip,upsert',
+        ]);
+
+        $rows = $validated['rows'];
+        $mode = $validated['mode'] ?? 'skip';
+
+        $tenantId = TenantContext::current()->tenantId();
+        $userId = Auth::id() ?? 1;
+
+        // Resolve default company
+        $defaultCompanyId = DB::table('companies')
+            ->where('tenant_id', $tenantId)
+            ->value('id') ?? 1;
+
+        // Resolve default factory, or create standard factory
+        $factory = DB::table('factories')
+            ->where('tenant_id', $tenantId)
+            ->first();
+
+        if (! $factory) {
+            $factoryId = DB::table('factories')->insertGetId([
+                'uuid' => (string) Str::uuid(),
+                'tenant_id' => $tenantId,
+                'company_id' => $defaultCompanyId,
+                'code' => 'F01',
+                'name' => 'Main Production Factory',
+                'is_active' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        } else {
+            $factoryId = $factory->id;
+        }
+
+        // Preload products for quick matching
+        $products = \App\Models\Product::where('tenant_id', $tenantId)->get();
+        $productMap = [];
+        foreach ($products as $prod) {
+            $productMap[strtolower(trim((string) $prod->sku))] = $prod;
+            $productMap[strtolower(trim((string) $prod->name))] = $prod;
+            $productMap[(string) $prod->id] = $prod;
+        }
+
+        // Preload BOMs for matching
+        $boms = \App\Models\BillOfMaterial::where('tenant_id', $tenantId)->get();
+        $bomMap = [];
+        foreach ($boms as $bom) {
+            $bomMap[$bom->product_id] = $bom;
+            $bomMap[strtolower(trim((string) $bom->code))] = $bom;
+        }
+
+        // Preload Units
+        $units = \App\Models\Unit::where('tenant_id', $tenantId)->get();
+        $unitMap = [];
+        foreach ($units as $unit) {
+            $unitMap[strtolower(trim((string) $unit->code))] = $unit;
+            $unitMap[strtolower(trim((string) $unit->name))] = $unit;
+            $unitMap[(string) $unit->id] = $unit;
+        }
+        $defaultUnit = $units->first();
+
+        $imported = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = [];
+
+        // Group rows by plan_number
+        $groupedPlans = [];
+        foreach ($rows as $index => $row) {
+            $rowNum = $index + 1;
+            $planNumber = trim((string) ($row['plan_number'] ?? $row['plan_code'] ?? $row['code'] ?? ''));
+            if ($planNumber === '') {
+                $planNumber = 'PLAN-' . date('Ymd') . '-' . str_pad((string) $rowNum, 4, '0', STR_PAD_LEFT);
+            }
+            $groupedPlans[$planNumber][] = [
+                'row_num' => $rowNum,
+                'data' => $row,
+            ];
+        }
+
+        $chunks = array_chunk($groupedPlans, 100, true);
+
+        foreach ($chunks as $chunk) {
+            DB::transaction(function () use (
+                $chunk,
+                $tenantId,
+                $userId,
+                $defaultCompanyId,
+                $factoryId,
+                $productMap,
+                $bomMap,
+                $unitMap,
+                $defaultUnit,
+                $mode,
+                &$imported,
+                &$updated,
+                &$skipped,
+                &$errors
+            ): void {
+                foreach ($chunk as $planNumber => $planRows) {
+                    $firstRow = $planRows[0]['data'];
+                    $planDate = !empty($firstRow['plan_date']) ? (string) $firstRow['plan_date'] : now()->format('Y-m-d');
+                    $periodStart = !empty($firstRow['period_start']) ? (string) $firstRow['period_start'] : $planDate;
+                    $periodEnd = !empty($firstRow['period_end']) ? (string) $firstRow['period_end'] : date('Y-m-d', strtotime('+30 days', strtotime($periodStart)));
+                    $notes = $firstRow['notes'] ?? $firstRow['description'] ?? null;
+                    $status = $firstRow['status'] ?? 'draft';
+
+                    $existing = ProductionPlan::withoutGlobalScope('tenant')
+                        ->where('tenant_id', $tenantId)
+                        ->where('plan_number', $planNumber)
+                        ->first();
+
+                    if ($existing) {
+                        if ($mode === 'skip') {
+                            $skipped += count($planRows);
+                            continue;
+                        }
+
+                        // Upsert plan header
+                        $existing->update([
+                            'plan_date' => $planDate,
+                            'period_start' => $periodStart,
+                            'period_end' => $periodEnd,
+                            'notes' => $notes,
+                            'status' => $status,
+                            'updated_by' => $userId,
+                        ]);
+
+                        // Sync or add items
+                        $existing->items()->delete();
+                        $plan = $existing;
+                        $updated++;
+                    } else {
+                        $plan = ProductionPlan::create([
+                            'uuid' => (string) Str::uuid(),
+                            'company_id' => $defaultCompanyId,
+                            'factory_id' => $factoryId,
+                            'plan_number' => $planNumber,
+                            'plan_date' => $planDate,
+                            'period_start' => $periodStart,
+                            'period_end' => $periodEnd,
+                            'source' => 'manual',
+                            'status' => $status,
+                            'notes' => $notes,
+                            'created_by' => $userId,
+                        ]);
+                        $imported++;
+                    }
+
+                    // Insert plan items
+                    foreach ($planRows as $itemIndex => $itemEntry) {
+                        $itemData = $itemEntry['data'];
+                        $rowNum = $itemEntry['row_num'];
+
+                        $productKey = strtolower(trim((string) ($itemData['product_sku'] ?? $itemData['sku'] ?? $itemData['product_code'] ?? $itemData['product_name'] ?? '')));
+                        $product = $productMap[$productKey] ?? null;
+
+                        if (! $product) {
+                            $errors[] = [
+                                'row' => $rowNum,
+                                'field' => 'product_sku',
+                                'message' => "Product '{$productKey}' not found.",
+                            ];
+                            continue;
+                        }
+
+                        $qty = isset($itemData['planned_quantity']) ? (float) $itemData['planned_quantity'] : (isset($itemData['quantity']) ? (float) $itemData['quantity'] : 1.0);
+                        if ($qty <= 0) {
+                            $qty = 1.0;
+                        }
+
+                        // Resolve BOM
+                        $bom = $bomMap[$product->id] ?? null;
+                        if (! $bom) {
+                            // Find or create minimal BOM for this product
+                            $bom = \App\Models\BillOfMaterial::firstOrCreate(
+                                ['tenant_id' => $tenantId, 'product_id' => $product->id],
+                                [
+                                    'uuid' => (string) Str::uuid(),
+                                    'code' => 'BOM-' . ($product->sku ?: str_pad((string) $product->id, 4, '0', STR_PAD_LEFT)),
+                                    'name' => 'Standard BOM - ' . $product->name,
+                                    'version' => '1.0',
+                                    'output_quantity' => '1.0000',
+                                    'output_unit_id' => $product->base_unit_id ?? ($defaultUnit ? $defaultUnit->id : 1),
+                                    'expected_yield_percentage' => '100.0000',
+                                    'is_active' => true,
+                                    'created_by' => $userId,
+                                ]
+                            );
+                            $bomMap[$product->id] = $bom;
+                        }
+
+                        // Resolve Unit
+                        $unitKey = strtolower(trim((string) ($itemData['unit_code'] ?? $itemData['unit'] ?? '')));
+                        $unit = ($unitKey !== '' ? ($unitMap[$unitKey] ?? null) : null) ?? ($product->unit_id ? ($unitMap[(string) $product->unit_id] ?? null) : $defaultUnit);
+
+                        \App\Models\ProductionPlanItem::create([
+                            'uuid' => (string) Str::uuid(),
+                            'production_plan_id' => $plan->id,
+                            'product_id' => $product->id,
+                            'bill_of_material_id' => $bom->id,
+                            'planned_quantity' => number_format($qty, 4, '.', ''),
+                            'unit_id' => $unit ? $unit->id : 1,
+                            'scheduled_date' => $itemData['scheduled_date'] ?? $periodStart,
+                            'produced_quantity' => '0.0000',
+                            'status' => 'draft',
+                            'sort_order' => $itemIndex,
+                            'created_by' => $userId,
+                        ]);
+                    }
+                }
+            });
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Bulk import completed. {$imported} plan(s) imported, {$updated} updated, {$skipped} skipped.",
+            'imported' => $imported,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'failed' => count($errors),
+            'errors' => $errors,
+            'data' => [
+                'imported_count' => $imported,
+                'updated_count' => $updated,
+                'skipped_count' => $skipped,
+                'failed_count' => count($errors),
+                'errors' => $errors,
+            ],
+        ]);
+    }
 }
+

@@ -23,16 +23,21 @@ class BankAccount extends Model
         'tenant_id',
         'uuid',
         'company_id',
+        'code',
+        'name',
+        'account_type',
         'account_name',
         'account_number',
         'bank_name',
         'branch_name',
+        'currency',
+        'currency_code',
         'routing_number',
         'swift_code',
         'chart_of_account_id',
-        'currency_code',
         'opening_balance',
         'current_balance',
+        'is_default_for_pos',
         'is_active',
         'created_by',
         'updated_by',
@@ -42,7 +47,32 @@ class BankAccount extends Model
         'opening_balance' => 'string',
         'current_balance' => 'string',
         'is_active' => 'boolean',
+        'is_default_for_pos' => 'boolean',
     ];
+
+    public function setAccountNameAttribute(?string $value): void
+    {
+        if ($value !== null) {
+            $this->attributes['name'] = $value;
+        }
+    }
+
+    public function getAccountNameAttribute(): ?string
+    {
+        return $this->attributes['name'] ?? null;
+    }
+
+    public function setCurrencyCodeAttribute(?string $value): void
+    {
+        if ($value !== null) {
+            $this->attributes['currency'] = $value;
+        }
+    }
+
+    public function getCurrencyCodeAttribute(): ?string
+    {
+        return $this->attributes['currency'] ?? null;
+    }
 
     protected static function boot(): void
     {
@@ -51,6 +81,15 @@ class BankAccount extends Model
         static::creating(static function (BankAccount $model): void {
             if (empty($model->uuid)) {
                 $model->uuid = (string) Str::uuid();
+            }
+            if (empty($model->code)) {
+                $model->code = 'BA-' . strtoupper(Str::random(6));
+            }
+            if (empty($model->account_type)) {
+                $model->account_type = 'bank';
+            }
+            if (empty($model->name) && !empty($model->account_name)) {
+                $model->name = $model->account_name;
             }
         });
     }

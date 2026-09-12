@@ -137,4 +137,182 @@ final class PriceListController extends Controller
 
         return response()->json(['success' => true, 'data' => null, 'meta' => ['correlation_id' => (string) $request->header('X-Correlation-Id', '')]]);
     }
+
+    public function bulkImport(Request $request): JsonResponse
+    {
+        $tenantId = TenantContext::current()->tenantId();
+
+        $validated = $request->validate([
+            'rows' => ['required', 'array', 'min:1'],
+            'rows.*' => ['required', 'array'],
+            'mode' => ['nullable', 'string', 'in:skip,upsert'],
+        ]);
+
+        $rows = $validated['rows'];
+        $mode = $validated['mode'] ?? 'skip';
+
+        $imported = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = [];
+
+        // Preload products for tenant
+        $productSkuMap = \App\Models\Product::query()
+            ->where('tenant_id', $tenantId)
+            ->get()
+            ->keyBy(fn ($p) => strtolower((string) $p->sku));
+
+        // Preload price lists for tenant
+        $priceLists = PriceList::query()
+            ->where('tenant_id', $tenantId)
+            ->get();
+        $priceListMap = [];
+        foreach ($priceLists as $pl) {
+            $priceListMap[strtolower((string) $pl->code)] = $pl;
+        }
+
+        $chunks = array_chunk($rows, 100);
+
+        foreach ($chunks as $chunkIndex => $chunk) {
+            \Illuminate\Support\Facades\DB::transaction(function () use (
+                $chunk,
+                $chunkIndex,
+                $tenantId,
+                $mode,
+                $productSkuMap,
+                &$priceListMap,
+                &$imported,
+                &$updated,
+                &$skipped,
+                &$errors
+            ): void {
+                foreach ($chunk as $i => $row) {
+                    $rowNum = ($chunkIndex * 100) + $i + 1;
+
+                    $sku = trim((string) ($row['product_sku'] ?? ''));
+                    if ($sku === '') {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'product_sku',
+                            'message' => 'Product SKU is required.',
+                        ];
+                        continue;
+                    }
+
+                    $lowerSku = strtolower($sku);
+                    if (!isset($productSkuMap[$lowerSku])) {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'product_sku',
+                            'message' => "Product with SKU '{$sku}' not found.",
+                        ];
+                        continue;
+                    }
+                    $product = $productSkuMap[$lowerSku];
+
+                    $priceListCode = trim((string) ($row['price_list_code'] ?? 'DEFAULT'));
+                    if ($priceListCode === '') {
+                        $priceListCode = 'DEFAULT';
+                    }
+                    $lowerPlCode = strtolower($priceListCode);
+
+                    // Auto-resolve or create Price List
+                    if (!isset($priceListMap[$lowerPlCode])) {
+                        $plName = !empty($row['price_list_name'])
+                            ? trim((string) $row['price_list_name'])
+                            : ucfirst(strtolower($priceListCode)) . ' Price List';
+
+                        $newPl = new PriceList();
+                        $newPl->uuid = (string) \Illuminate\Support\Str::uuid();
+                        $newPl->tenant_id = $tenantId;
+                        $newPl->code = strtoupper($priceListCode);
+                        $newPl->name = $plName;
+                        $newPl->currency_code = !empty($row['currency_code']) ? strtoupper(trim((string) $row['currency_code'])) : 'BDT';
+                        $newPl->applies_to = 'all';
+                        $newPl->is_active = true;
+                        $newPl->save();
+
+                        $priceListMap[$lowerPlCode] = $newPl;
+                    }
+                    $priceList = $priceListMap[$lowerPlCode];
+
+                    $unitPriceRaw = $row['unit_price'] ?? null;
+                    if ($unitPriceRaw === null || !is_numeric($unitPriceRaw) || (float) $unitPriceRaw < 0) {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'unit_price',
+                            'message' => 'Unit price must be a valid non-negative number.',
+                        ];
+                        continue;
+                    }
+                    $unitPrice = number_format((float) $unitPriceRaw, 4, '.', '');
+
+                    $minQtyRaw = $row['min_quantity'] ?? 1;
+                    $minQuantity = (is_numeric($minQtyRaw) && (float) $minQtyRaw > 0)
+                        ? number_format((float) $minQtyRaw, 4, '.', '')
+                        : '1.0000';
+
+                    $discountPctRaw = $row['discount_percentage'] ?? 0;
+                    $discountPct = (is_numeric($discountPctRaw) && (float) $discountPctRaw >= 0)
+                        ? number_format((float) $discountPctRaw, 4, '.', '')
+                        : '0.0000';
+
+                    // Check existing price list item
+                    $existingItem = \App\Models\PriceListItem::query()
+                        ->where('tenant_id', $tenantId)
+                        ->where('price_list_id', $priceList->id)
+                        ->where('product_id', $product->id)
+                        ->where('min_quantity', $minQuantity)
+                        ->first();
+
+                    if ($existingItem) {
+                        if ($mode === 'skip') {
+                            $skipped++;
+                            continue;
+                        }
+
+                        // Upsert
+                        $existingItem->update([
+                            'unit_price' => $unitPrice,
+                            'discount_percentage' => $discountPct,
+                        ]);
+                        $updated++;
+                        continue;
+                    }
+
+                    // Insert
+                    $newItem = new \App\Models\PriceListItem([
+                        'price_list_id' => $priceList->id,
+                        'product_id' => $product->id,
+                        'variant_id' => null,
+                        'min_quantity' => $minQuantity,
+                        'unit_price' => $unitPrice,
+                        'discount_percentage' => $discountPct,
+                    ]);
+                    $newItem->tenant_id = $tenantId;
+                    $newItem->save();
+
+                    $imported++;
+                }
+            });
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'imported_count' => $imported,
+                'updated_count' => $updated,
+                'skipped_count' => $skipped,
+                'total_processed' => $imported + $updated + $skipped,
+                'errors' => $errors,
+            ],
+            'message' => sprintf(
+                'Bulk import completed: %d imported, %d updated, %d skipped.',
+                $imported,
+                $updated,
+                $skipped
+            ),
+        ]);
+    }
 }
+

@@ -30,6 +30,7 @@ import {
   ShieldCheck,
   KeyRound,
   ChevronDown,
+  Upload,
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
 import { hrApi } from './services/hrApi';
@@ -38,6 +39,9 @@ import { useCurrency } from '../../hooks/useCurrency';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { notify } from '../../components/ui/Toast';
+import { UniversalImportModal } from '../../components/import';
+import { employeeImportSchema } from './schemas/employeeImportSchema';
+import { attendanceImportSchema } from './schemas/attendanceImportSchema';
 import type {
   Employee,
   Department,
@@ -486,6 +490,8 @@ export const HrWorkspace: React.FC = () => {
 
   // Onboard Employee Modal
   const [showOnboardModal, setShowOnboardModal] = useState(false);
+  const [showImportStaffModal, setShowImportStaffModal] = useState(false);
+  const [showImportAttendanceModal, setShowImportAttendanceModal] = useState(false);
   const [newFirstName, setNewFirstName] = useState('');
   const [newLastName, setNewLastName] = useState('');
   const [newPhone, setNewPhone] = useState('');
@@ -1564,6 +1570,15 @@ export const HrWorkspace: React.FC = () => {
               </button>
               <button
                 type="button"
+                onClick={() => setShowImportAttendanceModal(true)}
+                className="px-3 py-2 bg-surface hover:bg-surface-sunken border border-default text-default font-semibold rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+                title="Bulk import biometric punch logs"
+              >
+                <Upload className="size-3.5 text-primary" />
+                <span>Import</span>
+              </button>
+              <button
+                type="button"
                 onClick={handleExportAttendance}
                 className="px-3 py-2 bg-surface hover:bg-surface-sunken border border-default text-default font-semibold rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs cursor-pointer"
               >
@@ -1611,6 +1626,14 @@ export const HrWorkspace: React.FC = () => {
               >
                 <Download className="size-3.5 text-muted" />
                 <span>Export Staff</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowImportStaffModal(true)}
+                className="px-3 py-2 bg-surface hover:bg-surface-sunken border border-default text-default font-semibold rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+              >
+                <Upload className="size-3.5 text-muted" />
+                <span>Import Staff</span>
               </button>
               <button
                 type="button"
@@ -3739,6 +3762,27 @@ export const HrWorkspace: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Modal: Universal Bulk Import Staff
+          ───────────────────────────────────────────────────────────────────────────── */}
+      <UniversalImportModal
+        isOpen={showImportStaffModal}
+        onClose={() => setShowImportStaffModal(false)}
+        config={employeeImportSchema}
+        onSuccess={() => {
+          void loadHrData();
+        }}
+      />
+
+      <UniversalImportModal
+        isOpen={showImportAttendanceModal}
+        onClose={() => setShowImportAttendanceModal(false)}
+        config={attendanceImportSchema}
+        onSuccess={() => {
+          void loadHrData();
+        }}
+      />
 
       {/* ─────────────────────────────────────────────────────────────────────────────
           Modal 3: Mark Shift Attendance

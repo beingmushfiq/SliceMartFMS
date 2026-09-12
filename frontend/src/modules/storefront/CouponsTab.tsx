@@ -17,10 +17,13 @@ import {
   X,
   Tag,
   ShoppingBag,
+  FileUp,
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
 import { useCurrency } from '../../hooks/useCurrency';
 import { notify } from '../../components/ui/Toast';
+import { UniversalImportModal } from '../../components/import/UniversalImportModal';
+import { couponImportSchema } from './schemas/couponImportSchema';
 import type { Coupon, CouponStats } from '../../types/api/coupons';
 
 interface CouponFormData {
@@ -98,6 +101,7 @@ export const CouponsTab: React.FC = () => {
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBatchModal, setShowBatchModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
   const [formData, setFormData] = useState<CouponFormData>(DEFAULT_COUPON_FORM);
   const [batchData, setBatchData] = useState<BatchFormData>(DEFAULT_BATCH_FORM);
@@ -318,7 +322,16 @@ export const CouponsTab: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setShowImportModal(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl border border-default bg-surface hover:bg-surface-sunken text-default transition-all cursor-pointer shadow-2xs"
+          >
+            <FileUp className="size-3.5 text-primary" />
+            <span>Import Coupons</span>
+          </button>
+
           <button
             type="button"
             onClick={() => {
@@ -1085,6 +1098,15 @@ export const CouponsTab: React.FC = () => {
           </div>
         </div>
       )}
+
+      <UniversalImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        config={couponImportSchema}
+        onSuccess={() => {
+          fetchCoupons(true);
+        }}
+      />
     </div>
   );
 };

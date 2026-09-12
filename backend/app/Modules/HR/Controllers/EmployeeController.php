@@ -6,6 +6,7 @@ namespace App\Modules\HR\Controllers;
 
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
+use App\Core\Tenancy\TenantContext;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\HR\Actions\CreateEmployeeAction;
@@ -14,6 +15,7 @@ use App\Modules\HR\Models\Designation;
 use App\Modules\HR\Models\Employee;
 use App\Modules\HR\Models\EmployeeDocument;
 use App\Modules\HR\Models\Shift;
+use App\Modules\HR\Models\ShiftAssignment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -824,19 +826,809 @@ class EmployeeController extends Controller
         ]);
     }
 
-    public function bulkDeleteShifts(Request $request): JsonResponse
+    public function bulkImport(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'ids' => 'required|array',
-            'ids.*' => 'integer',
+            'mode' => 'nullable|string|in:skip,upsert',
+            'rows' => 'required|array|min:1|max:5000',
+            'rows.*.employee_code' => 'nullable|string|max:64',
+            'rows.*.first_name' => 'required|string|max:100',
+            'rows.*.last_name' => 'nullable|string|max:100',
+            'rows.*.phone' => 'required|string|max:32',
+            'rows.*.email' => 'nullable|string|max:191',
+            'rows.*.department' => 'nullable|string|max:100',
+            'rows.*.designation' => 'nullable|string|max:100',
+            'rows.*.shift' => 'nullable|string|max:100',
+            'rows.*.employment_type' => 'nullable|string|max:32',
+            'rows.*.employment_status' => 'nullable|string|max:32',
+            'rows.*.date_of_joining' => 'nullable|string|max:32',
+            'rows.*.national_id' => 'nullable|string|max:64',
+            'rows.*.bank_name' => 'nullable|string|max:100',
+            'rows.*.bank_account_number' => 'nullable|string|max:64',
+            'rows.*.mobile_wallet_number' => 'nullable|string|max:64',
         ]);
 
-        $ids = array_map('intval', $validated['ids']);
-        Shift::whereIn('id', $ids)->delete();
+        $mode = $validated['mode'] ?? 'skip';
+        $rows = $validated['rows'];
+        $tenantId = (int) ($request->user()?->tenant_id ?? 1);
+        $userId = (int) ($request->user()?->id ?? 1);
+
+        // Preload reference maps for tenant
+        $departments = Department::where('is_active', true)->get();
+        $deptMap = [];
+        foreach ($departments as $d) {
+            $deptMap[strtolower(trim($d->name))] = $d->id;
+            $deptMap[strtolower(trim($d->code))] = $d->id;
+        }
+
+        $designations = Designation::where('is_active', true)->get();
+        $desigMap = [];
+        foreach ($designations as $ds) {
+            $desigMap[strtolower(trim($ds->name))] = $ds->id;
+            $desigMap[strtolower(trim($ds->code))] = $ds->id;
+        }
+
+        $shifts = Shift::where('is_active', true)->get();
+        $shiftMap = [];
+        foreach ($shifts as $s) {
+            $shiftMap[strtolower(trim($s->name))] = $s->id;
+            $shiftMap[strtolower(trim($s->code))] = $s->id;
+        }
+
+        // Cache existing employees by code, email, phone
+        $existingEmployees = Employee::all();
+        $empCodeMap = [];
+        $empPhoneMap = [];
+        $empEmailMap = [];
+        foreach ($existingEmployees as $e) {
+            if ($e->employee_code) {
+                $empCodeMap[strtolower(trim($e->employee_code))] = $e;
+            }
+            if ($e->phone) {
+                $empPhoneMap[preg_replace('/[^0-9]/', '', $e->phone)] = $e;
+            }
+            if ($e->email) {
+                $empEmailMap[strtolower(trim($e->email))] = $e;
+            }
+        }
+
+        $imported = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = [];
+
+        // Process in chunks inside transactions
+        foreach (array_chunk($rows, 100) as $chunkIdx => $chunk) {
+            DB::transaction(function () use (
+                $chunk,
+                $chunkIdx,
+                $mode,
+                $tenantId,
+                $userId,
+                &$deptMap,
+                &$desigMap,
+                &$shiftMap,
+                &$empCodeMap,
+                &$empPhoneMap,
+                &$empEmailMap,
+                &$imported,
+                &$updated,
+                &$skipped,
+                &$errors
+            ) {
+                foreach ($chunk as $relIdx => $row) {
+                    $rowNum = ($chunkIdx * 100) + $relIdx + 2;
+                    $code = !empty($row['employee_code']) ? trim((string) $row['employee_code']) : null;
+                    $phone = trim((string) $row['phone']);
+                    $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
+                    $email = !empty($row['email']) ? strtolower(trim((string) $row['email'])) : null;
+
+                    // Check if employee already exists
+                    $existing = null;
+                    if ($code && isset($empCodeMap[strtolower($code)])) {
+                        $existing = $empCodeMap[strtolower($code)];
+                    } elseif ($cleanPhone && isset($empPhoneMap[$cleanPhone])) {
+                        $existing = $empPhoneMap[$cleanPhone];
+                    } elseif ($email && isset($empEmailMap[$email])) {
+                        $existing = $empEmailMap[$email];
+                    }
+
+                    if ($existing) {
+                        if ($mode === 'skip') {
+                            $skipped++;
+                            continue;
+                        }
+
+                        // Mode is upsert
+                        try {
+                            $updateData = [
+                                'first_name' => $row['first_name'],
+                                'last_name' => $row['last_name'] ?? $existing->last_name,
+                                'display_name' => trim($row['first_name'] . ' ' . ($row['last_name'] ?? '')),
+                                'updated_by' => $userId,
+                            ];
+                            if (!empty($row['employment_type'])) {
+                                $updateData['employment_type'] = $row['employment_type'];
+                            }
+                            if (!empty($row['employment_status'])) {
+                                $updateData['employment_status'] = $row['employment_status'];
+                            }
+                            if (!empty($row['national_id'])) {
+                                $updateData['national_id'] = $row['national_id'];
+                            }
+                            if (!empty($row['bank_name'])) {
+                                $updateData['bank_name'] = $row['bank_name'];
+                            }
+                            if (!empty($row['bank_account_number'])) {
+                                $updateData['bank_account_number'] = $row['bank_account_number'];
+                            }
+                            if (!empty($row['mobile_wallet_number'])) {
+                                $updateData['mobile_wallet_number'] = $row['mobile_wallet_number'];
+                            }
+
+                            $existing->update($updateData);
+                            $updated++;
+                            continue;
+                        } catch (\Throwable $e) {
+                            $errors[] = [
+                                'row' => $rowNum,
+                                'field' => 'employee_code',
+                                'value' => $code,
+                                'message' => 'Update failed: ' . $e->getMessage(),
+                            ];
+                            continue;
+                        }
+                    }
+
+                    // Resolve Department
+                    $deptId = null;
+                    if (!empty($row['department'])) {
+                        $deptKey = strtolower(trim((string) $row['department']));
+                        if (isset($deptMap[$deptKey])) {
+                            $deptId = $deptMap[$deptKey];
+                        } else {
+                            // Auto-create department
+                            $newDept = Department::create([
+                                'tenant_id' => $tenantId,
+                                'code' => strtoupper(substr((string) preg_replace('/[^A-Za-z0-9]/', '', (string) $row['department']), 0, 10)) ?: 'DEPT',
+                                'name' => trim((string) $row['department']),
+                                'company_id' => 1,
+                                'is_active' => true,
+                                'created_by' => $userId,
+                                'updated_by' => $userId,
+                            ]);
+                            $deptId = $newDept->id;
+                            $deptMap[$deptKey] = $deptId;
+                            $deptMap[strtolower($newDept->code)] = $deptId;
+                        }
+                    }
+
+                    // Resolve Designation
+                    $desigId = null;
+                    if (!empty($row['designation'])) {
+                        $desigKey = strtolower(trim((string) $row['designation']));
+                        if (isset($desigMap[$desigKey])) {
+                            $desigId = $desigMap[$desigKey];
+                        } else {
+                            // Auto-create designation
+                            $newDesig = Designation::create([
+                                'tenant_id' => $tenantId,
+                                'code' => strtoupper(substr((string) preg_replace('/[^A-Za-z0-9]/', '', (string) $row['designation']), 0, 10)) ?: 'DESIG',
+                                'name' => trim((string) $row['designation']),
+                                'company_id' => 1,
+                                'is_active' => true,
+                                'created_by' => $userId,
+                                'updated_by' => $userId,
+                            ]);
+                            $desigId = $newDesig->id;
+                            $desigMap[$desigKey] = $desigId;
+                            $desigMap[strtolower($newDesig->code)] = $desigId;
+                        }
+                    }
+
+                    // Resolve Shift
+                    $shiftId = null;
+                    if (!empty($row['shift'])) {
+                        $shiftKey = strtolower(trim((string) $row['shift']));
+                        if (isset($shiftMap[$shiftKey])) {
+                            $shiftId = $shiftMap[$shiftKey];
+                        }
+                    }
+
+                    // Generate employee code if missing
+                    if (!$code) {
+                        $code = 'EMP-' . str_pad((string) random_int(1000, 99999), 5, '0', STR_PAD_LEFT);
+                    }
+
+                    try {
+                        $newEmp = Employee::create([
+                            'tenant_id' => $tenantId,
+                            'employee_code' => $code,
+                            'company_id' => 1,
+                            'department_id' => $deptId,
+                            'designation_id' => $desigId,
+                            'default_shift_id' => $shiftId,
+                            'first_name' => $row['first_name'],
+                            'last_name' => $row['last_name'] ?? null,
+                            'display_name' => trim($row['first_name'] . ' ' . ($row['last_name'] ?? '')),
+                            'phone' => $phone,
+                            'email' => $email,
+                            'employment_type' => $row['employment_type'] ?? 'permanent',
+                            'employment_status' => $row['employment_status'] ?? 'active',
+                            'date_of_joining' => $row['date_of_joining'] ?? date('Y-m-d'),
+                            'national_id' => $row['national_id'] ?? null,
+                            'bank_name' => $row['bank_name'] ?? null,
+                            'bank_account_number' => $row['bank_account_number'] ?? null,
+                            'mobile_wallet_number' => $row['mobile_wallet_number'] ?? null,
+                            'is_active' => ($row['employment_status'] ?? 'active') === 'active',
+                            'created_by' => $userId,
+                            'updated_by' => $userId,
+                        ]);
+
+                        $empCodeMap[strtolower($code)] = $newEmp;
+                        if ($cleanPhone) {
+                            $empPhoneMap[$cleanPhone] = $newEmp;
+                        }
+                        if ($email) {
+                            $empEmailMap[$email] = $newEmp;
+                        }
+
+                        $imported++;
+                    } catch (\Throwable $e) {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'employee_code',
+                            'value' => $code,
+                            'message' => 'Creation failed: ' . $e->getMessage(),
+                        ];
+                    }
+                }
+            });
+        }
+
+        return response()->json([
+            'success' => count($errors) === 0 || $imported > 0 || $updated > 0,
+            'total' => count($rows),
+            'imported' => $imported,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'failed' => count($errors),
+            'errors' => $errors,
+            'message' => "Import completed: {$imported} added, {$updated} updated, {$skipped} skipped, " . count($errors) . " failed.",
+        ]);
+    }
+
+    public function bulkImportDepartments(Request $request): JsonResponse
+    {
+        $tenantId = TenantContext::current()->tenantId();
+        $userId = Auth::id() ? (int) Auth::id() : 1;
+
+        $validated = $request->validate([
+            'rows' => ['required', 'array', 'min:1'],
+            'rows.*' => ['required', 'array'],
+            'mode' => ['nullable', 'string', 'in:skip,upsert'],
+        ]);
+
+        $rows = $validated['rows'];
+        $mode = $validated['mode'] ?? 'skip';
+
+        $imported = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = [];
+
+        $existingDepts = Department::query()->where('tenant_id', $tenantId)->get();
+        $codeMap = [];
+        $nameMap = [];
+        foreach ($existingDepts as $d) {
+            $codeMap[strtolower((string) $d->code)] = $d;
+            $nameMap[strtolower((string) $d->name)] = $d;
+        }
+
+        $chunks = array_chunk($rows, 100);
+        foreach ($chunks as $chunkIndex => $chunk) {
+            DB::transaction(function () use ($chunk, $chunkIndex, $tenantId, $userId, $mode, &$codeMap, &$nameMap, &$imported, &$updated, &$skipped, &$errors) {
+                foreach ($chunk as $index => $row) {
+                    $rowNum = ($chunkIndex * 100) + $index + 1;
+                    $name = trim((string) ($row['name'] ?? $row['department_name'] ?? ''));
+                    $code = trim((string) ($row['code'] ?? $row['department_code'] ?? ''));
+                    $costCenter = isset($row['cost_center_code']) && trim((string) $row['cost_center_code']) !== '' ? trim((string) $row['cost_center_code']) : null;
+                    $isActive = isset($row['is_active']) ? (bool) $row['is_active'] : true;
+
+                    if ($name === '') {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'name',
+                            'value' => '',
+                            'message' => 'Department name is required.',
+                        ];
+                        continue;
+                    }
+
+                    if ($code === '') {
+                        $code = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $name), 0, 10)) ?: 'DEPT';
+                    }
+
+                    $existing = $codeMap[strtolower($code)] ?? ($nameMap[strtolower($name)] ?? null);
+
+                    if ($existing) {
+                        if ($mode === 'skip') {
+                            $skipped++;
+                            continue;
+                        }
+
+                        try {
+                            $existing->update([
+                                'name' => $name,
+                                'cost_center_code' => $costCenter ?? $existing->cost_center_code,
+                                'is_active' => $isActive,
+                                'updated_by' => $userId,
+                            ]);
+                            $updated++;
+                        } catch (\Throwable $e) {
+                            $errors[] = [
+                                'row' => $rowNum,
+                                'field' => 'name',
+                                'value' => $name,
+                                'message' => 'Update failed: ' . $e->getMessage(),
+                            ];
+                        }
+                    } else {
+                        try {
+                            $dept = Department::create([
+                                'tenant_id' => $tenantId,
+                                'company_id' => 1,
+                                'uuid' => (string) Str::uuid(),
+                                'code' => strtoupper($code),
+                                'name' => $name,
+                                'cost_center_code' => $costCenter,
+                                'is_active' => $isActive,
+                                'created_by' => $userId,
+                                'updated_by' => $userId,
+                            ]);
+                            $codeMap[strtolower($dept->code)] = $dept;
+                            $nameMap[strtolower($dept->name)] = $dept;
+                            $imported++;
+                        } catch (\Throwable $e) {
+                            $errors[] = [
+                                'row' => $rowNum,
+                                'field' => 'name',
+                                'value' => $name,
+                                'message' => 'Creation failed: ' . $e->getMessage(),
+                            ];
+                        }
+                    }
+                }
+            });
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'Deleted '.count($ids).' shifts.',
+            'data' => [
+                'imported' => $imported,
+                'updated' => $updated,
+                'skipped' => $skipped,
+                'failed' => count($errors),
+                'errors' => $errors,
+            ],
+        ]);
+    }
+
+    public function bulkImportDesignations(Request $request): JsonResponse
+    {
+        $tenantId = TenantContext::current()->tenantId();
+        $userId = Auth::id() ? (int) Auth::id() : 1;
+
+        $validated = $request->validate([
+            'rows' => ['required', 'array', 'min:1'],
+            'rows.*' => ['required', 'array'],
+            'mode' => ['nullable', 'string', 'in:skip,upsert'],
+        ]);
+
+        $rows = $validated['rows'];
+        $mode = $validated['mode'] ?? 'skip';
+
+        $imported = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = [];
+
+        $existing = Designation::query()->where('tenant_id', $tenantId)->get();
+        $codeMap = [];
+        $nameMap = [];
+        foreach ($existing as $d) {
+            $codeMap[strtolower((string) $d->code)] = $d;
+            $nameMap[strtolower((string) $d->name)] = $d;
+        }
+
+        $chunks = array_chunk($rows, 100);
+        foreach ($chunks as $chunkIndex => $chunk) {
+            DB::transaction(function () use ($chunk, $chunkIndex, $tenantId, $userId, $mode, &$codeMap, &$nameMap, &$imported, &$updated, &$skipped, &$errors) {
+                foreach ($chunk as $index => $row) {
+                    $rowNum = ($chunkIndex * 100) + $index + 1;
+                    $name = trim((string) ($row['name'] ?? $row['designation_name'] ?? ''));
+                    $code = trim((string) ($row['code'] ?? $row['designation_code'] ?? ''));
+                    $grade = isset($row['grade']) && trim((string) $row['grade']) !== '' ? trim((string) $row['grade']) : null;
+                    $isActive = isset($row['is_active']) ? (bool) $row['is_active'] : true;
+
+                    if ($name === '') {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'name',
+                            'value' => '',
+                            'message' => 'Designation name is required.',
+                        ];
+                        continue;
+                    }
+
+                    if ($code === '') {
+                        $code = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $name), 0, 10)) ?: 'DESIG';
+                    }
+
+                    $desig = $codeMap[strtolower($code)] ?? ($nameMap[strtolower($name)] ?? null);
+
+                    if ($desig) {
+                        if ($mode === 'skip') {
+                            $skipped++;
+                            continue;
+                        }
+
+                        try {
+                            $desig->update([
+                                'name' => $name,
+                                'grade' => $grade ?? $desig->grade,
+                                'is_active' => $isActive,
+                                'updated_by' => $userId,
+                            ]);
+                            $updated++;
+                        } catch (\Throwable $e) {
+                            $errors[] = [
+                                'row' => $rowNum,
+                                'field' => 'name',
+                                'value' => $name,
+                                'message' => 'Update failed: ' . $e->getMessage(),
+                            ];
+                        }
+                    } else {
+                        try {
+                            $newDes = Designation::create([
+                                'tenant_id' => $tenantId,
+                                'uuid' => (string) Str::uuid(),
+                                'code' => strtoupper($code),
+                                'name' => $name,
+                                'grade' => $grade,
+                                'is_active' => $isActive,
+                                'created_by' => $userId,
+                                'updated_by' => $userId,
+                            ]);
+                            $codeMap[strtolower($newDes->code)] = $newDes;
+                            $nameMap[strtolower($newDes->name)] = $newDes;
+                            $imported++;
+                        } catch (\Throwable $e) {
+                            $errors[] = [
+                                'row' => $rowNum,
+                                'field' => 'name',
+                                'value' => $name,
+                                'message' => 'Creation failed: ' . $e->getMessage(),
+                            ];
+                        }
+                    }
+                }
+            });
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'imported' => $imported,
+                'updated' => $updated,
+                'skipped' => $skipped,
+                'failed' => count($errors),
+                'errors' => $errors,
+            ],
+        ]);
+    }
+
+    public function bulkImportShifts(Request $request): JsonResponse
+    {
+        $tenantId = TenantContext::current()->tenantId();
+        $userId = Auth::id() ? (int) Auth::id() : 1;
+
+        $validated = $request->validate([
+            'rows' => ['required', 'array', 'min:1'],
+            'rows.*' => ['required', 'array'],
+            'mode' => ['nullable', 'string', 'in:skip,upsert'],
+        ]);
+
+        $rows = $validated['rows'];
+        $mode = $validated['mode'] ?? 'skip';
+
+        $imported = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = [];
+
+        $existing = Shift::query()->where('tenant_id', $tenantId)->get();
+        $codeMap = [];
+        $nameMap = [];
+        foreach ($existing as $s) {
+            $codeMap[strtolower((string) $s->code)] = $s;
+            $nameMap[strtolower((string) $s->name)] = $s;
+        }
+
+        $chunks = array_chunk($rows, 100);
+        foreach ($chunks as $chunkIndex => $chunk) {
+            DB::transaction(function () use ($chunk, $chunkIndex, $tenantId, $userId, $mode, &$codeMap, &$nameMap, &$imported, &$updated, &$skipped, &$errors) {
+                foreach ($chunk as $index => $row) {
+                    $rowNum = ($chunkIndex * 100) + $index + 1;
+                    $code = trim((string) ($row['code'] ?? $row['shift_code'] ?? ''));
+                    $name = trim((string) ($row['name'] ?? $row['shift_name'] ?? ''));
+                    $startTime = trim((string) ($row['start_time'] ?? $row['start'] ?? ''));
+                    $endTime = trim((string) ($row['end_time'] ?? $row['end'] ?? ''));
+                    $breakMin = isset($row['break_minutes']) ? (int) $row['break_minutes'] : 45;
+                    $graceIn = isset($row['grace_in_minutes']) ? (int) $row['grace_in_minutes'] : 15;
+                    $crossesMidnight = isset($row['crosses_midnight']) ? (bool) $row['crosses_midnight'] : false;
+                    $isActive = isset($row['is_active']) ? (bool) $row['is_active'] : true;
+
+                    if ($name === '') {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'name',
+                            'value' => '',
+                            'message' => 'Shift name is required.',
+                        ];
+                        continue;
+                    }
+
+                    if ($startTime === '' || $endTime === '') {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'start_time',
+                            'value' => "{$startTime} - {$endTime}",
+                            'message' => 'Shift start and end times are required.',
+                        ];
+                        continue;
+                    }
+
+                    if ($code === '') {
+                        $code = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $name), 0, 10)) ?: 'SHIFT';
+                    }
+
+                    $shift = $codeMap[strtolower($code)] ?? ($nameMap[strtolower($name)] ?? null);
+
+                    if ($shift) {
+                        if ($mode === 'skip') {
+                            $skipped++;
+                            continue;
+                        }
+
+                        try {
+                            $shift->update([
+                                'name' => $name,
+                                'start_time' => $startTime,
+                                'end_time' => $endTime,
+                                'break_minutes' => $breakMin,
+                                'grace_in_minutes' => $graceIn,
+                                'crosses_midnight' => $crossesMidnight,
+                                'is_active' => $isActive,
+                                'updated_by' => $userId,
+                            ]);
+                            $updated++;
+                        } catch (\Throwable $e) {
+                            $errors[] = [
+                                'row' => $rowNum,
+                                'field' => 'code',
+                                'value' => $code,
+                                'message' => 'Update failed: ' . $e->getMessage(),
+                            ];
+                        }
+                    } else {
+                        try {
+                            $newShift = Shift::create([
+                                'tenant_id' => $tenantId,
+                                'uuid' => (string) Str::uuid(),
+                                'code' => strtoupper($code),
+                                'name' => $name,
+                                'start_time' => $startTime,
+                                'end_time' => $endTime,
+                                'break_minutes' => $breakMin,
+                                'grace_in_minutes' => $graceIn,
+                                'crosses_midnight' => $crossesMidnight,
+                                'is_active' => $isActive,
+                                'created_by' => $userId,
+                                'updated_by' => $userId,
+                            ]);
+                            $codeMap[strtolower($newShift->code)] = $newShift;
+                            $nameMap[strtolower($newShift->name)] = $newShift;
+                            $imported++;
+                        } catch (\Throwable $e) {
+                            $errors[] = [
+                                'row' => $rowNum,
+                                'field' => 'code',
+                                'value' => $code,
+                                'message' => 'Creation failed: ' . $e->getMessage(),
+                            ];
+                        }
+                    }
+                }
+            });
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'imported' => $imported,
+                'updated' => $updated,
+                'skipped' => $skipped,
+                'failed' => count($errors),
+                'errors' => $errors,
+            ],
+        ]);
+    }
+
+    public function bulkImportRosters(Request $request): JsonResponse
+    {
+        $tenantId = TenantContext::current()->tenantId();
+        $userId = Auth::id() ? (int) Auth::id() : 1;
+
+        $validated = $request->validate([
+            'rows' => ['required', 'array', 'min:1'],
+            'rows.*' => ['required', 'array'],
+            'mode' => ['nullable', 'string', 'in:skip,upsert'],
+        ]);
+
+        $rows = $validated['rows'];
+        $mode = $validated['mode'] ?? 'skip';
+
+        $imported = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = [];
+
+        $employees = Employee::query()->where('tenant_id', $tenantId)->get();
+        $empMap = [];
+        foreach ($employees as $e) {
+            if ($e->employee_code) {
+                $empMap[strtolower((string) $e->employee_code)] = $e;
+            }
+            if ($e->email) {
+                $empMap[strtolower((string) $e->email)] = $e;
+            }
+        }
+
+        $shifts = Shift::query()->where('tenant_id', $tenantId)->get();
+        $shiftMap = [];
+        foreach ($shifts as $s) {
+            if ($s->code) {
+                $shiftMap[strtolower((string) $s->code)] = $s;
+            }
+            if ($s->name) {
+                $shiftMap[strtolower((string) $s->name)] = $s;
+            }
+        }
+
+        $chunks = array_chunk($rows, 100);
+        foreach ($chunks as $chunkIndex => $chunk) {
+            DB::transaction(function () use ($chunk, $chunkIndex, $tenantId, $userId, $mode, $empMap, $shiftMap, &$imported, &$updated, &$skipped, &$errors) {
+                foreach ($chunk as $index => $row) {
+                    $rowNum = ($chunkIndex * 100) + $index + 1;
+                    $empCode = trim((string) ($row['employee_code'] ?? $row['code'] ?? ''));
+                    $shiftCode = trim((string) ($row['shift_code'] ?? $row['shift'] ?? ''));
+                    $effectiveFrom = trim((string) ($row['effective_from'] ?? $row['date'] ?? ''));
+                    $effectiveTo = isset($row['effective_to']) && trim((string) $row['effective_to']) !== '' ? trim((string) $row['effective_to']) : null;
+
+                    if ($empCode === '') {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'employee_code',
+                            'value' => '',
+                            'message' => 'Employee code is required.',
+                        ];
+                        continue;
+                    }
+
+                    if ($shiftCode === '') {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'shift_code',
+                            'value' => '',
+                            'message' => 'Shift code is required.',
+                        ];
+                        continue;
+                    }
+
+                    if ($effectiveFrom === '') {
+                        $effectiveFrom = date('Y-m-d');
+                    }
+
+                    $employee = $empMap[strtolower($empCode)] ?? null;
+                    if (!$employee) {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'employee_code',
+                            'value' => $empCode,
+                            'message' => "Employee '{$empCode}' not found.",
+                        ];
+                        continue;
+                    }
+
+                    $shift = $shiftMap[strtolower($shiftCode)] ?? null;
+                    if (!$shift) {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'shift_code',
+                            'value' => $shiftCode,
+                            'message' => "Shift '{$shiftCode}' not found.",
+                        ];
+                        continue;
+                    }
+
+                    $existing = ShiftAssignment::query()
+                        ->where('tenant_id', $tenantId)
+                        ->where('employee_id', $employee->id)
+                        ->where('effective_from', $effectiveFrom)
+                        ->first();
+
+                    if ($existing) {
+                        if ($mode === 'skip') {
+                            $skipped++;
+                            continue;
+                        }
+
+                        try {
+                            $existing->update([
+                                'shift_id' => $shift->id,
+                                'effective_to' => $effectiveTo,
+                                'updated_by' => $userId,
+                            ]);
+                            $employee->update(['default_shift_id' => $shift->id]);
+                            $updated++;
+                        } catch (\Throwable $e) {
+                            $errors[] = [
+                                'row' => $rowNum,
+                                'field' => 'employee_code',
+                                'value' => $empCode,
+                                'message' => 'Update failed: ' . $e->getMessage(),
+                            ];
+                        }
+                    } else {
+                        try {
+                            ShiftAssignment::create([
+                                'tenant_id' => $tenantId,
+                                'uuid' => (string) Str::uuid(),
+                                'employee_id' => $employee->id,
+                                'shift_id' => $shift->id,
+                                'effective_from' => $effectiveFrom,
+                                'effective_to' => $effectiveTo,
+                                'assigned_by' => $userId,
+                                'created_by' => $userId,
+                                'updated_by' => $userId,
+                            ]);
+                            $employee->update(['default_shift_id' => $shift->id]);
+                            $imported++;
+                        } catch (\Throwable $e) {
+                            $errors[] = [
+                                'row' => $rowNum,
+                                'field' => 'employee_code',
+                                'value' => $empCode,
+                                'message' => 'Creation failed: ' . $e->getMessage(),
+                            ];
+                        }
+                    }
+                }
+            });
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'imported' => $imported,
+                'updated' => $updated,
+                'skipped' => $skipped,
+                'failed' => count($errors),
+                'errors' => $errors,
+            ],
         ]);
     }
 }
+

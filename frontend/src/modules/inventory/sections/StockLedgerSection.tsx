@@ -18,6 +18,7 @@ import {
   FileSpreadsheet,
   CheckSquare,
   X,
+  Upload,
 } from 'lucide-react';
 import type { StockMovement, StockBalance } from '../../../types/api/inventory';
 import { api } from '../../../lib/api/client';
@@ -25,6 +26,8 @@ import { useCurrency } from '../../../hooks/useCurrency';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
 import { cn } from '../../../lib/utils';
+import { UniversalImportModal } from '../../../components/import/UniversalImportModal';
+import { openingStockImportSchema } from '../schemas/openingStockImportSchema';
 
 export function StockLedgerSection() {
   const queryClient = useQueryClient();
@@ -33,6 +36,7 @@ export function StockLedgerSection() {
   const [search, setSearch] = useState('');
   const [viewingBalance, setViewingBalance] = useState<StockBalance | null>(null);
   const [viewingMovement, setViewingMovement] = useState<StockMovement | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   // Quick Action Dialogs initiated directly from Balances
   const [quickTransferItem, setQuickTransferItem] = useState<StockBalance | null>(null);
@@ -358,15 +362,26 @@ export function StockLedgerSection() {
 
         <div className="flex items-center gap-2">
           {viewMode === 'balances' && (
-            <button
-              type="button"
-              onClick={() => exportBalancesCsv(selectedBalanceIds.size > 0 ? filteredBalances.filter((b) => selectedBalanceIds.has(b.id)) : filteredBalances)}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-default bg-surface hover:bg-surface-sunken text-default transition-all shadow-2xs cursor-pointer"
-              title="Export visible or selected balances to CSV"
-            >
-              <FileSpreadsheet className="size-3.5 text-primary" />
-              <span>Export {selectedBalanceIds.size > 0 ? `(${selectedBalanceIds.size})` : 'CSV'}</span>
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setIsImportModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-default bg-surface hover:bg-surface-sunken text-default transition-all shadow-2xs cursor-pointer"
+                title="Bulk import initial stock balances"
+              >
+                <Upload className="size-3.5 text-primary" />
+                <span>Import</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => exportBalancesCsv(selectedBalanceIds.size > 0 ? filteredBalances.filter((b) => selectedBalanceIds.has(b.id)) : filteredBalances)}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-default bg-surface hover:bg-surface-sunken text-default transition-all shadow-2xs cursor-pointer"
+                title="Export visible or selected balances to CSV"
+              >
+                <FileSpreadsheet className="size-3.5 text-primary" />
+                <span>Export {selectedBalanceIds.size > 0 ? `(${selectedBalanceIds.size})` : 'CSV'}</span>
+              </button>
+            </>
           )}
 
           <div className="relative flex-1 sm:w-64">
@@ -999,6 +1014,18 @@ export function StockLedgerSection() {
           </div>
         </div>
       )}
+
+      {/* Universal Bulk Import Modal */}
+      <UniversalImportModal
+        schema={openingStockImportSchema}
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['inventory'] });
+          refetchBalances();
+          refetchMovements();
+        }}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ClipboardList, Plus, Search, Trash2, Rocket, Copy } from 'lucide-react';
+import { ClipboardList, Plus, Search, Trash2, Rocket, Copy, FileUp } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
@@ -8,6 +8,8 @@ import { SelectDropdown } from '../../../components/ui/Dropdown';
 import { StatusBadge } from '../../../components/ui/Badge';
 import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
 import { isApiError } from '../../../lib/api/errors';
+import { UniversalImportModal } from '../../../components/import/UniversalImportModal';
+import { productionPlanImportSchema } from '../schemas/productionPlanImportSchema';
 import type { ProductionPlan } from '../../../types/api/production';
 import type { Product } from '../../../types/api/catalog';
 import type { BillOfMaterial } from '../../../types/api/bom';
@@ -43,6 +45,7 @@ export function ProductionPlansSection() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<ProductionPlan | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [launchBatchDraft, setLaunchBatchDraft] = useState<LaunchBatchDraft | null>(null);
@@ -231,35 +234,46 @@ export function ProductionPlansSection() {
           />
         </div>
 
-        <Button
-          variant="primary"
-          onClick={() => {
-            setErrorMsg(null);
-            const defaultProduct = products.find((p) => p.type === 'finished_good') ?? products[0];
-            const matchingBom = defaultProduct
-              ? boms.find((b) => b.product_id === defaultProduct.id) ?? boms[0]
-              : boms[0];
-            setDraft({
-              plan_number: `PLN-${Date.now().toString().slice(-6)}`,
-              title: '',
-              start_date: new Date().toISOString().slice(0, 10),
-              end_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
-              notes: '',
-              items: [
-                {
-                  product_id: defaultProduct?.id ?? '',
-                  bom_id: matchingBom?.id ?? '',
-                  planned_quantity: '100.0000',
-                },
-              ],
-            });
-            setIsCreateOpen(true);
-          }}
-          className="flex items-center gap-1.5"
-        >
-          <Plus className="h-4 w-4" />
-          <span>New Production Plan</span>
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="secondary"
+            onClick={() => setIsImportOpen(true)}
+            className="flex items-center gap-1.5"
+          >
+            <FileUp className="h-4 w-4 text-primary" />
+            <span>Import Plans</span>
+          </Button>
+
+          <Button
+            variant="primary"
+            onClick={() => {
+              setErrorMsg(null);
+              const defaultProduct = products.find((p) => p.type === 'finished_good') ?? products[0];
+              const matchingBom = defaultProduct
+                ? boms.find((b) => b.product_id === defaultProduct.id) ?? boms[0]
+                : boms[0];
+              setDraft({
+                plan_number: `PLN-${Date.now().toString().slice(-6)}`,
+                title: '',
+                start_date: new Date().toISOString().slice(0, 10),
+                end_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+                notes: '',
+                items: [
+                  {
+                    product_id: defaultProduct?.id ?? '',
+                    bom_id: matchingBom?.id ?? '',
+                    planned_quantity: '100.0000',
+                  },
+                ],
+              });
+              setIsCreateOpen(true);
+            }}
+            className="flex items-center gap-1.5"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New Production Plan</span>
+          </Button>
+        </div>
       </div>
 
       {/* Data Table */}
@@ -895,6 +909,15 @@ export function ProductionPlansSection() {
           </div>
         </Modal>
       )}
+
+      <UniversalImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        config={productionPlanImportSchema}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['production', 'plans'] });
+        }}
+      />
     </div>
   );
 }

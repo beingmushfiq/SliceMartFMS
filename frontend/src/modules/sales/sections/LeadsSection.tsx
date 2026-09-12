@@ -19,6 +19,8 @@ import {
   Mail,
   X,
   ShoppingCart,
+  Upload,
+  Download,
 } from 'lucide-react';
 import type { Lead, LeadStatus, LeadSource } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
@@ -27,6 +29,8 @@ import { SelectDropdown } from '../../../components/ui/Dropdown';
 import { Badge } from '../../../components/ui/Badge';
 import { KPICard } from '../../../components/ui/KPICard';
 import { cn } from '../../../lib/utils';
+import { UniversalImportModal } from '../../../components/import/UniversalImportModal';
+import { leadImportSchema } from '../schemas/leadImportSchema';
 
 const SAMPLE_LEADS: Lead[] = [
   {
@@ -136,6 +140,51 @@ export function LeadsSection() {
   // Actions Menu & Details View State
   const [activeMenuLeadId, setActiveMenuLeadId] = useState<number | null>(null);
   const [selectedLeadForView, setSelectedLeadForView] = useState<Lead | null>(null);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+
+  const handleExportCsv = () => {
+    if (leads.length === 0) {
+      toast.info('No leads to export.');
+      return;
+    }
+    const headers = [
+      'Lead Number',
+      'Name',
+      'Company Name',
+      'Phone',
+      'Email',
+      'Source',
+      'Stage',
+      'Expected Value',
+      'Expected Close Date',
+      'Assigned To',
+      'Notes',
+    ];
+    const rows = leads.map((l) => [
+      `"${(l.lead_number || '').replace(/"/g, '""')}"`,
+      `"${(l.name || '').replace(/"/g, '""')}"`,
+      `"${(l.company_name || '').replace(/"/g, '""')}"`,
+      `"${(l.phone || '').replace(/"/g, '""')}"`,
+      `"${(l.email || '').replace(/"/g, '""')}"`,
+      l.source || 'walk_in',
+      l.status || 'new',
+      l.deal_value || '0.00',
+      l.expected_close_date || '',
+      `"${(String(l.assigned_to || '')).replace(/"/g, '""')}"`,
+      `"${(l.notes || '').replace(/"/g, '""')}"`,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `crm_leads_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${leads.length} leads to CSV.`);
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -399,7 +448,25 @@ type ApiError = { response?: { data?: { message?: string } } };
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setIsImportOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-muted hover:text-default rounded-xl border border-default bg-surface hover:bg-surface-sunken transition-colors shadow-2xs cursor-pointer"
+            title="Import leads from Excel (.xlsx) or CSV"
+          >
+            <Upload className="size-3.5 text-primary" />
+            <span>Import</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-muted hover:text-default rounded-xl border border-default bg-surface hover:bg-surface-sunken transition-colors shadow-2xs cursor-pointer"
+            title="Export leads to CSV"
+          >
+            <Download className="size-3.5 text-muted" />
+            <span>Export CSV</span>
+          </button>
           <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-medium text-white shadow-xs hover:bg-primary-hover transition-colors cursor-pointer"
@@ -1092,6 +1159,16 @@ type ApiError = { response?: { data?: { message?: string } } };
           </div>
         </div>
       )}
+
+      {/* Universal Bulk Import Modal */}
+      <UniversalImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        schema={leadImportSchema}
+        onImportSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['crm', 'leads'] });
+        }}
+      />
     </div>
   );
 }

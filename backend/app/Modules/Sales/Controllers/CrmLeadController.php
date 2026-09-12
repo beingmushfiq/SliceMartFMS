@@ -355,4 +355,270 @@ final class CrmLeadController extends Controller
             ]);
         });
     }
+
+    public function bulkImport(Request $request): JsonResponse
+    {
+        $tenantId = TenantContext::current()->tenantId();
+        $userId = Auth::id();
+
+        $validated = $request->validate([
+            'rows' => ['required', 'array', 'min:1'],
+            'rows.*' => ['required', 'array'],
+            'mode' => ['nullable', 'string', 'in:skip,upsert'],
+        ]);
+
+        $rows = $validated['rows'];
+        $mode = $validated['mode'] ?? 'skip';
+
+        $imported = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = [];
+
+        // Preload existing users/sales reps for this tenant for fast lookup
+        $users = \App\Models\User::query()
+            ->where(function ($q) use ($tenantId) {
+                $q->where('tenant_id', $tenantId)->orWhereNull('tenant_id');
+            })
+            ->get();
+        $userEmailMap = [];
+        $userIdMap = [];
+        foreach ($users as $u) {
+            $userEmailMap[strtolower((string) $u->email)] = $u->id;
+            $userIdMap[$u->id] = $u->id;
+        }
+
+        // Preload employees for code matching
+        $employees = \App\Modules\HR\Models\Employee::query()
+            ->where('tenant_id', $tenantId)
+            ->get();
+        $employeeCodeToUserId = [];
+        foreach ($employees as $emp) {
+            if ($emp->user_id && $emp->employee_code) {
+                $employeeCodeToUserId[strtolower((string) $emp->employee_code)] = $emp->user_id;
+            }
+        }
+
+        $validSources = ['walk_in', 'phone', 'referral', 'online', 'field_visit', 'other'];
+        $validStages = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost'];
+
+        $chunks = array_chunk($rows, 100);
+
+        foreach ($chunks as $chunkIndex => $chunk) {
+            DB::transaction(function () use (
+                $chunk,
+                $chunkIndex,
+                $tenantId,
+                $userId,
+                $mode,
+                $userEmailMap,
+                $employeeCodeToUserId,
+                $validSources,
+                $validStages,
+                &$imported,
+                &$updated,
+                &$skipped,
+                &$errors
+            ): void {
+                // Collect identifiers in chunk to query existing leads
+                $chunkLeadNumbers = [];
+                $chunkEmails = [];
+                $chunkPhones = [];
+
+                foreach ($chunk as $row) {
+                    if (!empty($row['lead_number'])) {
+                        $chunkLeadNumbers[] = trim((string) $row['lead_number']);
+                    }
+                    if (!empty($row['email'])) {
+                        $chunkEmails[] = strtolower(trim((string) $row['email']));
+                    }
+                    if (!empty($row['phone'])) {
+                        $chunkPhones[] = preg_replace('/[^0-9+]/', '', trim((string) $row['phone']));
+                    }
+                }
+
+                $existingByNumber = CrmLead::where('tenant_id', $tenantId)
+                    ->whereIn('lead_number', $chunkLeadNumbers)
+                    ->get()
+                    ->keyBy('lead_number');
+
+                $existingByEmail = !empty($chunkEmails)
+                    ? CrmLead::where('tenant_id', $tenantId)
+                        ->whereIn(DB::raw('LOWER(email)'), $chunkEmails)
+                        ->get()
+                        ->keyBy(fn ($l) => strtolower((string) $l->email))
+                    : collect();
+
+                $existingByPhone = !empty($chunkPhones)
+                    ? CrmLead::where('tenant_id', $tenantId)
+                        ->whereIn('phone', $chunkPhones)
+                        ->get()
+                        ->keyBy('phone')
+                    : collect();
+
+                foreach ($chunk as $i => $row) {
+                    $rowNum = ($chunkIndex * 100) + $i + 1;
+
+                    $name = trim((string) ($row['name'] ?? ''));
+                    if ($name === '') {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'name',
+                            'message' => 'Contact or Lead name is required.',
+                        ];
+                        continue;
+                    }
+
+                    $leadNumber = !empty($row['lead_number']) ? trim((string) $row['lead_number']) : null;
+                    $companyName = !empty($row['company_name']) ? trim((string) $row['company_name']) : null;
+                    $phone = !empty($row['phone']) ? preg_replace('/[^0-9+]/', '', trim((string) $row['phone'])) : null;
+                    $email = !empty($row['email']) ? strtolower(trim((string) $row['email'])) : null;
+
+                    // Match existing lead
+                    $existingLead = null;
+                    if ($leadNumber && isset($existingByNumber[$leadNumber])) {
+                        $existingLead = $existingByNumber[$leadNumber];
+                    } elseif ($email && isset($existingByEmail[$email])) {
+                        $existingLead = $existingByEmail[$email];
+                    } elseif ($phone && isset($existingByPhone[$phone])) {
+                        $existingLead = $existingByPhone[$phone];
+                    }
+
+                    if ($existingLead) {
+                        if ($mode === 'skip') {
+                            $skipped++;
+                            continue;
+                        }
+
+                        // Upsert
+                        $source = strtolower(trim((string) ($row['source'] ?? $existingLead->source)));
+                        if (!in_array($source, $validSources, true)) {
+                            $source = $existingLead->source;
+                        }
+
+                        $stage = strtolower(trim((string) ($row['stage'] ?? $existingLead->stage)));
+                        if (!in_array($stage, $validStages, true)) {
+                            $stage = $existingLead->stage;
+                        }
+
+                        $assignedTo = $existingLead->assigned_to;
+                        if (!empty($row['assigned_to'])) {
+                            $assignVal = strtolower(trim((string) $row['assigned_to']));
+                            if (isset($userEmailMap[$assignVal])) {
+                                $assignedTo = $userEmailMap[$assignVal];
+                            } elseif (isset($employeeCodeToUserId[$assignVal])) {
+                                $assignedTo = $employeeCodeToUserId[$assignVal];
+                            } elseif (is_numeric($assignVal)) {
+                                $assignedTo = (int) $assignVal;
+                            }
+                        }
+
+                        $expectedVal = isset($row['expected_value']) && is_numeric($row['expected_value'])
+                            ? (float) $row['expected_value']
+                            : $existingLead->expected_value;
+
+                        $expectedDate = !empty($row['expected_close_date']) ? (string) $row['expected_close_date'] : $existingLead->expected_close_date;
+                        $notes = !empty($row['notes']) ? (string) $row['notes'] : $existingLead->notes;
+
+                        $existingLead->update([
+                            'name' => $name,
+                            'company_name' => $companyName ?? $existingLead->company_name,
+                            'phone' => $phone ?? $existingLead->phone,
+                            'email' => $email ?? $existingLead->email,
+                            'source' => $source,
+                            'stage' => $stage,
+                            'assigned_to' => $assignedTo,
+                            'expected_value' => $expectedVal,
+                            'expected_close_date' => $expectedDate,
+                            'notes' => $notes,
+                            'updated_by' => $userId,
+                        ]);
+
+                        $updated++;
+                        continue;
+                    }
+
+                    // Insert new lead
+                    $source = strtolower(trim((string) ($row['source'] ?? 'walk_in')));
+                    if (!in_array($source, $validSources, true)) {
+                        $source = 'walk_in';
+                    }
+
+                    $stage = strtolower(trim((string) ($row['stage'] ?? 'new')));
+                    if (!in_array($stage, $validStages, true)) {
+                        $stage = 'new';
+                    }
+
+                    $assignedTo = null;
+                    if (!empty($row['assigned_to'])) {
+                        $assignVal = strtolower(trim((string) $row['assigned_to']));
+                        if (isset($userEmailMap[$assignVal])) {
+                            $assignedTo = $userEmailMap[$assignVal];
+                        } elseif (isset($employeeCodeToUserId[$assignVal])) {
+                            $assignedTo = $employeeCodeToUserId[$assignVal];
+                        } elseif (is_numeric($assignVal)) {
+                            $assignedTo = (int) $assignVal;
+                        }
+                    }
+
+                    $expectedVal = isset($row['expected_value']) && is_numeric($row['expected_value'])
+                        ? (float) $row['expected_value']
+                        : 0.0000;
+
+                    $expectedDate = !empty($row['expected_close_date']) ? (string) $row['expected_close_date'] : null;
+                    $notes = !empty($row['notes']) ? (string) $row['notes'] : null;
+
+                    $newLead = new CrmLead([
+                        'tenant_id' => $tenantId,
+                        'uuid' => (string) Str::uuid(),
+                        'lead_number' => $leadNumber, // If null, boot method auto-generates
+                        'name' => $name,
+                        'company_name' => $companyName,
+                        'phone' => $phone,
+                        'email' => $email,
+                        'source' => $source,
+                        'stage' => $stage,
+                        'assigned_to' => $assignedTo,
+                        'expected_value' => $expectedVal,
+                        'expected_close_date' => $expectedDate,
+                        'notes' => $notes,
+                        'created_by' => $userId,
+                        'updated_by' => $userId,
+                    ]);
+                    $newLead->tenant_id = $tenantId;
+                    $newLead->save();
+
+                    if ($leadNumber) {
+                        $existingByNumber[$leadNumber] = $newLead;
+                    }
+                    if ($email) {
+                        $existingByEmail[$email] = $newLead;
+                    }
+                    if ($phone) {
+                        $existingByPhone[$phone] = $newLead;
+                    }
+
+                    $imported++;
+                }
+            });
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'imported_count' => $imported,
+                'updated_count' => $updated,
+                'skipped_count' => $skipped,
+                'total_processed' => $imported + $updated + $skipped,
+                'errors' => $errors,
+            ],
+            'message' => sprintf(
+                'Bulk import completed: %d imported, %d updated, %d skipped.',
+                $imported,
+                $updated,
+                $skipped
+            ),
+        ]);
+    }
 }
+

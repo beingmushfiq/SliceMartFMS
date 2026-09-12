@@ -17,6 +17,8 @@ use App\Modules\Catalogue\Resources\CategoryResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 final class CategoryController extends Controller
 {
@@ -164,5 +166,156 @@ final class CategoryController extends Controller
         $action->execute(['user' => $user, 'category' => $category]);
 
         return response()->json(['success' => true, 'data' => null, 'meta' => ['correlation_id' => (string) $request->header('X-Correlation-Id', '')]]);
+    }
+
+    public function bulkImport(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'mode' => 'nullable|string|in:skip,upsert',
+            'rows' => 'required|array|min:1|max:5000',
+            'rows.*.code' => 'nullable|string|max:32',
+            'rows.*.name' => 'required|string|max:191',
+            'rows.*.parent' => 'nullable|string|max:100',
+            'rows.*.parent_code' => 'nullable|string|max:100',
+            'rows.*.is_active' => 'nullable|boolean',
+        ]);
+
+        $mode = $validated['mode'] ?? 'skip';
+        $rows = $validated['rows'];
+        $tenantId = TenantContext::isBound() ? TenantContext::current()->tenantId() : (int) ($request->user()?->tenant_id ?? 1);
+        $userId = (int) ($request->user()?->id ?? 1);
+
+        $existingCategories = Category::all();
+        $codeMap = [];
+        $nameMap = [];
+        foreach ($existingCategories as $c) {
+            if ($c->code) {
+                $codeMap[strtolower(trim($c->code))] = $c;
+            }
+            if ($c->name) {
+                $nameMap[strtolower(trim($c->name))] = $c;
+            }
+        }
+
+        $imported = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = [];
+
+        foreach (array_chunk($rows, 100) as $chunkIdx => $chunk) {
+            DB::transaction(function () use (
+                $chunk,
+                $chunkIdx,
+                $mode,
+                $tenantId,
+                $userId,
+                &$codeMap,
+                &$nameMap,
+                &$imported,
+                &$updated,
+                &$skipped,
+                &$errors
+            ) {
+                foreach ($chunk as $relIdx => $row) {
+                    $rowNum = ($chunkIdx * 100) + $relIdx + 2;
+                    $code = !empty($row['code']) ? trim((string) $row['code']) : null;
+                    $name = trim((string) $row['name']);
+                    $isActive = isset($row['is_active']) ? (bool) $row['is_active'] : true;
+
+                    // Match existing
+                    $existing = null;
+                    if ($code && isset($codeMap[strtolower($code)])) {
+                        $existing = $codeMap[strtolower($code)];
+                    } elseif (isset($nameMap[strtolower($name)])) {
+                        $existing = $nameMap[strtolower($name)];
+                    }
+
+                    // Resolve parent category
+                    $parentId = null;
+                    $parentKey = !empty($row['parent_code']) ? trim((string) $row['parent_code']) : (!empty($row['parent']) ? trim((string) $row['parent']) : null);
+                    if ($parentKey) {
+                        $parentObj = $codeMap[strtolower($parentKey)] ?? $nameMap[strtolower($parentKey)] ?? null;
+                        if ($parentObj) {
+                            $parentId = $parentObj->id;
+                        }
+                    }
+
+                    if ($existing) {
+                        if ($mode === 'skip') {
+                            $skipped++;
+                            continue;
+                        }
+
+                        // Mode is upsert
+                        try {
+                            $updateData = [
+                                'name' => $name,
+                                'is_active' => $isActive,
+                                'updated_by' => $userId,
+                            ];
+                            if ($parentId !== null && $parentId !== $existing->id) {
+                                $updateData['parent_id'] = $parentId;
+                            }
+                            $existing->update($updateData);
+                            $updated++;
+                            continue;
+                        } catch (\Throwable $e) {
+                            $errors[] = [
+                                'row' => $rowNum,
+                                'field' => 'code',
+                                'value' => $code,
+                                'message' => 'Update failed: ' . $e->getMessage(),
+                            ];
+                            continue;
+                        }
+                    }
+
+                    // Auto-generate code if null
+                    if (!$code) {
+                        $code = 'CAT-' . str_pad((string) random_int(100, 99999), 5, '0', STR_PAD_LEFT);
+                    }
+
+                    try {
+                        $newCat = Category::create([
+                            'uuid' => (string) Str::uuid(),
+                            'code' => $code,
+                            'name' => $name,
+                            'parent_id' => $parentId,
+                            'is_active' => $isActive,
+                            'created_by' => $userId,
+                            'updated_by' => $userId,
+                        ]);
+
+                        $codeMap[strtolower($code)] = $newCat;
+                        $nameMap[strtolower($name)] = $newCat;
+                        $imported++;
+                    } catch (\Throwable $e) {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'code',
+                            'value' => $code,
+                            'message' => 'Creation failed: ' . $e->getMessage(),
+                        ];
+                    }
+                }
+            });
+        }
+
+        return response()->json([
+            'success' => count($errors) === 0,
+            'total' => count($rows),
+            'imported' => $imported,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'failed' => count($errors),
+            'errors' => $errors,
+            'message' => sprintf(
+                'Import completed: %d added, %d updated, %d skipped, %d failed.',
+                $imported,
+                $updated,
+                $skipped,
+                count($errors)
+            ),
+        ]);
     }
 }

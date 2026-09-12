@@ -370,4 +370,178 @@ final class SalesmanTargetController extends Controller
 
         $target->save();
     }
+
+    public function bulkImport(Request $request): JsonResponse
+    {
+        $tenantId = TenantContext::current()->tenantId();
+        $userId = Auth::id();
+
+        $validated = $request->validate([
+            'rows' => ['required', 'array', 'min:1'],
+            'rows.*' => ['required', 'array'],
+            'mode' => ['nullable', 'string', 'in:skip,upsert'],
+        ]);
+
+        $rows = $validated['rows'];
+        $mode = $validated['mode'] ?? 'skip';
+
+        $imported = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = [];
+
+        // Preload employees for tenant
+        $employees = Employee::query()
+            ->where('tenant_id', $tenantId)
+            ->get();
+        $employeeMap = [];
+        foreach ($employees as $emp) {
+            if ($emp->employee_code) {
+                $employeeMap[strtolower((string) $emp->employee_code)] = $emp;
+            }
+            $employeeMap[(string) $emp->id] = $emp;
+            if ($emp->uuid) {
+                $employeeMap[strtolower((string) $emp->uuid)] = $emp;
+            }
+        }
+
+        $chunks = array_chunk($rows, 100);
+
+        foreach ($chunks as $chunkIndex => $chunk) {
+            DB::transaction(function () use (
+                $chunk,
+                $chunkIndex,
+                $tenantId,
+                $userId,
+                $mode,
+                $employeeMap,
+                &$imported,
+                &$updated,
+                &$skipped,
+                &$errors
+            ): void {
+                foreach ($chunk as $i => $row) {
+                    $rowNum = ($chunkIndex * 100) + $i + 1;
+
+                    $empKey = trim((string) ($row['employee_code'] ?? $row['salesman_code'] ?? $row['employee_id'] ?? ''));
+                    if ($empKey === '') {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'employee_code',
+                            'message' => 'Employee / Salesman code is required.',
+                        ];
+                        continue;
+                    }
+
+                    $lowerEmpKey = strtolower($empKey);
+                    if (!isset($employeeMap[$lowerEmpKey])) {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'employee_code',
+                            'message' => "Employee with code or ID '{$empKey}' not found.",
+                        ];
+                        continue;
+                    }
+                    $employee = $employeeMap[$lowerEmpKey];
+
+                    $rawMonth = trim((string) ($row['period_month'] ?? ''));
+                    if ($rawMonth === '') {
+                        $periodMonth = now()->format('Y-m');
+                    } elseif (preg_match('/^(\d{4})[-_](\d{2})/', $rawMonth, $m)) {
+                        $periodMonth = "{$m[1]}-{$m[2]}";
+                    } else {
+                        $ts = strtotime($rawMonth);
+                        $periodMonth = $ts ? date('Y-m', $ts) : now()->format('Y-m');
+                    }
+
+                    $targetAmtRaw = $row['target_amount'] ?? null;
+                    if ($targetAmtRaw === null || !is_numeric($targetAmtRaw) || (float) $targetAmtRaw <= 0) {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'target_amount',
+                            'message' => 'Target amount must be a positive number.',
+                        ];
+                        continue;
+                    }
+                    $targetAmount = (float) $targetAmtRaw;
+
+                    $achievedRaw = $row['achieved_amount'] ?? 0;
+                    $achievedAmount = (is_numeric($achievedRaw) && (float) $achievedRaw >= 0) ? (float) $achievedRaw : 0.0000;
+
+                    $pct = ($targetAmount > 0) ? round(($achievedAmount / $targetAmount) * 100, 2) : 0.00;
+
+                    $targetName = !empty($row['target_name'])
+                        ? trim((string) $row['target_name'])
+                        : "Target for {$periodMonth}";
+
+                    $rawStatus = !empty($row['status']) ? strtolower(trim((string) $row['status'])) : 'active';
+                    $status = in_array($rawStatus, ['active', 'completed', 'cancelled'], true) ? $rawStatus : 'active';
+                    $notes = !empty($row['notes']) ? (string) $row['notes'] : null;
+
+                    // Check existing target
+                    $existingTarget = SalesmanTarget::query()
+                        ->where('tenant_id', $tenantId)
+                        ->where('employee_id', $employee->id)
+                        ->where('period_month', $periodMonth)
+                        ->first();
+
+                    if ($existingTarget) {
+                        if ($mode === 'skip') {
+                            $skipped++;
+                            continue;
+                        }
+
+                        // Upsert
+                        $existingTarget->update([
+                            'target_name' => $targetName,
+                            'target_amount' => number_format($targetAmount, 4, '.', ''),
+                            'achieved_amount' => number_format($achievedAmount, 4, '.', ''),
+                            'achievement_percentage' => number_format($pct, 2, '.', ''),
+                            'status' => $status,
+                            'notes' => $notes ?? $existingTarget->notes,
+                            'updated_by' => $userId,
+                        ]);
+                        $updated++;
+                        continue;
+                    }
+
+                    // Insert
+                    $newTarget = new SalesmanTarget();
+                    $newTarget->uuid = (string) \Illuminate\Support\Str::uuid();
+                    $newTarget->tenant_id = $tenantId;
+                    $newTarget->employee_id = $employee->id;
+                    $newTarget->period_month = $periodMonth;
+                    $newTarget->target_name = $targetName;
+                    $newTarget->target_amount = number_format($targetAmount, 4, '.', '');
+                    $newTarget->achieved_amount = number_format($achievedAmount, 4, '.', '');
+                    $newTarget->achievement_percentage = number_format($pct, 2, '.', '');
+                    $newTarget->status = $status;
+                    $newTarget->notes = $notes;
+                    $newTarget->created_by = $userId;
+                    $newTarget->updated_by = $userId;
+                    $newTarget->save();
+
+                    $imported++;
+                }
+            });
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'imported_count' => $imported,
+                'updated_count' => $updated,
+                'skipped_count' => $skipped,
+                'total_processed' => $imported + $updated + $skipped,
+                'errors' => $errors,
+            ],
+            'message' => sprintf(
+                'Bulk import completed: %d imported, %d updated, %d skipped.',
+                $imported,
+                $updated,
+                $skipped
+            ),
+        ]);
+    }
 }
+

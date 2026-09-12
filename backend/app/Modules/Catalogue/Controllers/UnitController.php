@@ -11,12 +11,15 @@ use App\Models\Unit;
 use App\Modules\Catalogue\Actions\CreateUnitAction;
 use App\Modules\Catalogue\Actions\DeleteUnitAction;
 use App\Modules\Catalogue\Actions\UpdateUnitAction;
+use App\Modules\Catalogue\Enums\UnitType;
 use App\Modules\Catalogue\Requests\StoreUnitRequest;
 use App\Modules\Catalogue\Requests\UpdateUnitRequest;
 use App\Modules\Catalogue\Resources\UnitResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 final class UnitController extends Controller
 {
@@ -293,6 +296,157 @@ final class UnitController extends Controller
             'meta' => [
                 'correlation_id' => (string) $request->header('X-Correlation-Id', ''),
             ],
+        ]);
+    }
+
+    public function bulkImport(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'mode' => ['nullable', 'string', 'in:skip,upsert'],
+            'rows' => ['required', 'array', 'min:1', 'max:1000'],
+            'rows.*.code' => ['required', 'string', 'max:32'],
+            'rows.*.name' => ['required', 'string', 'max:191'],
+            'rows.*.type' => ['nullable', 'string'],
+            'rows.*.is_base' => ['nullable', 'boolean'],
+            'rows.*.precision' => ['nullable', 'integer', 'min:0', 'max:9'],
+            'rows.*.is_active' => ['nullable', 'boolean'],
+        ]);
+
+        $mode = $validated['mode'] ?? 'skip';
+        $rows = $validated['rows'];
+        $user = $request->user();
+        $userId = $user ? $user->id : null;
+
+        $validTypes = UnitType::values();
+
+        $imported = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = [];
+
+        $existingUnits = Unit::query()
+            ->pluck('id', 'code')
+            ->mapWithKeys(fn ($id, $code) => [strtolower((string) $code) => $id])
+            ->all();
+
+        $chunks = array_chunk($rows, 100);
+
+        foreach ($chunks as $chunkIndex => $chunk) {
+            DB::transaction(function () use (
+                $chunk,
+                $chunkIndex,
+                $mode,
+                $userId,
+                $validTypes,
+                &$existingUnits,
+                &$imported,
+                &$updated,
+                &$skipped,
+                &$errors
+            ) {
+                foreach ($chunk as $index => $row) {
+                    $rowNum = ($chunkIndex * 100) + $index + 1;
+                    $code = trim((string) ($row['code'] ?? ''));
+                    $name = trim((string) ($row['name'] ?? ''));
+                    $type = strtolower(trim((string) ($row['type'] ?? 'piece')));
+                    if (!in_array($type, $validTypes, true)) {
+                        $type = 'piece';
+                    }
+                    $isBase = isset($row['is_base']) ? (bool) $row['is_base'] : false;
+                    $precision = isset($row['precision']) ? (int) $row['precision'] : 0;
+                    if ($precision < 0 || $precision > 9) {
+                        $precision = 0;
+                    }
+                    $isActive = isset($row['is_active']) ? (bool) $row['is_active'] : true;
+
+                    if ($code === '' || $name === '') {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => $code === '' ? 'code' : 'name',
+                            'value' => $code === '' ? $code : $name,
+                            'message' => 'Unit code and name are required.',
+                        ];
+                        continue;
+                    }
+
+                    $existingId = $existingUnits[strtolower($code)] ?? null;
+
+                    if ($existingId !== null) {
+                        if ($mode === 'skip') {
+                            $skipped++;
+                            continue;
+                        }
+
+                        // Upsert
+                        try {
+                            $unit = Unit::find($existingId);
+                            if ($unit) {
+                                $unit->update([
+                                    'name' => $name,
+                                    'type' => $type,
+                                    'is_base' => $isBase,
+                                    'precision' => $precision,
+                                    'is_active' => $isActive,
+                                    'updated_by' => $userId,
+                                ]);
+                                $updated++;
+                            } else {
+                                $skipped++;
+                            }
+                            continue;
+                        } catch (\Throwable $e) {
+                            $errors[] = [
+                                'row' => $rowNum,
+                                'field' => 'code',
+                                'value' => $code,
+                                'message' => 'Update failed: ' . $e->getMessage(),
+                            ];
+                            continue;
+                        }
+                    }
+
+                    try {
+                        $newUnit = Unit::create([
+                            'uuid' => (string) Str::uuid(),
+                            'code' => $code,
+                            'name' => $name,
+                            'type' => $type,
+                            'is_base' => $isBase,
+                            'precision' => $precision,
+                            'is_active' => $isActive,
+                            'created_by' => $userId,
+                            'updated_by' => $userId,
+                        ]);
+
+                        $existingUnits[strtolower($code)] = $newUnit->id;
+                        $imported++;
+                    } catch (\Throwable $e) {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'code',
+                            'value' => $code,
+                            'message' => 'Creation failed: ' . $e->getMessage(),
+                        ];
+                    }
+                }
+            });
+        }
+
+        return response()->json([
+            'success' => count($errors) === 0,
+            'total' => count($rows),
+            'imported' => $imported,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'failed' => count($errors),
+            'errors' => $errors,
+            'message' => sprintf(
+                'Import completed: %d added, %d updated, %d skipped, %d failed.',
+                $imported,
+                $updated,
+                $skipped,
+                count($errors)
+            ),
         ]);
     }
 }

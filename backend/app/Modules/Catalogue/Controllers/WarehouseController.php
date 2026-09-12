@@ -8,6 +8,7 @@ use App\Core\Http\Responses\ErrorResponse;
 use App\Core\Tenancy\TenantContext;
 use App\Http\Controllers\Controller;
 use App\Models\Warehouse;
+use App\Models\WarehouseLocation;
 use App\Modules\Catalogue\Actions\CreateWarehouseAction;
 use App\Modules\Catalogue\Actions\DeleteWarehouseAction;
 use App\Modules\Catalogue\Actions\UpdateWarehouseAction;
@@ -16,6 +17,8 @@ use App\Modules\Catalogue\Requests\UpdateWarehouseRequest;
 use App\Modules\Catalogue\Resources\WarehouseResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 final class WarehouseController extends Controller
 {
@@ -117,5 +120,200 @@ final class WarehouseController extends Controller
         $action->execute(['user' => $user, 'warehouse' => $warehouse]);
 
         return response()->json(['success' => true, 'data' => null, 'meta' => ['correlation_id' => (string) $request->header('X-Correlation-Id', '')]]);
+    }
+
+    public function bulkImport(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'mode' => ['nullable', 'string', 'in:skip,upsert'],
+            'rows' => ['required', 'array', 'min:1', 'max:1000'],
+            'rows.*.code' => ['nullable', 'string', 'max:32'],
+            'rows.*.name' => ['required', 'string', 'max:191'],
+            'rows.*.type' => ['nullable', 'string', 'max:32'],
+            'rows.*.address' => ['nullable', 'string'],
+            'rows.*.allows_negative_stock' => ['nullable', 'boolean'],
+            'rows.*.is_default' => ['nullable', 'boolean'],
+            'rows.*.is_active' => ['nullable', 'boolean'],
+            'rows.*.locations' => ['nullable', 'string'],
+        ]);
+
+        $mode = $validated['mode'] ?? 'skip';
+        $rows = $validated['rows'];
+        $user = $request->user();
+        $userId = $user ? $user->id : null;
+
+        $imported = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = [];
+
+        $existingCodes = Warehouse::query()
+            ->whereNotNull('code')
+            ->pluck('id', 'code')
+            ->mapWithKeys(fn ($id, $code) => [strtolower((string) $code) => $id])
+            ->all();
+
+        $existingNames = Warehouse::query()
+            ->pluck('id', 'name')
+            ->mapWithKeys(fn ($id, $name) => [strtolower((string) $name) => $id])
+            ->all();
+
+        $chunks = array_chunk($rows, 100);
+
+        foreach ($chunks as $chunkIndex => $chunk) {
+            DB::transaction(function () use (
+                $chunk,
+                $chunkIndex,
+                $mode,
+                $userId,
+                &$existingCodes,
+                &$existingNames,
+                &$imported,
+                &$updated,
+                &$skipped,
+                &$errors
+            ) {
+                foreach ($chunk as $index => $row) {
+                    $rowNum = ($chunkIndex * 100) + $index + 1;
+                    $code = isset($row['code']) && trim((string) $row['code']) !== '' ? trim((string) $row['code']) : null;
+                    $name = trim((string) ($row['name'] ?? ''));
+                    $type = !empty($row['type']) ? strtolower(trim((string) $row['type'])) : 'general';
+                    $address = isset($row['address']) && trim((string) $row['address']) !== '' ? trim((string) $row['address']) : null;
+                    $allowsNeg = isset($row['allows_negative_stock']) ? (bool) $row['allows_negative_stock'] : false;
+                    $isDefault = isset($row['is_default']) ? (bool) $row['is_default'] : false;
+                    $isActive = isset($row['is_active']) ? (bool) $row['is_active'] : true;
+                    $locationsRaw = isset($row['locations']) ? trim((string) $row['locations']) : '';
+
+                    if ($name === '') {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'name',
+                            'value' => '',
+                            'message' => 'Warehouse name is required.',
+                        ];
+                        continue;
+                    }
+
+                    $existingId = null;
+                    if ($code && isset($existingCodes[strtolower($code)])) {
+                        $existingId = $existingCodes[strtolower($code)];
+                    } elseif (isset($existingNames[strtolower($name)])) {
+                        $existingId = $existingNames[strtolower($name)];
+                    }
+
+                    $warehouse = null;
+
+                    if ($existingId !== null) {
+                        if ($mode === 'skip') {
+                            $skipped++;
+                            $warehouse = Warehouse::find($existingId);
+                        } else {
+                            try {
+                                $warehouse = Warehouse::find($existingId);
+                                if ($warehouse) {
+                                    $warehouse->update([
+                                        'name' => $name,
+                                        'type' => $type,
+                                        'address' => $address ?? $warehouse->address,
+                                        'allows_negative_stock' => $allowsNeg,
+                                        'is_default' => $isDefault,
+                                        'is_active' => $isActive,
+                                        'updated_by' => $userId,
+                                    ]);
+                                    $updated++;
+                                } else {
+                                    $skipped++;
+                                }
+                            } catch (\Throwable $e) {
+                                $errors[] = [
+                                    'row' => $rowNum,
+                                    'field' => 'name',
+                                    'value' => $name,
+                                    'message' => 'Update failed: ' . $e->getMessage(),
+                                ];
+                                continue;
+                            }
+                        }
+                    } else {
+                        // Generate code if missing
+                        if (!$code) {
+                            $code = 'WH-' . str_pad((string) random_int(100, 99999), 5, '0', STR_PAD_LEFT);
+                        }
+
+                        try {
+                            $warehouse = Warehouse::create([
+                                'uuid' => (string) Str::uuid(),
+                                'code' => $code,
+                                'name' => $name,
+                                'type' => $type,
+                                'address' => $address,
+                                'allows_negative_stock' => $allowsNeg,
+                                'is_default' => $isDefault,
+                                'is_active' => $isActive,
+                                'created_by' => $userId,
+                                'updated_by' => $userId,
+                            ]);
+
+                            $existingCodes[strtolower($code)] = $warehouse->id;
+                            $existingNames[strtolower($name)] = $warehouse->id;
+                            $imported++;
+                        } catch (\Throwable $e) {
+                            $errors[] = [
+                                'row' => $rowNum,
+                                'field' => 'code',
+                                'value' => $code,
+                                'message' => 'Creation failed: ' . $e->getMessage(),
+                            ];
+                            continue;
+                        }
+                    }
+
+                    // Auto-seed initial locations/bins if provided
+                    if ($warehouse && $locationsRaw !== '') {
+                        $locNames = array_filter(array_map('trim', explode(',', $locationsRaw)));
+                        foreach ($locNames as $locName) {
+                            if ($locName === '') continue;
+                            $locCode = strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', $locName)) ?: 'BIN';
+                            
+                            $locExists = WarehouseLocation::query()
+                                ->where('warehouse_id', $warehouse->id)
+                                ->where(fn ($q) => $q->where('code', $locCode)->orWhere('name', $locName))
+                                ->exists();
+
+                            if (!$locExists) {
+                                WarehouseLocation::create([
+                                    'uuid' => (string) Str::uuid(),
+                                    'warehouse_id' => $warehouse->id,
+                                    'parent_id' => null,
+                                    'code' => $locCode,
+                                    'name' => $locName,
+                                    'type' => 'bin',
+                                    'is_active' => true,
+                                    'created_by' => $userId,
+                                    'updated_by' => $userId,
+                                ]);
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        return response()->json([
+            'success' => count($errors) === 0,
+            'total' => count($rows),
+            'imported' => $imported,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'failed' => count($errors),
+            'errors' => $errors,
+            'message' => sprintf(
+                'Import completed: %d added, %d updated, %d skipped, %d failed.',
+                $imported,
+                $updated,
+                $skipped,
+                count($errors)
+            ),
+        ]);
     }
 }

@@ -6,6 +6,7 @@ export interface Department {
   uuid: string;
   code: string;
   name: string;
+  cost_center_code?: string | undefined;
   description?: string | undefined;
   is_active: boolean;
   created_at?: string | undefined;
@@ -16,6 +17,7 @@ export interface Designation {
   uuid: string;
   code: string;
   name: string;
+  grade?: string | undefined;
   description?: string | undefined;
   is_active: boolean;
   created_at?: string | undefined;

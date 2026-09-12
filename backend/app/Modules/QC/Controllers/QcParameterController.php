@@ -17,6 +17,9 @@ use App\Modules\QC\Requests\UpdateQcParameterRequest;
 use App\Modules\QC\Resources\QcParameterResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 final class QcParameterController extends Controller
 {
@@ -190,4 +193,178 @@ final class QcParameterController extends Controller
             'meta' => ['correlation_id' => (string) $request->header('X-Correlation-Id', '')],
         ]);
     }
+
+    public function bulkImport(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'rows' => 'required|array|min:1',
+            'mode' => 'nullable|string|in:skip,upsert',
+        ]);
+
+        $rows = $validated['rows'];
+        $mode = $validated['mode'] ?? 'skip';
+
+        $tenantId = TenantContext::current()->tenantId();
+        $userId = Auth::id() ?? 1;
+
+        // Preload products
+        $products = \App\Models\Product::where('tenant_id', $tenantId)->get();
+        $productMap = [];
+        foreach ($products as $prod) {
+            $productMap[strtolower(trim((string) $prod->sku))] = $prod;
+            $productMap[strtolower(trim((string) $prod->name))] = $prod;
+            $productMap[(string) $prod->id] = $prod;
+        }
+
+        // Preload units
+        $units = \App\Models\Unit::where('tenant_id', $tenantId)->get();
+        $unitMap = [];
+        foreach ($units as $unit) {
+            $unitMap[strtolower(trim((string) $unit->code))] = $unit;
+            $unitMap[strtolower(trim((string) $unit->name))] = $unit;
+            $unitMap[(string) $unit->id] = $unit;
+        }
+
+        $imported = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = [];
+
+        $chunks = array_chunk($rows, 100);
+
+        foreach ($chunks as $chunkIndex => $chunk) {
+            DB::transaction(function () use (
+                $chunk,
+                $chunkIndex,
+                $tenantId,
+                $userId,
+                $productMap,
+                $unitMap,
+                $mode,
+                &$imported,
+                &$updated,
+                &$skipped,
+                &$errors
+            ): void {
+                foreach ($chunk as $i => $row) {
+                    $rowNum = ($chunkIndex * 100) + $i + 1;
+
+                    $name = trim((string) ($row['name'] ?? $row['parameter_name'] ?? ''));
+                    if ($name === '') {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'name',
+                            'message' => 'Parameter name is required.',
+                        ];
+                        continue;
+                    }
+
+                    // Resolve Product (optional)
+                    $productId = null;
+                    $prodKey = strtolower(trim((string) ($row['product_sku'] ?? $row['sku'] ?? $row['product_code'] ?? $row['product'] ?? '')));
+                    if ($prodKey !== '') {
+                        $product = $productMap[$prodKey] ?? null;
+                        if (! $product) {
+                            $errors[] = [
+                                'row' => $rowNum,
+                                'field' => 'product_sku',
+                                'message' => "Product '{$prodKey}' not found.",
+                            ];
+                            continue;
+                        }
+                        $productId = $product->id;
+                    }
+
+                    // Resolve Unit (optional)
+                    $unitId = null;
+                    $unitKey = strtolower(trim((string) ($row['unit_code'] ?? $row['unit'] ?? '')));
+                    if ($unitKey !== '') {
+                        $unit = $unitMap[$unitKey] ?? null;
+                        if ($unit) {
+                            $unitId = $unit->id;
+                        }
+                    }
+
+                    $type = !empty($row['type']) ? strtolower((string) $row['type']) : 'numeric';
+                    if (! in_array($type, ['numeric', 'boolean', 'select', 'text'], true)) {
+                        $type = 'numeric';
+                    }
+
+                    $minValue = isset($row['min_value']) && is_numeric($row['min_value']) ? number_format((float) $row['min_value'], 4, '.', '') : null;
+                    $maxValue = isset($row['max_value']) && is_numeric($row['max_value']) ? number_format((float) $row['max_value'], 4, '.', '') : null;
+                    $isMandatory = isset($row['is_mandatory']) ? filter_var($row['is_mandatory'], FILTER_VALIDATE_BOOLEAN) : true;
+                    $sortOrder = isset($row['sort_order']) && is_numeric($row['sort_order']) ? (int) $row['sort_order'] : 0;
+
+                    // Query existing parameter
+                    $query = QcParameter::withoutGlobalScope('tenant')
+                        ->where('tenant_id', $tenantId)
+                        ->where('name', $name);
+
+                    if ($productId !== null) {
+                        $query->where('product_id', $productId);
+                    } else {
+                        $query->whereNull('product_id');
+                    }
+
+                    $existing = $query->first();
+
+                    if ($existing) {
+                        if ($mode === 'skip') {
+                            $skipped++;
+                            continue;
+                        }
+
+                        // Upsert
+                        $existing->update([
+                            'type' => $type,
+                            'unit_id' => $unitId ?? $existing->unit_id,
+                            'min_value' => $minValue ?? $existing->min_value,
+                            'max_value' => $maxValue ?? $existing->max_value,
+                            'is_mandatory' => $isMandatory ? 1 : 0,
+                            'sort_order' => $sortOrder,
+                            'updated_by' => $userId,
+                        ]);
+
+                        $updated++;
+                        continue;
+                    }
+
+                    // Insert
+                    QcParameter::create([
+                        'uuid' => (string) Str::uuid(),
+                        'tenant_id' => $tenantId,
+                        'product_id' => $productId,
+                        'name' => $name,
+                        'type' => $type,
+                        'unit_id' => $unitId,
+                        'min_value' => $minValue,
+                        'max_value' => $maxValue,
+                        'is_mandatory' => $isMandatory ? 1 : 0,
+                        'sort_order' => $sortOrder,
+                        'created_by' => $userId,
+                    ]);
+
+                    $imported++;
+                }
+            });
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Bulk import completed. {$imported} QC parameter(s) imported, {$updated} updated, {$skipped} skipped.",
+            'imported' => $imported,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'failed' => count($errors),
+            'errors' => $errors,
+            'data' => [
+                'imported_count' => $imported,
+                'updated_count' => $updated,
+                'skipped_count' => $skipped,
+                'failed_count' => count($errors),
+                'errors' => $errors,
+            ],
+        ]);
+    }
 }
+

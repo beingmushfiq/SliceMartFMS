@@ -18,6 +18,9 @@ use App\Modules\Production\Requests\UpdateWorkerProductionEntryRequest;
 use App\Modules\Production\Resources\WorkerProductionEntryResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 final class WorkerProductionEntryController extends Controller
 {
@@ -281,4 +284,279 @@ final class WorkerProductionEntryController extends Controller
             'meta' => ['correlation_id' => (string) $request->header('X-Correlation-Id', '')],
         ]);
     }
+
+    public function bulkImport(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'rows' => 'required|array|min:1',
+            'mode' => 'nullable|string|in:skip,upsert',
+        ]);
+
+        $rows = $validated['rows'];
+        $mode = $validated['mode'] ?? 'skip';
+
+        $tenantId = TenantContext::current()->tenantId();
+        $userId = Auth::id() ?? 1;
+
+        // Preload employees
+        $employees = \App\Models\Employee::where('tenant_id', $tenantId)->get();
+        $employeeMap = [];
+        foreach ($employees as $emp) {
+            $employeeMap[strtolower(trim((string) $emp->employee_code))] = $emp;
+            $employeeMap[strtolower(trim((string) $emp->first_name . ' ' . $emp->last_name))] = $emp;
+            $employeeMap[(string) $emp->id] = $emp;
+        }
+
+        // Preload products
+        $products = \App\Models\Product::where('tenant_id', $tenantId)->get();
+        $productMap = [];
+        foreach ($products as $prod) {
+            $productMap[strtolower(trim((string) $prod->sku))] = $prod;
+            $productMap[strtolower(trim((string) $prod->name))] = $prod;
+            $productMap[(string) $prod->id] = $prod;
+        }
+
+        // Preload units
+        $units = \App\Models\Unit::where('tenant_id', $tenantId)->get();
+        $unitMap = [];
+        foreach ($units as $unit) {
+            $unitMap[strtolower(trim((string) $unit->code))] = $unit;
+            $unitMap[strtolower(trim((string) $unit->name))] = $unit;
+            $unitMap[(string) $unit->id] = $unit;
+        }
+        $defaultUnit = $units->first();
+
+        // Preload batches
+        $batches = \App\Models\ProductionBatch::where('tenant_id', $tenantId)->get();
+        $batchMap = [];
+        foreach ($batches as $b) {
+            $batchMap[strtolower(trim((string) $b->batch_number))] = $b;
+            $batchMap[(string) $b->id] = $b;
+            if (! isset($batchMap['product_' . $b->product_id])) {
+                $batchMap['product_' . $b->product_id] = $b;
+            }
+        }
+
+        // Preload shifts
+        $shifts = \App\Modules\HR\Models\Shift::where('tenant_id', $tenantId)->get();
+        $shiftMap = [];
+        foreach ($shifts as $s) {
+            $shiftMap[strtolower(trim((string) $s->code))] = $s;
+            $shiftMap[strtolower(trim((string) $s->name))] = $s;
+            $shiftMap[(string) $s->id] = $s;
+        }
+
+        $imported = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = [];
+
+        $chunks = array_chunk($rows, 100);
+
+        foreach ($chunks as $chunkIndex => $chunk) {
+            DB::transaction(function () use (
+                $chunk,
+                $chunkIndex,
+                $tenantId,
+                $userId,
+                $employeeMap,
+                $productMap,
+                $unitMap,
+                $defaultUnit,
+                $batchMap,
+                $shiftMap,
+                $mode,
+                &$imported,
+                &$updated,
+                &$skipped,
+                &$errors
+            ): void {
+                foreach ($chunk as $i => $row) {
+                    $rowNum = ($chunkIndex * 100) + $i + 1;
+
+                    // Resolve Employee
+                    $empKey = strtolower(trim((string) ($row['employee_code'] ?? $row['worker_code'] ?? $row['employee'] ?? $row['worker'] ?? '')));
+                    $employee = $employeeMap[$empKey] ?? null;
+                    if (! $employee) {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'employee_code',
+                            'message' => "Employee / Worker '{$empKey}' not found.",
+                        ];
+                        continue;
+                    }
+
+                    // Resolve Product
+                    $prodKey = strtolower(trim((string) ($row['product_sku'] ?? $row['sku'] ?? $row['product_code'] ?? $row['product'] ?? '')));
+                    $product = $productMap[$prodKey] ?? null;
+                    if (! $product) {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'product_sku',
+                            'message' => "Product '{$prodKey}' not found.",
+                        ];
+                        continue;
+                    }
+
+                    // Resolve Batch
+                    $batchKey = strtolower(trim((string) ($row['batch_number'] ?? $row['batch_code'] ?? $row['batch'] ?? '')));
+                    $batch = null;
+                    if ($batchKey !== '') {
+                        $batch = $batchMap[$batchKey] ?? null;
+                    }
+                    if (! $batch) {
+                        $batch = $batchMap['product_' . $product->id] ?? null;
+                    }
+                    if (! $batch) {
+                        // Resolve factory and BOM to create a batch
+                        $factoryId = DB::table('factories')->where('tenant_id', $tenantId)->value('id') ?? 1;
+                        $bomId = DB::table('bill_of_materials')->where('tenant_id', $tenantId)->where('product_id', $product->id)->value('id');
+                        if (! $bomId) {
+                            $bomId = DB::table('bill_of_materials')->insertGetId([
+                                'uuid' => (string) Str::uuid(),
+                                'tenant_id' => $tenantId,
+                                'product_id' => $product->id,
+                                'code' => 'BOM-' . ($product->sku ?: str_pad((string) $product->id, 4, '0', STR_PAD_LEFT)),
+                                'name' => 'Auto BOM - ' . $product->name,
+                                'version' => '1.0',
+                                'output_quantity' => '1.0000',
+                                'output_unit_id' => $product->base_unit_id ?? ($defaultUnit ? $defaultUnit->id : 1),
+                                'expected_yield_percentage' => '100.0000',
+                                'is_active' => 1,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                        }
+
+                        $batch = \App\Models\ProductionBatch::create([
+                            'uuid' => (string) Str::uuid(),
+                            'tenant_id' => $tenantId,
+                            'batch_number' => 'BATCH-AUTO-' . date('Ymd') . '-' . str_pad((string) random_int(100, 9999), 4, '0', STR_PAD_LEFT),
+                            'factory_id' => $factoryId,
+                            'product_id' => $product->id,
+                            'bill_of_material_id' => $bomId,
+                            'batch_date' => now()->format('Y-m-d'),
+                            'planned_quantity' => '1000.0000',
+                            'output_unit_id' => $product->unit_id ?? ($defaultUnit ? $defaultUnit->id : 1),
+                            'status' => 'in_progress',
+                            'context_completeness' => 'draft',
+                            'created_by' => $userId,
+                        ]);
+                        $batchMap[strtolower($batch->batch_number)] = $batch;
+                        $batchMap['product_' . $product->id] = $batch;
+                    }
+
+                    // Resolve Shift
+                    $shiftKey = strtolower(trim((string) ($row['shift_code'] ?? $row['shift'] ?? '')));
+                    $shift = $shiftKey !== '' ? ($shiftMap[$shiftKey] ?? null) : null;
+                    $shiftId = $shift ? $shift->id : null;
+
+                    // Resolve Unit
+                    $unitKey = strtolower(trim((string) ($row['unit_code'] ?? $row['unit'] ?? '')));
+                    $unit = ($unitKey !== '' ? ($unitMap[$unitKey] ?? null) : null) ?? ($product->unit_id ? ($unitMap[(string) $product->unit_id] ?? null) : $defaultUnit);
+                    $unitId = $unit ? $unit->id : 1;
+
+                    $workDate = !empty($row['work_date']) ? (string) $row['work_date'] : (!empty($row['date']) ? (string) $row['date'] : now()->format('Y-m-d'));
+                    $qty = isset($row['quantity']) ? (float) $row['quantity'] : (isset($row['units_completed']) ? (float) $row['units_completed'] : 0.0);
+                    $reworkQty = isset($row['rework_quantity']) ? (float) $row['rework_quantity'] : (isset($row['rework']) ? (float) $row['rework'] : 0.0);
+                    $rejectedQty = isset($row['rejected_quantity']) ? (float) $row['rejected_quantity'] : (isset($row['rejected']) ? (float) $row['rejected'] : 0.0);
+
+                    if ($qty <= 0 && $reworkQty <= 0 && $rejectedQty <= 0) {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'quantity',
+                            'message' => 'Completed or logged quantity must be greater than zero.',
+                        ];
+                        continue;
+                    }
+
+                    $rate = isset($row['rate']) && is_numeric($row['rate']) ? number_format((float) $row['rate'], 4, '.', '') : null;
+                    $incentive = isset($row['incentive_amount']) && is_numeric($row['incentive_amount']) ? number_format((float) $row['incentive_amount'], 4, '.', '') : null;
+                    $hoursWorked = isset($row['hours_worked']) && is_numeric($row['hours_worked']) ? number_format((float) $row['hours_worked'], 4, '.', '') : null;
+                    $status = !empty($row['status']) ? (string) $row['status'] : 'submitted';
+
+                    // Check existing entry
+                    $query = WorkerProductionEntry::withoutGlobalScope('tenant')
+                        ->where('tenant_id', $tenantId)
+                        ->where('production_batch_id', $batch->id)
+                        ->where('employee_id', $employee->id)
+                        ->where('product_id', $product->id)
+                        ->where('work_date', $workDate);
+
+                    if ($shiftId !== null) {
+                        $query->where('shift_id', $shiftId);
+                    } else {
+                        $query->whereNull('shift_id');
+                    }
+
+                    $existing = $query->first();
+
+                    if ($existing) {
+                        if ($mode === 'skip') {
+                            $skipped++;
+                            continue;
+                        }
+
+                        // Upsert
+                        $existing->update([
+                            'quantity' => number_format($qty, 4, '.', ''),
+                            'rework_quantity' => number_format($reworkQty, 4, '.', ''),
+                            'rejected_quantity' => number_format($rejectedQty, 4, '.', ''),
+                            'hours_worked' => $hoursWorked,
+                            'rate' => $rate ?? $existing->rate,
+                            'incentive_amount' => $incentive ?? $existing->incentive_amount,
+                            'status' => $status,
+                            'updated_by' => $userId,
+                        ]);
+
+                        $updated++;
+                        continue;
+                    }
+
+                    // Insert
+                    WorkerProductionEntry::create([
+                        'uuid' => (string) Str::uuid(),
+                        'tenant_id' => $tenantId,
+                        'production_batch_id' => $batch->id,
+                        'employee_id' => $employee->id,
+                        'product_id' => $product->id,
+                        'shift_id' => $shiftId,
+                        'work_date' => $workDate,
+                        'measure_type' => 'piece',
+                        'quantity' => number_format($qty, 4, '.', ''),
+                        'unit_id' => $unitId,
+                        'rework_quantity' => number_format($reworkQty, 4, '.', ''),
+                        'rejected_quantity' => number_format($rejectedQty, 4, '.', ''),
+                        'hours_worked' => $hoursWorked,
+                        'rate_type' => 'piece_rate',
+                        'rate' => $rate,
+                        'incentive_amount' => $incentive,
+                        'status' => $status,
+                        'entered_by' => $userId,
+                        'created_by' => $userId,
+                    ]);
+
+                    $imported++;
+                }
+            });
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Bulk import completed. {$imported} worker entry(s) imported, {$updated} updated, {$skipped} skipped.",
+            'imported' => $imported,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'failed' => count($errors),
+            'errors' => $errors,
+            'data' => [
+                'imported_count' => $imported,
+                'updated_count' => $updated,
+                'skipped_count' => $skipped,
+                'failed_count' => count($errors),
+                'errors' => $errors,
+            ],
+        ]);
+    }
 }
+

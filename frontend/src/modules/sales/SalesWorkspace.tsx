@@ -33,6 +33,8 @@ import { SalesmenProfilesSection } from './sections/SalesmenProfilesSection';
 import { SalesmanTargetsSection } from './sections/SalesmanTargetsSection';
 import { IncentivesSection } from './sections/IncentivesSection';
 import { SalesmanDashboardSection } from './sections/SalesmanDashboardSection';
+import { PriceListsSection } from './sections/PriceListsSection';
+import { Tag } from 'lucide-react';
 
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { Modal } from '../../components/ui/Modal';
@@ -48,6 +50,7 @@ export type SalesTab =
   | 'exchanges'
   | 'customers'
   | 'leads'
+  | 'pricelists'
   | 'salesmen'
   | 'targets'
   | 'incentives'
@@ -62,6 +65,7 @@ const VALID_TABS: readonly SalesTab[] = [
   'exchanges',
   'customers',
   'leads',
+  'pricelists',
   'salesmen',
   'targets',
   'incentives',
@@ -109,10 +113,10 @@ const CATEGORIES: CategoryConfig[] = [
     label: 'Customer Leads & CRM',
     tagline: 'Commercial Leads & Customer Accounts',
     icon: Users,
-    tabs: ['leads', 'customers'],
+    tabs: ['leads', 'customers', 'pricelists'],
     defaultTab: 'leads',
     shortcut: '2',
-    badge: '2 Capabilities',
+    badge: '3 Capabilities',
   },
   {
     id: 'performance',
@@ -206,6 +210,16 @@ const TABS: TabConfig[] = [
     icon: Users,
     description: 'Full customer list, contact details, past purchases and unpaid balance statements',
     highlights: ['Statement of accounts', 'Credit limits & balances', 'Contact profiles'],
+  },
+  {
+    id: 'pricelists',
+    label: 'Customer Price Lists',
+    shortLabel: 'Price Lists',
+    category: 'crm',
+    badge: 'Pricing',
+    icon: Tag,
+    description: 'Tiered customer price schedules, wholesale rates, and quantity break matrix',
+    highlights: ['Multi-tier pricing matrix', 'Quantity break discounts', 'Excel/CSV bulk sync'],
   },
   {
     id: 'salesmen',
@@ -842,6 +856,7 @@ export default function SalesWorkspace() {
         {activeTab === 'exchanges' && <ExchangesSection />}
         {activeTab === 'customers' && <CustomersSection />}
         {activeTab === 'leads' && <LeadsSection />}
+        {activeTab === 'pricelists' && <PriceListsSection />}
         {activeTab === 'salesmen' && (
           <SalesmenProfilesSection
             onSelectSalesmanForDashboard={(empId) => {

@@ -28,6 +28,7 @@ return new class extends Migration
             $table->string('transaction_type', 32); // receipt, payment, transfer_in, transfer_out, pos_settlement, cod_settlement, payroll_disbursement, expense, adjustment, opening
             $table->string('reference_type', 64)->nullable();
             $table->unsignedBigInteger('reference_id')->nullable();
+            $table->string('reference_number', 128)->nullable();
 
             $table->unsignedBigInteger('related_transaction_id')->nullable(); // paired leg of transfer
             $table->unsignedBigInteger('journal_entry_id')->nullable();
@@ -37,7 +38,9 @@ return new class extends Migration
             $table->string('reconciliation_status', 32)->default('unreconciled'); // unreconciled, reconciled, disputed
 
             $table->timestamps();
+            $table->softDeletes();
             $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
 
             $table->unique(['tenant_id', 'id'], 'uq_bank_transactions_tenant_id');
             $table->index(['tenant_id', 'bank_account_id', 'transaction_date'], 'ix_bank_tx_account_date');

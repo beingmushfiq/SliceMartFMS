@@ -36,8 +36,12 @@ import {
   Download,
   X,
   Play,
+  Upload,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { UniversalImportModal } from '../../components/import/UniversalImportModal';
+import { fixedAssetImportSchema } from '../finance/schemas/fixedAssetImportSchema';
 
 type AssetTab = 'machinery' | 'maintenance' | 'assets' | 'depreciation' | 'categories';
 type PerspectiveMode = 'all' | 'operations' | 'finance';
@@ -245,46 +249,41 @@ export const AssetsWorkspace: React.FC = () => {
   ]);
 
   // Live Backend Assets & Categories Synchronization
-  useEffect(() => {
-    let active = true;
+  const loadLiveAssets = async () => {
+    try {
+      const [assetRes, catRes] = await Promise.allSettled([
+        api.get('/assets'),
+        api.get('/assets/categories'),
+      ]);
 
-    async function loadLiveAssets() {
-      try {
-        const [assetRes, catRes] = await Promise.allSettled([
-          api.get('/assets'),
-          api.get('/assets/categories'),
-        ]);
-
-        if (!active) return;
-
-        if (assetRes.status === 'fulfilled') {
-          const fetchedAssets = extractList<Asset>(assetRes.value);
-          if (fetchedAssets.length > 0) {
-            setAssets(fetchedAssets);
-          }
+      if (assetRes.status === 'fulfilled') {
+        const fetchedAssets = extractList<Asset>(assetRes.value);
+        if (fetchedAssets.length > 0) {
+          setAssets(fetchedAssets);
         }
-
-        if (catRes.status === 'fulfilled') {
-          const fetchedCats = extractList<AssetCategory>(catRes.value);
-          if (fetchedCats.length > 0) {
-            setCategories(fetchedCats);
-          }
-        }
-      } catch (err) {
-        console.error('Failed loading live asset data', err);
       }
+
+      if (catRes.status === 'fulfilled') {
+        const fetchedCats = extractList<AssetCategory>(catRes.value);
+        if (fetchedCats.length > 0) {
+          setCategories(fetchedCats);
+        }
+      }
+    } catch (err) {
+      console.error('Failed loading live asset data', err);
     }
+  };
 
+  useEffect(() => {
     loadLiveAssets();
-
-    return () => {
-      active = false;
-    };
   }, []);
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 3. Modal States & Form Fields
   // ─────────────────────────────────────────────────────────────────────────────
+
+  // Import Asset Modal
+  const [showImportAssetModal, setShowImportAssetModal] = useState(false);
 
   // Add Asset Modal
   const [showAddAssetModal, setShowAddAssetModal] = useState(false);
@@ -593,6 +592,53 @@ export const AssetsWorkspace: React.FC = () => {
     notify.success('Depreciation schedule exported to CSV');
   };
 
+  // Export Assets Register CSV
+  const handleExportAssetsCsv = () => {
+    if (assets.length === 0) {
+      notify.warning('No assets to export');
+      return;
+    }
+    const headers = [
+      'Asset Code',
+      'Asset Name',
+      'Category',
+      'Purchase Cost',
+      'Salvage Value',
+      'Accumulated Depreciation',
+      'Net Book Value',
+      'Depreciation Method',
+      'Useful Life (Months)',
+      'Status',
+      'Serial Number',
+      'Model',
+      'Manufacturer',
+    ];
+    const rows = assets.map((a) => [
+      `"${a.asset_code}"`,
+      `"${(a.name || '').replace(/"/g, '""')}"`,
+      `"${a.category?.name || ''}"`,
+      `"${a.purchase_cost}"`,
+      `"${a.salvage_value || '0'}"`,
+      `"${a.accumulated_depreciation || '0'}"`,
+      `"${a.book_value || '0'}"`,
+      `"${a.depreciation_method || 'straight_line'}"`,
+      `"${a.useful_life_months || 60}"`,
+      `"${a.status}"`,
+      `"${a.serial_number || ''}"`,
+      `"${(a as any).model || ''}"`,
+      `"${(a as any).manufacturer || ''}"`,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `assets-register-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    notify.success('Assets Exported', { description: `Exported ${assets.length} fixed assets to CSV.` });
+  };
+
   // ─────────────────────────────────────────────────────────────────────────────
   // 6. Calculations & Filtered Data
   // ─────────────────────────────────────────────────────────────────────────────
@@ -792,6 +838,24 @@ export const AssetsWorkspace: React.FC = () => {
                 >
                   <Wrench className="size-3.5 text-primary" />
                   <span>New Work Order</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowImportAssetModal(true)}
+                  className="px-3.5 py-2 bg-surface hover:bg-surface-sunken border border-default text-default font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+                >
+                  <Upload className="size-3.5 text-primary" />
+                  <span>Import Assets</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportAssetsCsv}
+                  className="px-3.5 py-2 bg-surface hover:bg-surface-sunken border border-default text-default font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+                >
+                  <FileSpreadsheet className="size-3.5 text-primary" />
+                  <span>Export CSV</span>
                 </button>
 
                 <button
@@ -2321,6 +2385,13 @@ export const AssetsWorkspace: React.FC = () => {
           </div>
         )}
       </Modal>
+      {/* Universal Import Modal for Fixed Assets Register */}
+      <UniversalImportModal
+        isOpen={showImportAssetModal}
+        onClose={() => setShowImportAssetModal(false)}
+        schema={fixedAssetImportSchema}
+        onImportSuccess={() => loadLiveAssets()}
+      />
     </div>
   );
 };

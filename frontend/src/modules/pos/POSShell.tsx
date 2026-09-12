@@ -1486,7 +1486,7 @@ export function POSShell({ session, onExit }: POSShellProps) {
                   const invoiceNum = lastReceipt.invoice.invoice_number;
                   const orderItems = (lastReceipt.order.items ?? []).map((it) => ({
                     product_id: it.product_id,
-                    product_name: it.product_name,
+                    ...(it.product_name ? { product_name: it.product_name } : {}),
                     quantity: it.quantity,
                     unit_price: it.unit_price,
                   }));

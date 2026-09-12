@@ -57,3 +57,27 @@ Every workspace screen, table, and data-bound component must handle all 20 opera
 - **Escape Key:** Universally closes open modals, drawers, popovers, and dropdowns.
 - **Tab Order:** Logical left-to-right, top-to-bottom sequence through all inputs.
 - **Screen Reader Semantics:** Proper `role="dialog"`, `aria-expanded`, `aria-haspopup`, `aria-describedby` on dynamic components.
+
+---
+
+## 4. ERP Workspace Data Tables & Row Actions Standard
+
+Reference implementation rule: `.agents/rules/erp_table_and_action_standards.md`
+
+1. **Zero Horizontal Overflow Principle:**
+   - Total intrinsic width across all table columns must sum to **≤ 1030px** to ensure zero horizontal scrolling on 1280px–1440px viewports with open sidebars.
+   - Use `px-2` (8px padding) for compact columns (Code, Phone, Status, Type, Actions) and `px-2.5` (10px padding) for text-rich columns. Never use indiscriminate `px-3` or `px-4`.
+   - "Don't borderize": Avoid harsh vertical grid column lines (`border-l`, `border-r`); use soft horizontal row dividers (`divide-y divide-default/40`).
+
+2. **Actions Column & Button Architecture:**
+   - Constrain Actions column to `w-36 px-2 text-right whitespace-nowrap` (144px).
+   - Only **two** primary buttons per row:
+     - Direct primary trigger (`Profile` or `View`): `px-2.5 py-1 text-xs rounded-lg border font-medium`.
+     - Explicit dropdown trigger (`Actions ▾` with `ChevronDown`): Never use a bare, unlabeled 3-dot icon.
+   - Secondary actions (e.g. `Print ID Badge`, `Download PDF`) belong inside the `Actions ▾` dropdown menu, not repeated directly on the table row.
+
+3. **Dropdown Menu Architecture:**
+   - Container: `absolute right-0 z-50 mt-1.5 w-52 rounded-xl bg-surface border border-default p-1 shadow-xl animate-in fade-in zoom-in-95 duration-100 text-left`.
+   - Click-outside handling via document listener with `target.closest('[data-action-menu]')`.
+   - Destructive action (`Delete ...`): Separated by `<div className="my-1 border-t border-default/50" />`, styled in bold red (`text-rose-600 font-semibold hover:bg-rose-50`), with a confirmation safety modal before API execution.
+

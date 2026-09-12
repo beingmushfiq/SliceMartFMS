@@ -46,6 +46,9 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             Route::get('/', [App\Modules\Catalogue\Controllers\UnitController::class, 'index'])
                 ->middleware('permission:catalog.unit.view')
                 ->name('index');
+            Route::post('bulk-import', [App\Modules\Catalogue\Controllers\UnitController::class, 'bulkImport'])
+                ->middleware('permission:catalog.unit.create')
+                ->name('bulk-import');
             Route::post('/', [App\Modules\Catalogue\Controllers\UnitController::class, 'store'])
                 ->middleware('permission:catalog.unit.create')
                 ->name('store');
@@ -65,6 +68,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 ->middleware('permission:catalog.brand.view')->name('options');
             Route::get('/', [App\Modules\Catalogue\Controllers\BrandController::class, 'index'])
                 ->middleware('permission:catalog.brand.view')->name('index');
+            Route::post('bulk-import', [App\Modules\Catalogue\Controllers\BrandController::class, 'bulkImport'])
+                ->middleware('permission:catalog.brand.create')->name('bulk-import');
             Route::post('/', [App\Modules\Catalogue\Controllers\BrandController::class, 'store'])
                 ->middleware('permission:catalog.brand.create')->name('store');
             Route::get('{brand:uuid}', [App\Modules\Catalogue\Controllers\BrandController::class, 'show'])
@@ -80,6 +85,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 ->middleware('permission:catalog.category.view')->name('options');
             Route::get('/', [App\Modules\Catalogue\Controllers\CategoryController::class, 'index'])
                 ->middleware('permission:catalog.category.view')->name('index');
+            Route::post('bulk-import', [App\Modules\Catalogue\Controllers\CategoryController::class, 'bulkImport'])
+                ->middleware('permission:catalog.category.create')->name('bulk-import');
             Route::post('/', [App\Modules\Catalogue\Controllers\CategoryController::class, 'store'])
                 ->middleware('permission:catalog.category.create')->name('store');
             Route::get('{category:uuid}', [App\Modules\Catalogue\Controllers\CategoryController::class, 'show'])
@@ -104,6 +111,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 ->middleware('permission:catalog.product.view')->name('index');
             Route::post('/', [App\Modules\Catalogue\Controllers\ProductController::class, 'store'])
                 ->middleware(['permission:catalog.product.create', 'tenant.quota:products'])->name('store');
+            Route::post('bulk-import', [App\Modules\Catalogue\Controllers\ProductController::class, 'bulkImport'])
+                ->middleware('permission:catalog.product.create')->name('bulk-import');
             Route::get('{product:uuid}', [App\Modules\Catalogue\Controllers\ProductController::class, 'show'])
                 ->middleware('permission:catalog.product.view')->name('show');
             Route::patch('{product:uuid}', [App\Modules\Catalogue\Controllers\ProductController::class, 'update'])
@@ -128,6 +137,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
         Route::prefix('bill-of-materials')->name('bill-of-materials.')->group(static function (): void {
             Route::get('/', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'index'])
                 ->middleware('permission:catalog.bom.view')->name('index');
+            Route::post('bulk-import', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'bulkImport'])
+                ->middleware('permission:catalog.bom.create')->name('bulk-import');
             Route::post('/', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'store'])
                 ->middleware('permission:catalog.bom.create')->name('store');
             Route::get('{billOfMaterial:uuid}', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'show'])
@@ -141,6 +152,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
         Route::prefix('boms')->name('boms.')->group(static function (): void {
             Route::get('/', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'index'])
                 ->middleware('permission:catalog.bom.view')->name('index');
+            Route::post('bulk-import', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'bulkImport'])
+                ->middleware('permission:catalog.bom.create')->name('bulk-import');
             Route::post('/', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'store'])
                 ->middleware('permission:catalog.bom.create')->name('store');
             Route::get('{billOfMaterial:uuid}', [App\Modules\Catalogue\Controllers\BillOfMaterialController::class, 'show'])
@@ -156,6 +169,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 ->middleware('permission:inventory.warehouse.view')->name('options');
             Route::get('/', [App\Modules\Catalogue\Controllers\WarehouseController::class, 'index'])
                 ->middleware('permission:inventory.warehouse.view')->name('index');
+            Route::post('bulk-import', [App\Modules\Catalogue\Controllers\WarehouseController::class, 'bulkImport'])
+                ->middleware('permission:inventory.warehouse.create')->name('bulk-import');
             Route::post('/', [App\Modules\Catalogue\Controllers\WarehouseController::class, 'store'])
                 ->middleware(['permission:inventory.warehouse.create', 'tenant.quota:warehouses'])->name('store');
             Route::get('{warehouse:uuid}', [App\Modules\Catalogue\Controllers\WarehouseController::class, 'show'])
@@ -187,6 +202,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 ->middleware('permission:catalog.party.view')->name('index');
             Route::post('/', [App\Modules\Catalogue\Controllers\PartyController::class, 'store'])
                 ->middleware('permission:catalog.party.create')->name('store');
+            Route::post('bulk-import', [App\Modules\Catalogue\Controllers\PartyController::class, 'bulkImport'])
+                ->middleware('permission:catalog.party.create')->name('bulk-import');
             Route::get('{party:uuid}', [App\Modules\Catalogue\Controllers\PartyController::class, 'show'])
                 ->middleware('permission:catalog.party.view')->name('show');
             Route::patch('{party:uuid}', [App\Modules\Catalogue\Controllers\PartyController::class, 'update'])
@@ -204,6 +221,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                     ->middleware('permission:pricing.price_list.view')->name('index');
                 Route::post('/', [App\Modules\Pricing\Controllers\PriceListController::class, 'store'])
                     ->middleware('permission:pricing.price_list.create')->name('store');
+                Route::post('bulk-import', [App\Modules\Pricing\Controllers\PriceListController::class, 'bulkImport'])
+                    ->middleware('permission:pricing.price_list.create')->name('bulk-import');
                 Route::get('{priceList:uuid}', [App\Modules\Pricing\Controllers\PriceListController::class, 'show'])
                     ->middleware('permission:pricing.price_list.view')->name('show');
                 Route::patch('{priceList:uuid}', [App\Modules\Pricing\Controllers\PriceListController::class, 'update'])
@@ -211,6 +230,9 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::delete('{priceList:uuid}', [App\Modules\Pricing\Controllers\PriceListController::class, 'destroy'])
                     ->middleware('permission:pricing.price_list.delete')->name('destroy');
             });
+
+            Route::post('bulk-import', [App\Modules\Pricing\Controllers\PriceListController::class, 'bulkImport'])
+                ->middleware('permission:pricing.price_list.create')->name('bulk-import');
 
             Route::prefix('discount-rules')->name('discount-rules.')->group(static function (): void {
                 Route::get('/', [App\Modules\Pricing\Controllers\DiscountRuleController::class, 'index'])
@@ -244,6 +266,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
         // ── Production ────────────────────────────────────────────────
         Route::prefix('production')->name('production.')->group(static function (): void {
             Route::prefix('plans')->name('plans.')->group(static function (): void {
+                Route::post('bulk-import', [App\Modules\Production\Controllers\ProductionPlanController::class, 'bulkImport'])
+                    ->middleware('permission:production.plan.create')->name('bulk-import');
                 Route::get('/', [App\Modules\Production\Controllers\ProductionPlanController::class, 'index'])
                     ->middleware('permission:production.plan.view')->name('index');
                 Route::post('/', [App\Modules\Production\Controllers\ProductionPlanController::class, 'store'])
@@ -284,6 +308,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             });
 
             Route::prefix('worker-entries')->name('worker-entries.')->group(static function (): void {
+                Route::post('bulk-import', [App\Modules\Production\Controllers\WorkerProductionEntryController::class, 'bulkImport'])
+                    ->middleware('permission:production.worker_entry.create')->name('bulk-import');
                 Route::get('/', [App\Modules\Production\Controllers\WorkerProductionEntryController::class, 'index'])
                     ->middleware('permission:production.worker_entry.view')->name('index');
                 Route::get('/summary', [App\Modules\Production\Controllers\WorkerProductionEntryController::class, 'summary'])
@@ -299,11 +325,15 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::delete('{workerProductionEntry:uuid}', [App\Modules\Production\Controllers\WorkerProductionEntryController::class, 'destroy'])
                     ->middleware('permission:production.worker_entry.delete')->name('destroy');
             });
+            Route::post('piece-rate/bulk-import', [App\Modules\Production\Controllers\WorkerProductionEntryController::class, 'bulkImport'])
+                ->middleware('permission:production.worker_entry.create')->name('piece-rate.bulk-import');
         });
 
         // ── Quality Control (QC) & Wastage ───────────────────────────
         Route::prefix('qc')->name('qc.')->group(static function (): void {
             Route::prefix('parameters')->name('parameters.')->group(static function (): void {
+                Route::post('bulk-import', [App\Modules\QC\Controllers\QcParameterController::class, 'bulkImport'])
+                    ->middleware('permission:qc.parameter.create')->name('bulk-import');
                 Route::get('/', [App\Modules\QC\Controllers\QcParameterController::class, 'index'])
                     ->middleware('permission:qc.parameter.view')->name('index');
                 Route::post('/', [App\Modules\QC\Controllers\QcParameterController::class, 'store'])
@@ -364,6 +394,10 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
 
         // ── Inventory & Stock Operations ──────────────────────────────
         Route::prefix('inventory')->name('inventory.')->group(static function (): void {
+            Route::post('opening-stock/bulk-import', [App\Modules\Inventory\Controllers\StockMovementController::class, 'bulkImport'])
+                ->middleware('permission:inventory.stock.view')->name('opening-stock.bulk-import');
+            Route::post('balances/bulk-import', [App\Modules\Inventory\Controllers\StockMovementController::class, 'bulkImport'])
+                ->middleware('permission:inventory.stock.view')->name('balances.bulk-import');
             Route::get('movements', [App\Modules\Inventory\Controllers\StockMovementController::class, 'index'])
                 ->middleware('permission:inventory.movement.view')->name('movements.index');
             Route::get('movements/{id}', [App\Modules\Inventory\Controllers\StockMovementController::class, 'show'])
@@ -516,6 +550,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                     ->middleware('permission:sales.invoice.view')->name('index');
                 Route::post('/', [App\Modules\Sales\Controllers\InvoiceController::class, 'store'])
                     ->middleware('permission:sales.invoice.create')->name('store');
+                Route::post('bulk-import', [App\Modules\Sales\Controllers\InvoiceController::class, 'bulkImport'])
+                    ->middleware('permission:sales.invoice.create')->name('bulk-import');
                 Route::get('{id}', [App\Modules\Sales\Controllers\InvoiceController::class, 'show'])
                     ->middleware('permission:sales.invoice.view')->name('show');
                 Route::post('{id}/approve', [App\Modules\Sales\Controllers\InvoiceController::class, 'approve'])
@@ -577,6 +613,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                     ->middleware('permission:sales.lead.view')->name('index');
                 Route::post('/', [App\Modules\Sales\Controllers\CrmLeadController::class, 'store'])
                     ->middleware('permission:sales.lead.create')->name('store');
+                Route::post('bulk-import', [App\Modules\Sales\Controllers\CrmLeadController::class, 'bulkImport'])
+                    ->middleware('permission:sales.lead.create')->name('bulk-import');
                 Route::get('{id}', [App\Modules\Sales\Controllers\CrmLeadController::class, 'show'])
                     ->middleware('permission:sales.lead.view')->name('show');
                 Route::put('{id}', [App\Modules\Sales\Controllers\CrmLeadController::class, 'update'])
@@ -604,6 +642,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                     ->name('index');
                 Route::post('/', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'store'])
                     ->name('store');
+                Route::post('bulk-import', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'bulkImport'])
+                    ->name('bulk-import');
                 Route::get('{id}', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'show'])
                     ->name('show');
                 Route::put('{id}', [App\Modules\Sales\Controllers\SalesmanTargetController::class, 'update'])
@@ -630,6 +670,7 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
 
             // ── Coupons & Promotions ──────────────────────────────────────
             Route::prefix('coupons')->name('coupons.')->group(static function (): void {
+                Route::post('bulk-import', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'bulkImport'])->name('bulk-import');
                 Route::get('/', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'index'])->name('index');
                 Route::post('/', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'store'])->name('store');
                 Route::post('generate-batch', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'generateBatch'])->name('generate-batch');
@@ -638,6 +679,9 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::post('{id}/toggle-status', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'toggleStatus'])->name('toggle-status');
                 Route::delete('{id}', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'destroy'])->name('destroy');
             });
+
+            Route::post('price-lists/bulk-import', [App\Modules\Pricing\Controllers\PriceListController::class, 'bulkImport'])
+                ->middleware('permission:pricing.price_list.create')->name('price-lists.bulk-import');
         });
 
         // ── POS ───────────────────────────────────────────────────────
@@ -724,6 +768,21 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
 
         // ── Finance & Accounting ──────────────────────────────────────
         Route::prefix('finance')->name('finance.')->group(static function (): void {
+            Route::post('accounts/bulk-import', [App\Modules\Finance\Controllers\ChartOfAccountController::class, 'bulkImport'])
+                ->middleware('permission:finance.account.create')->name('accounts.bulk-import');
+            Route::post('journal-entries/bulk-import', [App\Modules\Finance\Controllers\JournalEntryController::class, 'bulkImport'])
+                ->middleware('permission:finance.journal.create')->name('journal-entries.bulk-import');
+            Route::post('journal/bulk-import', [App\Modules\Finance\Controllers\JournalEntryController::class, 'bulkImport'])
+                ->middleware('permission:finance.journal.create')->name('journal.bulk-import');
+            Route::post('bank-accounts/bulk-import', [App\Modules\Finance\Controllers\BankAccountController::class, 'bulkImport'])
+                ->middleware('permission:finance.bank.create')->name('bank-accounts.bulk-import');
+            Route::post('bank-transactions/bulk-import', [App\Modules\Finance\Controllers\BankAccountController::class, 'bulkImport'])
+                ->middleware('permission:finance.bank.create')->name('bank-transactions.bulk-import');
+            Route::post('reconciliation/bulk-import', [App\Modules\Finance\Controllers\BankAccountController::class, 'bulkImport'])
+                ->middleware('permission:finance.bank.create')->name('reconciliation.bulk-import');
+            Route::post('fixed-assets/bulk-import', [App\Modules\Assets\Controllers\AssetController::class, 'bulkImport'])
+                ->middleware('permission:assets.asset.create')->name('fixed-assets.bulk-import');
+
             Route::prefix('accounts')->name('accounts.')->group(static function (): void {
                 Route::get('/', [App\Modules\Finance\Controllers\ChartOfAccountController::class, 'index'])
                     ->middleware('permission:finance.account.view')->name('index');
@@ -772,6 +831,8 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
 
         // ── Fixed Assets & Maintenance ────────────────────────────────
         Route::prefix('assets')->name('assets.')->group(static function (): void {
+            Route::post('bulk-import', [App\Modules\Assets\Controllers\AssetController::class, 'bulkImport'])
+                ->middleware('permission:assets.asset.create')->name('bulk-import');
             Route::get('categories', [App\Modules\Assets\Controllers\AssetController::class, 'categories'])
                 ->middleware('permission:assets.asset.view')->name('categories');
             Route::post('categories', [App\Modules\Assets\Controllers\AssetController::class, 'storeCategory'])
@@ -804,6 +865,7 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
         Route::prefix('hr')->name('hr.')->group(static function (): void {
             // Departments
             Route::get('departments', [App\Modules\HR\Controllers\EmployeeController::class, 'departments'])->name('departments');
+            Route::post('departments/bulk-import', [App\Modules\HR\Controllers\EmployeeController::class, 'bulkImportDepartments'])->name('departments.bulk-import');
             Route::post('departments', [App\Modules\HR\Controllers\EmployeeController::class, 'storeDepartment'])->name('departments.store');
             Route::put('departments/{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'updateDepartment'])->name('departments.update');
             Route::delete('departments/{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'destroyDepartment'])->name('departments.destroy');
@@ -811,13 +873,16 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
 
             // Designations
             Route::get('designations', [App\Modules\HR\Controllers\EmployeeController::class, 'designations'])->name('designations');
+            Route::post('designations/bulk-import', [App\Modules\HR\Controllers\EmployeeController::class, 'bulkImportDesignations'])->name('designations.bulk-import');
             Route::post('designations', [App\Modules\HR\Controllers\EmployeeController::class, 'storeDesignation'])->name('designations.store');
             Route::put('designations/{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'updateDesignation'])->name('designations.update');
             Route::delete('designations/{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'destroyDesignation'])->name('designations.destroy');
             Route::post('designations/bulk-delete', [App\Modules\HR\Controllers\EmployeeController::class, 'bulkDeleteDesignations'])->name('designations.bulk-delete');
 
-            // Shifts
+            // Shifts & Rosters
             Route::get('shifts', [App\Modules\HR\Controllers\EmployeeController::class, 'shifts'])->name('shifts');
+            Route::post('shifts/bulk-import', [App\Modules\HR\Controllers\EmployeeController::class, 'bulkImportShifts'])->name('shifts.bulk-import');
+            Route::post('shifts/roster/bulk-import', [App\Modules\HR\Controllers\EmployeeController::class, 'bulkImportRosters'])->name('shifts.roster.bulk-import');
             Route::post('shifts', [App\Modules\HR\Controllers\EmployeeController::class, 'storeShift'])->name('shifts.store');
             Route::put('shifts/{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'updateShift'])->name('shifts.update');
             Route::delete('shifts/{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'destroyShift'])->name('shifts.destroy');
@@ -826,6 +891,7 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             // Employees
             Route::prefix('employees')->name('employees.')->group(static function (): void {
                 Route::get('/', [App\Modules\HR\Controllers\EmployeeController::class, 'index'])->name('index');
+                Route::post('bulk-import', [App\Modules\HR\Controllers\EmployeeController::class, 'bulkImport'])->name('bulk-import');
                 Route::post('/', [App\Modules\HR\Controllers\EmployeeController::class, 'store'])->name('store');
                 Route::post('bulk-delete', [App\Modules\HR\Controllers\EmployeeController::class, 'bulkDelete'])->name('bulk-delete');
                 Route::post('bulk-status', [App\Modules\HR\Controllers\EmployeeController::class, 'bulkStatus'])->name('bulk-status');
@@ -840,6 +906,7 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
 
             // Attendance & Kiosk Punch
             Route::prefix('attendances')->name('attendances.')->group(static function (): void {
+                Route::post('bulk-import', [App\Modules\HR\Controllers\AttendanceController::class, 'bulkImport'])->name('bulk-import');
                 Route::get('/', [App\Modules\HR\Controllers\AttendanceController::class, 'index'])->name('index');
                 Route::post('/', [App\Modules\HR\Controllers\AttendanceController::class, 'store'])->name('store');
                 Route::post('bulk-delete', [App\Modules\HR\Controllers\AttendanceController::class, 'bulkDelete'])->name('bulk-delete');
@@ -889,6 +956,7 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::get('payslips/{id}', [App\Modules\HR\Controllers\PayrollController::class, 'showPayslip'])->name('payslips.show');
                 Route::delete('payslips/{id}', [App\Modules\HR\Controllers\PayrollController::class, 'destroyPayslip'])->name('payslips.destroy');
                 Route::get('advances', [App\Modules\HR\Controllers\PayrollController::class, 'advances'])->name('advances');
+                Route::post('advances/bulk-import', [App\Modules\HR\Controllers\PayrollController::class, 'bulkImportAdvances'])->name('advances.bulk-import');
                 Route::post('advances', [App\Modules\HR\Controllers\PayrollController::class, 'storeAdvance'])->name('advances.store');
                 Route::post('advances/bulk-status', [App\Modules\HR\Controllers\PayrollController::class, 'bulkStatusAdvances'])->name('advances.bulk-status');
                 Route::post('advances/bulk-delete', [App\Modules\HR\Controllers\PayrollController::class, 'bulkDeleteAdvances'])->name('advances.bulk-delete');
@@ -972,6 +1040,7 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
 
             // Coupons & Promotional Code Engine
             Route::prefix('coupons')->name('coupons.')->group(static function (): void {
+                Route::post('bulk-import', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'bulkImport'])->name('bulk-import');
                 Route::get('/', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'index'])->name('index');
                 Route::post('/', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'store'])->name('store');
                 Route::post('generate-batch', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'generateBatch'])->name('generate-batch');
@@ -1048,21 +1117,27 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
         Route::prefix('hr')->name('hr.')->group(static function (): void {
             // Departments & Designations & Shifts
             Route::get('departments', [App\Modules\HR\Controllers\EmployeeController::class, 'departments'])->name('departments.index');
+            Route::post('departments/bulk-import', [App\Modules\HR\Controllers\EmployeeController::class, 'bulkImportDepartments'])->name('departments.bulk-import');
             Route::post('departments', [App\Modules\HR\Controllers\EmployeeController::class, 'storeDepartment'])->name('departments.store');
             Route::put('departments/{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'updateDepartment'])->name('departments.update');
 
             Route::get('designations', [App\Modules\HR\Controllers\EmployeeController::class, 'designations'])->name('designations.index');
+            Route::post('designations/bulk-import', [App\Modules\HR\Controllers\EmployeeController::class, 'bulkImportDesignations'])->name('designations.bulk-import');
             Route::post('designations', [App\Modules\HR\Controllers\EmployeeController::class, 'storeDesignation'])->name('designations.store');
             Route::put('designations/{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'updateDesignation'])->name('designations.update');
 
             Route::get('shifts', [App\Modules\HR\Controllers\EmployeeController::class, 'shifts'])->name('shifts.index');
+            Route::post('shifts/bulk-import', [App\Modules\HR\Controllers\EmployeeController::class, 'bulkImportShifts'])->name('shifts.bulk-import');
+            Route::post('shifts/roster/bulk-import', [App\Modules\HR\Controllers\EmployeeController::class, 'bulkImportRosters'])->name('shifts.roster.bulk-import');
             Route::post('shifts', [App\Modules\HR\Controllers\EmployeeController::class, 'storeShift'])->name('shifts.store');
             Route::put('shifts/{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'updateShift'])->name('shifts.update');
+            Route::post('advances/bulk-import', [App\Modules\HR\Controllers\PayrollController::class, 'bulkImportAdvances'])->name('advances.bulk-import');
 
             // Employees CRUD & Access Provisioning
             Route::prefix('employees')->name('employees.')->group(static function (): void {
                 Route::get('/', [App\Modules\HR\Controllers\EmployeeController::class, 'index'])->name('index');
                 Route::post('/', [App\Modules\HR\Controllers\EmployeeController::class, 'store'])->name('store');
+                Route::post('bulk-import', [App\Modules\HR\Controllers\EmployeeController::class, 'bulkImport'])->name('bulk-import');
                 Route::get('{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'show'])->name('show');
                 Route::put('{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'update'])->name('update');
                 Route::delete('{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'destroy'])->name('destroy');
@@ -1077,6 +1152,7 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
 
             // Attendance
             Route::prefix('attendance')->name('attendance.')->group(static function (): void {
+                Route::post('bulk-import', [App\Modules\HR\Controllers\AttendanceController::class, 'bulkImport'])->name('bulk-import');
                 Route::get('/', [App\Modules\HR\Controllers\AttendanceController::class, 'index'])->name('index');
                 Route::post('/', [App\Modules\HR\Controllers\AttendanceController::class, 'store'])->name('store');
             });

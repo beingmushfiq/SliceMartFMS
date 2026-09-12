@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Mail, Phone, Plus, Search, Eye, Edit2, Trash2 } from 'lucide-react';
+import { Mail, Phone, Plus, Search, Eye, Edit2, Trash2, Upload, Download } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
+import { UniversalImportModal } from '../../../components/import/UniversalImportModal';
+import { partyImportSchema } from '../schemas/partyImportSchema';
 import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
 import { isApiError } from '../../../lib/api/errors';
 import { notify } from '../../../components/ui/Toast';
@@ -35,6 +37,7 @@ export function PartiesSection() {
     'all' | 'customer' | 'supplier' | 'dealer' | 'agent'
   >('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingParty, setEditingParty] = useState<Party | null>(null);
   const [viewingParty, setViewingParty] = useState<Party | null>(null);
   const [deletingParty, setDeletingParty] = useState<Party | null>(null);
@@ -192,6 +195,34 @@ export function PartiesSection() {
 
   const parties = partiesQuery.data?.data ?? [];
 
+  const handleExportPartiesCsv = () => {
+    if (parties.length === 0) {
+      notify.warning('No parties to export.');
+      return;
+    }
+    const headers = ['Code', 'Name', 'Type', 'Roles', 'Phone', 'Email', 'Credit Limit', 'Balance', 'Status'];
+    const rows = parties.map((p) => [
+      `"${p.code}"`,
+      `"${(p.name || '').replace(/"/g, '""')}"`,
+      `"${p.type}"`,
+      `"${[p.is_customer ? 'Customer' : '', p.is_supplier ? 'Supplier' : '', p.is_dealer ? 'Dealer' : '', p.is_agent ? 'Agent' : ''].filter(Boolean).join('; ')}"`,
+      `"${p.phone || ''}"`,
+      `"${p.email || ''}"`,
+      `"${p.credit_limit || '0.00'}"`,
+      `"${p.current_balance || '0.00'}"`,
+      `"${p.status}"`,
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `parties_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    notify.success(`Exported ${parties.length} parties to CSV.`);
+  };
+
   return (
     <div className="space-y-6">
       {/* Controls */}
@@ -225,34 +256,56 @@ export function PartiesSection() {
           </div>
         </div>
 
-        <Button
-          variant="primary"
-          onClick={() => {
-            setErrorMsg(null);
-            setDraft({
-              code: '',
-              name: '',
-              legal_name: '',
-              is_customer: true,
-              is_supplier: false,
-              is_dealer: false,
-              is_agent: false,
-              type: 'business',
-              phone: '',
-              email: '',
-              credit_limit: '0.0000',
-              credit_days: 0,
-              line1: '',
-              city: 'Dhaka',
-              is_active: true,
-            });
-            setIsCreateOpen(true);
-          }}
-          className="flex items-center gap-1.5 shadow-xs"
-        >
-          <Plus className="h-4 w-4" />
-          <span>New Party</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            onClick={handleExportPartiesCsv}
+            className="flex items-center gap-1.5 shadow-xs"
+            title="Export parties to CSV"
+          >
+            <Download className="h-4 w-4 text-muted" />
+            <span>Export CSV</span>
+          </Button>
+
+          <Button
+            variant="secondary"
+            onClick={() => setIsImportOpen(true)}
+            className="flex items-center gap-1.5 shadow-xs"
+            title="Bulk import parties from Excel (.xlsx) or CSV"
+          >
+            <Upload className="h-4 w-4 text-primary" />
+            <span>Import Parties</span>
+          </Button>
+
+          <Button
+            variant="primary"
+            onClick={() => {
+              setErrorMsg(null);
+              setDraft({
+                code: '',
+                name: '',
+                legal_name: '',
+                is_customer: true,
+                is_supplier: false,
+                is_dealer: false,
+                is_agent: false,
+                type: 'business',
+                phone: '',
+                email: '',
+                credit_limit: '0.0000',
+                credit_days: 0,
+                line1: '',
+                city: 'Dhaka',
+                is_active: true,
+              });
+              setIsCreateOpen(true);
+            }}
+            className="flex items-center gap-1.5 shadow-xs"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New Party</span>
+          </Button>
+        </div>
       </div>
 
       {/* Parties Table */}
@@ -690,6 +743,15 @@ export function PartiesSection() {
           </div>
         </Modal>
       )}
+      {/* Universal Bulk Import Modal */}
+      <UniversalImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        schema={partyImportSchema}
+        onImportSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['catalogue', 'parties'] });
+        }}
+      />
     </div>
   );
 }

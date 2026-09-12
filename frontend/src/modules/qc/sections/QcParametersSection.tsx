@@ -9,6 +9,7 @@ import {
   Edit2,
   Trash2,
   AlertTriangle,
+  FileUp,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
@@ -16,6 +17,8 @@ import { Button } from '../../../components/ui/Button';
 import { Badge } from '../../../components/ui/Badge';
 import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
 import { isApiError } from '../../../lib/api/errors';
+import { UniversalImportModal } from '../../../components/import/UniversalImportModal';
+import { qcParameterImportSchema } from '../schemas/qcParameterImportSchema';
 import type { QcParameter } from '../../../types/api/qc';
 
 interface ParameterFormData {
@@ -34,6 +37,7 @@ export function QcParametersSection() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingParameter, setEditingParameter] = useState<QcParameter | null>(null);
   const [editForm, setEditForm] = useState<ParameterFormData>({
     code: '',
@@ -204,28 +208,39 @@ export function QcParametersSection() {
           </select>
         </div>
 
-        <Button
-          variant="primary"
-          onClick={() => {
-            setErrorMsg(null);
-            setDraft({
-              code: `QC-${Date.now().toString().slice(-4)}`,
-              name: '',
-              category: 'physical',
-              data_type: 'numeric',
-              min_value: '0.0000',
-              max_value: '100.0000',
-              target_value: '50.0000',
-              unit_of_measure: 'mm',
-              is_mandatory: true,
-            });
-            setIsCreateOpen(true);
-          }}
-          className="flex items-center gap-1.5"
-        >
-          <Plus className="h-4 w-4" />
-          <span>New QC Parameter</span>
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="secondary"
+            onClick={() => setIsImportOpen(true)}
+            className="flex items-center gap-1.5"
+          >
+            <FileUp className="h-4 w-4 text-primary" />
+            <span>Import Parameters</span>
+          </Button>
+
+          <Button
+            variant="primary"
+            onClick={() => {
+              setErrorMsg(null);
+              setDraft({
+                code: `QC-${Date.now().toString().slice(-4)}`,
+                name: '',
+                category: 'physical',
+                data_type: 'numeric',
+                min_value: '0.0000',
+                max_value: '100.0000',
+                target_value: '50.0000',
+                unit_of_measure: 'mm',
+                is_mandatory: true,
+              });
+              setIsCreateOpen(true);
+            }}
+            className="flex items-center gap-1.5"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New QC Parameter</span>
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
@@ -701,6 +716,15 @@ export function QcParametersSection() {
           </div>
         </Modal>
       )}
+
+      <UniversalImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        config={qcParameterImportSchema}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['qc', 'parameters'] });
+        }}
+      />
     </div>
   );
 }

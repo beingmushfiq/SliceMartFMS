@@ -9,6 +9,7 @@ import {
   Trash2,
   UserCheck,
   Users,
+  FileUp,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
@@ -17,6 +18,8 @@ import { SelectDropdown } from '../../../components/ui/Dropdown';
 import { StatusBadge } from '../../../components/ui/Badge';
 import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
 import { isApiError } from '../../../lib/api/errors';
+import { UniversalImportModal } from '../../../components/import/UniversalImportModal';
+import { pieceRateLogImportSchema } from '../schemas/pieceRateLogImportSchema';
 import type {
   WorkerProductionEntry,
   WorkerOutputSummary,
@@ -60,6 +63,7 @@ export function WorkerProductionSection() {
   const [shiftFilter, setShiftFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<EditEntryDraft | null>(null);
   const [editErrorMsg, setEditErrorMsg] = useState<string | null>(null);
@@ -319,33 +323,44 @@ export function WorkerProductionSection() {
           />
         </div>
 
-        <Button
-          variant="primary"
-          onClick={() => {
-            setErrorMsg(null);
-            const defaultBatch = batches[0];
-            const defaultProduct = defaultBatch
-              ? products.find((p) => p.id === defaultBatch.product_id) ?? products[0]
-              : products[0];
-            setDraft({
-              batch_id: defaultBatch?.id ?? '',
-              employee_id: employees[0]?.id ?? '',
-              product_id: defaultProduct?.id ?? defaultBatch?.product_id ?? '',
-              work_date: new Date().toISOString().slice(0, 10),
-              shift: 'morning',
-              wage_type: 'piece_rate',
-              good_quantity: '50.0000',
-              rework_quantity: '0.0000',
-              rejected_quantity: '0.0000',
-              piece_rate: '2.5000',
-            });
-            setIsCreateOpen(true);
-          }}
-          className="flex items-center gap-1.5 min-h-11"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Log Worker Output</span>
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="secondary"
+            onClick={() => setIsImportOpen(true)}
+            className="flex items-center gap-1.5 min-h-11"
+          >
+            <FileUp className="h-4 w-4 text-primary" />
+            <span>Import Piece-Rate Logs</span>
+          </Button>
+
+          <Button
+            variant="primary"
+            onClick={() => {
+              setErrorMsg(null);
+              const defaultBatch = batches[0];
+              const defaultProduct = defaultBatch
+                ? products.find((p) => p.id === defaultBatch.product_id) ?? products[0]
+                : products[0];
+              setDraft({
+                batch_id: defaultBatch?.id ?? '',
+                employee_id: employees[0]?.id ?? '',
+                product_id: defaultProduct?.id ?? defaultBatch?.product_id ?? '',
+                work_date: new Date().toISOString().slice(0, 10),
+                shift: 'morning',
+                wage_type: 'piece_rate',
+                good_quantity: '50.0000',
+                rework_quantity: '0.0000',
+                rejected_quantity: '0.0000',
+                piece_rate: '2.5000',
+              });
+              setIsCreateOpen(true);
+            }}
+            className="flex items-center gap-1.5 min-h-11"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Log Worker Output</span>
+          </Button>
+        </div>
       </div>
 
       {/* Entries Table */}
@@ -785,6 +800,16 @@ export function WorkerProductionSection() {
           </div>
         </Modal>
       )}
+
+      <UniversalImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        config={pieceRateLogImportSchema}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['production', 'worker-entries'] });
+          queryClient.invalidateQueries({ queryKey: ['production', 'worker-entries', 'summary'] });
+        }}
+      />
     </div>
   );
 }

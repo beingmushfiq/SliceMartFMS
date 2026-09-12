@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Boxes, Plus, Search, Eye, Edit2, Trash2 } from 'lucide-react';
+import { Boxes, Plus, Search, Eye, Edit2, Trash2, Upload, Download } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
 import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
 import { isApiError } from '../../../lib/api/errors';
 import { notify } from '../../../components/ui/Toast';
+import { UniversalImportModal } from '../../../components/import/UniversalImportModal';
+import { brandImportSchema } from '../schemas/brandImportSchema';
 import type { Brand } from '../../../types/api/catalog';
 
 interface BrandFormDraft {
@@ -19,6 +21,7 @@ interface BrandFormDraft {
 export function BrandsSection() {
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
   const [viewingBrand, setViewingBrand] = useState<Brand | null>(null);
   const [deletingBrand, setDeletingBrand] = useState<Brand | null>(null);
@@ -105,6 +108,31 @@ export function BrandsSection() {
 
   const brands = brandsQuery.data?.data ?? [];
 
+  const handleExportCsv = () => {
+    if (!brands.length) {
+      notify.info('No brands to export.');
+      return;
+    }
+    const headers = ['code', 'name', 'logo_path', 'is_active'];
+    const rows = brands.map((b) => [
+      b.code,
+      `"${(b.name || '').replace(/"/g, '""')}"`,
+      `"${(b.logo_path || '').replace(/"/g, '""')}"`,
+      b.is_active ? 'TRUE' : 'FALSE',
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `brands_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    notify.success(`Exported ${brands.length} brands to CSV.`);
+  };
+
   return (
     <div className="space-y-6">
       {/* Search and New Brand Bar */}
@@ -120,18 +148,38 @@ export function BrandsSection() {
           />
         </div>
 
-        <Button
-          variant="primary"
-          onClick={() => {
-            setErrorMsg(null);
-            setDraft({ code: '', name: '', logo_path: null, is_active: true });
-            setIsCreateOpen(true);
-          }}
-          className="flex items-center gap-1.5 shadow-xs"
-        >
-          <Plus className="h-4 w-4" />
-          <span>New Brand</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsImportOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-muted hover:text-default rounded-xl border border-default bg-surface hover:bg-surface-sunken transition-colors shadow-2xs cursor-pointer"
+            title="Import brands from Excel (.xlsx) or CSV"
+          >
+            <Upload className="size-3.5 text-primary" />
+            <span>Import</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-muted hover:text-default rounded-xl border border-default bg-surface hover:bg-surface-sunken transition-colors shadow-2xs cursor-pointer"
+            title="Export brands to CSV"
+          >
+            <Download className="size-3.5 text-muted" />
+            <span>Export CSV</span>
+          </button>
+          <Button
+            variant="primary"
+            onClick={() => {
+              setErrorMsg(null);
+              setDraft({ code: '', name: '', logo_path: null, is_active: true });
+              setIsCreateOpen(true);
+            }}
+            className="flex items-center gap-1.5 shadow-xs"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New Brand</span>
+          </Button>
+        </div>
       </div>
 
       <QueryBoundary
@@ -404,6 +452,16 @@ export function BrandsSection() {
           </div>
         </Modal>
       )}
+
+      {/* Universal Bulk Import Modal */}
+      <UniversalImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        schema={brandImportSchema}
+        onImportSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['catalogue', 'brands'] });
+        }}
+      />
     </div>
   );
 }

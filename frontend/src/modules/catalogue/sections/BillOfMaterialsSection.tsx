@@ -1,12 +1,14 @@
 import { useState, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileCode, Plus, Search, Calculator, Sparkles, Eye, Edit2, Trash2, Copy } from 'lucide-react';
+import { FileCode, Plus, Search, Calculator, Sparkles, Eye, Edit2, Trash2, Copy, Upload, Download } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
 import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
 import { isApiError } from '../../../lib/api/errors';
 import { notify } from '../../../components/ui/Toast';
+import { UniversalImportModal } from '../../../components/import/UniversalImportModal';
+import { bomImportSchema } from '../schemas/bomImportSchema';
 import type { BillOfMaterial } from '../../../types/api/bom';
 import type { Product } from '../../../types/api/catalog';
 import type { Unit } from '../../../types/api/unit';
@@ -75,6 +77,7 @@ export function BillOfMaterialsSection() {
   const { formatCurrency } = useCurrency();
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingBOM, setEditingBOM] = useState<BillOfMaterial | null>(null);
   const [viewingBOM, setViewingBOM] = useState<BillOfMaterial | null>(null);
   const [deletingBOM, setDeletingBOM] = useState<BillOfMaterial | null>(null);
@@ -305,6 +308,56 @@ export function BillOfMaterialsSection() {
     { name: 'Infrared Cooker Shockproof EPE Foam Set', qty: 1.0, unit: 'SET', baseCost: 85.0 },
   ];
 
+  const handleExportCsv = () => {
+    if (!boms.length) {
+      notify.info('No BOMs to export.');
+      return;
+    }
+    const headers = ['finished_sku', 'bom_name', 'version', 'output_quantity', 'output_unit', 'component_sku', 'component_quantity', 'component_unit', 'scrap_percentage', 'status'];
+    const rows: string[][] = [];
+    boms.forEach((b) => {
+      const anyB = b as unknown as Record<string, any>;
+      const fSku = anyB.product?.sku || b.code || '';
+      const bName = b.name || '';
+      const ver = String(b.version || 'v1.0');
+      const outQty = String(b.output_quantity || 1);
+      const outUnit = anyB.output_unit?.code || b.output_unit_id || '';
+      const stat = b.is_active ? 'active' : 'inactive';
+
+      if (!b.items || b.items.length === 0) {
+        rows.push([fSku, `"${bName.replace(/"/g, '""')}"`, ver, outQty, outUnit, '', '', '', '0', stat]);
+      } else {
+        b.items.forEach((it) => {
+          const anyIt = it as unknown as Record<string, any>;
+          rows.push([
+            fSku,
+            `"${bName.replace(/"/g, '""')}"`,
+            ver,
+            outQty,
+            outUnit,
+            it.product_sku || anyIt.product?.sku || '',
+            String(it.quantity || 1),
+            it.unit_code || anyIt.unit?.code || it.unit_id || '',
+            String(it.scrap_percentage || it.wastage_allowance_percentage || 0),
+            stat,
+          ]);
+        });
+      }
+    });
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `boms_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    notify.success(`Exported ${boms.length} BOM recipes to CSV.`);
+  };
+
   return (
     <div className="space-y-6">
       {/* Search and New BOM Bar */}
@@ -320,30 +373,50 @@ export function BillOfMaterialsSection() {
           />
         </div>
 
-        <Button
-          variant="primary"
-          onClick={() => {
-            setErrorMsg(null);
-            const firstProd = products[0] || null;
-            const defaults = deriveBOMDefaults(firstProd);
-            setDraft({
-              product_id: firstProd?.id ? String(firstProd.id) : '',
-              code: defaults.code,
-              name: defaults.name,
-              version: 1,
-              output_quantity: '1.0000',
-              output_unit_id: firstProd?.base_unit_id ? String(firstProd.base_unit_id) : (units[0]?.id ? String(units[0].id) : ''),
-              is_default: true,
-              is_active: true,
-              items: [],
-            });
-            setIsCreateOpen(true);
-          }}
-          className="flex items-center gap-1.5 shadow-xs"
-        >
-          <Plus className="h-4 w-4" />
-          <span>New Bill of Material</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsImportOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-muted hover:text-default rounded-xl border border-default bg-surface hover:bg-surface-sunken transition-colors shadow-2xs cursor-pointer"
+            title="Import BOM recipes from Excel (.xlsx) or CSV"
+          >
+            <Upload className="size-3.5 text-primary" />
+            <span>Import</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-muted hover:text-default rounded-xl border border-default bg-surface hover:bg-surface-sunken transition-colors shadow-2xs cursor-pointer"
+            title="Export BOM recipes to CSV"
+          >
+            <Download className="size-3.5 text-muted" />
+            <span>Export CSV</span>
+          </button>
+          <Button
+            variant="primary"
+            onClick={() => {
+              setErrorMsg(null);
+              const firstProd = products[0] || null;
+              const defaults = deriveBOMDefaults(firstProd);
+              setDraft({
+                product_id: firstProd?.id ? String(firstProd.id) : '',
+                code: defaults.code,
+                name: defaults.name,
+                version: 1,
+                output_quantity: '1.0000',
+                output_unit_id: firstProd?.base_unit_id ? String(firstProd.base_unit_id) : (units[0]?.id ? String(units[0].id) : ''),
+                is_default: true,
+                is_active: true,
+                items: [],
+              });
+              setIsCreateOpen(true);
+            }}
+            className="flex items-center gap-1.5 shadow-xs"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New Bill of Material</span>
+          </Button>
+        </div>
       </div>
 
       <QueryBoundary
@@ -1140,6 +1213,16 @@ export function BillOfMaterialsSection() {
           </div>
         </Modal>
       )}
+
+      {/* Universal Bulk Import Modal */}
+      <UniversalImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        schema={bomImportSchema}
+        onImportSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['catalogue', 'boms'] });
+        }}
+      />
     </div>
   );
 }

@@ -20,17 +20,23 @@ class BankTransaction extends Model
     protected $fillable = [
         'tenant_id',
         'uuid',
-        'company_id',
         'bank_account_id',
         'transaction_date',
+        'direction',
         'transaction_type',
         'amount',
+        'running_balance',
         'balance_after',
+        'reference_type',
+        'reference_id',
         'reference_number',
+        'related_transaction_id',
+        'journal_entry_id',
         'description',
+        'cleared_at',
+        'reconciliation_status',
         'reconciled',
         'reconciled_at',
-        'journal_entry_id',
         'created_by',
         'updated_by',
     ];
@@ -38,10 +44,30 @@ class BankTransaction extends Model
     protected $casts = [
         'transaction_date' => 'date:Y-m-d',
         'amount' => 'string',
-        'balance_after' => 'string',
-        'reconciled' => 'boolean',
+        'running_balance' => 'string',
+        'cleared_at' => 'datetime',
         'reconciled_at' => 'datetime',
     ];
+
+    public function setBalanceAfterAttribute($value): void
+    {
+        $this->attributes['running_balance'] = $value !== null ? (string) $value : '0.0000';
+    }
+
+    public function getBalanceAfterAttribute(): ?string
+    {
+        return isset($this->attributes['running_balance']) ? (string) $this->attributes['running_balance'] : null;
+    }
+
+    public function setReconciledAttribute($value): void
+    {
+        $this->attributes['reconciliation_status'] = filter_var($value, FILTER_VALIDATE_BOOLEAN) ? 'reconciled' : 'unreconciled';
+    }
+
+    public function getReconciledAttribute(): bool
+    {
+        return ($this->attributes['reconciliation_status'] ?? '') === 'reconciled';
+    }
 
     protected static function boot(): void
     {
@@ -50,6 +76,15 @@ class BankTransaction extends Model
         static::creating(static function (BankTransaction $model): void {
             if (empty($model->uuid)) {
                 $model->uuid = (string) Str::uuid();
+            }
+            if (empty($model->direction)) {
+                $model->direction = in_array($model->transaction_type, ['withdrawal', 'payment', 'expense', 'transfer_out']) ? 'out' : 'in';
+            }
+            if (!isset($model->attributes['running_balance'])) {
+                $model->attributes['running_balance'] = '0.0000';
+            }
+            if (empty($model->reconciliation_status)) {
+                $model->reconciliation_status = 'unreconciled';
             }
         });
     }

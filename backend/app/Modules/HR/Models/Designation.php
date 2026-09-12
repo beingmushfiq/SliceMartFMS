@@ -22,6 +22,7 @@ class Designation extends Model
         'uuid',
         'code',
         'name',
+        'grade',
         'description',
         'is_active',
         'created_by',

@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { MapPin, Plus, Search, Warehouse as WarehouseIcon, Eye, Edit2, Trash2 } from 'lucide-react';
+import { MapPin, Plus, Search, Warehouse as WarehouseIcon, Eye, Edit2, Trash2, Upload, Download } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
 import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
 import { isApiError } from '../../../lib/api/errors';
 import { notify } from '../../../components/ui/Toast';
+import { UniversalImportModal } from '../../../components/import/UniversalImportModal';
+import { warehouseImportSchema } from '../schemas/warehouseImportSchema';
 import type { Warehouse, WarehouseLocation } from '../../../types/api/catalog';
 
 interface WarehouseFormDraft {
@@ -22,6 +24,7 @@ interface WarehouseFormDraft {
 export function WarehousesSection() {
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(null);
   const [viewingWarehouse, setViewingWarehouse] = useState<Warehouse | null>(null);
   const [deletingWarehouse, setDeletingWarehouse] = useState<Warehouse | null>(null);
@@ -142,6 +145,34 @@ export function WarehousesSection() {
 
   const warehouses = warehousesQuery.data?.data ?? [];
 
+  const handleExportCsv = () => {
+    if (!warehouses.length) {
+      notify.info('No warehouses to export.');
+      return;
+    }
+    const headers = ['code', 'name', 'type', 'address', 'allows_negative_stock', 'is_default', 'is_active'];
+    const rows = warehouses.map((w) => [
+      w.code,
+      `"${(w.name || '').replace(/"/g, '""')}"`,
+      w.type,
+      `"${(w.address || '').replace(/"/g, '""')}"`,
+      w.allows_negative_stock ? 'TRUE' : 'FALSE',
+      w.is_default ? 'TRUE' : 'FALSE',
+      w.is_active ? 'TRUE' : 'FALSE',
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `warehouses_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    notify.success(`Exported ${warehouses.length} warehouses to CSV.`);
+  };
+
   return (
     <div className="space-y-6">
       {/* Search and New Warehouse Bar */}
@@ -157,26 +188,46 @@ export function WarehousesSection() {
           />
         </div>
 
-        <Button
-          variant="primary"
-          onClick={() => {
-            setErrorMsg(null);
-            setDraft({
-              code: '',
-              name: '',
-              type: 'general',
-              address: '',
-              allows_negative_stock: false,
-              is_default: false,
-              is_active: true,
-            });
-            setIsCreateOpen(true);
-          }}
-          className="flex items-center gap-1.5 shadow-xs"
-        >
-          <Plus className="h-4 w-4" />
-          <span>New Warehouse</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsImportOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-muted hover:text-default rounded-xl border border-default bg-surface hover:bg-surface-sunken transition-colors shadow-2xs cursor-pointer"
+            title="Import warehouses from Excel (.xlsx) or CSV"
+          >
+            <Upload className="size-3.5 text-primary" />
+            <span>Import</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-muted hover:text-default rounded-xl border border-default bg-surface hover:bg-surface-sunken transition-colors shadow-2xs cursor-pointer"
+            title="Export warehouses to CSV"
+          >
+            <Download className="size-3.5 text-muted" />
+            <span>Export CSV</span>
+          </button>
+          <Button
+            variant="primary"
+            onClick={() => {
+              setErrorMsg(null);
+              setDraft({
+                code: '',
+                name: '',
+                type: 'general',
+                address: '',
+                allows_negative_stock: false,
+                is_default: false,
+                is_active: true,
+              });
+              setIsCreateOpen(true);
+            }}
+            className="flex items-center gap-1.5 shadow-xs"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New Warehouse</span>
+          </Button>
+        </div>
       </div>
 
       <QueryBoundary
@@ -645,6 +696,16 @@ export function WarehousesSection() {
           </div>
         </Modal>
       )}
+
+      {/* Universal Bulk Import Modal */}
+      <UniversalImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        schema={warehouseImportSchema}
+        onImportSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['catalogue', 'warehouses'] });
+        }}
+      />
     </div>
   );
 }

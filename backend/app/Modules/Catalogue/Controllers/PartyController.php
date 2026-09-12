@@ -8,6 +8,7 @@ use App\Core\Http\Responses\ErrorResponse;
 use App\Core\Tenancy\TenantContext;
 use App\Http\Controllers\Controller;
 use App\Models\Party;
+use App\Models\PartyAddress;
 use App\Models\User;
 use App\Modules\Catalogue\Actions\CreatePartyAction;
 use App\Modules\Catalogue\Actions\DeletePartyAction;
@@ -18,6 +19,8 @@ use App\Modules\Catalogue\Resources\PartyResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 final class PartyController extends Controller
 {
@@ -297,6 +300,264 @@ final class PartyController extends Controller
             'meta' => [
                 'correlation_id' => (string) $request->header('X-Correlation-Id', ''),
             ],
+        ]);
+    }
+
+    /**
+     * POST /v1/parties/bulk-import
+     */
+    public function bulkImport(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'mode' => 'nullable|string|in:skip,upsert',
+            'rows' => 'required|array|min:1|max:5000',
+            'rows.*.code' => 'nullable|string|max:32',
+            'rows.*.name' => 'required|string|max:191',
+            'rows.*.legal_name' => 'nullable|string|max:191',
+            'rows.*.role' => 'nullable|string|max:32',
+            'rows.*.is_customer' => 'nullable|boolean',
+            'rows.*.is_supplier' => 'nullable|boolean',
+            'rows.*.is_dealer' => 'nullable|boolean',
+            'rows.*.is_agent' => 'nullable|boolean',
+            'rows.*.type' => 'nullable|string|max:32',
+            'rows.*.phone' => 'nullable|string|max:32',
+            'rows.*.email' => 'nullable|string|max:191',
+            'rows.*.tax_identifier' => 'nullable|string|max:64',
+            'rows.*.bin' => 'nullable|string|max:64',
+            'rows.*.credit_limit' => 'nullable|numeric|min:0',
+            'rows.*.credit_days' => 'nullable|integer|min:0',
+            'rows.*.opening_balance' => 'nullable|numeric',
+            'rows.*.status' => 'nullable|string|max:32',
+            'rows.*.address' => 'nullable|string|max:255',
+            'rows.*.address_line1' => 'nullable|string|max:255',
+            'rows.*.city' => 'nullable|string|max:100',
+            'rows.*.state' => 'nullable|string|max:100',
+            'rows.*.postal_code' => 'nullable|string|max:20',
+            'rows.*.country_code' => 'nullable|string|max:2',
+        ]);
+
+        $mode = $validated['mode'] ?? 'skip';
+        $rows = $validated['rows'];
+        $tenantId = TenantContext::isBound() ? TenantContext::current()->tenantId() : (int) ($request->user()?->tenant_id ?? 1);
+        $userId = (int) ($request->user()?->id ?? 1);
+
+        // Preload existing parties for fast matching
+        $existingParties = Party::all();
+        $codeMap = [];
+        $phoneMap = [];
+        $emailMap = [];
+        foreach ($existingParties as $p) {
+            if ($p->code) {
+                $codeMap[strtolower(trim($p->code))] = $p;
+            }
+            if ($p->phone) {
+                $cleanP = preg_replace('/[^0-9]/', '', $p->phone);
+                if ($cleanP) {
+                    $phoneMap[$cleanP] = $p;
+                }
+            }
+            if ($p->email) {
+                $emailMap[strtolower(trim($p->email))] = $p;
+            }
+        }
+
+        $imported = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = [];
+
+        foreach (array_chunk($rows, 100) as $chunkIdx => $chunk) {
+            DB::transaction(function () use (
+                $chunk,
+                $chunkIdx,
+                $mode,
+                $tenantId,
+                $userId,
+                &$codeMap,
+                &$phoneMap,
+                &$emailMap,
+                &$imported,
+                &$updated,
+                &$skipped,
+                &$errors
+            ) {
+                foreach ($chunk as $relIdx => $row) {
+                    $rowNum = ($chunkIdx * 100) + $relIdx + 2;
+                    $code = !empty($row['code']) ? trim((string) $row['code']) : null;
+                    $phone = !empty($row['phone']) ? trim((string) $row['phone']) : null;
+                    $cleanPhone = $phone ? preg_replace('/[^0-9]/', '', $phone) : null;
+                    $email = !empty($row['email']) ? strtolower(trim((string) $row['email'])) : null;
+
+                    // Match existing
+                    $existing = null;
+                    if ($code && isset($codeMap[strtolower($code)])) {
+                        $existing = $codeMap[strtolower($code)];
+                    } elseif ($cleanPhone && isset($phoneMap[$cleanPhone])) {
+                        $existing = $phoneMap[$cleanPhone];
+                    } elseif ($email && isset($emailMap[$email])) {
+                        $existing = $emailMap[$email];
+                    }
+
+                    // Roles resolution
+                    $isCustomer = 0;
+                    $isSupplier = 0;
+                    $isDealer = 0;
+                    $isAgent = 0;
+
+                    if (isset($row['is_customer'])) $isCustomer = $row['is_customer'] ? 1 : 0;
+                    if (isset($row['is_supplier'])) $isSupplier = $row['is_supplier'] ? 1 : 0;
+                    if (isset($row['is_dealer'])) $isDealer = $row['is_dealer'] ? 1 : 0;
+                    if (isset($row['is_agent'])) $isAgent = $row['is_agent'] ? 1 : 0;
+
+                    if (!empty($row['role'])) {
+                        $roleLower = strtolower(trim((string) $row['role']));
+                        if (str_contains($roleLower, 'cust')) $isCustomer = 1;
+                        if (str_contains($roleLower, 'supp') || str_contains($roleLower, 'vendor')) $isSupplier = 1;
+                        if (str_contains($roleLower, 'deal')) $isDealer = 1;
+                        if (str_contains($roleLower, 'agent')) $isAgent = 1;
+                        if (str_contains($roleLower, 'both')) {
+                            $isCustomer = 1;
+                            $isSupplier = 1;
+                        }
+                    }
+
+                    // Default to customer if no roles set
+                    if ($isCustomer === 0 && $isSupplier === 0 && $isDealer === 0 && $isAgent === 0) {
+                        $isCustomer = 1;
+                    }
+
+                    $type = !empty($row['type']) && in_array(strtolower(trim((string) $row['type'])), ['individual', 'business'], true)
+                        ? strtolower(trim((string) $row['type']))
+                        : 'business';
+
+                    $status = !empty($row['status']) && in_array(strtolower(trim((string) $row['status'])), ['active', 'inactive', 'blacklisted'], true)
+                        ? strtolower(trim((string) $row['status']))
+                        : 'active';
+
+                    $taxId = $row['tax_identifier'] ?? $row['bin'] ?? null;
+                    $creditLimit = (float) ($row['credit_limit'] ?? 0);
+                    $creditDays = (int) ($row['credit_days'] ?? 0);
+                    $openingBalance = (float) ($row['opening_balance'] ?? 0);
+
+                    if ($existing) {
+                        if ($mode === 'skip') {
+                            $skipped++;
+                            continue;
+                        }
+
+                        // Mode is upsert
+                        try {
+                            $updateData = [
+                                'name' => $row['name'],
+                                'legal_name' => $row['legal_name'] ?? $existing->legal_name,
+                                'type' => $type,
+                                'phone' => $phone ?? $existing->phone,
+                                'email' => $email ?? $existing->email,
+                                'tax_identifier' => $taxId ?? $existing->tax_identifier,
+                                'credit_limit' => $creditLimit ?: $existing->credit_limit,
+                                'credit_days' => $creditDays ?: $existing->credit_days,
+                                'status' => $status,
+                                'updated_by' => $userId,
+                            ];
+                            if ($isCustomer) $updateData['is_customer'] = 1;
+                            if ($isSupplier) $updateData['is_supplier'] = 1;
+                            if ($isDealer) $updateData['is_dealer'] = 1;
+                            if ($isAgent) $updateData['is_agent'] = 1;
+
+                            $existing->update($updateData);
+                            $updated++;
+                            continue;
+                        } catch (\Throwable $e) {
+                            $errors[] = [
+                                'row' => $rowNum,
+                                'field' => 'code',
+                                'value' => $code,
+                                'message' => 'Update failed: ' . $e->getMessage(),
+                            ];
+                            continue;
+                        }
+                    }
+
+                    // Auto-generate code if missing
+                    if (!$code) {
+                        $prefix = $isSupplier && !$isCustomer ? 'SUP-' : 'CUST-';
+                        $code = $prefix . str_pad((string) random_int(1000, 99999), 5, '0', STR_PAD_LEFT);
+                    }
+
+                    try {
+                        $newParty = Party::create([
+                            'uuid' => (string) Str::uuid(),
+                            'code' => $code,
+                            'name' => $row['name'],
+                            'legal_name' => $row['legal_name'] ?? null,
+                            'is_customer' => $isCustomer,
+                            'is_supplier' => $isSupplier,
+                            'is_dealer' => $isDealer,
+                            'is_agent' => $isAgent,
+                            'type' => $type,
+                            'phone' => $phone,
+                            'email' => $email,
+                            'tax_identifier' => $taxId,
+                            'credit_limit' => $creditLimit,
+                            'credit_days' => $creditDays,
+                            'opening_balance' => $openingBalance,
+                            'current_balance' => $openingBalance,
+                            'status' => $status,
+                            'created_by' => $userId,
+                            'updated_by' => $userId,
+                        ]);
+
+                        $addrLine = $row['address_line1'] ?? $row['address'] ?? null;
+                        if ($addrLine) {
+                            PartyAddress::create([
+                                'uuid' => (string) Str::uuid(),
+                                'party_id' => $newParty->id,
+                                'type' => 'billing',
+                                'line1' => $addrLine,
+                                'city' => $row['city'] ?? 'Dhaka',
+                                'state' => $row['state'] ?? null,
+                                'postal_code' => $row['postal_code'] ?? null,
+                                'country_code' => $row['country_code'] ?? 'BD',
+                                'is_default' => true,
+                            ]);
+                        }
+
+                        $codeMap[strtolower($code)] = $newParty;
+                        if ($cleanPhone) {
+                            $phoneMap[$cleanPhone] = $newParty;
+                        }
+                        if ($email) {
+                            $emailMap[$email] = $newParty;
+                        }
+
+                        $imported++;
+                    } catch (\Throwable $e) {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'code',
+                            'value' => $code,
+                            'message' => 'Creation failed: ' . $e->getMessage(),
+                        ];
+                    }
+                }
+            });
+        }
+
+        return response()->json([
+            'success' => count($errors) === 0,
+            'total' => count($rows),
+            'imported' => $imported,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'failed' => count($errors),
+            'errors' => $errors,
+            'message' => sprintf(
+                'Import completed: %d added, %d updated, %d skipped, %d failed.',
+                $imported,
+                $updated,
+                $skipped,
+                count($errors)
+            ),
         ]);
     }
 }

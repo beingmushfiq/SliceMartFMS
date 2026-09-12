@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\HR\Controllers;
 
+use App\Core\Tenancy\TenantContext;
 use App\Http\Controllers\Controller;
 use App\Modules\HR\Actions\RecordAttendanceAction;
 use App\Modules\HR\Models\Attendance;
@@ -13,12 +14,264 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class AttendanceController extends Controller
 {
     public function __construct(
         private readonly RecordAttendanceAction $recordAttendanceAction
     ) {}
+
+    public function bulkImport(Request $request): JsonResponse
+    {
+        $tenantId = TenantContext::current()->tenantId();
+        $userId = Auth::id() ? (int) Auth::id() : 1;
+
+        $validated = $request->validate([
+            'rows' => ['required', 'array', 'min:1'],
+            'rows.*' => ['required', 'array'],
+            'mode' => ['nullable', 'string', 'in:skip,upsert'],
+        ]);
+
+        $rows = $validated['rows'];
+        $mode = $validated['mode'] ?? 'skip';
+
+        $imported = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = [];
+
+        // Preload employees by code and email for fast lookup
+        $employees = Employee::query()
+            ->where('tenant_id', $tenantId)
+            ->get();
+
+        $employeeMap = [];
+        foreach ($employees as $emp) {
+            if ($emp->employee_code) {
+                $employeeMap[strtolower((string) $emp->employee_code)] = $emp;
+            }
+            if ($emp->email) {
+                $employeeMap[strtolower((string) $emp->email)] = $emp;
+            }
+        }
+
+        // Preload shifts
+        $shifts = Shift::query()
+            ->where('tenant_id', $tenantId)
+            ->get();
+
+        $shiftMap = [];
+        foreach ($shifts as $shift) {
+            if ($shift->code) {
+                $shiftMap[strtolower((string) $shift->code)] = $shift;
+            }
+            if ($shift->name) {
+                $shiftMap[strtolower((string) $shift->name)] = $shift;
+            }
+        }
+
+        $chunks = array_chunk($rows, 100);
+
+        foreach ($chunks as $chunkIndex => $chunk) {
+            DB::transaction(function () use (
+                $chunk,
+                $chunkIndex,
+                $tenantId,
+                $userId,
+                $mode,
+                $employeeMap,
+                $shiftMap,
+                &$imported,
+                &$updated,
+                &$skipped,
+                &$errors
+            ) {
+                foreach ($chunk as $index => $row) {
+                    $rowNum = ($chunkIndex * 100) + $index + 1;
+                    $empCode = trim((string) ($row['employee_code'] ?? $row['code'] ?? $row['emp_id'] ?? $row['staff_id'] ?? ''));
+                    $attDate = trim((string) ($row['attendance_date'] ?? $row['date'] ?? ''));
+                    $shiftCode = isset($row['shift_code']) ? trim((string) $row['shift_code']) : (isset($row['shift']) ? trim((string) $row['shift']) : null);
+                    $checkInRaw = isset($row['check_in_at']) ? trim((string) $row['check_in_at']) : (isset($row['in_time']) ? trim((string) $row['in_time']) : (isset($row['clock_in']) ? trim((string) $row['clock_in']) : null));
+                    $checkOutRaw = isset($row['check_out_at']) ? trim((string) $row['check_out_at']) : (isset($row['out_time']) ? trim((string) $row['out_time']) : (isset($row['clock_out']) ? trim((string) $row['clock_out']) : null));
+                    $status = isset($row['status']) && in_array(strtolower(trim((string) $row['status'])), ['present', 'absent', 'late', 'half_day', 'on_leave', 'holiday', 'weekly_off'], true)
+                        ? strtolower(trim((string) $row['status']))
+                        : null;
+                    $remarks = isset($row['remarks']) ? trim((string) $row['remarks']) : (isset($row['notes']) ? trim((string) $row['notes']) : 'Bulk imported attendance');
+
+                    if ($empCode === '') {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'employee_code',
+                            'value' => '',
+                            'message' => 'Employee code is required.',
+                        ];
+                        continue;
+                    }
+
+                    if ($attDate === '') {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'attendance_date',
+                            'value' => '',
+                            'message' => 'Attendance date is required.',
+                        ];
+                        continue;
+                    }
+
+                    $employee = $employeeMap[strtolower($empCode)] ?? null;
+                    if (!$employee) {
+                        $errors[] = [
+                            'row' => $rowNum,
+                            'field' => 'employee_code',
+                            'value' => $empCode,
+                            'message' => "Employee with code '{$empCode}' does not exist.",
+                        ];
+                        continue;
+                    }
+
+                    $shift = null;
+                    if ($shiftCode && isset($shiftMap[strtolower($shiftCode)])) {
+                        $shift = $shiftMap[strtolower($shiftCode)];
+                    } elseif ($employee->default_shift_id) {
+                        $shift = Shift::find($employee->default_shift_id);
+                    }
+
+                    // Format full datetimes
+                    $checkIn = null;
+                    $checkOut = null;
+                    if ($checkInRaw) {
+                        if (strlen($checkInRaw) <= 8 && str_contains($checkInRaw, ':')) {
+                            $checkIn = Carbon::parse($attDate . ' ' . $checkInRaw);
+                        } else {
+                            $checkIn = Carbon::parse($checkInRaw);
+                        }
+                    }
+                    if ($checkOutRaw) {
+                        if (strlen($checkOutRaw) <= 8 && str_contains($checkOutRaw, ':')) {
+                            $checkOut = Carbon::parse($attDate . ' ' . $checkOutRaw);
+                        } else {
+                            $checkOut = Carbon::parse($checkOutRaw);
+                        }
+                    }
+
+                    // Calculate worked and late minutes
+                    $workedMinutes = 0;
+                    $lateMinutes = 0;
+                    $overtimeMinutes = 0;
+
+                    if ($checkIn && $checkOut) {
+                        $diffSec = $checkOut->getTimestamp() - $checkIn->getTimestamp();
+                        $workedMinutes = (int) max(0, floor($diffSec / 60));
+
+                        if ($shift && $shift->start_time) {
+                            $shiftStart = Carbon::parse($attDate . ' ' . $shift->start_time);
+                            $grace = (int) ($shift->grace_in_minutes ?? 0);
+                            $allowedStart = $shiftStart->copy()->addMinutes($grace);
+                            if ($checkIn->getTimestamp() > $allowedStart->getTimestamp()) {
+                                $lateMinutes = (int) max(0, floor(($checkIn->getTimestamp() - $shiftStart->getTimestamp()) / 60));
+                            }
+                        }
+
+                        if ($workedMinutes > 480) {
+                            $overtimeMinutes = $workedMinutes - 480;
+                        }
+                    }
+
+                    if (!$status) {
+                        if ($lateMinutes > 0) {
+                            $status = 'late';
+                        } elseif ($workedMinutes > 0 || $checkIn) {
+                            $status = 'present';
+                        } else {
+                            $status = 'present';
+                        }
+                    }
+
+                    // Check existing attendance record
+                    $existing = Attendance::query()
+                        ->where('tenant_id', $tenantId)
+                        ->where('employee_id', $employee->id)
+                        ->where('attendance_date', $attDate)
+                        ->first();
+
+                    if ($existing) {
+                        if ($mode === 'skip') {
+                            $skipped++;
+                            continue;
+                        }
+
+                        // Upsert
+                        try {
+                            $existing->update([
+                                'shift_id' => $shift?->id ?? $existing->shift_id,
+                                'check_in_at' => $checkIn ?? $existing->check_in_at,
+                                'check_out_at' => $checkOut ?? $existing->check_out_at,
+                                'check_in_source' => 'import',
+                                'check_out_source' => 'import',
+                                'worked_minutes' => $workedMinutes > 0 ? $workedMinutes : $existing->worked_minutes,
+                                'late_minutes' => $lateMinutes,
+                                'overtime_minutes' => $overtimeMinutes,
+                                'status' => $status,
+                                'remarks' => $remarks,
+                                'updated_by' => $userId,
+                            ]);
+                            $updated++;
+                        } catch (\Throwable $e) {
+                            $errors[] = [
+                                'row' => $rowNum,
+                                'field' => 'attendance_date',
+                                'value' => $attDate,
+                                'message' => 'Attendance update failed: ' . $e->getMessage(),
+                            ];
+                        }
+                    } else {
+                        // Create
+                        try {
+                            Attendance::create([
+                                'tenant_id' => $tenantId,
+                                'uuid' => (string) Str::uuid(),
+                                'employee_id' => $employee->id,
+                                'attendance_date' => $attDate,
+                                'shift_id' => $shift?->id,
+                                'check_in_at' => $checkIn,
+                                'check_out_at' => $checkOut,
+                                'check_in_source' => 'import',
+                                'check_out_source' => 'import',
+                                'worked_minutes' => $workedMinutes,
+                                'late_minutes' => $lateMinutes,
+                                'overtime_minutes' => $overtimeMinutes,
+                                'status' => $status,
+                                'remarks' => $remarks,
+                                'created_by' => $userId,
+                                'updated_by' => $userId,
+                            ]);
+                            $imported++;
+                        } catch (\Throwable $e) {
+                            $errors[] = [
+                                'row' => $rowNum,
+                                'field' => 'attendance_date',
+                                'value' => $attDate,
+                                'message' => 'Attendance creation failed: ' . $e->getMessage(),
+                            ];
+                        }
+                    }
+                }
+            });
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'imported' => $imported,
+                'updated' => $updated,
+                'skipped' => $skipped,
+                'failed' => count($errors),
+                'errors' => $errors,
+            ],
+        ]);
+    }
 
     public function index(Request $request): JsonResponse
     {

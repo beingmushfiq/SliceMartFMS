@@ -24,6 +24,7 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   ArrowLeftRight,
+  Upload,
 } from 'lucide-react';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { useCurrency } from '../../hooks/useCurrency';
@@ -51,6 +52,12 @@ import { PrintPreviewModal, FinancialStatementPrintDocument } from '../../compon
 import { useBusinessConfig } from '../../lib/document/useBusinessConfig';
 import { api } from '../../lib/api/client';
 import { extractList } from '../../lib/api/apiData';
+import { UniversalImportModal } from '../../components/import/UniversalImportModal';
+import {
+  chartOfAccountsImportSchema,
+  openingJournalImportSchema,
+  bankStatementImportSchema,
+} from './schemas';
 
 export type FinanceTab =
   'coa' | 'journal' | 'banking' | 'expenses' | 'costing' | 'statements' | 'due-collection';
@@ -214,6 +221,9 @@ export const FinanceWorkspace: React.FC = () => {
   const { formatCurrency } = useCurrency();
   const { config: businessConfig } = useBusinessConfig();
   const [showPrintStatementModal, setShowPrintStatementModal] = useState(false);
+  const [showImportCoaModal, setShowImportCoaModal] = useState(false);
+  const [showImportJournalModal, setShowImportJournalModal] = useState(false);
+  const [showImportBankModal, setShowImportBankModal] = useState(false);
   const [activeTab, setActiveTab] = useWorkspaceTab<FinanceTab>('banking', [
     'banking',
     'expenses',
@@ -522,6 +532,68 @@ export const FinanceWorkspace: React.FC = () => {
     URL.revokeObjectURL(url);
     notify.success('Journals Exported', { description: `Exported ${journalsToExport.length} journal entries to CSV.` });
   };
+
+  const exportAccountsCsv = () => {
+    if (accounts.length === 0) {
+      notify.warning('No accounts to export');
+      return;
+    }
+    const headers = ['Account Code', 'Account Name', 'Type', 'Subtype', 'Normal Balance', 'Current Balance', 'Status'];
+    const rows = accounts.map((a) => [
+      `"${a.account_code}"`,
+      `"${(a.name || '').replace(/"/g, '""')}"`,
+      `"${a.account_type}"`,
+      `"${a.account_subtype || ''}"`,
+      `"${a.normal_balance}"`,
+      `"${a.current_balance || '0'}"`,
+      `"${a.is_active ? 'ACTIVE' : 'INACTIVE'}"`,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `chart-of-accounts-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    notify.success('Accounts Exported', { description: `Exported ${accounts.length} accounts to CSV.` });
+  };
+
+  const fetchAccountsFromApi = useCallback(async () => {
+    try {
+      const res = await api.get('/finance/accounts');
+      const list = extractList<ChartOfAccount>(res.data);
+      if (list.length > 0) {
+        setAccounts(list);
+      }
+    } catch {
+      // Retain state on error
+    }
+  }, []);
+
+  const fetchJournalsFromApi = useCallback(async () => {
+    try {
+      const res = await api.get('/finance/journal-entries');
+      const list = extractList<JournalEntry>(res.data);
+      if (list.length > 0) {
+        setJournalEntries(list);
+      }
+    } catch {
+      // Retain state on error
+    }
+  }, []);
+
+  const fetchBanksFromApi = useCallback(async () => {
+    try {
+      const res = await api.get('/finance/bank-accounts');
+      const list = extractList<BankAccount>(res.data);
+      if (list.length > 0) {
+        setBankAccounts(list);
+      }
+    } catch {
+      // Retain state on error
+    }
+  }, []);
 
   // Bank Accounts State
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([
@@ -1506,6 +1578,15 @@ export const FinanceWorkspace: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 type="button"
+                onClick={() => setShowImportJournalModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-default bg-surface hover:bg-surface-sunken text-default transition-all shadow-2xs cursor-pointer"
+              >
+                <Upload className="size-3.5 text-primary" />
+                <span>Import Journals</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() =>
                   exportJournalsCsv(
                     selectedJournalIds.size > 0
@@ -1692,6 +1773,35 @@ export const FinanceWorkspace: React.FC = () => {
       {/* Tab 2: Chart of Accounts */}
       {activeTab === 'coa' && (
         <div className="space-y-4 pt-1">
+          {/* Discovery & Bulk Actions Toolbar */}
+          <div className="flex flex-wrap items-center justify-between gap-2.5 px-4 py-2.5 rounded-xl bg-surface-sunken/60 border border-default text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-muted font-medium">
+                Showing <strong className="text-default">{accounts.length}</strong> GL ledger accounts
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowImportCoaModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-default bg-surface hover:bg-surface-sunken text-default transition-all shadow-2xs cursor-pointer"
+              >
+                <Upload className="size-3.5 text-primary" />
+                <span>Import Accounts</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={exportAccountsCsv}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-default bg-surface hover:bg-surface-sunken text-default transition-all shadow-2xs cursor-pointer"
+              >
+                <FileSpreadsheet className="size-3.5 text-primary" />
+                <span>Export CSV</span>
+              </button>
+            </div>
+          </div>
+
           <div className="bg-surface rounded-2xl shadow-xs border border-default overflow-hidden">
             <table className="w-full text-left text-xs text-default">
               <thead className="bg-surface-sunken/70 text-muted uppercase text-[11px] font-semibold tracking-wider border-b border-default">
@@ -1794,6 +1904,14 @@ export const FinanceWorkspace: React.FC = () => {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowImportBankModal(true)}
+                className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl border border-default bg-surface hover:bg-surface-sunken text-default shadow-xs transition cursor-pointer"
+              >
+                <Upload className="size-3.5 text-primary" />
+                <span>Import Statement</span>
+              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -3058,6 +3176,27 @@ export const FinanceWorkspace: React.FC = () => {
           />
         </PrintPreviewModal>
       )}
+      {/* Universal Import Modals for Finance Master Data & Records */}
+      <UniversalImportModal
+        isOpen={showImportCoaModal}
+        onClose={() => setShowImportCoaModal(false)}
+        schema={chartOfAccountsImportSchema}
+        onImportSuccess={() => fetchAccountsFromApi()}
+      />
+
+      <UniversalImportModal
+        isOpen={showImportJournalModal}
+        onClose={() => setShowImportJournalModal(false)}
+        schema={openingJournalImportSchema}
+        onImportSuccess={() => fetchJournalsFromApi()}
+      />
+
+      <UniversalImportModal
+        isOpen={showImportBankModal}
+        onClose={() => setShowImportBankModal(false)}
+        schema={bankStatementImportSchema}
+        onImportSuccess={() => fetchBanksFromApi()}
+      />
     </div>
   );
 };
