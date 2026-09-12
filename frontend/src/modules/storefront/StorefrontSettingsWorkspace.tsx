@@ -19,10 +19,12 @@ import {
   Plus,
   Trash2,
   ExternalLink,
+  Ticket,
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
 import type { StorefrontConfig } from '../../types/api/storefront';
 import { DomainSettingsTab } from './DomainSettingsTab';
+import { CouponsTab } from './CouponsTab';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { useCurrency } from '../../hooks/useCurrency';
 import { notify } from '../../components/ui/Toast';
@@ -41,13 +43,13 @@ interface PublishedProductItem {
   display_order: number;
 }
 
-type StorefrontSettingTab = 'branding' | 'header' | 'footer' | 'products' | 'checkout' | 'domains';
+type StorefrontSettingTab = 'branding' | 'header' | 'footer' | 'products' | 'checkout' | 'coupons' | 'domains';
 
 export const StorefrontSettingsWorkspace: React.FC = () => {
   const { currencyCode } = useCurrency();
   const [activeTab, setActiveTab] = useWorkspaceTab<StorefrontSettingTab>(
     'branding',
-    ['branding', 'header', 'footer', 'products', 'checkout', 'domains'] as const
+    ['branding', 'header', 'footer', 'products', 'checkout', 'coupons', 'domains'] as const
   );
   const [products, setProducts] = useState<PublishedProductItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -511,6 +513,7 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
             { id: 'footer', label: 'Footer & Marketing', icon: Megaphone },
             { id: 'products', label: `Product Catalogue Visibility (${products.filter((p) => p.is_published).length}/${products.length})`, icon: Tag },
             { id: 'checkout', label: 'Checkout & Payment Rules', icon: Truck },
+            { id: 'coupons', label: 'Coupons & Promo Codes', icon: Ticket },
             { id: 'domains', label: 'Custom Domains & DNS', icon: Globe },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -1483,6 +1486,12 @@ export const StorefrontSettingsWorkspace: React.FC = () => {
               />
             </div>
           </div>
+        </div>
+      )}
+
+      {activeTab === 'coupons' && (
+        <div className="pt-2">
+          <CouponsTab />
         </div>
       )}
 

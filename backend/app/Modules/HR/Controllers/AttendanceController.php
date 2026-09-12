@@ -12,6 +12,7 @@ use App\Modules\HR\Models\Shift;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class AttendanceController extends Controller
 {
@@ -99,7 +100,7 @@ class AttendanceController extends Controller
             ->orWhere('id', is_numeric($code) ? (int) $code : 0)
             ->first();
 
-        if (!$employee) {
+        if (! $employee) {
             return response()->json([
                 'success' => false,
                 'message' => "Unrecognized badge or employee ID: {$code}",
@@ -116,12 +117,13 @@ class AttendanceController extends Controller
 
         $shift = $employee->defaultShift ?? Shift::where('is_active', true)->first();
 
-        if ($attendance && $attendance->check_in_at && !$attendance->check_out_at) {
+        if ($attendance && $attendance->check_in_at && ! $attendance->check_out_at) {
             // Clock out
             $attendance->check_out_at = $now;
             $checkIn = Carbon::parse($attendance->check_in_at);
             $workingHours = round($checkIn->diffInMinutes($now) / 60, 2);
             $attendance->working_hours = $workingHours;
+            /** @var Attendance $attendance */
             $attendance->save();
 
             return response()->json([
@@ -141,12 +143,14 @@ class AttendanceController extends Controller
         // Clock in
         $status = 'present';
         if ($shift) {
-            $shiftStart = Carbon::parse($today . ' ' . $shift->start_time);
+            $shiftStart = Carbon::parse($today.' '.$shift->start_time);
             $graceEnd = $shiftStart->copy()->addMinutes($shift->grace_in_minutes ?? 15);
             if ($now->gt($graceEnd)) {
                 $status = 'late';
             }
         }
+
+        $userId = is_numeric(Auth::id()) ? (int) Auth::id() : 1;
 
         $attendance = Attendance::updateOrCreate(
             [
@@ -157,8 +161,8 @@ class AttendanceController extends Controller
                 'shift_id' => $shift?->id,
                 'check_in_at' => $now,
                 'status' => $status,
-                'created_by' => auth()->id() ?? 1,
-                'updated_by' => auth()->id() ?? 1,
+                'created_by' => $userId,
+                'updated_by' => $userId,
             ]
         );
 
@@ -174,7 +178,57 @@ class AttendanceController extends Controller
                 'designation' => $employee->designation?->name,
             ],
             'attendance' => $attendance,
-            'message' => "Clock-in verified: {$employee->display_name} ({$employee->employee_code}) at {$now->format('h:i A')}. Status: " . strtoupper($status),
+            'message' => "Clock-in verified: {$employee->display_name} ({$employee->employee_code}) at {$now->format('h:i A')}. Status: ".strtoupper($status),
+        ]);
+    }
+
+    public function destroy(int $id): JsonResponse
+    {
+        $attendance = Attendance::findOrFail($id);
+        $attendance->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Attendance record removed successfully.',
+        ]);
+    }
+
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+        ]);
+
+        $ids = array_map('intval', $validated['ids']);
+        $count = (int) Attendance::whereIn('id', $ids)->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Removed {$count} attendance records.",
+        ]);
+    }
+
+    public function bulkStatus(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+            'status' => 'required|string|in:present,absent,late,half_day,on_leave,holiday,weekly_off',
+        ]);
+
+        $ids = array_map('intval', $validated['ids']);
+        $status = (string) $validated['status'];
+        $userId = is_numeric(Auth::id()) ? (int) Auth::id() : 1;
+
+        $count = (int) Attendance::whereIn('id', $ids)->update([
+            'status' => $status,
+            'updated_by' => $userId,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Marked {$count} attendance records as {$status}.",
         ]);
     }
 }

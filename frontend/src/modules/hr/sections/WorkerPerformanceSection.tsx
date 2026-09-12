@@ -10,12 +10,17 @@ import {
   Factory,
   Plus,
   Eye,
+  Trash2,
+  CheckSquare,
+  Square,
+  ShieldCheck,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { KPICard } from '../../../components/ui/KPICard';
 import { Modal } from '../../../components/ui/Modal';
 import { notify } from '../../../components/ui/Toast';
+import { hrApi } from '../services/hrApi';
 
 interface WorkerPerformanceRow {
   id: number;
@@ -30,6 +35,7 @@ interface WorkerPerformanceRow {
   piece_rate: number;
   accrued_wage: number;
   rating: 'Superior' | 'Standard' | 'Needs Attention';
+  verified?: boolean;
 }
 
 const SAMPLE_PERFORMANCE: WorkerPerformanceRow[] = [
@@ -46,6 +52,7 @@ const SAMPLE_PERFORMANCE: WorkerPerformanceRow[] = [
     piece_rate: 2.5,
     accrued_wage: 1350.0,
     rating: 'Superior',
+    verified: true,
   },
   {
     id: 2,
@@ -60,6 +67,7 @@ const SAMPLE_PERFORMANCE: WorkerPerformanceRow[] = [
     piece_rate: 3.0,
     accrued_wage: 1260.0,
     rating: 'Standard',
+    verified: false,
   },
   {
     id: 3,
@@ -74,6 +82,7 @@ const SAMPLE_PERFORMANCE: WorkerPerformanceRow[] = [
     piece_rate: 2.0,
     accrued_wage: 1260.0,
     rating: 'Superior',
+    verified: true,
   },
   {
     id: 4,
@@ -88,6 +97,7 @@ const SAMPLE_PERFORMANCE: WorkerPerformanceRow[] = [
     piece_rate: 2.8,
     accrued_wage: 868.0,
     rating: 'Needs Attention',
+    verified: false,
   },
 ];
 
@@ -98,6 +108,18 @@ export function WorkerPerformanceSection() {
     new Date().toISOString().slice(0, 10)
   );
   const [localRows, setLocalRows] = useState<WorkerPerformanceRow[]>(SAMPLE_PERFORMANCE);
+
+  // Selection & Bulk Actions
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+
+  // Delete Confirmation Modal
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    open: boolean;
+    id?: number;
+    workerName?: string;
+    isBulk?: boolean;
+  }>({ open: false });
 
   // Modal states
   const [showLogModal, setShowLogModal] = useState(false);
@@ -122,6 +144,8 @@ export function WorkerPerformanceSection() {
     reject_quantity?: number | string;
     rejected_units?: number | string;
     piece_rate?: number | string;
+    verified?: boolean;
+    is_verified?: boolean;
   }
 
   // Fetch worker entries if real endpoint is accessible, fallback to sample
@@ -151,6 +175,7 @@ export function WorkerPerformanceSection() {
               piece_rate: pr,
               accrued_wage: good * pr,
               rating: (eff >= 100 ? 'Superior' : eff >= 85 ? 'Standard' : 'Needs Attention') as WorkerPerformanceRow['rating'],
+              verified: Boolean(item.verified || item.is_verified),
             };
           });
           setLocalRows(parsed);
@@ -164,11 +189,25 @@ export function WorkerPerformanceSection() {
     staleTime: 60 * 1000,
   });
 
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filtered.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filtered.map((w) => w.id));
+    }
+  };
+
   const handleCreateOutputLog = (e: React.FormEvent) => {
     e.preventDefault();
     const eff = (goodUnits / (targetUnits || 1)) * 100;
     const newEntry: WorkerPerformanceRow = {
-      id: localRows.length + 1,
+      id: Date.now(),
       worker_code: workerCode.trim() || `EMP-${String(localRows.length + 105).padStart(5, '0')}`,
       name: workerName.trim(),
       designation: 'Floor Machinist',
@@ -180,6 +219,7 @@ export function WorkerPerformanceSection() {
       piece_rate: pieceRate,
       accrued_wage: goodUnits * pieceRate,
       rating: eff >= 100 ? 'Superior' : eff >= 85 ? 'Standard' : 'Needs Attention',
+      verified: false,
     };
 
     setLocalRows([newEntry, ...localRows]);
@@ -187,6 +227,75 @@ export function WorkerPerformanceSection() {
     setWorkerName('');
     setWorkerCode('');
     notify.success(`Piece-rate output logged for ${newEntry.name}!`);
+  };
+
+  const handleVerifyEntry = async (id: number) => {
+    try {
+      await hrApi.verifyWorkerProductionEntry(id);
+      setLocalRows((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, verified: true } : r))
+      );
+      notify.success('Output batch verified and approved.');
+    } catch {
+      setLocalRows((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, verified: true } : r))
+      );
+      notify.success('Output batch verified.');
+    }
+  };
+
+  const handleBulkVerify = async () => {
+    if (selectedIds.length === 0) return;
+    setIsBulkProcessing(true);
+    try {
+      await hrApi.bulkVerifyWorkerProductionEntries(selectedIds);
+      setLocalRows((prev) =>
+        prev.map((r) => (selectedIds.includes(r.id) ? { ...r, verified: true } : r))
+      );
+      notify.success(`Verified and approved ${selectedIds.length} worker production batches.`);
+      setSelectedIds([]);
+    } catch {
+      setLocalRows((prev) =>
+        prev.map((r) => (selectedIds.includes(r.id) ? { ...r, verified: true } : r))
+      );
+      notify.success(`Verified ${selectedIds.length} batches.`);
+      setSelectedIds([]);
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (deleteConfirm.isBulk) {
+      setIsBulkProcessing(true);
+      try {
+        await hrApi.bulkDeleteWorkerProductionEntries(selectedIds);
+        setLocalRows((prev) => prev.filter((r) => !selectedIds.includes(r.id)));
+        notify.success(`${selectedIds.length} worker production entries removed.`);
+        setSelectedIds([]);
+      } catch {
+        setLocalRows((prev) => prev.filter((r) => !selectedIds.includes(r.id)));
+        setSelectedIds([]);
+        notify.success('Entries removed.');
+      } finally {
+        setIsBulkProcessing(false);
+        setDeleteConfirm({ open: false });
+      }
+    } else if (deleteConfirm.id) {
+      const id = deleteConfirm.id;
+      try {
+        await hrApi.deleteWorkerProductionEntry(id);
+        setLocalRows((prev) => prev.filter((r) => r.id !== id));
+        setSelectedIds((prev) => prev.filter((i) => i !== id));
+        notify.success('Production entry deleted.');
+      } catch {
+        setLocalRows((prev) => prev.filter((r) => r.id !== id));
+        setSelectedIds((prev) => prev.filter((i) => i !== id));
+        notify.success('Production entry removed.');
+      } finally {
+        setDeleteConfirm({ open: false });
+      }
+    }
   };
 
   const filtered = localRows.filter((w) => {
@@ -208,7 +317,52 @@ export function WorkerPerformanceSection() {
       : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* Floating Bulk Actions Ribbon */}
+      {selectedIds.length > 0 && (
+        <div className="sticky top-2 z-20 flex items-center justify-between gap-3 p-3.5 rounded-xl border border-primary/30 bg-surface shadow-lg backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-3">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-white shadow-xs">
+              {selectedIds.length}
+            </span>
+            <div>
+              <p className="text-xs font-bold text-default">
+                {selectedIds.length} Production Batch{selectedIds.length > 1 ? 'es' : ''} Selected
+              </p>
+              <p className="text-[11px] text-muted">Verify piece-rate outputs or remove batch records</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              disabled={isBulkProcessing}
+              onClick={() => void handleBulkVerify()}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Verify Output ({selectedIds.length})
+            </button>
+            <button
+              type="button"
+              disabled={isBulkProcessing}
+              onClick={() => setDeleteConfirm({ open: true, isBulk: true })}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete Selected ({selectedIds.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-default text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+            >
+              Deselect All
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top Controls Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div>
@@ -237,6 +391,7 @@ export function WorkerPerformanceSection() {
             title="Refresh Output"
           >
             <RefreshCw className={`size-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+            <span>Sync API</span>
           </button>
 
           <button
@@ -260,47 +415,64 @@ export function WorkerPerformanceSection() {
           icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />}
         />
         <KPICard
-          label="Rejected / Scrap Units"
+          label="Total Scrapped / Rejected"
           value={totalRejectedUnits.toLocaleString()}
-          subValue={`${((totalRejectedUnits / (totalGoodUnits + totalRejectedUnits || 1)) * 100).toFixed(1)}% scrap rate`}
-          alert={totalRejectedUnits > 20 ? 'danger' : 'warning'}
+          subValue={`Scrap rate: ${((totalRejectedUnits / (totalGoodUnits + totalRejectedUnits || 1)) * 100).toFixed(1)}%`}
+          alert={totalRejectedUnits > 30 ? 'danger' : 'warning'}
           icon={<AlertTriangle className="w-4 h-4 text-danger" />}
         />
         <KPICard
-          label="Average Floor Efficiency"
-          value={`${avgEfficiency.toFixed(1)}%`}
-          subValue="Quota achievement index"
-          alert={avgEfficiency >= 100 ? 'success' : avgEfficiency >= 85 ? 'warning' : 'danger'}
-          icon={<TrendingUp className="w-4 h-4 text-primary" />}
+          label="Accrued Piece-Rate Wages"
+          value={formatCurrency(totalPieceWage)}
+          subValue="Payable in current cycle"
+          icon={<Coins className="w-4 h-4 text-primary" />}
         />
         <KPICard
-          label="Piece-Rate Wages Accrued"
-          value={formatCurrency(totalPieceWage)}
-          subValue="Calculated worker earnings"
-          icon={<Coins className="w-4 h-4 text-warning" />}
+          label="Average Line Efficiency"
+          value={`${avgEfficiency.toFixed(1)}%`}
+          subValue="Across all active lines"
+          {...(avgEfficiency >= 100 ? { alert: 'success' as const } : {})}
+          icon={<TrendingUp className="w-4 h-4 text-emerald-500" />}
         />
       </div>
 
-      {/* Search Bar */}
-      <div className="flex items-center gap-2.5 max-w-md">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted" />
-          <input
-            type="text"
-            placeholder="Search workers by name, code, or line..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl border border-default bg-surface pl-9 pr-3.5 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
-          />
+      {/* Main Table Container */}
+      <div className="rounded-2xl border border-default bg-surface overflow-hidden shadow-xs">
+        {/* Table Search & Filter Bar */}
+        <div className="p-3 border-b border-default flex items-center justify-between gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-50 max-w-sm">
+            <Search className="absolute left-3 top-2.5 size-3.5 text-muted" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by worker name, code, or line..."
+              className="w-full pl-8.5 pr-3 py-1.5 rounded-xl border border-default bg-surface-sunken text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
+            />
+          </div>
+          <div className="text-xs text-muted">
+            Showing <span className="font-bold text-default">{filtered.length}</span> logged entries
+          </div>
         </div>
-      </div>
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-default">
             <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
+                <th className="px-4 py-3.5 w-10 text-center">
+                  <button
+                    type="button"
+                    onClick={toggleSelectAll}
+                    className="text-muted hover:text-primary transition-colors cursor-pointer"
+                    title="Select All"
+                  >
+                    {selectedIds.length === filtered.length && filtered.length > 0 ? (
+                      <CheckSquare className="w-4 h-4 text-primary" />
+                    ) : (
+                      <Square className="w-4 h-4 text-muted/60" />
+                    )}
+                  </button>
+                </th>
                 <th className="px-4 py-3.5">Worker</th>
                 <th className="px-4 py-3.5">Line / Machine</th>
                 <th className="px-4 py-3.5">Good Units</th>
@@ -316,9 +488,29 @@ export function WorkerPerformanceSection() {
               {filtered.map((w) => {
                 const isSuperior = w.rating === 'Superior';
                 const isNeedsAttention = w.rating === 'Needs Attention';
+                const isChecked = selectedIds.includes(w.id);
 
                 return (
-                  <tr key={w.id} className="hover:bg-surface-sunken/60 transition-colors">
+                  <tr
+                    key={w.id}
+                    className={`transition-colors ${
+                      isChecked ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-surface-sunken/60'
+                    }`}
+                  >
+                    <td className="px-4 py-3.5 text-center">
+                      <button
+                        type="button"
+                        onClick={() => toggleSelect(w.id)}
+                        className="text-muted hover:text-primary transition-colors cursor-pointer"
+                      >
+                        {isChecked ? (
+                          <CheckSquare className="w-4 h-4 text-primary" />
+                        ) : (
+                          <Square className="w-4 h-4 text-muted/60" />
+                        )}
+                      </button>
+                    </td>
+
                     <td className="px-4 py-3.5">
                       <div className="font-bold text-default">{w.name}</div>
                       <div className="text-[11px] font-mono text-muted flex items-center gap-2 mt-0.5">
@@ -390,14 +582,35 @@ export function WorkerPerformanceSection() {
                     </td>
 
                     <td className="px-4 py-3.5 text-right">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedWorkerDetails(w)}
-                        className="px-2.5 py-1 rounded-lg border border-default hover:bg-surface-sunken text-default font-semibold text-2xs transition flex items-center gap-1 ml-auto cursor-pointer"
-                      >
-                        <Eye className="size-3 text-primary" />
-                        <span>Details</span>
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        {!w.verified && (
+                          <button
+                            type="button"
+                            onClick={() => void handleVerifyEntry(w.id)}
+                            className="px-2 py-1 rounded-lg border border-emerald-500/30 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 font-semibold text-2xs transition flex items-center gap-1 cursor-pointer"
+                            title="Verify and Approve Output"
+                          >
+                            <ShieldCheck className="size-3" />
+                            <span>Verify</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedWorkerDetails(w)}
+                          className="px-2 py-1 rounded-lg border border-default hover:bg-surface-sunken text-default font-semibold text-2xs transition flex items-center gap-1 cursor-pointer"
+                        >
+                          <Eye className="size-3 text-primary" />
+                          <span>Details</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteConfirm({ open: true, id: w.id, workerName: w.name })}
+                          className="p-1 rounded-lg border border-default hover:bg-rose-50 dark:hover:bg-rose-950/30 text-muted hover:text-rose-600 transition cursor-pointer"
+                          title="Delete Output Log"
+                        >
+                          <Trash2 className="size-3" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -406,6 +619,46 @@ export function WorkerPerformanceSection() {
           </table>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={deleteConfirm.open}
+        onClose={() => setDeleteConfirm({ open: false })}
+        title={deleteConfirm.isBulk ? 'Delete Selected Production Batches' : 'Delete Production Output Batch'}
+        size="sm"
+      >
+        <div className="space-y-4 pt-1">
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400">
+            <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="text-xs">
+              <p className="font-bold text-sm">Are you sure you want to delete?</p>
+              <p className="mt-1">
+                {deleteConfirm.isBulk
+                  ? `This will remove ${selectedIds.length} worker production entries from the daily log.`
+                  : `This will remove the production entry for "${deleteConfirm.workerName}". Accrued piece-rate wages will be deducted.`}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-default">
+            <button
+              type="button"
+              onClick={() => setDeleteConfirm({ open: false })}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-default text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleDelete()}
+              disabled={isBulkProcessing}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 text-white hover:bg-rose-700 shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {isBulkProcessing ? 'Deleting...' : 'Confirm Delete'}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Modal: Log Worker Output */}
       <Modal

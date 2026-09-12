@@ -19,6 +19,7 @@ import {
   Users,
   Warehouse,
   Zap,
+  Ticket,
 } from 'lucide-react';
 
 export interface DynamicNavItem {
@@ -136,6 +137,16 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
         permission: ['ecommerce.storefront.view', 'ecommerce.storefront.manage'],
         badge: 'Live',
         badgeTone: 'success',
+      },
+      {
+        id: 'coupons',
+        moduleKey: 'ecommerce',
+        defaultLabel: 'Coupons & Promo Codes',
+        to: '/storefront?tab=coupons',
+        icon: Ticket,
+        permission: ['ecommerce.storefront.view', 'sales.order.view'],
+        badge: 'Promo',
+        badgeTone: 'primary',
       },
     ],
   },

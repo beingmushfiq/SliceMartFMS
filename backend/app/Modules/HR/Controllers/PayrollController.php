@@ -14,6 +14,7 @@ use App\Modules\HR\Models\PayslipItem;
 use App\Modules\HR\Models\SalaryComponent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class PayrollController extends Controller
@@ -83,7 +84,7 @@ class PayrollController extends Controller
             'disbursement_date' => 'nullable|date',
         ]);
 
-        DB::transaction(function () use ($period, $validated, $request) {
+        DB::transaction(function () use ($period, $validated, $request): void {
             $period->update([
                 'status' => 'paid',
                 'updated_by' => (int) ($request->user()?->id ?? 1),
@@ -184,7 +185,7 @@ class PayrollController extends Controller
             $net = max(0.0, $gross - $deductions);
 
             $seq = Payslip::where('payroll_period_id', $period->id)->count() + 1;
-            $payslipNum = "PS-{$period->period_code}-" . str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
+            $payslipNum = "PS-{$period->period_code}-".str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
 
             $payslip = Payslip::create([
                 'payroll_period_id' => $period->id,
@@ -201,7 +202,7 @@ class PayrollController extends Controller
                 'updated_by' => $userId,
             ]);
 
-            if (!empty($validated['items'])) {
+            if (! empty($validated['items'])) {
                 foreach ($validated['items'] as $idx => $item) {
                     $component = SalaryComponent::firstOrCreate(
                         ['code' => $item['component_code']],
@@ -279,7 +280,7 @@ class PayrollController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $advanceNumber = 'ADV-' . date('Ym') . '-' . str_pad((string) random_int(100, 9999), 4, '0', STR_PAD_LEFT);
+        $advanceNumber = 'ADV-'.date('Ym').'-'.str_pad((string) random_int(100, 9999), 4, '0', STR_PAD_LEFT);
         $userId = (int) ($request->user()?->id ?? 1);
 
         $advance = PayrollAdvance::create([
@@ -298,7 +299,136 @@ class PayrollController extends Controller
 
         return response()->json([
             'data' => $advance->load(['employee']),
-            'message' => "Salary advance of ৳" . number_format((float) $validated['amount'], 2) . " approved for recovery.",
+            'message' => 'Salary advance of ৳'.number_format((float) $validated['amount'], 2).' approved for recovery.',
         ], 201);
+    }
+
+    public function destroyPayslip(int $id): JsonResponse
+    {
+        $payslip = Payslip::findOrFail($id);
+        $payslip->items()->delete();
+        $payslip->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Payslip record deleted successfully.',
+        ]);
+    }
+
+    public function bulkStatusPayslips(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+            'payment_status' => 'required|string|in:draft,approved,paid',
+        ]);
+
+        $ids = array_map('intval', $validated['ids']);
+        $status = (string) $validated['payment_status'];
+        $userId = is_numeric(Auth::id()) ? (int) Auth::id() : 1;
+
+        $count = Payslip::whereIn('id', $ids)->update([
+            'payment_status' => $status,
+            'updated_by' => $userId,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Updated payment status for {$count} payslips.",
+        ]);
+    }
+
+    public function bulkDeletePayslips(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+        ]);
+
+        $ids = array_map('intval', $validated['ids']);
+        $count = 0;
+
+        DB::transaction(function () use ($ids, &$count): void {
+            PayslipItem::whereIn('payslip_id', $ids)->delete();
+            $count = Payslip::whereIn('id', $ids)->delete();
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => "Deleted {$count} payslips.",
+        ]);
+    }
+
+    public function destroyPeriod(int $id): JsonResponse
+    {
+        $period = PayrollPeriod::withCount('payslips')->findOrFail($id);
+        if ($period->payslips_count > 0 && $period->status === 'paid') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot delete a settled and disbursed payroll period.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($period): void {
+            $payslipIds = Payslip::where('payroll_period_id', $period->id)->pluck('id');
+            PayslipItem::whereIn('payslip_id', $payslipIds)->delete();
+            Payslip::where('payroll_period_id', $period->id)->delete();
+            $period->delete();
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => "Payroll period '{$period->period_code}' and associated drafts removed.",
+        ]);
+    }
+
+    public function destroyAdvance(int $id): JsonResponse
+    {
+        $advance = PayrollAdvance::findOrFail($id);
+        $advance->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Salary advance record removed.',
+        ]);
+    }
+
+    public function bulkStatusAdvances(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+            'status' => 'required|string|in:active,recovered,written_off',
+        ]);
+
+        $ids = array_map('intval', $validated['ids']);
+        $status = (string) $validated['status'];
+        $userId = is_numeric(Auth::id()) ? (int) Auth::id() : 1;
+
+        $count = PayrollAdvance::whereIn('id', $ids)->update([
+            'status' => $status,
+            'updated_by' => $userId,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Updated status for {$count} advances.",
+        ]);
+    }
+
+    public function bulkDeleteAdvances(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+        ]);
+
+        $ids = array_map('intval', $validated['ids']);
+        $count = PayrollAdvance::whereIn('id', $ids)->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Deleted {$count} advances.",
+        ]);
     }
 }

@@ -627,6 +627,17 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::post('calculations/{id}/approve', [App\Modules\Sales\Controllers\IncentivePolicyController::class, 'approve'])
                     ->name('calculations.approve');
             });
+
+            // ── Coupons & Promotions ──────────────────────────────────────
+            Route::prefix('coupons')->name('coupons.')->group(static function (): void {
+                Route::get('/', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'store'])->name('store');
+                Route::post('generate-batch', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'generateBatch'])->name('generate-batch');
+                Route::get('{id}', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'show'])->name('show');
+                Route::put('{id}', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'update'])->name('update');
+                Route::post('{id}/toggle-status', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'toggleStatus'])->name('toggle-status');
+                Route::delete('{id}', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'destroy'])->name('destroy');
+            });
         });
 
         // ── POS ───────────────────────────────────────────────────────
@@ -795,23 +806,33 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             Route::get('departments', [App\Modules\HR\Controllers\EmployeeController::class, 'departments'])->name('departments');
             Route::post('departments', [App\Modules\HR\Controllers\EmployeeController::class, 'storeDepartment'])->name('departments.store');
             Route::put('departments/{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'updateDepartment'])->name('departments.update');
+            Route::delete('departments/{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'destroyDepartment'])->name('departments.destroy');
+            Route::post('departments/bulk-delete', [App\Modules\HR\Controllers\EmployeeController::class, 'bulkDeleteDepartments'])->name('departments.bulk-delete');
 
             // Designations
             Route::get('designations', [App\Modules\HR\Controllers\EmployeeController::class, 'designations'])->name('designations');
             Route::post('designations', [App\Modules\HR\Controllers\EmployeeController::class, 'storeDesignation'])->name('designations.store');
             Route::put('designations/{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'updateDesignation'])->name('designations.update');
+            Route::delete('designations/{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'destroyDesignation'])->name('designations.destroy');
+            Route::post('designations/bulk-delete', [App\Modules\HR\Controllers\EmployeeController::class, 'bulkDeleteDesignations'])->name('designations.bulk-delete');
 
             // Shifts
             Route::get('shifts', [App\Modules\HR\Controllers\EmployeeController::class, 'shifts'])->name('shifts');
             Route::post('shifts', [App\Modules\HR\Controllers\EmployeeController::class, 'storeShift'])->name('shifts.store');
             Route::put('shifts/{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'updateShift'])->name('shifts.update');
+            Route::delete('shifts/{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'destroyShift'])->name('shifts.destroy');
+            Route::post('shifts/bulk-delete', [App\Modules\HR\Controllers\EmployeeController::class, 'bulkDeleteShifts'])->name('shifts.bulk-delete');
 
             // Employees
             Route::prefix('employees')->name('employees.')->group(static function (): void {
                 Route::get('/', [App\Modules\HR\Controllers\EmployeeController::class, 'index'])->name('index');
                 Route::post('/', [App\Modules\HR\Controllers\EmployeeController::class, 'store'])->name('store');
+                Route::post('bulk-delete', [App\Modules\HR\Controllers\EmployeeController::class, 'bulkDelete'])->name('bulk-delete');
+                Route::post('bulk-status', [App\Modules\HR\Controllers\EmployeeController::class, 'bulkStatus'])->name('bulk-status');
                 Route::get('{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'show'])->name('show');
                 Route::put('{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'update'])->name('update');
+                Route::delete('{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'destroy'])->name('destroy');
+                Route::patch('{id}/status', [App\Modules\HR\Controllers\EmployeeController::class, 'toggleStatus'])->name('status');
                 Route::post('{id}/toggle-status', [App\Modules\HR\Controllers\EmployeeController::class, 'toggleStatus'])->name('toggle-status');
                 Route::get('{id}/documents', [App\Modules\HR\Controllers\EmployeeController::class, 'documents'])->name('documents');
                 Route::post('{id}/documents', [App\Modules\HR\Controllers\EmployeeController::class, 'storeDocument'])->name('documents.store');
@@ -821,6 +842,9 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
             Route::prefix('attendances')->name('attendances.')->group(static function (): void {
                 Route::get('/', [App\Modules\HR\Controllers\AttendanceController::class, 'index'])->name('index');
                 Route::post('/', [App\Modules\HR\Controllers\AttendanceController::class, 'store'])->name('store');
+                Route::post('bulk-delete', [App\Modules\HR\Controllers\AttendanceController::class, 'bulkDelete'])->name('bulk-delete');
+                Route::post('bulk-status', [App\Modules\HR\Controllers\AttendanceController::class, 'bulkStatus'])->name('bulk-status');
+                Route::delete('{id}', [App\Modules\HR\Controllers\AttendanceController::class, 'destroy'])->name('destroy');
                 Route::get('summary', [App\Modules\HR\Controllers\AttendanceController::class, 'summary'])->name('summary');
                 Route::post('punch-badge', [App\Modules\HR\Controllers\AttendanceController::class, 'punchBadge'])->name('punch-badge');
             });
@@ -831,30 +855,44 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
                 Route::get('balances', [App\Modules\HR\Controllers\LeaveRequestController::class, 'balances'])->name('balances');
                 Route::get('/', [App\Modules\HR\Controllers\LeaveRequestController::class, 'index'])->name('index');
                 Route::post('/', [App\Modules\HR\Controllers\LeaveRequestController::class, 'store'])->name('store');
+                Route::post('bulk-approve', [App\Modules\HR\Controllers\LeaveRequestController::class, 'bulkApprove'])->name('bulk-approve');
+                Route::post('bulk-reject', [App\Modules\HR\Controllers\LeaveRequestController::class, 'bulkReject'])->name('bulk-reject');
+                Route::post('bulk-delete', [App\Modules\HR\Controllers\LeaveRequestController::class, 'bulkDelete'])->name('bulk-delete');
                 Route::post('{id}/approve', [App\Modules\HR\Controllers\LeaveRequestController::class, 'approve'])->name('approve');
                 Route::post('{id}/reject', [App\Modules\HR\Controllers\LeaveRequestController::class, 'reject'])->name('reject');
+                Route::delete('{id}', [App\Modules\HR\Controllers\LeaveRequestController::class, 'destroy'])->name('destroy');
             });
 
             // Salary Structures & Compensation
             Route::prefix('salary-structures')->name('salary-structures.')->group(static function (): void {
                 Route::get('/', [App\Modules\HR\Controllers\SalaryStructureController::class, 'index'])->name('index');
                 Route::post('/', [App\Modules\HR\Controllers\SalaryStructureController::class, 'store'])->name('store');
+                Route::post('bulk-delete', [App\Modules\HR\Controllers\SalaryStructureController::class, 'bulkDelete'])->name('bulk-delete');
                 Route::get('components', [App\Modules\HR\Controllers\SalaryStructureController::class, 'components'])->name('components');
                 Route::get('{id}', [App\Modules\HR\Controllers\SalaryStructureController::class, 'show'])->name('show');
+                Route::post('{id}/toggle-status', [App\Modules\HR\Controllers\SalaryStructureController::class, 'toggleStatus'])->name('toggle-status');
+                Route::delete('{id}', [App\Modules\HR\Controllers\SalaryStructureController::class, 'destroy'])->name('destroy');
             });
 
             // Payroll & Advances
             Route::prefix('payroll')->name('payroll.')->group(static function (): void {
                 Route::get('periods', [App\Modules\HR\Controllers\PayrollController::class, 'periods'])->name('periods');
                 Route::post('periods', [App\Modules\HR\Controllers\PayrollController::class, 'storePeriod'])->name('periods.store');
+                Route::delete('periods/{id}', [App\Modules\HR\Controllers\PayrollController::class, 'destroyPeriod'])->name('periods.destroy');
                 Route::post('periods/{id}/process', [App\Modules\HR\Controllers\PayrollController::class, 'process'])->name('periods.process');
                 Route::post('periods/{id}/disburse', [App\Modules\HR\Controllers\PayrollController::class, 'disburse'])->name('periods.disburse');
                 Route::get('periods/{id}/bank-advice', [App\Modules\HR\Controllers\PayrollController::class, 'bankAdvice'])->name('periods.bank-advice');
                 Route::get('payslips', [App\Modules\HR\Controllers\PayrollController::class, 'payslips'])->name('payslips');
                 Route::post('payslips', [App\Modules\HR\Controllers\PayrollController::class, 'storePayslip'])->name('payslips.store');
+                Route::post('payslips/bulk-status', [App\Modules\HR\Controllers\PayrollController::class, 'bulkStatusPayslips'])->name('payslips.bulk-status');
+                Route::post('payslips/bulk-delete', [App\Modules\HR\Controllers\PayrollController::class, 'bulkDeletePayslips'])->name('payslips.bulk-delete');
                 Route::get('payslips/{id}', [App\Modules\HR\Controllers\PayrollController::class, 'showPayslip'])->name('payslips.show');
+                Route::delete('payslips/{id}', [App\Modules\HR\Controllers\PayrollController::class, 'destroyPayslip'])->name('payslips.destroy');
                 Route::get('advances', [App\Modules\HR\Controllers\PayrollController::class, 'advances'])->name('advances');
                 Route::post('advances', [App\Modules\HR\Controllers\PayrollController::class, 'storeAdvance'])->name('advances.store');
+                Route::post('advances/bulk-status', [App\Modules\HR\Controllers\PayrollController::class, 'bulkStatusAdvances'])->name('advances.bulk-status');
+                Route::post('advances/bulk-delete', [App\Modules\HR\Controllers\PayrollController::class, 'bulkDeleteAdvances'])->name('advances.bulk-delete');
+                Route::delete('advances/{id}', [App\Modules\HR\Controllers\PayrollController::class, 'destroyAdvance'])->name('advances.destroy');
             });
         });
 
@@ -890,162 +928,171 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
 
         // ── Storefront CMS & Customizer ─────────────────────────────
         Route::prefix('storefront')->name('storefront.')->group(static function (): void {
-            Route::get('settings', [\App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'getSettings'])->name('settings.get');
-            Route::put('settings', [\App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'updateSettings'])->name('settings.update');
-            Route::get('cms-products', [\App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'getPublishedProducts'])->name('products.index');
-            Route::post('cms-products/toggle-publish', [\App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'togglePublishProduct'])->name('products.toggle');
-            Route::post('cms-products/bulk-publish-finished', [\App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'bulkPublishFinished'])->name('products.bulk-publish');
-            Route::post('products/toggle-publish', [\App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'togglePublishProduct'])->name('products.toggle.legacy');
-
+            Route::get('settings', [App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'getSettings'])->name('settings.get');
+            Route::put('settings', [App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'updateSettings'])->name('settings.update');
+            Route::get('cms-products', [App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'getPublishedProducts'])->name('products.index');
+            Route::post('cms-products/toggle-publish', [App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'togglePublishProduct'])->name('products.toggle');
+            Route::post('cms-products/bulk-publish-finished', [App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'bulkPublishFinished'])->name('products.bulk-publish');
+            Route::post('products/toggle-publish', [App\Modules\Ecommerce\Controllers\StorefrontCustomizerController::class, 'togglePublishProduct'])->name('products.toggle.legacy');
 
             // Page Builder
-            Route::get('cms/pages', [\App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'index'])->name('cms.pages.index');
-            Route::post('cms/pages', [\App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'store'])->name('cms.pages.store');
-            Route::post('cms/pages/seed-defaults', [\App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'seedDefaults'])->name('cms.pages.seed-defaults');
-            Route::get('cms/pages/{idOrSlug}', [\App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'show'])->name('cms.pages.show');
-            Route::put('cms/pages/{id}', [\App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'update'])->name('cms.pages.update');
-            Route::delete('cms/pages/{id}', [\App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'destroy'])->name('cms.pages.destroy');
+            Route::get('cms/pages', [App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'index'])->name('cms.pages.index');
+            Route::post('cms/pages', [App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'store'])->name('cms.pages.store');
+            Route::post('cms/pages/seed-defaults', [App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'seedDefaults'])->name('cms.pages.seed-defaults');
+            Route::get('cms/pages/{idOrSlug}', [App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'show'])->name('cms.pages.show');
+            Route::put('cms/pages/{id}', [App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'update'])->name('cms.pages.update');
+            Route::delete('cms/pages/{id}', [App\Modules\Ecommerce\Controllers\StorefrontPageBuilderController::class, 'destroy'])->name('cms.pages.destroy');
 
             // Custom Domain & Storefront Domain Management
             Route::prefix('domains')->name('domains.')->group(static function (): void {
-                Route::get('/', [\App\Modules\Ecommerce\Controllers\TenantDomainController::class, 'index'])->name('index');
-                Route::post('/', [\App\Modules\Ecommerce\Controllers\TenantDomainController::class, 'store'])->name('store');
-                Route::post('{id}/verify', [\App\Modules\Ecommerce\Controllers\TenantDomainController::class, 'verify'])->name('verify');
-                Route::post('{id}/set-primary', [\App\Modules\Ecommerce\Controllers\TenantDomainController::class, 'setPrimary'])->name('set-primary');
-                Route::delete('{id}', [\App\Modules\Ecommerce\Controllers\TenantDomainController::class, 'destroy'])->name('destroy');
+                Route::get('/', [App\Modules\Ecommerce\Controllers\TenantDomainController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\Ecommerce\Controllers\TenantDomainController::class, 'store'])->name('store');
+                Route::post('{id}/verify', [App\Modules\Ecommerce\Controllers\TenantDomainController::class, 'verify'])->name('verify');
+                Route::post('{id}/set-primary', [App\Modules\Ecommerce\Controllers\TenantDomainController::class, 'setPrimary'])->name('set-primary');
+                Route::delete('{id}', [App\Modules\Ecommerce\Controllers\TenantDomainController::class, 'destroy'])->name('destroy');
             });
 
             // SEO, Sitemaps, Robots & Discoverability
             Route::prefix('seo')->name('seo.')->group(static function (): void {
-                Route::get('settings', [\App\Modules\Ecommerce\Controllers\TenantSeoSettingsController::class, 'show'])->name('settings.show');
-                Route::put('settings', [\App\Modules\Ecommerce\Controllers\TenantSeoSettingsController::class, 'update'])->name('settings.update');
-                Route::get('audit', [\App\Modules\Ecommerce\Controllers\TenantSeoSettingsController::class, 'audit'])->name('audit');
-                Route::post('indexnow/ping', [\App\Modules\Ecommerce\Controllers\TenantSeoSettingsController::class, 'pingIndexNow'])->name('indexnow.ping');
+                Route::get('settings', [App\Modules\Ecommerce\Controllers\TenantSeoSettingsController::class, 'show'])->name('settings.show');
+                Route::put('settings', [App\Modules\Ecommerce\Controllers\TenantSeoSettingsController::class, 'update'])->name('settings.update');
+                Route::get('audit', [App\Modules\Ecommerce\Controllers\TenantSeoSettingsController::class, 'audit'])->name('audit');
+                Route::post('indexnow/ping', [App\Modules\Ecommerce\Controllers\TenantSeoSettingsController::class, 'pingIndexNow'])->name('indexnow.ping');
             });
 
             // URL Redirect Management & 404 Error Log
             Route::prefix('redirects')->name('redirects.')->group(static function (): void {
-                Route::get('/', [\App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'index'])->name('index');
-                Route::post('/', [\App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'store'])->name('store');
-                Route::put('{id}', [\App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'update'])->name('update');
-                Route::delete('{id}', [\App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'destroy'])->name('destroy');
-                Route::get('404-logs', [\App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'notFoundLogs'])->name('404-logs');
-                Route::post('404-logs/{id}/resolve', [\App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'resolveNotFound'])->name('404-logs.resolve');
+                Route::get('/', [App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'store'])->name('store');
+                Route::put('{id}', [App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'update'])->name('update');
+                Route::delete('{id}', [App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'destroy'])->name('destroy');
+                Route::get('404-logs', [App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'notFoundLogs'])->name('404-logs');
+                Route::post('404-logs/{id}/resolve', [App\Modules\Ecommerce\Controllers\TenantRedirectController::class, 'resolveNotFound'])->name('404-logs.resolve');
+            });
+
+            // Coupons & Promotional Code Engine
+            Route::prefix('coupons')->name('coupons.')->group(static function (): void {
+                Route::get('/', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'store'])->name('store');
+                Route::post('generate-batch', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'generateBatch'])->name('generate-batch');
+                Route::get('{id}', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'show'])->name('show');
+                Route::put('{id}', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'update'])->name('update');
+                Route::post('{id}/toggle-status', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'toggleStatus'])->name('toggle-status');
+                Route::delete('{id}', [App\Modules\Ecommerce\Controllers\TenantCouponController::class, 'destroy'])->name('destroy');
             });
         });
 
         // ── Dynamic Tenant Modules ──────────────────────────────────
         Route::prefix('tenant/modules')->name('tenant.modules.')->group(static function (): void {
-            Route::get('/', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'index'])->name('index');
-            Route::get('nav-order', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'getNavOrder'])->name('nav-order.get');
-            Route::put('nav-order', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'updateNavOrder'])->name('nav-order.update');
-            Route::put('{moduleKey}', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'update'])->name('update');
-            Route::post('batch', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'batchUpdate'])->name('batch');
+            Route::get('/', [App\Modules\Platform\Controllers\TenantModuleController::class, 'index'])->name('index');
+            Route::get('nav-order', [App\Modules\Platform\Controllers\TenantModuleController::class, 'getNavOrder'])->name('nav-order.get');
+            Route::put('nav-order', [App\Modules\Platform\Controllers\TenantModuleController::class, 'updateNavOrder'])->name('nav-order.update');
+            Route::put('{moduleKey}', [App\Modules\Platform\Controllers\TenantModuleController::class, 'update'])->name('update');
+            Route::post('batch', [App\Modules\Platform\Controllers\TenantModuleController::class, 'batchUpdate'])->name('batch');
         });
 
         // ── Settings & Configuration System ─────────────────────────
         Route::prefix('settings')->name('settings.')->group(static function (): void {
-            Route::get('schema', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'schema'])->name('schema');
-            Route::post('upload-asset', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'uploadAsset'])->name('upload-asset');
-            Route::get('{group}', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'getGroup'])->name('get');
-            Route::put('{group}', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'updateGroup'])->name('update');
-            Route::post('{group}/test-connection', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'testConnection'])->name('test-connection');
-            Route::post('{group}/reset', [\App\Modules\Platform\Controllers\TenantSettingsController::class, 'resetGroup'])->name('reset');
+            Route::get('schema', [App\Modules\Platform\Controllers\TenantSettingsController::class, 'schema'])->name('schema');
+            Route::post('upload-asset', [App\Modules\Platform\Controllers\TenantSettingsController::class, 'uploadAsset'])->name('upload-asset');
+            Route::get('{group}', [App\Modules\Platform\Controllers\TenantSettingsController::class, 'getGroup'])->name('get');
+            Route::put('{group}', [App\Modules\Platform\Controllers\TenantSettingsController::class, 'updateGroup'])->name('update');
+            Route::post('{group}/test-connection', [App\Modules\Platform\Controllers\TenantSettingsController::class, 'testConnection'])->name('test-connection');
+            Route::post('{group}/reset', [App\Modules\Platform\Controllers\TenantSettingsController::class, 'resetGroup'])->name('reset');
         });
-
 
         // ── User Management & Identity ───────────────────────────────
         Route::prefix('users')->name('users.')->group(static function (): void {
-            Route::get('/', [\App\Modules\Auth\Controllers\UserController::class, 'index'])
+            Route::get('/', [App\Modules\Auth\Controllers\UserController::class, 'index'])
                 ->middleware('permission:core.user.view')->name('index');
-            Route::post('/', [\App\Modules\Auth\Controllers\UserController::class, 'store'])
+            Route::post('/', [App\Modules\Auth\Controllers\UserController::class, 'store'])
                 ->middleware('permission:core.user.create')->name('store');
-            Route::get('{id}', [\App\Modules\Auth\Controllers\UserController::class, 'show'])
+            Route::get('{id}', [App\Modules\Auth\Controllers\UserController::class, 'show'])
                 ->middleware('permission:core.user.view')->name('show');
-            Route::put('{id}', [\App\Modules\Auth\Controllers\UserController::class, 'update'])
+            Route::put('{id}', [App\Modules\Auth\Controllers\UserController::class, 'update'])
                 ->middleware('permission:core.user.update')->name('update');
-            Route::post('{id}/assign-roles', [\App\Modules\Auth\Controllers\UserController::class, 'assignRoles'])
+            Route::post('{id}/assign-roles', [App\Modules\Auth\Controllers\UserController::class, 'assignRoles'])
                 ->middleware('permission:core.role.manage')->name('assign-roles');
-            Route::patch('{id}/status', [\App\Modules\Auth\Controllers\UserController::class, 'toggleStatus'])
+            Route::patch('{id}/status', [App\Modules\Auth\Controllers\UserController::class, 'toggleStatus'])
                 ->middleware('permission:core.user.update')->name('toggle-status');
-            Route::post('{id}/reset-password', [\App\Modules\Auth\Controllers\UserController::class, 'resetPassword'])
+            Route::post('{id}/reset-password', [App\Modules\Auth\Controllers\UserController::class, 'resetPassword'])
                 ->middleware('permission:core.user.update')->name('reset-password');
         });
 
         // ── RBAC & Role Management ──────────────────────────────────
         Route::prefix('roles')->name('roles.')->group(static function (): void {
-            Route::get('/', [\App\Modules\Auth\Controllers\RoleController::class, 'index'])
+            Route::get('/', [App\Modules\Auth\Controllers\RoleController::class, 'index'])
                 ->middleware('permission:core.role.view')->name('index');
-            Route::post('/', [\App\Modules\Auth\Controllers\RoleController::class, 'store'])
+            Route::post('/', [App\Modules\Auth\Controllers\RoleController::class, 'store'])
                 ->middleware('permission:core.role.create')->name('store');
-            Route::get('{id}', [\App\Modules\Auth\Controllers\RoleController::class, 'show'])
+            Route::get('{id}', [App\Modules\Auth\Controllers\RoleController::class, 'show'])
                 ->middleware('permission:core.role.view')->name('show');
-            Route::put('{id}', [\App\Modules\Auth\Controllers\RoleController::class, 'update'])
+            Route::put('{id}', [App\Modules\Auth\Controllers\RoleController::class, 'update'])
                 ->middleware('permission:core.role.update')->name('update');
-            Route::delete('{id}', [\App\Modules\Auth\Controllers\RoleController::class, 'destroy'])
+            Route::delete('{id}', [App\Modules\Auth\Controllers\RoleController::class, 'destroy'])
                 ->middleware('permission:core.role.delete')->name('destroy');
 
             // Role Members Assignment
-            Route::get('{id}/users', [\App\Modules\Auth\Controllers\RoleController::class, 'users'])
+            Route::get('{id}/users', [App\Modules\Auth\Controllers\RoleController::class, 'users'])
                 ->middleware('permission:core.role.view')->name('users.index');
-            Route::post('{id}/users', [\App\Modules\Auth\Controllers\RoleController::class, 'assignUser'])
+            Route::post('{id}/users', [App\Modules\Auth\Controllers\RoleController::class, 'assignUser'])
                 ->middleware('permission:core.role.manage')->name('users.assign');
-            Route::delete('{id}/users/{userId}', [\App\Modules\Auth\Controllers\RoleController::class, 'removeUser'])
+            Route::delete('{id}/users/{userId}', [App\Modules\Auth\Controllers\RoleController::class, 'removeUser'])
                 ->middleware('permission:core.role.manage')->name('users.remove');
         });
 
-        Route::get('permissions', [\App\Modules\Auth\Controllers\RoleController::class, 'permissions'])
+        Route::get('permissions', [App\Modules\Auth\Controllers\RoleController::class, 'permissions'])
             ->middleware('permission:core.permission.view')->name('permissions.index');
 
         // ── Human Resources & Staff Management ──────────────────────
         Route::prefix('hr')->name('hr.')->group(static function (): void {
             // Departments & Designations & Shifts
-            Route::get('departments', [\App\Modules\HR\Controllers\EmployeeController::class, 'departments'])->name('departments.index');
-            Route::post('departments', [\App\Modules\HR\Controllers\EmployeeController::class, 'storeDepartment'])->name('departments.store');
-            Route::put('departments/{id}', [\App\Modules\HR\Controllers\EmployeeController::class, 'updateDepartment'])->name('departments.update');
+            Route::get('departments', [App\Modules\HR\Controllers\EmployeeController::class, 'departments'])->name('departments.index');
+            Route::post('departments', [App\Modules\HR\Controllers\EmployeeController::class, 'storeDepartment'])->name('departments.store');
+            Route::put('departments/{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'updateDepartment'])->name('departments.update');
 
-            Route::get('designations', [\App\Modules\HR\Controllers\EmployeeController::class, 'designations'])->name('designations.index');
-            Route::post('designations', [\App\Modules\HR\Controllers\EmployeeController::class, 'storeDesignation'])->name('designations.store');
-            Route::put('designations/{id}', [\App\Modules\HR\Controllers\EmployeeController::class, 'updateDesignation'])->name('designations.update');
+            Route::get('designations', [App\Modules\HR\Controllers\EmployeeController::class, 'designations'])->name('designations.index');
+            Route::post('designations', [App\Modules\HR\Controllers\EmployeeController::class, 'storeDesignation'])->name('designations.store');
+            Route::put('designations/{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'updateDesignation'])->name('designations.update');
 
-            Route::get('shifts', [\App\Modules\HR\Controllers\EmployeeController::class, 'shifts'])->name('shifts.index');
-            Route::post('shifts', [\App\Modules\HR\Controllers\EmployeeController::class, 'storeShift'])->name('shifts.store');
-            Route::put('shifts/{id}', [\App\Modules\HR\Controllers\EmployeeController::class, 'updateShift'])->name('shifts.update');
+            Route::get('shifts', [App\Modules\HR\Controllers\EmployeeController::class, 'shifts'])->name('shifts.index');
+            Route::post('shifts', [App\Modules\HR\Controllers\EmployeeController::class, 'storeShift'])->name('shifts.store');
+            Route::put('shifts/{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'updateShift'])->name('shifts.update');
 
             // Employees CRUD & Access Provisioning
             Route::prefix('employees')->name('employees.')->group(static function (): void {
-                Route::get('/', [\App\Modules\HR\Controllers\EmployeeController::class, 'index'])->name('index');
-                Route::post('/', [\App\Modules\HR\Controllers\EmployeeController::class, 'store'])->name('store');
-                Route::get('{id}', [\App\Modules\HR\Controllers\EmployeeController::class, 'show'])->name('show');
-                Route::put('{id}', [\App\Modules\HR\Controllers\EmployeeController::class, 'update'])->name('update');
-                Route::delete('{id}', [\App\Modules\HR\Controllers\EmployeeController::class, 'destroy'])->name('destroy');
-                Route::patch('{id}/status', [\App\Modules\HR\Controllers\EmployeeController::class, 'toggleStatus'])->name('status');
+                Route::get('/', [App\Modules\HR\Controllers\EmployeeController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\HR\Controllers\EmployeeController::class, 'store'])->name('store');
+                Route::get('{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'show'])->name('show');
+                Route::put('{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'update'])->name('update');
+                Route::delete('{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'destroy'])->name('destroy');
+                Route::patch('{id}/status', [App\Modules\HR\Controllers\EmployeeController::class, 'toggleStatus'])->name('status');
 
                 // Role & User Access provisioning for Employee
-                Route::post('{id}/provision-user', [\App\Modules\HR\Controllers\EmployeeController::class, 'provisionUser'])->name('provision-user');
-                Route::put('{id}/roles', [\App\Modules\HR\Controllers\EmployeeController::class, 'updateRoles'])->name('update-roles');
-                Route::post('{id}/link-user', [\App\Modules\HR\Controllers\EmployeeController::class, 'linkUser'])->name('link-user');
-                Route::delete('{id}/unlink-user', [\App\Modules\HR\Controllers\EmployeeController::class, 'unlinkUser'])->name('unlink-user');
+                Route::post('{id}/provision-user', [App\Modules\HR\Controllers\EmployeeController::class, 'provisionUser'])->name('provision-user');
+                Route::put('{id}/roles', [App\Modules\HR\Controllers\EmployeeController::class, 'updateRoles'])->name('update-roles');
+                Route::post('{id}/link-user', [App\Modules\HR\Controllers\EmployeeController::class, 'linkUser'])->name('link-user');
+                Route::delete('{id}/unlink-user', [App\Modules\HR\Controllers\EmployeeController::class, 'unlinkUser'])->name('unlink-user');
             });
 
             // Attendance
             Route::prefix('attendance')->name('attendance.')->group(static function (): void {
-                Route::get('/', [\App\Modules\HR\Controllers\AttendanceController::class, 'index'])->name('index');
-                Route::post('/', [\App\Modules\HR\Controllers\AttendanceController::class, 'store'])->name('store');
+                Route::get('/', [App\Modules\HR\Controllers\AttendanceController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\HR\Controllers\AttendanceController::class, 'store'])->name('store');
             });
 
             // Leave Requests
             Route::prefix('leave-requests')->name('leave-requests.')->group(static function (): void {
-                Route::get('/', [\App\Modules\HR\Controllers\LeaveRequestController::class, 'index'])->name('index');
-                Route::post('/', [\App\Modules\HR\Controllers\LeaveRequestController::class, 'store'])->name('store');
-                Route::get('types', [\App\Modules\HR\Controllers\LeaveRequestController::class, 'leaveTypes'])->name('types');
+                Route::get('/', [App\Modules\HR\Controllers\LeaveRequestController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\HR\Controllers\LeaveRequestController::class, 'store'])->name('store');
+                Route::get('types', [App\Modules\HR\Controllers\LeaveRequestController::class, 'leaveTypes'])->name('types');
             });
 
             // Salary Structures
             Route::prefix('salary-structures')->name('salary-structures.')->group(static function (): void {
-                Route::get('/', [\App\Modules\HR\Controllers\SalaryStructureController::class, 'index'])->name('index');
-                Route::get('components', [\App\Modules\HR\Controllers\SalaryStructureController::class, 'components'])->name('components');
-                Route::post('/', [\App\Modules\HR\Controllers\SalaryStructureController::class, 'store'])->name('store');
+                Route::get('/', [App\Modules\HR\Controllers\SalaryStructureController::class, 'index'])->name('index');
+                Route::get('components', [App\Modules\HR\Controllers\SalaryStructureController::class, 'components'])->name('components');
+                Route::post('/', [App\Modules\HR\Controllers\SalaryStructureController::class, 'store'])->name('store');
             });
         });
 
@@ -1059,91 +1106,91 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
         // ── Centralized Document Templates & Printing Infrastructure ─
         Route::prefix('documents')->name('documents.')->group(static function (): void {
             // Template Resolution (Public within tenant)
-            Route::get('templates/resolve', [\App\Modules\Documents\Controllers\DocumentResolveController::class, 'resolve'])
+            Route::get('templates/resolve', [App\Modules\Documents\Controllers\DocumentResolveController::class, 'resolve'])
                 ->name('templates.resolve');
 
             // Document Templates CRUD & Versioning
             Route::prefix('templates')->name('templates.')->group(static function (): void {
-                Route::get('/', [\App\Modules\Documents\Controllers\DocumentTemplateController::class, 'index'])
+                Route::get('/', [App\Modules\Documents\Controllers\DocumentTemplateController::class, 'index'])
                     ->middleware('permission:documents.template.view')
                     ->name('index');
-                Route::post('/', [\App\Modules\Documents\Controllers\DocumentTemplateController::class, 'store'])
+                Route::post('/', [App\Modules\Documents\Controllers\DocumentTemplateController::class, 'store'])
                     ->middleware('permission:documents.template.create')
                     ->name('store');
-                Route::get('{id}', [\App\Modules\Documents\Controllers\DocumentTemplateController::class, 'show'])
+                Route::get('{id}', [App\Modules\Documents\Controllers\DocumentTemplateController::class, 'show'])
                     ->middleware('permission:documents.template.view')
                     ->name('show');
-                Route::put('{id}', [\App\Modules\Documents\Controllers\DocumentTemplateController::class, 'update'])
+                Route::put('{id}', [App\Modules\Documents\Controllers\DocumentTemplateController::class, 'update'])
                     ->middleware('permission:documents.template.update')
                     ->name('update');
-                Route::delete('{id}', [\App\Modules\Documents\Controllers\DocumentTemplateController::class, 'destroy'])
+                Route::delete('{id}', [App\Modules\Documents\Controllers\DocumentTemplateController::class, 'destroy'])
                     ->middleware('permission:documents.template.delete')
                     ->name('destroy');
-                Route::post('{id}/set-default', [\App\Modules\Documents\Controllers\DocumentTemplateController::class, 'setDefault'])
+                Route::post('{id}/set-default', [App\Modules\Documents\Controllers\DocumentTemplateController::class, 'setDefault'])
                     ->middleware('permission:documents.template.manage')
                     ->name('set-default');
-                Route::post('{id}/duplicate', [\App\Modules\Documents\Controllers\DocumentTemplateController::class, 'duplicate'])
+                Route::post('{id}/duplicate', [App\Modules\Documents\Controllers\DocumentTemplateController::class, 'duplicate'])
                     ->middleware('permission:documents.template.create')
                     ->name('duplicate');
-                Route::get('{id}/versions', [\App\Modules\Documents\Controllers\DocumentTemplateController::class, 'versions'])
+                Route::get('{id}/versions', [App\Modules\Documents\Controllers\DocumentTemplateController::class, 'versions'])
                     ->middleware('permission:documents.template.view')
                     ->name('versions');
-                Route::post('{id}/versions/{version}/activate', [\App\Modules\Documents\Controllers\DocumentTemplateController::class, 'activateVersion'])
+                Route::post('{id}/versions/{version}/activate', [App\Modules\Documents\Controllers\DocumentTemplateController::class, 'activateVersion'])
                     ->middleware('permission:documents.template.manage')
                     ->name('activate-version');
             });
 
             // Centralized Paper Sizes Registry
             Route::prefix('paper-sizes')->name('paper-sizes.')->group(static function (): void {
-                Route::get('/', [\App\Modules\Documents\Controllers\PaperSizeController::class, 'index'])
+                Route::get('/', [App\Modules\Documents\Controllers\PaperSizeController::class, 'index'])
                     ->middleware('permission:documents.paper_size.view')
                     ->name('index');
-                Route::post('/', [\App\Modules\Documents\Controllers\PaperSizeController::class, 'store'])
+                Route::post('/', [App\Modules\Documents\Controllers\PaperSizeController::class, 'store'])
                     ->middleware('permission:documents.paper_size.create')
                     ->name('store');
-                Route::put('{id}', [\App\Modules\Documents\Controllers\PaperSizeController::class, 'update'])
+                Route::put('{id}', [App\Modules\Documents\Controllers\PaperSizeController::class, 'update'])
                     ->middleware('permission:documents.paper_size.update')
                     ->name('update');
-                Route::delete('{id}', [\App\Modules\Documents\Controllers\PaperSizeController::class, 'destroy'])
+                Route::delete('{id}', [App\Modules\Documents\Controllers\PaperSizeController::class, 'destroy'])
                     ->middleware('permission:documents.paper_size.delete')
                     ->name('destroy');
             });
 
             // Reusable Print Profiles
             Route::prefix('print-profiles')->name('print-profiles.')->group(static function (): void {
-                Route::get('/', [\App\Modules\Documents\Controllers\PrintProfileController::class, 'index'])
+                Route::get('/', [App\Modules\Documents\Controllers\PrintProfileController::class, 'index'])
                     ->middleware('permission:documents.print_profile.view')
                     ->name('index');
-                Route::post('/', [\App\Modules\Documents\Controllers\PrintProfileController::class, 'store'])
+                Route::post('/', [App\Modules\Documents\Controllers\PrintProfileController::class, 'store'])
                     ->middleware('permission:documents.print_profile.create')
                     ->name('store');
-                Route::put('{id}', [\App\Modules\Documents\Controllers\PrintProfileController::class, 'update'])
+                Route::put('{id}', [App\Modules\Documents\Controllers\PrintProfileController::class, 'update'])
                     ->middleware('permission:documents.print_profile.update')
                     ->name('update');
-                Route::delete('{id}', [\App\Modules\Documents\Controllers\PrintProfileController::class, 'destroy'])
+                Route::delete('{id}', [App\Modules\Documents\Controllers\PrintProfileController::class, 'destroy'])
                     ->middleware('permission:documents.print_profile.delete')
                     ->name('destroy');
             });
 
             // Centralized Document Number Sequences
             Route::prefix('numbering')->name('numbering.')->group(static function (): void {
-                Route::get('/', [\App\Modules\Documents\Controllers\DocumentNumberingController::class, 'index'])
+                Route::get('/', [App\Modules\Documents\Controllers\DocumentNumberingController::class, 'index'])
                     ->middleware('permission:documents.numbering.view')
                     ->name('index');
-                Route::post('/', [\App\Modules\Documents\Controllers\DocumentNumberingController::class, 'store'])
+                Route::post('/', [App\Modules\Documents\Controllers\DocumentNumberingController::class, 'store'])
                     ->middleware('permission:documents.numbering.create')
                     ->name('store');
-                Route::put('{id}', [\App\Modules\Documents\Controllers\DocumentNumberingController::class, 'update'])
+                Route::put('{id}', [App\Modules\Documents\Controllers\DocumentNumberingController::class, 'update'])
                     ->middleware('permission:documents.numbering.update')
                     ->name('update');
             });
 
             // Print & Reprint History Audit Log
             Route::prefix('print-history')->name('print-history.')->group(static function (): void {
-                Route::get('/', [\App\Modules\Documents\Controllers\DocumentPrintHistoryController::class, 'index'])
+                Route::get('/', [App\Modules\Documents\Controllers\DocumentPrintHistoryController::class, 'index'])
                     ->middleware('permission:documents.history.view')
                     ->name('index');
-                Route::post('/', [\App\Modules\Documents\Controllers\DocumentPrintHistoryController::class, 'store'])
+                Route::post('/', [App\Modules\Documents\Controllers\DocumentPrintHistoryController::class, 'store'])
                     ->middleware('permission:documents.document.print')
                     ->name('store');
             });
@@ -1152,67 +1199,67 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
         // ── Platform Capability & Dynamic Tenant Configuration ────────
         Route::prefix('tenant')->name('tenant.config.')->group(static function (): void {
             // Capability Manifest (cached 5 min per tenant)
-            Route::get('manifest', [\App\Modules\Platform\Controllers\TenantCapabilityController::class, 'manifest'])->name('manifest');
+            Route::get('manifest', [App\Modules\Platform\Controllers\TenantCapabilityController::class, 'manifest'])->name('manifest');
 
             // Dynamic Modules Enable/Disable
-            Route::get('modules', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'index'])->name('modules.index');
-            Route::put('modules/batch', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'batchUpdate'])->name('modules.batch');
-            Route::put('modules/{moduleKey}', [\App\Modules\Platform\Controllers\TenantModuleController::class, 'update'])->name('modules.update');
+            Route::get('modules', [App\Modules\Platform\Controllers\TenantModuleController::class, 'index'])->name('modules.index');
+            Route::put('modules/batch', [App\Modules\Platform\Controllers\TenantModuleController::class, 'batchUpdate'])->name('modules.batch');
+            Route::put('modules/{moduleKey}', [App\Modules\Platform\Controllers\TenantModuleController::class, 'update'])->name('modules.update');
 
             // Dynamic Production Stages
-            Route::get('production-stages', [\App\Modules\Platform\Controllers\TenantProductionStageController::class, 'index'])->name('production-stages.index');
-            Route::post('production-stages', [\App\Modules\Platform\Controllers\TenantProductionStageController::class, 'store'])->name('production-stages.store');
-            Route::post('production-stages/reorder', [\App\Modules\Platform\Controllers\TenantProductionStageController::class, 'reorder'])->name('production-stages.reorder');
-            Route::put('production-stages/{id}', [\App\Modules\Platform\Controllers\TenantProductionStageController::class, 'update'])->name('production-stages.update');
-            Route::delete('production-stages/{id}', [\App\Modules\Platform\Controllers\TenantProductionStageController::class, 'destroy'])->name('production-stages.destroy');
+            Route::get('production-stages', [App\Modules\Platform\Controllers\TenantProductionStageController::class, 'index'])->name('production-stages.index');
+            Route::post('production-stages', [App\Modules\Platform\Controllers\TenantProductionStageController::class, 'store'])->name('production-stages.store');
+            Route::post('production-stages/reorder', [App\Modules\Platform\Controllers\TenantProductionStageController::class, 'reorder'])->name('production-stages.reorder');
+            Route::put('production-stages/{id}', [App\Modules\Platform\Controllers\TenantProductionStageController::class, 'update'])->name('production-stages.update');
+            Route::delete('production-stages/{id}', [App\Modules\Platform\Controllers\TenantProductionStageController::class, 'destroy'])->name('production-stages.destroy');
 
             // Custom Field Definitions
-            Route::get('custom-fields', [\App\Modules\Platform\Controllers\CustomFieldDefinitionController::class, 'index'])->name('custom-fields.index');
-            Route::post('custom-fields', [\App\Modules\Platform\Controllers\CustomFieldDefinitionController::class, 'store'])->name('custom-fields.store');
-            Route::put('custom-fields/{id}', [\App\Modules\Platform\Controllers\CustomFieldDefinitionController::class, 'update'])->name('custom-fields.update');
-            Route::delete('custom-fields/{id}', [\App\Modules\Platform\Controllers\CustomFieldDefinitionController::class, 'destroy'])->name('custom-fields.destroy');
+            Route::get('custom-fields', [App\Modules\Platform\Controllers\CustomFieldDefinitionController::class, 'index'])->name('custom-fields.index');
+            Route::post('custom-fields', [App\Modules\Platform\Controllers\CustomFieldDefinitionController::class, 'store'])->name('custom-fields.store');
+            Route::put('custom-fields/{id}', [App\Modules\Platform\Controllers\CustomFieldDefinitionController::class, 'update'])->name('custom-fields.update');
+            Route::delete('custom-fields/{id}', [App\Modules\Platform\Controllers\CustomFieldDefinitionController::class, 'destroy'])->name('custom-fields.destroy');
 
             // Industry Profile & Terminology Overrides
-            Route::post('apply-industry-profile', [\App\Modules\Platform\Controllers\IndustryProfileController::class, 'applyProfile'])->name('apply-profile');
-            Route::patch('terminology', [\App\Modules\Platform\Controllers\IndustryProfileController::class, 'updateTerminology'])->name('terminology.update');
+            Route::post('apply-industry-profile', [App\Modules\Platform\Controllers\IndustryProfileController::class, 'applyProfile'])->name('apply-profile');
+            Route::patch('terminology', [App\Modules\Platform\Controllers\IndustryProfileController::class, 'updateTerminology'])->name('terminology.update');
 
             // 10-Step Onboarding Engine
-            Route::get('onboarding/state', [\App\Modules\Platform\Controllers\TenantOnboardingController::class, 'state'])->name('onboarding.state');
-            Route::post('onboarding/step', [\App\Modules\Platform\Controllers\TenantOnboardingController::class, 'saveStep'])->name('onboarding.step');
-            Route::post('onboarding/complete', [\App\Modules\Platform\Controllers\TenantOnboardingController::class, 'complete'])->name('onboarding.complete');
+            Route::get('onboarding/state', [App\Modules\Platform\Controllers\TenantOnboardingController::class, 'state'])->name('onboarding.state');
+            Route::post('onboarding/step', [App\Modules\Platform\Controllers\TenantOnboardingController::class, 'saveStep'])->name('onboarding.step');
+            Route::post('onboarding/complete', [App\Modules\Platform\Controllers\TenantOnboardingController::class, 'complete'])->name('onboarding.complete');
         });
 
         // Industry Profiles & Business Types catalog
-        Route::get('industry-profiles', [\App\Modules\Platform\Controllers\IndustryProfileController::class, 'index'])->name('industry-profiles.index');
-        Route::get('industry-profiles/{key}', [\App\Modules\Platform\Controllers\IndustryProfileController::class, 'show'])->name('industry-profiles.show');
-        Route::get('business-types', [\App\Modules\Platform\Controllers\IndustryProfileController::class, 'businessTypes'])->name('business-types.index');
+        Route::get('industry-profiles', [App\Modules\Platform\Controllers\IndustryProfileController::class, 'index'])->name('industry-profiles.index');
+        Route::get('industry-profiles/{key}', [App\Modules\Platform\Controllers\IndustryProfileController::class, 'show'])->name('industry-profiles.show');
+        Route::get('business-types', [App\Modules\Platform\Controllers\IndustryProfileController::class, 'businessTypes'])->name('business-types.index');
 
         // ── Data Bin (Recycle Bin / Recovery Vault) ───────────────────
         Route::prefix('bin')->name('bin.')->group(static function (): void {
-            Route::get('stats', [\App\Modules\Platform\Controllers\DataBinController::class, 'stats'])->name('stats');
-            Route::get('/', [\App\Modules\Platform\Controllers\DataBinController::class, 'index'])->name('index');
-            Route::post('empty', [\App\Modules\Platform\Controllers\DataBinController::class, 'empty'])->name('empty');
-            Route::post('{type}/{id}/restore', [\App\Modules\Platform\Controllers\DataBinController::class, 'restore'])->name('restore');
-            Route::delete('{type}/{id}/force-delete', [\App\Modules\Platform\Controllers\DataBinController::class, 'forceDelete'])->name('force-delete');
+            Route::get('stats', [App\Modules\Platform\Controllers\DataBinController::class, 'stats'])->name('stats');
+            Route::get('/', [App\Modules\Platform\Controllers\DataBinController::class, 'index'])->name('index');
+            Route::post('empty', [App\Modules\Platform\Controllers\DataBinController::class, 'empty'])->name('empty');
+            Route::post('{type}/{id}/restore', [App\Modules\Platform\Controllers\DataBinController::class, 'restore'])->name('restore');
+            Route::delete('{type}/{id}/force-delete', [App\Modules\Platform\Controllers\DataBinController::class, 'forceDelete'])->name('force-delete');
         });
 
         // ── SliceMart Flow (No-Code Workflow Automation) ───────────────
         Route::prefix('workflows')->name('workflows.')->group(static function (): void {
-            Route::get('/', [\App\Modules\Platform\Controllers\WorkflowAutomationController::class, 'index'])->name('index');
-            Route::post('/', [\App\Modules\Platform\Controllers\WorkflowAutomationController::class, 'store'])->name('store');
-            Route::patch('{id}/toggle', [\App\Modules\Platform\Controllers\WorkflowAutomationController::class, 'toggle'])->name('toggle');
-            Route::post('{id}/test', [\App\Modules\Platform\Controllers\WorkflowAutomationController::class, 'testRun'])->name('test');
+            Route::get('/', [App\Modules\Platform\Controllers\WorkflowAutomationController::class, 'index'])->name('index');
+            Route::post('/', [App\Modules\Platform\Controllers\WorkflowAutomationController::class, 'store'])->name('store');
+            Route::patch('{id}/toggle', [App\Modules\Platform\Controllers\WorkflowAutomationController::class, 'toggle'])->name('toggle');
+            Route::post('{id}/test', [App\Modules\Platform\Controllers\WorkflowAutomationController::class, 'testRun'])->name('test');
         });
 
         // ── Manufacturing Cost Variance Radar ─────────────────────────
         Route::prefix('production')->name('production.')->group(static function (): void {
-            Route::get('variance-radar', [\App\Modules\Production\Controllers\CostVarianceRadarController::class, 'radar'])->name('variance-radar');
+            Route::get('variance-radar', [App\Modules\Production\Controllers\CostVarianceRadarController::class, 'radar'])->name('variance-radar');
         });
 
         // ── SliceMart Brain (100% Self-Contained Agentic AI) ──────────
         Route::prefix('brain')->name('brain.')->group(static function (): void {
-            Route::post('ask', [\App\Modules\Platform\Controllers\SliceMartBrainController::class, 'ask'])->name('ask');
-            Route::get('capabilities', [\App\Modules\Platform\Controllers\SliceMartBrainController::class, 'capabilities'])->name('capabilities');
-            Route::post('execute', [\App\Modules\Platform\Controllers\SliceMartBrainController::class, 'execute'])->name('execute');
+            Route::post('ask', [App\Modules\Platform\Controllers\SliceMartBrainController::class, 'ask'])->name('ask');
+            Route::get('capabilities', [App\Modules\Platform\Controllers\SliceMartBrainController::class, 'capabilities'])->name('capabilities');
+            Route::post('execute', [App\Modules\Platform\Controllers\SliceMartBrainController::class, 'execute'])->name('execute');
         });
     });

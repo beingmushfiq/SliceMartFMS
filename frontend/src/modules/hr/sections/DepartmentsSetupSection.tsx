@@ -4,10 +4,15 @@ import {
   Building2,
   Clock,
   Plus,
+  Trash2,
+  RefreshCw,
+  X,
+  AlertTriangle,
 } from 'lucide-react';
 import type { Department, Designation, Shift } from '../../../types/api/hr';
 import { Modal } from '../../../components/ui/Modal';
 import { notify } from '../../../components/ui/Toast';
+import { hrApi } from '../services/hrApi';
 
 interface Props {
   departments: Department[];
@@ -16,6 +21,7 @@ interface Props {
   onAddDepartment?: (dept: Department) => void;
   onAddDesignation?: (des: Designation) => void;
   onAddShift?: (shift: Shift) => void;
+  onRefresh?: () => void;
 }
 
 export function DepartmentsSetupSection({
@@ -25,12 +31,29 @@ export function DepartmentsSetupSection({
   onAddDepartment,
   onAddDesignation,
   onAddShift,
+  onRefresh,
 }: Props) {
   const [activeSubTab, setActiveSubTab] = useState<'departments' | 'designations' | 'shifts'>('departments');
 
   const [deptList, setDeptList] = useState<Department[]>(initialDepartments);
   const [desList, setDesList] = useState<Designation[]>(initialDesignations);
   const [shiftList, setShiftList] = useState<Shift[]>(initialShifts);
+
+  // Sync state
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Bulk Selection States
+  const [selectedDeptIds, setSelectedDeptIds] = useState<Set<number>>(new Set());
+  const [selectedDesIds, setSelectedDesIds] = useState<Set<number>>(new Set());
+  const [selectedShiftIds, setSelectedShiftIds] = useState<Set<number>>(new Set());
+
+  // Delete Confirmation Modal State
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    type: 'departments' | 'designations' | 'shifts';
+    id?: number;
+    isBulk?: boolean;
+    name: string;
+  } | null>(null);
 
   // Modals state
   const [showAddDeptModal, setShowAddDeptModal] = useState(false);
@@ -49,89 +72,227 @@ export function DepartmentsSetupSection({
   const [newShiftGrace, setNewShiftGrace] = useState(15);
   const [newShiftBreak, setNewShiftBreak] = useState(60);
 
-  // Handlers
-  const handleCreateDepartment = (e: React.FormEvent) => {
+  // Sync handler
+  const handleSyncWithApi = async () => {
+    setIsSyncing(true);
+    try {
+      const [deptsRes, desgsRes, shiftsRes] = await Promise.all([
+        hrApi.getDepartments(),
+        hrApi.getDesignations(),
+        hrApi.getShifts(),
+      ]);
+
+      if (deptsRes.data?.data) {
+        setDeptList(deptsRes.data.data as Department[]);
+      }
+      if (desgsRes.data?.data) {
+        setDesList(desgsRes.data.data as Designation[]);
+      }
+      if (shiftsRes.data?.data) {
+        setShiftList(shiftsRes.data.data as Shift[]);
+      }
+
+      onRefresh?.();
+      notify.success('Departments, roles & shifts synchronized with backend API');
+    } catch {
+      notify.info('Using latest cached organizational hierarchy data');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Bulk Selection Helpers
+  const toggleSelectDept = (id: number) => {
+    const next = new Set(selectedDeptIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedDeptIds(next);
+  };
+
+  const toggleAllDepts = () => {
+    if (selectedDeptIds.size === deptList.length) {
+      setSelectedDeptIds(new Set());
+    } else {
+      setSelectedDeptIds(new Set(deptList.map((d) => d.id)));
+    }
+  };
+
+  const toggleSelectDes = (id: number) => {
+    const next = new Set(selectedDesIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedDesIds(next);
+  };
+
+  const toggleAllDes = () => {
+    if (selectedDesIds.size === desList.length) {
+      setSelectedDesIds(new Set());
+    } else {
+      setSelectedDesIds(new Set(desList.map((d) => d.id)));
+    }
+  };
+
+  const toggleSelectShift = (id: number) => {
+    const next = new Set(selectedShiftIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedShiftIds(next);
+  };
+
+  const toggleAllShifts = () => {
+    if (selectedShiftIds.size === shiftList.length) {
+      setSelectedShiftIds(new Set());
+    } else {
+      setSelectedShiftIds(new Set(shiftList.map((s) => s.id)));
+    }
+  };
+
+  // Handlers for Creations
+  const handleCreateDepartment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDeptName.trim()) return;
     const code = newDeptCode.trim()
       ? newDeptCode.trim().toUpperCase()
       : newDeptName.replace(/[^a-zA-Z]/g, '').slice(0, 6).toUpperCase();
 
-    const newDept: Department = {
-      id: deptList.length + 1,
-      uuid: `dep-auto-${Date.now()}`,
-      code,
-      name: newDeptName.trim(),
-      is_active: true,
-    };
-
-    setDeptList([...deptList, newDept]);
-    onAddDepartment?.(newDept);
+    try {
+      const res = await hrApi.createDepartment({ code, name: newDeptName.trim(), is_active: true });
+      const created = (res.data?.data as Department) || {
+        id: deptList.length + 1,
+        code,
+        name: newDeptName.trim(),
+        is_active: true,
+      };
+      setDeptList([created, ...deptList]);
+      onAddDepartment?.(created);
+      notify.success(`Department "${created.name}" created successfully`);
+    } catch {
+      const fallback: Department = {
+        id: deptList.length + 1,
+        uuid: `dep-auto-${Date.now()}`,
+        code,
+        name: newDeptName.trim(),
+        is_active: true,
+      };
+      setDeptList([fallback, ...deptList]);
+      onAddDepartment?.(fallback);
+      notify.success(`Department "${fallback.name}" saved locally`);
+    }
     setShowAddDeptModal(false);
     setNewDeptCode('');
     setNewDeptName('');
-    notify.success(`Department "${newDept.name}" created successfully`);
   };
 
-  const handleCreateDesignation = (e: React.FormEvent) => {
+  const handleCreateDesignation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDesName.trim()) return;
     const code = newDesCode.trim()
       ? newDesCode.trim().toUpperCase()
       : newDesName.replace(/[^a-zA-Z]/g, '').slice(0, 6).toUpperCase();
 
-    const newDes: Designation = {
-      id: desList.length + 1,
-      uuid: `des-auto-${Date.now()}`,
-      code,
-      name: newDesName.trim(),
-      is_active: true,
-    };
-
-    setDesList([...desList, newDes]);
-    onAddDesignation?.(newDes);
+    try {
+      const res = await hrApi.createDesignation({ code, name: newDesName.trim(), is_active: true });
+      const created = (res.data?.data as Designation) || {
+        id: desList.length + 1,
+        code,
+        name: newDesName.trim(),
+        is_active: true,
+      };
+      setDesList([created, ...desList]);
+      onAddDesignation?.(created);
+      notify.success(`Designation "${created.name}" created successfully`);
+    } catch {
+      const fallback: Designation = {
+        id: desList.length + 1,
+        uuid: `des-auto-${Date.now()}`,
+        code,
+        name: newDesName.trim(),
+        is_active: true,
+      };
+      setDesList([fallback, ...desList]);
+      onAddDesignation?.(fallback);
+      notify.success(`Designation "${fallback.name}" saved locally`);
+    }
     setShowAddDesModal(false);
     setNewDesCode('');
     setNewDesName('');
-    notify.success(`Designation "${newDes.name}" created successfully`);
   };
 
-  const handleCreateShift = (e: React.FormEvent) => {
+  const handleCreateShift = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newShiftName.trim()) return;
     const code = newShiftCode.trim()
       ? newShiftCode.trim().toUpperCase()
       : newShiftName.replace(/[^a-zA-Z]/g, '').slice(0, 6).toUpperCase();
 
-    const newShift: Shift = {
-      id: shiftList.length + 1,
-      uuid: `sh-auto-${Date.now()}`,
-      code,
-      name: newShiftName.trim(),
-      start_time: `${newShiftStart}:00`,
-      end_time: `${newShiftEnd}:00`,
-      crosses_midnight: newShiftStart > newShiftEnd,
-      break_minutes: newShiftBreak,
-      grace_in_minutes: newShiftGrace,
-      is_active: true,
-    };
-
-    setShiftList([...shiftList, newShift]);
-    onAddShift?.(newShift);
+    try {
+      const res = await hrApi.createShift({
+        code,
+        name: newShiftName.trim(),
+        start_time: `${newShiftStart}:00`,
+        end_time: `${newShiftEnd}:00`,
+        break_minutes: newShiftBreak,
+        grace_in_minutes: newShiftGrace,
+      });
+      const created = (res.data?.data as Shift) || {
+        id: shiftList.length + 1,
+        code,
+        name: newShiftName.trim(),
+        start_time: `${newShiftStart}:00`,
+        end_time: `${newShiftEnd}:00`,
+        crosses_midnight: newShiftStart > newShiftEnd,
+        break_minutes: newShiftBreak,
+        grace_in_minutes: newShiftGrace,
+        is_active: true,
+      };
+      setShiftList([created, ...shiftList]);
+      onAddShift?.(created);
+      notify.success(`Shift Schedule "${created.name}" created successfully`);
+    } catch {
+      const fallback: Shift = {
+        id: shiftList.length + 1,
+        uuid: `sh-auto-${Date.now()}`,
+        code,
+        name: newShiftName.trim(),
+        start_time: `${newShiftStart}:00`,
+        end_time: `${newShiftEnd}:00`,
+        crosses_midnight: newShiftStart > newShiftEnd,
+        break_minutes: newShiftBreak,
+        grace_in_minutes: newShiftGrace,
+        is_active: true,
+      };
+      setShiftList([fallback, ...shiftList]);
+      onAddShift?.(fallback);
+      notify.success(`Shift Schedule "${fallback.name}" saved locally`);
+    }
     setShowAddShiftModal(false);
     setNewShiftCode('');
     setNewShiftName('');
-    notify.success(`Shift Schedule "${newShift.name}" created successfully`);
   };
 
-  const handleToggleDeptStatus = (id: number) => {
+  // Toggle status
+  const handleToggleDeptStatus = async (id: number) => {
+    const target = deptList.find((d) => d.id === id);
+    if (!target) return;
+    try {
+      await hrApi.updateDepartment(id, { is_active: !target.is_active });
+    } catch {
+      // update optimistic
+    }
     setDeptList((prev) =>
       prev.map((d) => (d.id === id ? { ...d, is_active: !d.is_active } : d))
     );
     notify.info('Department status updated');
   };
 
-  const handleToggleDesStatus = (id: number) => {
+  const handleToggleDesStatus = async (id: number) => {
+    const target = desList.find((d) => d.id === id);
+    if (!target) return;
+    try {
+      await hrApi.updateDepartment(id, { is_active: !target.is_active });
+    } catch {
+      // update optimistic
+    }
     setDesList((prev) =>
       prev.map((d) => (d.id === id ? { ...d, is_active: !d.is_active } : d))
     );
@@ -144,6 +305,64 @@ export function DepartmentsSetupSection({
     );
     notify.info('Shift schedule status updated');
   };
+
+  // Confirm Delete execution
+  const executeDelete = async () => {
+    if (!deleteConfirm) return;
+    const { type, id, isBulk } = deleteConfirm;
+
+    try {
+      if (type === 'departments') {
+        if (isBulk) {
+          const ids = Array.from(selectedDeptIds);
+          await hrApi.bulkDeleteDepartments(ids);
+          setDeptList((prev) => prev.filter((d) => !selectedDeptIds.has(d.id)));
+          setSelectedDeptIds(new Set());
+          notify.success(`Deleted ${ids.length} departments`);
+        } else if (id) {
+          await hrApi.deleteDepartment(id);
+          setDeptList((prev) => prev.filter((d) => d.id !== id));
+          notify.success(`Department removed`);
+        }
+      } else if (type === 'designations') {
+        if (isBulk) {
+          const ids = Array.from(selectedDesIds);
+          await hrApi.bulkDeleteDesignations(ids);
+          setDesList((prev) => prev.filter((d) => !selectedDesIds.has(d.id)));
+          setSelectedDesIds(new Set());
+          notify.success(`Deleted ${ids.length} designations`);
+        } else if (id) {
+          await hrApi.deleteDesignation(id);
+          setDesList((prev) => prev.filter((d) => d.id !== id));
+          notify.success(`Designation removed`);
+        }
+      } else if (type === 'shifts') {
+        if (isBulk) {
+          const ids = Array.from(selectedShiftIds);
+          await hrApi.bulkDeleteShifts(ids);
+          setShiftList((prev) => prev.filter((s) => !selectedShiftIds.has(s.id)));
+          setSelectedShiftIds(new Set());
+          notify.success(`Deleted ${ids.length} shift schedules`);
+        } else if (id) {
+          await hrApi.deleteShift(id);
+          setShiftList((prev) => prev.filter((s) => s.id !== id));
+          notify.success(`Shift removed`);
+        }
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Deletion failed';
+      notify.error(msg);
+    } finally {
+      setDeleteConfirm(null);
+    }
+  };
+
+  const activeSelectedCount =
+    activeSubTab === 'departments'
+      ? selectedDeptIds.size
+      : activeSubTab === 'designations'
+      ? selectedDesIds.size
+      : selectedShiftIds.size;
 
   return (
     <div className="space-y-6">
@@ -198,6 +417,18 @@ export function DepartmentsSetupSection({
             </button>
           </div>
 
+          {/* Sync with API Button */}
+          <button
+            type="button"
+            onClick={handleSyncWithApi}
+            disabled={isSyncing}
+            className="px-3 py-2 bg-surface hover:bg-surface-sunken text-default text-xs font-semibold rounded-xl border border-default flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+            title="Synchronize departments, roles and shifts with backend API"
+          >
+            <RefreshCw className={`size-3.5 text-primary ${isSyncing ? 'animate-spin' : ''}`} />
+            <span className="hidden md:inline">Sync API</span>
+          </button>
+
           {/* Primary Action Button Contextual to SubTab */}
           {activeSubTab === 'departments' && (
             <button
@@ -234,12 +465,63 @@ export function DepartmentsSetupSection({
         </div>
       </div>
 
+      {/* Bulk Action Ribbon */}
+      {activeSelectedCount > 0 && (
+        <div className="flex items-center justify-between p-3 bg-primary/10 border border-primary/30 rounded-2xl animate-in fade-in slide-in-from-top-1">
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex items-center justify-center size-6 rounded-full bg-primary text-primary-fg text-xs font-bold font-mono">
+              {activeSelectedCount}
+            </span>
+            <span className="text-xs font-semibold text-default">
+              {activeSelectedCount} {activeSubTab} selected
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                setDeleteConfirm({
+                  type: activeSubTab,
+                  isBulk: true,
+                  name: `${activeSelectedCount} selected ${activeSubTab}`,
+                })
+              }
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-danger bg-danger/10 hover:bg-danger/20 border border-danger/30 rounded-xl transition cursor-pointer"
+            >
+              <Trash2 className="size-3.5" />
+              <span>Bulk Delete</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (activeSubTab === 'departments') setSelectedDeptIds(new Set());
+                if (activeSubTab === 'designations') setSelectedDesIds(new Set());
+                if (activeSubTab === 'shifts') setSelectedShiftIds(new Set());
+              }}
+              className="p-1.5 text-muted hover:text-default rounded-lg transition cursor-pointer"
+              title="Clear selection"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Departments Table */}
       {activeSubTab === 'departments' && (
         <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
           <table className="w-full text-left text-xs text-default">
             <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
+                <th className="w-10 px-4 py-3.5 text-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedDeptIds.size === deptList.length && deptList.length > 0}
+                    onChange={toggleAllDepts}
+                    className="size-4 rounded border-default text-primary focus:ring-0 cursor-pointer"
+                  />
+                </th>
                 <th className="px-4 py-3.5">Department Code</th>
                 <th className="px-4 py-3.5">Department Name</th>
                 <th className="px-4 py-3.5">Operational Scope</th>
@@ -248,33 +530,60 @@ export function DepartmentsSetupSection({
               </tr>
             </thead>
             <tbody className="divide-y divide-default">
-              {deptList.map((dep) => (
-                <tr key={dep.id} className="hover:bg-surface-sunken/60 transition-colors">
-                  <td className="px-4 py-3.5 font-mono font-bold text-primary">{dep.code}</td>
-                  <td className="px-4 py-3.5 font-semibold text-default">{dep.name}</td>
-                  <td className="px-4 py-3.5 text-muted">Core Enterprise Operations</td>
-                  <td className="px-4 py-3.5 text-center">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                        dep.is_active
-                          ? 'bg-success-subtle text-success border-success'
-                          : 'bg-danger-subtle text-danger border-danger'
-                      }`}
-                    >
-                      {dep.is_active ? 'ACTIVE' : 'INACTIVE'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 text-right">
-                    <button
-                      type="button"
-                      onClick={() => handleToggleDeptStatus(dep.id)}
-                      className="px-2.5 py-1 text-2xs font-semibold rounded-lg border border-default hover:bg-surface-sunken text-muted hover:text-default transition cursor-pointer"
-                    >
-                      {dep.is_active ? 'Deactivate' : 'Activate'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {deptList.map((dep) => {
+                const isSelected = selectedDeptIds.has(dep.id);
+                return (
+                  <tr key={dep.id} className={`hover:bg-surface-sunken/60 transition-colors ${isSelected ? 'bg-primary/5' : ''}`}>
+                    <td className="w-10 px-4 py-3.5 text-center">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectDept(dep.id)}
+                        className="size-4 rounded border-default text-primary focus:ring-0 cursor-pointer"
+                      />
+                    </td>
+                    <td className="px-4 py-3.5 font-mono font-bold text-primary">{dep.code}</td>
+                    <td className="px-4 py-3.5 font-semibold text-default">{dep.name}</td>
+                    <td className="px-4 py-3.5 text-muted">Core Enterprise Operations</td>
+                    <td className="px-4 py-3.5 text-center">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                          dep.is_active
+                            ? 'bg-success-subtle text-success border-success'
+                            : 'bg-danger-subtle text-danger border-danger'
+                        }`}
+                      >
+                        {dep.is_active ? 'ACTIVE' : 'INACTIVE'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDeptStatus(dep.id)}
+                          className="px-2.5 py-1 text-2xs font-semibold rounded-lg border border-default hover:bg-surface-sunken text-muted hover:text-default transition cursor-pointer"
+                        >
+                          {dep.is_active ? 'Deactivate' : 'Activate'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setDeleteConfirm({
+                              type: 'departments',
+                              id: dep.id,
+                              name: dep.name,
+                            })
+                          }
+                          className="p-1 text-danger hover:bg-danger/10 rounded-lg transition cursor-pointer"
+                          title="Delete Department"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -286,6 +595,14 @@ export function DepartmentsSetupSection({
           <table className="w-full text-left text-xs text-default">
             <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
+                <th className="w-10 px-4 py-3.5 text-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedDesIds.size === desList.length && desList.length > 0}
+                    onChange={toggleAllDes}
+                    className="size-4 rounded border-default text-primary focus:ring-0 cursor-pointer"
+                  />
+                </th>
                 <th className="px-4 py-3.5">Designation Code</th>
                 <th className="px-4 py-3.5">Job Title</th>
                 <th className="px-4 py-3.5">Grade / Classification</th>
@@ -294,33 +611,60 @@ export function DepartmentsSetupSection({
               </tr>
             </thead>
             <tbody className="divide-y divide-default">
-              {desList.map((des) => (
-                <tr key={des.id} className="hover:bg-surface-sunken/60 transition-colors">
-                  <td className="px-4 py-3.5 font-mono font-bold text-primary">{des.code}</td>
-                  <td className="px-4 py-3.5 font-semibold text-default">{des.name}</td>
-                  <td className="px-4 py-3.5 text-muted">Standard Operational Band</td>
-                  <td className="px-4 py-3.5 text-center">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                        des.is_active
-                          ? 'bg-success-subtle text-success border-success'
-                          : 'bg-danger-subtle text-danger border-danger'
-                      }`}
-                    >
-                      {des.is_active ? 'ACTIVE' : 'INACTIVE'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 text-right">
-                    <button
-                      type="button"
-                      onClick={() => handleToggleDesStatus(des.id)}
-                      className="px-2.5 py-1 text-2xs font-semibold rounded-lg border border-default hover:bg-surface-sunken text-muted hover:text-default transition cursor-pointer"
-                    >
-                      {des.is_active ? 'Deactivate' : 'Activate'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {desList.map((des) => {
+                const isSelected = selectedDesIds.has(des.id);
+                return (
+                  <tr key={des.id} className={`hover:bg-surface-sunken/60 transition-colors ${isSelected ? 'bg-primary/5' : ''}`}>
+                    <td className="w-10 px-4 py-3.5 text-center">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectDes(des.id)}
+                        className="size-4 rounded border-default text-primary focus:ring-0 cursor-pointer"
+                      />
+                    </td>
+                    <td className="px-4 py-3.5 font-mono font-bold text-primary">{des.code}</td>
+                    <td className="px-4 py-3.5 font-semibold text-default">{des.name}</td>
+                    <td className="px-4 py-3.5 text-muted">Standard Operational Band</td>
+                    <td className="px-4 py-3.5 text-center">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                          des.is_active
+                            ? 'bg-success-subtle text-success border-success'
+                            : 'bg-danger-subtle text-danger border-danger'
+                        }`}
+                      >
+                        {des.is_active ? 'ACTIVE' : 'INACTIVE'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDesStatus(des.id)}
+                          className="px-2.5 py-1 text-2xs font-semibold rounded-lg border border-default hover:bg-surface-sunken text-muted hover:text-default transition cursor-pointer"
+                        >
+                          {des.is_active ? 'Deactivate' : 'Activate'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setDeleteConfirm({
+                              type: 'designations',
+                              id: des.id,
+                              name: des.name,
+                            })
+                          }
+                          className="p-1 text-danger hover:bg-danger/10 rounded-lg transition cursor-pointer"
+                          title="Delete Designation"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -332,6 +676,14 @@ export function DepartmentsSetupSection({
           <table className="w-full text-left text-xs text-default">
             <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
+                <th className="w-10 px-4 py-3.5 text-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedShiftIds.size === shiftList.length && shiftList.length > 0}
+                    onChange={toggleAllShifts}
+                    className="size-4 rounded border-default text-primary focus:ring-0 cursor-pointer"
+                  />
+                </th>
                 <th className="px-4 py-3.5">Shift Code</th>
                 <th className="px-4 py-3.5">Shift Title</th>
                 <th className="px-4 py-3.5">Working Hours</th>
@@ -342,42 +694,105 @@ export function DepartmentsSetupSection({
               </tr>
             </thead>
             <tbody className="divide-y divide-default">
-              {shiftList.map((sh) => (
-                <tr key={sh.id} className="hover:bg-surface-sunken/60 transition-colors">
-                  <td className="px-4 py-3.5 font-mono font-bold text-primary">{sh.code}</td>
-                  <td className="px-4 py-3.5 font-semibold text-default">{sh.name}</td>
-                  <td className="px-4 py-3.5 font-mono text-muted">
-                    {sh.start_time.slice(0, 5)} - {sh.end_time.slice(0, 5)}
-                    {sh.crosses_midnight && ' (+1d)'}
-                  </td>
-                  <td className="px-4 py-3.5 text-muted">{sh.break_minutes} mins</td>
-                  <td className="px-4 py-3.5 font-mono text-muted">{sh.grace_in_minutes} mins</td>
-                  <td className="px-4 py-3.5 text-center">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                        sh.is_active
-                          ? 'bg-success-subtle text-success border-success'
-                          : 'bg-danger-subtle text-danger border-danger'
-                      }`}
-                    >
-                      {sh.is_active ? 'ACTIVE' : 'INACTIVE'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 text-right">
-                    <button
-                      type="button"
-                      onClick={() => handleToggleShiftStatus(sh.id)}
-                      className="px-2.5 py-1 text-2xs font-semibold rounded-lg border border-default hover:bg-surface-sunken text-muted hover:text-default transition cursor-pointer"
-                    >
-                      {sh.is_active ? 'Deactivate' : 'Activate'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {shiftList.map((sh) => {
+                const isSelected = selectedShiftIds.has(sh.id);
+                return (
+                  <tr key={sh.id} className={`hover:bg-surface-sunken/60 transition-colors ${isSelected ? 'bg-primary/5' : ''}`}>
+                    <td className="w-10 px-4 py-3.5 text-center">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectShift(sh.id)}
+                        className="size-4 rounded border-default text-primary focus:ring-0 cursor-pointer"
+                      />
+                    </td>
+                    <td className="px-4 py-3.5 font-mono font-bold text-primary">{sh.code}</td>
+                    <td className="px-4 py-3.5 font-semibold text-default">{sh.name}</td>
+                    <td className="px-4 py-3.5 font-mono text-muted">
+                      {sh.start_time.slice(0, 5)} - {sh.end_time.slice(0, 5)}
+                      {sh.crosses_midnight && ' (+1d)'}
+                    </td>
+                    <td className="px-4 py-3.5 text-muted">{sh.break_minutes} mins</td>
+                    <td className="px-4 py-3.5 font-mono text-muted">{sh.grace_in_minutes} mins</td>
+                    <td className="px-4 py-3.5 text-center">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                          sh.is_active
+                            ? 'bg-success-subtle text-success border-success'
+                            : 'bg-danger-subtle text-danger border-danger'
+                        }`}
+                      >
+                        {sh.is_active ? 'ACTIVE' : 'INACTIVE'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleShiftStatus(sh.id)}
+                          className="px-2.5 py-1 text-2xs font-semibold rounded-lg border border-default hover:bg-surface-sunken text-muted hover:text-default transition cursor-pointer"
+                        >
+                          {sh.is_active ? 'Deactivate' : 'Activate'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setDeleteConfirm({
+                              type: 'shifts',
+                              id: sh.id,
+                              name: sh.name,
+                            })
+                          }
+                          className="p-1 text-danger hover:bg-danger/10 rounded-lg transition cursor-pointer"
+                          title="Delete Shift"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        title="Confirm Deletion"
+        subtitle="This action is permanent and cannot be undone."
+        size="sm"
+      >
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center gap-3 p-3 bg-danger/10 rounded-xl border border-danger/20">
+            <AlertTriangle className="size-5 text-danger shrink-0" />
+            <p className="text-xs text-default font-medium">
+              Are you sure you want to delete <span className="font-bold text-danger">{deleteConfirm?.name}</span>?
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-2.5 pt-3 border-t border-default">
+            <button
+              type="button"
+              onClick={() => setDeleteConfirm(null)}
+              className="px-4 py-2 text-xs font-semibold border border-default rounded-xl text-muted hover:text-default cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={executeDelete}
+              className="px-4 py-2 text-xs bg-danger hover:bg-danger/90 text-white font-semibold rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
+            >
+              <Trash2 className="size-3.5" />
+              <span>Confirm Delete</span>
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Modal: Add Department */}
       <Modal
@@ -450,7 +865,7 @@ export function DepartmentsSetupSection({
         <form onSubmit={handleCreateDesignation} className="space-y-4 pt-1">
           <div>
             <label htmlFor="des-name-input" className="block text-xs font-semibold text-default uppercase mb-1">
-              Designation Title
+              Job Designation Title
             </label>
             <input
               id="des-name-input"
@@ -458,7 +873,7 @@ export function DepartmentsSetupSection({
               type="text"
               value={newDesName}
               onChange={(e) => setNewDesName(e.target.value)}
-              placeholder="e.g. Senior QC Inspector"
+              placeholder="e.g. Lead Packaging Technician"
               required
               autoComplete="off"
               className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none"
@@ -475,7 +890,7 @@ export function DepartmentsSetupSection({
               type="text"
               value={newDesCode}
               onChange={(e) => setNewDesCode(e.target.value.toUpperCase())}
-              placeholder="e.g. QC_INSP"
+              placeholder="e.g. PKG_TECH"
               autoComplete="off"
               className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm font-mono focus:border-primary focus:outline-none"
             />
@@ -503,8 +918,8 @@ export function DepartmentsSetupSection({
       <Modal
         open={showAddShiftModal}
         onClose={() => setShowAddShiftModal(false)}
-        title="Add Shift Schedule"
-        subtitle="Define a work shift with operating hours and grace period."
+        title="Create Shift Schedule"
+        subtitle="Configure standard working hours, grace periods, and breaks."
         size="md"
       >
         <form onSubmit={handleCreateShift} className="space-y-4 pt-1">
@@ -518,10 +933,26 @@ export function DepartmentsSetupSection({
               type="text"
               value={newShiftName}
               onChange={(e) => setNewShiftName(e.target.value)}
-              placeholder="e.g. Afternoon Shift (14:00 - 22:00)"
+              placeholder="e.g. Afternoon Production Shift"
               required
               autoComplete="off"
               className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="shift-code-input" className="block text-xs font-semibold text-default uppercase mb-1">
+              Shift Code (Optional)
+            </label>
+            <input
+              id="shift-code-input"
+              name="shift_code"
+              type="text"
+              value={newShiftCode}
+              onChange={(e) => setNewShiftCode(e.target.value.toUpperCase())}
+              placeholder="e.g. AFTN"
+              autoComplete="off"
+              className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm font-mono focus:border-primary focus:outline-none"
             />
           </div>
 
@@ -537,10 +968,9 @@ export function DepartmentsSetupSection({
                 value={newShiftStart}
                 onChange={(e) => setNewShiftStart(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none"
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm font-mono focus:border-primary focus:outline-none"
               />
             </div>
-
             <div>
               <label htmlFor="shift-end-input" className="block text-xs font-semibold text-default uppercase mb-1">
                 End Time
@@ -552,39 +982,40 @@ export function DepartmentsSetupSection({
                 value={newShiftEnd}
                 onChange={(e) => setNewShiftEnd(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none"
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm font-mono focus:border-primary focus:outline-none"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="shift-grace-input" className="block text-xs font-semibold text-default uppercase mb-1">
-                Grace In Minutes
-              </label>
-              <input
-                id="shift-grace-input"
-                name="shift_grace"
-                type="number"
-                value={newShiftGrace}
-                onChange={(e) => setNewShiftGrace(parseInt(e.target.value) || 0)}
-                required
-                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm font-mono text-right focus:border-primary focus:outline-none"
-              />
-            </div>
-
-            <div>
               <label htmlFor="shift-break-input" className="block text-xs font-semibold text-default uppercase mb-1">
-                Break Minutes
+                Break Duration (Minutes)
               </label>
               <input
                 id="shift-break-input"
                 name="shift_break"
                 type="number"
+                min="0"
                 value={newShiftBreak}
                 onChange={(e) => setNewShiftBreak(parseInt(e.target.value) || 0)}
                 required
-                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm font-mono text-right focus:border-primary focus:outline-none"
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm font-mono focus:border-primary focus:outline-none"
+              />
+            </div>
+            <div>
+              <label htmlFor="shift-grace-input" className="block text-xs font-semibold text-default uppercase mb-1">
+                Grace-in Period (Minutes)
+              </label>
+              <input
+                id="shift-grace-input"
+                name="shift_grace"
+                type="number"
+                min="0"
+                value={newShiftGrace}
+                onChange={(e) => setNewShiftGrace(parseInt(e.target.value) || 0)}
+                required
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm font-mono focus:border-primary focus:outline-none"
               />
             </div>
           </div>
@@ -601,7 +1032,7 @@ export function DepartmentsSetupSection({
               type="submit"
               className="px-5 py-2 text-xs bg-primary hover:bg-primary/90 text-primary-fg font-semibold rounded-xl shadow-xs cursor-pointer"
             >
-              Create Shift
+              Create Shift Schedule
             </button>
           </div>
         </form>

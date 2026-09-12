@@ -7,7 +7,6 @@ namespace App\Modules\HR\Controllers;
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
 use App\Http\Controllers\Controller;
-use App\Models\Role;
 use App\Models\User;
 use App\Modules\HR\Actions\CreateEmployeeAction;
 use App\Modules\HR\Models\Department;
@@ -17,6 +16,7 @@ use App\Modules\HR\Models\EmployeeDocument;
 use App\Modules\HR\Models\Shift;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -233,8 +233,8 @@ class EmployeeController extends Controller
         ]);
 
         if ($request->filled('search')) {
-            $search = '%' . $request->query('search') . '%';
-            $query->where(function ($q) use ($search) {
+            $search = '%'.$request->query('search').'%';
+            $query->where(function ($q) use ($search): void {
                 $q->where('first_name', 'like', $search)
                     ->orWhere('last_name', 'like', $search)
                     ->orWhere('display_name', 'like', $search)
@@ -261,7 +261,7 @@ class EmployeeController extends Controller
                 'uuid' => $emp->uuid,
                 'employee_code' => $emp->employee_code,
                 'user_id' => $emp->user_id,
-                'has_user_account' => !is_null($emp->user_id),
+                'has_user_account' => ! is_null($emp->user_id),
                 'first_name' => $emp->first_name,
                 'last_name' => $emp->last_name ?? '',
                 'full_name' => $emp->display_name ?: trim("{$emp->first_name} {$emp->last_name}"),
@@ -396,7 +396,7 @@ class EmployeeController extends Controller
         $employee->update([
             'employment_status' => $newStatus,
             'is_active' => ($newStatus === 'active') ? 1 : 0,
-            'updated_by' => auth()->id() ?? 1,
+            'updated_by' => Auth::id() ?? 1,
         ]);
 
         // Security cascade: if employee is terminated, suspend user login and invalidate sessions immediately
@@ -495,7 +495,7 @@ class EmployeeController extends Controller
     {
         $employee = Employee::with('user')->findOrFail($id);
 
-        if (!$employee->user) {
+        if (! $employee->user) {
             return response()->json([
                 'message' => 'Employee does not have an active system user account.',
             ], 422);
@@ -508,7 +508,7 @@ class EmployeeController extends Controller
 
         $tenantId = $employee->tenant_id ?? (int) ($request->user()?->tenant_id ?? 1);
 
-        DB::transaction(function () use ($employee, $validated, $tenantId, $auditLogger, $request) {
+        DB::transaction(function () use ($employee, $validated, $tenantId, $auditLogger, $request): void {
             $pivotData = [];
             foreach ($validated['role_ids'] as $roleId) {
                 $pivotData[$roleId] = ['tenant_id' => $tenantId];
@@ -648,5 +648,195 @@ class EmployeeController extends Controller
             'data' => $doc,
             'message' => 'Document registered to employee profile.',
         ], 201);
+    }
+
+    public function destroy(int $id): JsonResponse
+    {
+        $employee = Employee::with('user')->findOrFail($id);
+
+        DB::transaction(function () use ($employee): void {
+            if ($employee->user) {
+                $employee->user->update(['status' => 'suspended']);
+            }
+            $employee->delete();
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => "Employee '{$employee->display_name}' deleted successfully.",
+        ]);
+    }
+
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+        ]);
+
+        $ids = array_map('intval', $validated['ids']);
+        $count = 0;
+
+        DB::transaction(function () use ($ids, &$count): void {
+            $employees = Employee::with('user')->whereIn('id', $ids)->get();
+            foreach ($employees as $employee) {
+                /** @var Employee $employee */
+                if ($employee->user) {
+                    $employee->user->update(['status' => 'suspended']);
+                }
+                $employee->delete();
+                $count++;
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => "Successfully deleted {$count} employee records.",
+        ]);
+    }
+
+    public function bulkStatus(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+            'status' => 'required|string|in:active,terminated,on_leave,suspended,resigned',
+        ]);
+
+        $ids = array_map('intval', $validated['ids']);
+        $status = (string) $validated['status'];
+        $isActive = ($status === 'active') ? 1 : 0;
+        $userId = is_numeric(Auth::id()) ? (int) Auth::id() : 1;
+
+        DB::transaction(function () use ($ids, $status, $isActive, $userId): void {
+            Employee::whereIn('id', $ids)->update([
+                'employment_status' => $status,
+                'is_active' => $isActive,
+                'updated_by' => $userId,
+            ]);
+
+            if ($status !== 'active') {
+                $userIds = Employee::whereIn('id', $ids)->whereNotNull('user_id')->pluck('user_id');
+                User::whereIn('id', $userIds)->update(['status' => 'suspended']);
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => "Status updated to '{$status}' for ".count($ids).' employees.',
+        ]);
+    }
+
+    public function destroyDepartment(int $id): JsonResponse
+    {
+        $department = Department::withCount('employees')->findOrFail($id);
+        if ($department->employees_count > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => "Cannot delete department '{$department->name}' because it has {$department->employees_count} assigned employees.",
+            ], 422);
+        }
+
+        $department->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Department '{$department->name}' deleted successfully.",
+        ]);
+    }
+
+    public function bulkDeleteDepartments(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+        ]);
+
+        $ids = array_map('intval', $validated['ids']);
+        $departments = Department::withCount('employees')->whereIn('id', $ids)->get();
+        $deleted = 0;
+
+        foreach ($departments as $dept) {
+            /** @var Department $dept */
+            if ($dept->employees_count === 0) {
+                $dept->delete();
+                $deleted++;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Deleted {$deleted} departments.",
+        ]);
+    }
+
+    public function destroyDesignation(int $id): JsonResponse
+    {
+        $designation = Designation::withCount('employees')->findOrFail($id);
+        if ($designation->employees_count > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => "Cannot delete designation '{$designation->name}' because it has {$designation->employees_count} assigned employees.",
+            ], 422);
+        }
+
+        $designation->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Designation '{$designation->name}' deleted successfully.",
+        ]);
+    }
+
+    public function bulkDeleteDesignations(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+        ]);
+
+        $ids = array_map('intval', $validated['ids']);
+        $designations = Designation::withCount('employees')->whereIn('id', $ids)->get();
+        $deleted = 0;
+
+        foreach ($designations as $des) {
+            /** @var Designation $des */
+            if ($des->employees_count === 0) {
+                $des->delete();
+                $deleted++;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Deleted {$deleted} designations.",
+        ]);
+    }
+
+    public function destroyShift(int $id): JsonResponse
+    {
+        $shift = Shift::findOrFail($id);
+        $shift->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Shift '{$shift->name}' deleted successfully.",
+        ]);
+    }
+
+    public function bulkDeleteShifts(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+        ]);
+
+        $ids = array_map('intval', $validated['ids']);
+        Shift::whereIn('id', $ids)->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Deleted '.count($ids).' shifts.',
+        ]);
     }
 }

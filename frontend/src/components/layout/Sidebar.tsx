@@ -80,6 +80,14 @@ export function Sidebar({ isOpen, onClose, isCollapsed = false, onToggleCollapse
       return location.pathname === '/sales' || location.pathname.startsWith('/sales/');
     }
 
+    // 2b. Special case for '/storefront': if URL has 'tab=coupons', Coupons is the active nav item
+    if (to === '/storefront') {
+      if (location.pathname === '/storefront' && location.search.includes('tab=coupons')) {
+        return false;
+      }
+      return location.pathname === '/storefront' || location.pathname.startsWith('/storefront/');
+    }
+
     // 3. Special case for '/settings': if URL is '/settings/roles', Roles is the active nav item
     if (to === '/settings') {
       if (location.pathname.startsWith('/settings/roles')) {

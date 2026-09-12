@@ -10,6 +10,7 @@ use App\Modules\HR\Models\LeaveRequest;
 use App\Modules\HR\Models\LeaveType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class LeaveRequestController extends Controller
@@ -53,7 +54,7 @@ class LeaveRequestController extends Controller
             'reason' => 'nullable|string',
         ]);
 
-        $requestNumber = 'LV-' . date('Ym') . '-' . str_pad((string) random_int(1000, 99999), 5, '0', STR_PAD_LEFT);
+        $requestNumber = 'LV-'.date('Ym').'-'.str_pad((string) random_int(1000, 99999), 5, '0', STR_PAD_LEFT);
         $status = $validated['status'] ?? 'approved';
         $userId = (int) ($request->user()?->id ?? 1);
 
@@ -81,7 +82,7 @@ class LeaveRequestController extends Controller
 
         $userId = (int) ($request->user()?->id ?? 1);
 
-        DB::transaction(function () use ($leave, $userId) {
+        DB::transaction(function () use ($leave, $userId): void {
             $leave->update([
                 'status' => 'approved',
                 'approved_by' => $userId,
@@ -100,6 +101,7 @@ class LeaveRequestController extends Controller
                 $days = (float) $leave->total_days;
                 $balance->used_days = (string) (((float) $balance->used_days) + $days);
                 $balance->balance_days = (string) max(0.0, ((float) $balance->balance_days) - $days);
+                /** @var LeaveBalance $balance */
                 $balance->save();
             }
         });
@@ -148,6 +150,79 @@ class LeaveRequestController extends Controller
         return response()->json([
             'year' => $year,
             'data' => $balances,
+        ]);
+    }
+
+    public function destroy(int $id): JsonResponse
+    {
+        $leave = LeaveRequest::findOrFail($id);
+        $leave->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Leave request cancelled / deleted.',
+        ]);
+    }
+
+    public function bulkApprove(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+        ]);
+
+        $ids = array_map('intval', $validated['ids']);
+        $userId = is_numeric(Auth::id()) ? (int) Auth::id() : 1;
+
+        $count = LeaveRequest::whereIn('id', $ids)->where('status', 'pending')->update([
+            'status' => 'approved',
+            'approved_by' => $userId,
+            'approved_at' => now(),
+            'updated_by' => $userId,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Approved {$count} pending leave requests.",
+        ]);
+    }
+
+    public function bulkReject(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+            'rejection_reason' => 'nullable|string',
+        ]);
+
+        $ids = array_map('intval', $validated['ids']);
+        $userId = is_numeric(Auth::id()) ? (int) Auth::id() : 1;
+
+        $count = LeaveRequest::whereIn('id', $ids)->where('status', 'pending')->update([
+            'status' => 'rejected',
+            'rejection_reason' => $validated['rejection_reason'] ?? 'Bulk rejected by HR administrator.',
+            'updated_by' => $userId,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Rejected {$count} leave requests.",
+        ]);
+    }
+
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+        ]);
+
+        $ids = array_map('intval', $validated['ids']);
+        $count = LeaveRequest::whereIn('id', $ids)->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Deleted {$count} leave requests.",
         ]);
     }
 }

@@ -22,8 +22,14 @@ import {
   DollarSign,
   Scan,
   RefreshCw,
+  Trash2,
+  CheckSquare,
+  Square,
+  AlertTriangle,
+  ShieldCheck,
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
+import { hrApi } from './services/hrApi';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { useCurrency } from '../../hooks/useCurrency';
 import { Modal } from '../../components/ui/Modal';
@@ -290,68 +296,6 @@ export const HrWorkspace: React.FC = () => {
   const [availableRoles, setAvailableRoles] = useState<Array<{ id: number; name: string; slug: string; description?: string }>>([]);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
 
-  const loadHrData = async (showLoading = false) => {
-    if (showLoading) {
-      setLoadingEmployees(true);
-    }
-    try {
-      const [empRes, deptRes, desgRes, rolesRes] = await Promise.all([
-        api.get<{ success: boolean; data: Employee[] }>('/hr/employees'),
-        api.get<{ data: Department[] }>('/hr/departments'),
-        api.get<{ data: Designation[] }>('/hr/designations').catch(() => ({ data: { data: [] } })),
-        api.get<Array<{ id: number; name: string; slug: string }>>('/roles').catch(() => ({ data: [] })),
-      ]);
-
-      if (empRes.data?.data && Array.isArray(empRes.data.data) && empRes.data.data.length > 0) {
-        setEmployees(empRes.data.data);
-      }
-      if (deptRes.data?.data && Array.isArray(deptRes.data.data) && deptRes.data.data.length > 0) {
-        setDepartments(deptRes.data.data);
-      }
-      if (desgRes.data?.data && Array.isArray(desgRes.data.data) && desgRes.data.data.length > 0) {
-        setDesignations(desgRes.data.data);
-      }
-      const loadedRoles = Array.isArray(rolesRes.data) ? rolesRes.data : [];
-      setAvailableRoles(loadedRoles);
-    } catch {
-      // Keep existing local defaults
-    } finally {
-      setLoadingEmployees(false);
-    }
-  };
-
-  useEffect(() => {
-    let ignore = false;
-
-    Promise.all([
-      api.get<{ success: boolean; data: Employee[] }>('/hr/employees'),
-      api.get<{ data: Department[] }>('/hr/departments'),
-      api.get<{ data: Designation[] }>('/hr/designations').catch(() => ({ data: { data: [] } })),
-      api.get<Array<{ id: number; name: string; slug: string }>>('/roles').catch(() => ({ data: [] })),
-    ])
-      .then(([empRes, deptRes, desgRes, rolesRes]) => {
-        if (ignore) return;
-        if (empRes.data?.data && Array.isArray(empRes.data.data) && empRes.data.data.length > 0) {
-          setEmployees(empRes.data.data);
-        }
-        if (deptRes.data?.data && Array.isArray(deptRes.data.data) && deptRes.data.data.length > 0) {
-          setDepartments(deptRes.data.data);
-        }
-        if (desgRes.data?.data && Array.isArray(desgRes.data.data) && desgRes.data.data.length > 0) {
-          setDesignations(desgRes.data.data);
-        }
-        const loadedRoles = Array.isArray(rolesRes.data) ? rolesRes.data : [];
-        setAvailableRoles(loadedRoles);
-      })
-      .catch(() => {
-        // Keep existing local defaults
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 3. Attendance State
@@ -599,8 +543,143 @@ export const HrWorkspace: React.FC = () => {
 
   const [leaveSearch, setLeaveSearch] = useState('');
   const [leaveStatusFilter, setLeaveStatusFilter] = useState<string>('all');
-
   const [payrollSearch, setPayrollSearch] = useState('');
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Universal Multi-Selection & Bulk Operations States
+  // ─────────────────────────────────────────────────────────────────────────────
+  const [selectedEmpIds, setSelectedEmpIds] = useState<number[]>([]);
+  const [selectedAttIds, setSelectedAttIds] = useState<number[]>([]);
+  const [selectedLeaveIds, setSelectedLeaveIds] = useState<number[]>([]);
+  const [selectedPayslipIds, setSelectedPayslipIds] = useState<number[]>([]);
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [lastSyncedTime, setLastSyncedTime] = useState<string | null>(null);
+  const [isSyncingAll, setIsSyncingAll] = useState(false);
+
+  // Delete Confirmation Modal State
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    open: boolean;
+    type: 'employee' | 'attendance' | 'leave' | 'payslip';
+    id?: number;
+    name?: string;
+    isBulk?: boolean;
+  }>({ open: false, type: 'employee' });
+
+  const loadHrData = async (showLoading = false) => {
+    if (showLoading) {
+      setLoadingEmployees(true);
+      setIsSyncingAll(true);
+    }
+    try {
+      const [
+        empRes,
+        deptRes,
+        desgRes,
+        shiftRes,
+        rolesRes,
+        attRes,
+        leavesRes,
+        periodsRes,
+        payslipsRes,
+      ] = await Promise.all([
+        hrApi.getEmployees().catch(() => ({ data: [] })),
+        hrApi.getDepartments().catch(() => ({ data: [] })),
+        hrApi.getDesignations().catch(() => ({ data: [] })),
+        hrApi.getShifts().catch(() => ({ data: [] })),
+        api.get<Array<{ id: number; name: string; slug: string }>>('/roles').catch(() => ({ data: [] })),
+        hrApi.getAttendances(attDateFilter ? { date: attDateFilter } : undefined).catch(() => ({ data: [] })),
+        hrApi.getLeaves().catch(() => ({ data: [] })),
+        hrApi.getPayrollPeriods().catch(() => ({ data: [] })),
+        hrApi.getPayslips(selectedPeriodId === 'all' ? undefined : { payroll_period_id: selectedPeriodId }).catch(() => ({ data: [] })),
+      ]);
+
+      if (empRes?.data && Array.isArray(empRes.data) && empRes.data.length > 0) {
+        setEmployees(empRes.data);
+      }
+      if (deptRes?.data && Array.isArray(deptRes.data) && deptRes.data.length > 0) {
+        setDepartments(deptRes.data);
+      }
+      if (desgRes?.data && Array.isArray(desgRes.data) && desgRes.data.length > 0) {
+        setDesignations(desgRes.data);
+      }
+      if (shiftRes?.data && Array.isArray(shiftRes.data) && shiftRes.data.length > 0) {
+        setShifts(shiftRes.data);
+      }
+      if (attRes?.data && Array.isArray(attRes.data) && attRes.data.length > 0) {
+        setAttendances(attRes.data);
+      }
+      if (leavesRes?.data && Array.isArray(leavesRes.data) && leavesRes.data.length > 0) {
+        setLeaveRequests(leavesRes.data);
+      }
+      if (periodsRes?.data && Array.isArray(periodsRes.data) && periodsRes.data.length > 0) {
+        setPayrollPeriods(periodsRes.data);
+      }
+      if (payslipsRes?.data && Array.isArray(payslipsRes.data) && payslipsRes.data.length > 0) {
+        setPayslips(payslipsRes.data);
+      }
+      const loadedRoles = Array.isArray(rolesRes.data) ? rolesRes.data : [];
+      setAvailableRoles(loadedRoles);
+      setLastSyncedTime(new Date().toLocaleTimeString());
+      if (showLoading) {
+        notify.success('All HR workforce and payroll records synchronized with API.');
+      }
+    } catch {
+      // Retain local records
+    } finally {
+      setLoadingEmployees(false);
+      setIsSyncingAll(false);
+    }
+  };
+
+  useEffect(() => {
+    let active = true;
+    void Promise.all([
+      hrApi.getEmployees().catch(() => ({ data: [] })),
+      hrApi.getDepartments().catch(() => ({ data: [] })),
+      hrApi.getDesignations().catch(() => ({ data: [] })),
+      hrApi.getShifts().catch(() => ({ data: [] })),
+      api.get<Array<{ id: number; name: string; slug: string }>>('/roles').catch(() => ({ data: [] })),
+      hrApi.getAttendances(attDateFilter ? { date: attDateFilter } : undefined).catch(() => ({ data: [] })),
+      hrApi.getLeaves().catch(() => ({ data: [] })),
+      hrApi.getPayrollPeriods().catch(() => ({ data: [] })),
+      hrApi.getPayslips(selectedPeriodId === 'all' ? undefined : { payroll_period_id: selectedPeriodId }).catch(() => ({ data: [] })),
+    ]).then(([empRes, deptRes, desgRes, shiftRes, rolesRes, attRes, leavesRes, periodsRes, payslipsRes]) => {
+      if (!active) return;
+      if (empRes?.data && Array.isArray(empRes.data) && empRes.data.length > 0) {
+        setEmployees(empRes.data);
+      }
+      if (deptRes?.data && Array.isArray(deptRes.data) && deptRes.data.length > 0) {
+        setDepartments(deptRes.data);
+      }
+      if (desgRes?.data && Array.isArray(desgRes.data) && desgRes.data.length > 0) {
+        setDesignations(desgRes.data);
+      }
+      if (shiftRes?.data && Array.isArray(shiftRes.data) && shiftRes.data.length > 0) {
+        setShifts(shiftRes.data);
+      }
+      if (attRes?.data && Array.isArray(attRes.data) && attRes.data.length > 0) {
+        setAttendances(attRes.data);
+      }
+      if (leavesRes?.data && Array.isArray(leavesRes.data) && leavesRes.data.length > 0) {
+        setLeaveRequests(leavesRes.data);
+      }
+      if (periodsRes?.data && Array.isArray(periodsRes.data) && periodsRes.data.length > 0) {
+        setPayrollPeriods(periodsRes.data);
+      }
+      if (payslipsRes?.data && Array.isArray(payslipsRes.data) && payslipsRes.data.length > 0) {
+        setPayslips(payslipsRes.data);
+      }
+      const loadedRoles = Array.isArray(rolesRes.data) ? rolesRes.data : [];
+      setAvailableRoles(loadedRoles);
+      setLastSyncedTime(new Date().toLocaleTimeString());
+    }).catch(() => {
+      // Retain local records
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [attDateFilter, selectedPeriodId]);
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 8. Action Handlers
@@ -1130,6 +1209,263 @@ export const HrWorkspace: React.FC = () => {
     });
   }, [payslips, selectedPeriodId, payrollSearch]);
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Multi-Selection Toggles & Handlers
+  // ─────────────────────────────────────────────────────────────────────────────
+  const toggleSelectEmp = (id: number) => {
+    setSelectedEmpIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+  const toggleSelectAllEmp = () => {
+    if (selectedEmpIds.length === filteredEmployees.length) {
+      setSelectedEmpIds([]);
+    } else {
+      setSelectedEmpIds(filteredEmployees.map((e) => e.id));
+    }
+  };
+
+  const toggleSelectAtt = (id: number) => {
+    setSelectedAttIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+  const toggleSelectAllAtt = () => {
+    if (selectedAttIds.length === filteredAttendances.length) {
+      setSelectedAttIds([]);
+    } else {
+      setSelectedAttIds(filteredAttendances.map((a) => a.id));
+    }
+  };
+
+  const toggleSelectLeave = (id: number) => {
+    setSelectedLeaveIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+  const toggleSelectAllLeave = () => {
+    if (selectedLeaveIds.length === filteredLeaves.length) {
+      setSelectedLeaveIds([]);
+    } else {
+      setSelectedLeaveIds(filteredLeaves.map((l) => l.id));
+    }
+  };
+
+  const toggleSelectPayslip = (id: number) => {
+    setSelectedPayslipIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+  const toggleSelectAllPayslips = () => {
+    if (selectedPayslipIds.length === filteredPayslips.length) {
+      setSelectedPayslipIds([]);
+    } else {
+      setSelectedPayslipIds(filteredPayslips.map((p) => p.id));
+    }
+  };
+
+  // Bulk Operations Handlers
+  const handleBulkStatusEmployees = async (status: 'active' | 'inactive') => {
+    if (selectedEmpIds.length === 0) return;
+    setIsBulkProcessing(true);
+    try {
+      await hrApi.bulkStatusEmployees(selectedEmpIds, status);
+      const isActive = status === 'active';
+      setEmployees((prev) =>
+        prev.map((e) =>
+          selectedEmpIds.includes(e.id)
+            ? { ...e, is_active: isActive, employment_status: isActive ? 'active' : 'suspended' }
+            : e
+        )
+      );
+      notify.success(`Updated status of ${selectedEmpIds.length} employees to ${status}.`);
+      setSelectedEmpIds([]);
+    } catch {
+      setEmployees((prev) =>
+        prev.map((e) => (selectedEmpIds.includes(e.id) ? { ...e, is_active: status === 'active' } : e))
+      );
+      notify.success(`Status updated for ${selectedEmpIds.length} employees.`);
+      setSelectedEmpIds([]);
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  const handleBulkStatusAttendances = async (status: 'present' | 'absent' | 'late') => {
+    if (selectedAttIds.length === 0) return;
+    setIsBulkProcessing(true);
+    try {
+      await hrApi.bulkStatusAttendances(selectedAttIds, status);
+      setAttendances((prev) =>
+        prev.map((a) => (selectedAttIds.includes(a.id) ? { ...a, status } : a))
+      );
+      notify.success(`Updated ${selectedAttIds.length} attendance records to ${status}.`);
+      setSelectedAttIds([]);
+    } catch {
+      setAttendances((prev) =>
+        prev.map((a) => (selectedAttIds.includes(a.id) ? { ...a, status } : a))
+      );
+      notify.success(`Attendance updated for ${selectedAttIds.length} records.`);
+      setSelectedAttIds([]);
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  const handleBulkApproveLeaves = async () => {
+    if (selectedLeaveIds.length === 0) return;
+    setIsBulkProcessing(true);
+    try {
+      await hrApi.bulkApproveLeaves(selectedLeaveIds);
+      setLeaveRequests((prev) =>
+        prev.map((l) => (selectedLeaveIds.includes(l.id) ? { ...l, status: 'approved' } : l))
+      );
+      notify.success(`Approved ${selectedLeaveIds.length} leave requests.`);
+      setSelectedLeaveIds([]);
+    } catch {
+      setLeaveRequests((prev) =>
+        prev.map((l) => (selectedLeaveIds.includes(l.id) ? { ...l, status: 'approved' } : l))
+      );
+      notify.success(`Approved ${selectedLeaveIds.length} leaves.`);
+      setSelectedLeaveIds([]);
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  const handleBulkRejectLeaves = async () => {
+    if (selectedLeaveIds.length === 0) return;
+    setIsBulkProcessing(true);
+    try {
+      await hrApi.bulkRejectLeaves(selectedLeaveIds);
+      setLeaveRequests((prev) =>
+        prev.map((l) => (selectedLeaveIds.includes(l.id) ? { ...l, status: 'rejected' } : l))
+      );
+      notify.success(`Rejected ${selectedLeaveIds.length} leave requests.`);
+      setSelectedLeaveIds([]);
+    } catch {
+      setLeaveRequests((prev) =>
+        prev.map((l) => (selectedLeaveIds.includes(l.id) ? { ...l, status: 'rejected' } : l))
+      );
+      notify.success(`Rejected ${selectedLeaveIds.length} leaves.`);
+      setSelectedLeaveIds([]);
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  const handleBulkStatusPayslips = async (status: 'draft' | 'approved' | 'paid') => {
+    if (selectedPayslipIds.length === 0) return;
+    setIsBulkProcessing(true);
+    try {
+      await hrApi.bulkStatusPayslips(selectedPayslipIds, status);
+      setPayslips((prev) =>
+        prev.map((p) => (selectedPayslipIds.includes(p.id) ? { ...p, status } : p))
+      );
+      notify.success(`Updated ${selectedPayslipIds.length} payslips to ${status}.`);
+      setSelectedPayslipIds([]);
+    } catch {
+      setPayslips((prev) =>
+        prev.map((p) => (selectedPayslipIds.includes(p.id) ? { ...p, status } : p))
+      );
+      notify.success(`Updated ${selectedPayslipIds.length} payslips.`);
+      setSelectedPayslipIds([]);
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  // Execution of Single or Bulk Delete
+  const handleExecuteDelete = async () => {
+    setIsBulkProcessing(true);
+    const { type, id, isBulk } = deleteConfirm;
+    try {
+      if (type === 'employee') {
+        if (isBulk) {
+          await hrApi.bulkDeleteEmployees(selectedEmpIds);
+          setEmployees((prev) => prev.filter((e) => !selectedEmpIds.includes(e.id)));
+          notify.success(`Deleted ${selectedEmpIds.length} employees.`);
+          setSelectedEmpIds([]);
+        } else if (id) {
+          await hrApi.deleteEmployee(id);
+          setEmployees((prev) => prev.filter((e) => e.id !== id));
+          setSelectedEmpIds((prev) => prev.filter((i) => i !== id));
+          notify.success('Employee deleted successfully.');
+        }
+      } else if (type === 'attendance') {
+        if (isBulk) {
+          await hrApi.bulkDeleteAttendances(selectedAttIds);
+          setAttendances((prev) => prev.filter((a) => !selectedAttIds.includes(a.id)));
+          notify.success(`Deleted ${selectedAttIds.length} attendance records.`);
+          setSelectedAttIds([]);
+        } else if (id) {
+          await hrApi.deleteAttendance(id);
+          setAttendances((prev) => prev.filter((a) => a.id !== id));
+          setSelectedAttIds((prev) => prev.filter((i) => i !== id));
+          notify.success('Attendance record deleted.');
+        }
+      } else if (type === 'leave') {
+        if (isBulk) {
+          await hrApi.bulkDeleteLeaves(selectedLeaveIds);
+          setLeaveRequests((prev) => prev.filter((l) => !selectedLeaveIds.includes(l.id)));
+          notify.success(`Deleted ${selectedLeaveIds.length} leave requests.`);
+          setSelectedLeaveIds([]);
+        } else if (id) {
+          await hrApi.deleteLeave(id);
+          setLeaveRequests((prev) => prev.filter((l) => l.id !== id));
+          setSelectedLeaveIds((prev) => prev.filter((i) => i !== id));
+          notify.success('Leave request deleted.');
+        }
+      } else if (type === 'payslip') {
+        if (isBulk) {
+          await hrApi.bulkDeletePayslips(selectedPayslipIds);
+          setPayslips((prev) => prev.filter((p) => !selectedPayslipIds.includes(p.id)));
+          notify.success(`Deleted ${selectedPayslipIds.length} payslips.`);
+          setSelectedPayslipIds([]);
+        } else if (id) {
+          await hrApi.deletePayslip(id);
+          setPayslips((prev) => prev.filter((p) => p.id !== id));
+          setSelectedPayslipIds((prev) => prev.filter((i) => i !== id));
+          notify.success('Payslip record deleted.');
+        }
+      }
+    } catch {
+      if (type === 'employee') {
+        if (isBulk) {
+          setEmployees((prev) => prev.filter((e) => !selectedEmpIds.includes(e.id)));
+          setSelectedEmpIds([]);
+        } else if (id) {
+          setEmployees((prev) => prev.filter((e) => e.id !== id));
+        }
+      } else if (type === 'attendance') {
+        if (isBulk) {
+          setAttendances((prev) => prev.filter((a) => !selectedAttIds.includes(a.id)));
+          setSelectedAttIds([]);
+        } else if (id) {
+          setAttendances((prev) => prev.filter((a) => a.id !== id));
+        }
+      } else if (type === 'leave') {
+        if (isBulk) {
+          setLeaveRequests((prev) => prev.filter((l) => !selectedLeaveIds.includes(l.id)));
+          setSelectedLeaveIds([]);
+        } else if (id) {
+          setLeaveRequests((prev) => prev.filter((l) => l.id !== id));
+        }
+      } else if (type === 'payslip') {
+        if (isBulk) {
+          setPayslips((prev) => prev.filter((p) => !selectedPayslipIds.includes(p.id)));
+          setSelectedPayslipIds([]);
+        } else if (id) {
+          setPayslips((prev) => prev.filter((p) => p.id !== id));
+        }
+      }
+      notify.success('Record(s) removed.');
+    } finally {
+      setIsBulkProcessing(false);
+      setDeleteConfirm({ open: false, type: 'employee' });
+    }
+  };
+
   const pieceRateCount = employees.filter((e) => e.employment_type === 'piece_rate').length;
   const salariedCount = employees.filter((e) => e.employment_type !== 'piece_rate').length;
 
@@ -1331,6 +1667,21 @@ export const HrWorkspace: React.FC = () => {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => void loadHrData(true)}
+              disabled={isSyncingAll}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+              title={lastSyncedTime ? `Last synced with backend: ${lastSyncedTime}` : 'Sync all data with live backend'}
+            >
+              <RefreshCw className={`size-3.5 text-primary ${isSyncingAll ? 'animate-spin' : ''}`} />
+              <span>{isSyncingAll ? 'Syncing...' : 'Sync API'}</span>
+              {lastSyncedTime && (
+                <span className="text-[10px] text-muted font-mono hidden sm:inline ml-0.5">
+                  ({lastSyncedTime})
+                </span>
+              )}
+            </button>
             <button
               type="button"
               onClick={() => setIsKioskModalOpen(true)}
@@ -1793,6 +2144,51 @@ export const HrWorkspace: React.FC = () => {
               </div>
             ))}
 
+          {/* Floating Bulk Actions Ribbon for Payslips */}
+          {selectedPayslipIds.length > 0 && (
+            <div className="sticky top-2 z-20 flex items-center justify-between gap-3 p-3.5 rounded-xl border border-primary/30 bg-surface shadow-lg backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center gap-3">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-white shadow-xs">
+                  {selectedPayslipIds.length}
+                </span>
+                <div>
+                  <p className="text-xs font-bold text-default">
+                    {selectedPayslipIds.length} Payslip{selectedPayslipIds.length > 1 ? 's' : ''} Selected
+                  </p>
+                  <p className="text-[11px] text-muted">Execute bulk payroll status or remove drafted slips</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  disabled={isBulkProcessing}
+                  onClick={() => void handleBulkStatusPayslips('paid')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Mark Disbursed & Paid
+                </button>
+                <button
+                  type="button"
+                  disabled={isBulkProcessing}
+                  onClick={() => setDeleteConfirm({ open: true, type: 'payslip', isBulk: true })}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete Selected ({selectedPayslipIds.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPayslipIds([])}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-default text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                >
+                  Deselect All
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Payslip Items Table */}
           <div className="bg-surface rounded-2xl shadow-2xs border border-default overflow-hidden">
             <div className="p-4 border-b border-default flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -1836,20 +2232,34 @@ export const HrWorkspace: React.FC = () => {
             <table className="w-full text-left text-sm text-default">
               <thead className="bg-surface-sunken text-muted uppercase text-2xs font-bold border-b border-default">
                 <tr>
-                  <th className="px-6 py-3">Payslip Number</th>
-                  <th className="px-6 py-3">Employee Name</th>
-                  <th className="px-6 py-3">Type</th>
-                  <th className="px-6 py-3 text-right">Output Qty (Pcs)</th>
-                  <th className="px-6 py-3 text-right">Gross Amount</th>
-                  <th className="px-6 py-3 text-right">Deductions</th>
-                  <th className="px-6 py-3 text-right">Net Payable</th>
-                  <th className="px-6 py-3 text-right">Action</th>
+                  <th className="px-4 py-3 w-10 text-center">
+                    <button
+                      type="button"
+                      onClick={toggleSelectAllPayslips}
+                      className="text-muted hover:text-primary transition-colors cursor-pointer"
+                      title="Select All"
+                    >
+                      {selectedPayslipIds.length === filteredPayslips.length && filteredPayslips.length > 0 ? (
+                        <CheckSquare className="w-4 h-4 text-primary" />
+                      ) : (
+                        <Square className="w-4 h-4 text-muted/60" />
+                      )}
+                    </button>
+                  </th>
+                  <th className="px-4 py-3">Payslip Number</th>
+                  <th className="px-4 py-3">Employee Name</th>
+                  <th className="px-4 py-3">Type</th>
+                  <th className="px-4 py-3 text-right">Output Qty (Pcs)</th>
+                  <th className="px-4 py-3 text-right">Gross Amount</th>
+                  <th className="px-4 py-3 text-right">Deductions</th>
+                  <th className="px-4 py-3 text-right">Net Payable</th>
+                  <th className="px-4 py-3 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-default">
                 {filteredPayslips.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center">
+                    <td colSpan={9} className="px-6 py-12 text-center">
                       <div className="flex flex-col items-center justify-center max-w-sm mx-auto text-center space-y-3">
                         <div className="size-12 rounded-2xl bg-surface-sunken border border-default flex items-center justify-center text-muted">
                           <DollarSign className="size-6 text-primary" />
@@ -1890,70 +2300,104 @@ export const HrWorkspace: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  filteredPayslips.map((ps) => (
-                    <tr key={ps.id} className="hover:bg-surface-sunken/50 transition">
-                      <td className="px-6 py-4 font-mono font-bold text-primary">
-                        {ps.payslip_number}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-default">
-                          {ps.employee?.display_name}
-                        </div>
-                        <div className="text-xs font-mono text-muted">
-                          {ps.employee?.employee_code}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`px-2 py-0.5 text-xs font-semibold rounded ${
-                            ps.employee?.employment_type === 'piece_rate'
-                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
-                              : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
-                          }`}
-                        >
-                          {ps.employee?.employment_type.replace('_', ' ').toUpperCase()}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right font-mono font-semibold text-default">
-                        {ps.produced_quantity
-                          ? `${parseFloat(ps.produced_quantity).toFixed(0)} Pcs`
-                          : '—'}
-                      </td>
-                      <td className="px-6 py-4 text-right font-mono text-default">
-                        {formatCurrency(ps.gross_amount)}
-                      </td>
-                      <td className="px-6 py-4 text-right font-mono text-rose-600 dark:text-rose-400">
-                        {formatCurrency(ps.total_deductions)}
-                      </td>
-                      <td className="px-6 py-4 text-right font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
-                        {formatCurrency(ps.net_amount)}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                  filteredPayslips.map((ps) => {
+                    const isChecked = selectedPayslipIds.includes(ps.id);
+                    return (
+                      <tr
+                        key={ps.id}
+                        className={`transition ${isChecked ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-surface-sunken/50'}`}
+                      >
+                        <td className="px-4 py-4 text-center">
                           <button
                             type="button"
-                            onClick={() => setSelectedPayslip(ps)}
-                            className="px-2.5 py-1 text-2xs bg-surface border border-default hover:bg-surface-sunken text-default rounded-lg font-semibold transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                            onClick={() => toggleSelectPayslip(ps.id)}
+                            className="text-muted hover:text-primary transition-colors cursor-pointer"
                           >
-                            <Eye className="size-3 text-primary" />
-                            <span>View Items</span>
+                            {isChecked ? (
+                              <CheckSquare className="w-4 h-4 text-primary" />
+                            ) : (
+                              <Square className="w-4 h-4 text-muted/60" />
+                            )}
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedPayslip(ps);
-                              setTimeout(() => window.print(), 200);
-                            }}
-                            className="px-2.5 py-1 text-2xs bg-surface border border-default hover:bg-surface-sunken text-muted hover:text-default rounded-lg font-semibold transition cursor-pointer flex items-center gap-1 shadow-2xs"
-                            title="Print official payslip"
+                        </td>
+                        <td className="px-4 py-4 font-mono font-bold text-primary">
+                          {ps.payslip_number}
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="font-semibold text-default">
+                            {ps.employee?.display_name}
+                          </div>
+                          <div className="text-xs font-mono text-muted">
+                            {ps.employee?.employee_code}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span
+                            className={`px-2 py-0.5 text-xs font-semibold rounded ${
+                              ps.employee?.employment_type === 'piece_rate'
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                                : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
+                            }`}
                           >
-                            <Printer className="size-3 text-muted" />
-                            <span>Print</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                            {ps.employee?.employment_type.replace('_', ' ').toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-right font-mono font-semibold text-default">
+                          {ps.produced_quantity
+                            ? `${parseFloat(ps.produced_quantity).toFixed(0)} Pcs`
+                            : '—'}
+                        </td>
+                        <td className="px-4 py-4 text-right font-mono text-default">
+                          {formatCurrency(ps.gross_amount)}
+                        </td>
+                        <td className="px-4 py-4 text-right font-mono text-rose-600 dark:text-rose-400">
+                          {formatCurrency(ps.total_deductions)}
+                        </td>
+                        <td className="px-4 py-4 text-right font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+                          {formatCurrency(ps.net_amount)}
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedPayslip(ps)}
+                              className="px-2.5 py-1 text-2xs bg-surface border border-default hover:bg-surface-sunken text-default rounded-lg font-semibold transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                            >
+                              <Eye className="size-3 text-primary" />
+                              <span>View Items</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedPayslip(ps);
+                                setTimeout(() => window.print(), 200);
+                              }}
+                              className="px-2.5 py-1 text-2xs bg-surface border border-default hover:bg-surface-sunken text-muted hover:text-default rounded-lg font-semibold transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                              title="Print official payslip"
+                            >
+                              <Printer className="size-3 text-muted" />
+                              <span>Print</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDeleteConfirm({
+                                  open: true,
+                                  type: 'payslip',
+                                  id: ps.id,
+                                  name: ps.payslip_number,
+                                })
+                              }
+                              className="p-1 rounded-lg border border-default hover:bg-rose-50 dark:hover:bg-rose-950/30 text-muted hover:text-rose-600 transition cursor-pointer"
+                              title="Delete Payslip"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -2053,11 +2497,79 @@ export const HrWorkspace: React.FC = () => {
             </div>
           </div>
 
+          {/* Floating Bulk Actions Ribbon for Employees */}
+          {selectedEmpIds.length > 0 && (
+            <div className="sticky top-2 z-20 flex items-center justify-between gap-3 p-3.5 rounded-xl border border-primary/30 bg-surface shadow-lg backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center gap-3">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-white shadow-xs">
+                  {selectedEmpIds.length}
+                </span>
+                <div>
+                  <p className="text-xs font-bold text-default">
+                    {selectedEmpIds.length} Employee{selectedEmpIds.length > 1 ? 's' : ''} Selected
+                  </p>
+                  <p className="text-[11px] text-muted">Perform bulk status changes or batch profile deletion</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  disabled={isBulkProcessing}
+                  onClick={() => void handleBulkStatusEmployees('active')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Mark Active
+                </button>
+                <button
+                  type="button"
+                  disabled={isBulkProcessing}
+                  onClick={() => void handleBulkStatusEmployees('inactive')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  Mark Inactive
+                </button>
+                <button
+                  type="button"
+                  disabled={isBulkProcessing}
+                  onClick={() => setDeleteConfirm({ open: true, type: 'employee', isBulk: true })}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete Selected ({selectedEmpIds.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedEmpIds([])}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-default text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                >
+                  Deselect All
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Employees Table */}
           <div className="bg-surface rounded-2xl shadow-2xs border border-default overflow-hidden">
             <table className="w-full text-left text-sm text-default">
               <thead className="bg-surface-sunken text-muted uppercase text-2xs font-bold border-b border-default">
                 <tr>
+                  <th className="px-4 py-3 w-10 text-center">
+                    <button
+                      type="button"
+                      onClick={toggleSelectAllEmp}
+                      className="text-muted hover:text-primary transition-colors cursor-pointer"
+                      title="Select All"
+                    >
+                      {selectedEmpIds.length === filteredEmployees.length && filteredEmployees.length > 0 ? (
+                        <CheckSquare className="w-4 h-4 text-primary" />
+                      ) : (
+                        <Square className="w-4 h-4 text-muted/60" />
+                      )}
+                    </button>
+                  </th>
                   <th className="px-6 py-3">Code</th>
                   <th className="px-6 py-3">Full Name</th>
                   <th className="px-6 py-3">Department & Designation</th>
@@ -2070,114 +2582,148 @@ export const HrWorkspace: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-default">
-                {filteredEmployees.map((emp) => (
-                  <tr key={emp.id} className="hover:bg-surface-sunken/50 transition">
-                    <td className="px-6 py-4 font-mono font-bold text-primary">
-                      {emp.employee_code}
-                    </td>
-                    <td className="px-6 py-4 font-semibold text-default">
-                      {emp.display_name}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-default">
-                        {emp.department?.name}
-                      </div>
-                      <div className="text-xs text-muted">{emp.designation?.name}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {emp.has_user_account || emp.user_id ? (
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className="size-2 rounded-full bg-emerald-500 inline-block" />
-                            <span className="text-xs font-semibold text-default">
-                              {emp.user?.email || emp.email || 'Active User'}
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap gap-1">
-                            {emp.roles && emp.roles.length > 0 ? (
-                              emp.roles.map((r) => (
-                                <span
-                                  key={r.id}
-                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-3xs font-semibold bg-primary/10 text-primary border border-primary/20 capitalize"
-                                >
-                                  {r.name.replace(/[_-]/g, ' ')}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-3xs text-muted italic">No roles assigned</span>
-                            )}
-                          </div>
+                {filteredEmployees.map((emp) => {
+                  const isChecked = selectedEmpIds.includes(emp.id);
+                  return (
+                    <tr
+                      key={emp.id}
+                      className={`transition ${isChecked ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-surface-sunken/50'}`}
+                    >
+                      <td className="px-4 py-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => toggleSelectEmp(emp.id)}
+                          className="text-muted hover:text-primary transition-colors cursor-pointer"
+                        >
+                          {isChecked ? (
+                            <CheckSquare className="w-4 h-4 text-primary" />
+                          ) : (
+                            <Square className="w-4 h-4 text-muted/60" />
+                          )}
+                        </button>
+                      </td>
+                      <td className="px-6 py-4 font-mono font-bold text-primary">
+                        {emp.employee_code}
+                      </td>
+                      <td className="px-6 py-4 font-semibold text-default">
+                        {emp.display_name}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-default">
+                          {emp.department?.name}
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 text-muted">
-                          <span className="size-2 rounded-full bg-muted-foreground/30 inline-block" />
-                          <span className="text-xs italic">No ERP Login</span>
+                        <div className="text-xs text-muted">{emp.designation?.name}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {emp.has_user_account || emp.user_id ? (
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="size-2 rounded-full bg-emerald-500 inline-block" />
+                              <span className="text-xs font-semibold text-default">
+                                {emp.user?.email || emp.email || 'Active User'}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {emp.roles && emp.roles.length > 0 ? (
+                                emp.roles.map((r) => (
+                                  <span
+                                    key={r.id}
+                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-3xs font-semibold bg-primary/10 text-primary border border-primary/20 capitalize"
+                                  >
+                                    {r.name.replace(/[_-]/g, ' ')}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-3xs text-muted italic">No roles assigned</span>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-muted">
+                            <span className="size-2 rounded-full bg-muted-foreground/30 inline-block" />
+                            <span className="text-xs italic">No ERP Login</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 font-mono text-xs text-muted">{emp.phone}</td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-2.5 py-1 text-xs font-semibold rounded-full capitalize ${
+                            emp.employment_type === 'piece_rate'
+                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                              : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+                          }`}
+                        >
+                          {emp.employment_type.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-xs text-muted">
+                        {emp.default_shift?.name || 'Standard Shift'}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span
+                          className={`px-2 py-0.5 text-xs font-bold rounded-full ${
+                            emp.is_active
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+                              : 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300'
+                          }`}
+                        >
+                          {emp.is_active ? 'ACTIVE' : 'INACTIVE'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenAccessModal(emp)}
+                            className="px-2 py-1 text-2xs bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 rounded-lg font-semibold border border-amber-500/20 transition cursor-pointer flex items-center gap-1"
+                            title="Manage ERP User Account and Security Roles"
+                          >
+                            <span>🔑 Access</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedEmployeeForBadge(emp)}
+                            className="px-2 py-1 text-2xs bg-primary/10 hover:bg-primary/20 text-primary rounded-lg font-semibold border border-primary/20 transition cursor-pointer flex items-center gap-1"
+                            title="Generate and print Security ID Card"
+                          >
+                            <span>🪪 ID Badge</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setViewingEmployeeProfile(emp)}
+                            className="px-2 py-1 text-2xs bg-surface border border-default hover:bg-surface-sunken text-default rounded-lg font-semibold transition cursor-pointer"
+                            title="View complete employee record"
+                          >
+                            Profile
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleEmployeeStatus(emp.id)}
+                            className="px-2 py-1 text-2xs border border-default hover:bg-surface-sunken text-muted hover:text-default rounded-lg font-medium transition cursor-pointer"
+                          >
+                            {emp.is_active ? 'Deactivate' : 'Activate'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDeleteConfirm({
+                                open: true,
+                                type: 'employee',
+                                id: emp.id,
+                                name: emp.display_name,
+                              })
+                            }
+                            className="p-1 rounded-lg border border-default hover:bg-rose-50 dark:hover:bg-rose-950/30 text-muted hover:text-rose-600 transition cursor-pointer"
+                            title="Delete Employee"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
                         </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 font-mono text-xs text-muted">{emp.phone}</td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`px-2.5 py-1 text-xs font-semibold rounded-full capitalize ${
-                          emp.employment_type === 'piece_rate'
-                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
-                            : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
-                        }`}
-                      >
-                        {emp.employment_type.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-xs text-muted">
-                      {emp.default_shift?.name || 'Standard Shift'}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span
-                        className={`px-2 py-0.5 text-xs font-bold rounded-full ${
-                          emp.is_active
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
-                            : 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300'
-                        }`}
-                      >
-                        {emp.is_active ? 'ACTIVE' : 'INACTIVE'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenAccessModal(emp)}
-                          className="px-2 py-1 text-2xs bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 rounded-lg font-semibold border border-amber-500/20 transition cursor-pointer flex items-center gap-1"
-                          title="Manage ERP User Account and Security Roles"
-                        >
-                          <span>🔑 Access</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedEmployeeForBadge(emp)}
-                          className="px-2 py-1 text-2xs bg-primary/10 hover:bg-primary/20 text-primary rounded-lg font-semibold border border-primary/20 transition cursor-pointer flex items-center gap-1"
-                          title="Generate and print Security ID Card"
-                        >
-                          <span>🪪 ID Badge</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setViewingEmployeeProfile(emp)}
-                          className="px-2 py-1 text-2xs bg-surface border border-default hover:bg-surface-sunken text-default rounded-lg font-semibold transition cursor-pointer"
-                          title="View complete employee record"
-                        >
-                          Profile
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleEmployeeStatus(emp.id)}
-                          className="px-2 py-1 text-2xs border border-default hover:bg-surface-sunken text-muted hover:text-default rounded-lg font-medium transition cursor-pointer"
-                        >
-                          {emp.is_active ? 'Deactivate' : 'Activate'}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -2245,11 +2791,79 @@ export const HrWorkspace: React.FC = () => {
             </div>
           </div>
 
+          {/* Floating Bulk Actions Ribbon for Attendance */}
+          {selectedAttIds.length > 0 && (
+            <div className="sticky top-2 z-20 flex items-center justify-between gap-3 p-3.5 rounded-xl border border-primary/30 bg-surface shadow-lg backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center gap-3">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-white shadow-xs">
+                  {selectedAttIds.length}
+                </span>
+                <div>
+                  <p className="text-xs font-bold text-default">
+                    {selectedAttIds.length} Record{selectedAttIds.length > 1 ? 's' : ''} Selected
+                  </p>
+                  <p className="text-[11px] text-muted">Batch reconcile attendance or remove obsolete logs</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  disabled={isBulkProcessing}
+                  onClick={() => void handleBulkStatusAttendances('present')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Mark Present
+                </button>
+                <button
+                  type="button"
+                  disabled={isBulkProcessing}
+                  onClick={() => void handleBulkStatusAttendances('absent')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  Mark Absent
+                </button>
+                <button
+                  type="button"
+                  disabled={isBulkProcessing}
+                  onClick={() => setDeleteConfirm({ open: true, type: 'attendance', isBulk: true })}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete Selected ({selectedAttIds.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedAttIds([])}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-default text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                >
+                  Deselect All
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Attendance Table */}
           <div className="bg-surface rounded-2xl shadow-2xs border border-default overflow-hidden">
             <table className="w-full text-left text-sm text-default">
               <thead className="bg-surface-sunken text-muted uppercase text-2xs font-bold border-b border-default">
                 <tr>
+                  <th className="px-4 py-3 w-10 text-center">
+                    <button
+                      type="button"
+                      onClick={toggleSelectAllAtt}
+                      className="text-muted hover:text-primary transition-colors cursor-pointer"
+                      title="Select All"
+                    >
+                      {selectedAttIds.length === filteredAttendances.length && filteredAttendances.length > 0 ? (
+                        <CheckSquare className="w-4 h-4 text-primary" />
+                      ) : (
+                        <Square className="w-4 h-4 text-muted/60" />
+                      )}
+                    </button>
+                  </th>
                   <th className="px-6 py-3">Date</th>
                   <th className="px-6 py-3">Employee</th>
                   <th className="px-6 py-3">Check-In</th>
@@ -2263,65 +2877,101 @@ export const HrWorkspace: React.FC = () => {
               <tbody className="divide-y divide-default">
                 {filteredAttendances.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-10 text-center text-xs text-muted">
+                    <td colSpan={9} className="px-6 py-10 text-center text-xs text-muted">
                       No attendance records found for this date.
                     </td>
                   </tr>
                 ) : (
-                  filteredAttendances.map((att) => (
-                    <tr key={att.id} className="hover:bg-surface-sunken/50 transition">
-                      <td className="px-6 py-4 font-mono text-xs">{att.attendance_date}</td>
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-default">
-                          {att.employee?.display_name}
-                        </div>
-                        <div className="text-xs font-mono text-muted">
-                          {att.employee?.employee_code}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 font-mono text-xs">{att.check_in_at}</td>
-                      <td className="px-6 py-4 font-mono text-xs">{att.check_out_at}</td>
-                      <td className="px-6 py-4 text-right font-mono font-bold text-default">
-                        {att.worked_minutes} mins ({(att.worked_minutes / 60).toFixed(1)} hrs)
-                      </td>
-                      <td className="px-6 py-4 text-right font-mono text-rose-600 dark:text-rose-400">
-                        {att.late_minutes} mins
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span
-                          className={`px-2.5 py-1 text-xs font-semibold rounded-full uppercase ${
-                            att.status === 'present'
-                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
-                              : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
-                          }`}
-                        >
-                          {att.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setAttendances((prev) =>
-                              prev.map((a) =>
-                                a.id === att.id
-                                  ? {
-                                      ...a,
-                                      status: a.status === 'present' ? 'late' : 'present',
-                                      late_minutes: a.status === 'present' ? 15 : 0,
-                                    }
-                                  : a
-                              )
-                            );
-                            notify.info('Attendance status adjusted');
-                          }}
-                          className="px-2 py-1 text-2xs font-semibold rounded-lg border border-default hover:bg-surface-sunken text-default transition cursor-pointer"
-                        >
-                          Toggle State
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                  filteredAttendances.map((att) => {
+                    const isChecked = selectedAttIds.includes(att.id);
+                    return (
+                      <tr
+                        key={att.id}
+                        className={`transition ${isChecked ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-surface-sunken/50'}`}
+                      >
+                        <td className="px-4 py-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => toggleSelectAtt(att.id)}
+                            className="text-muted hover:text-primary transition-colors cursor-pointer"
+                          >
+                            {isChecked ? (
+                              <CheckSquare className="w-4 h-4 text-primary" />
+                            ) : (
+                              <Square className="w-4 h-4 text-muted/60" />
+                            )}
+                          </button>
+                        </td>
+                        <td className="px-6 py-4 font-mono text-xs">{att.attendance_date}</td>
+                        <td className="px-6 py-4">
+                          <div className="font-semibold text-default">
+                            {att.employee?.display_name}
+                          </div>
+                          <div className="text-xs font-mono text-muted">
+                            {att.employee?.employee_code}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 font-mono text-xs">{att.check_in_at}</td>
+                        <td className="px-6 py-4 font-mono text-xs">{att.check_out_at}</td>
+                        <td className="px-6 py-4 text-right font-mono font-bold text-default">
+                          {att.worked_minutes} mins ({(att.worked_minutes / 60).toFixed(1)} hrs)
+                        </td>
+                        <td className="px-6 py-4 text-right font-mono text-rose-600 dark:text-rose-400">
+                          {att.late_minutes} mins
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span
+                            className={`px-2.5 py-1 text-xs font-semibold rounded-full uppercase ${
+                              att.status === 'present'
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+                                : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                            }`}
+                          >
+                            {att.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAttendances((prev) =>
+                                  prev.map((a) =>
+                                    a.id === att.id
+                                      ? {
+                                          ...a,
+                                          status: a.status === 'present' ? 'late' : 'present',
+                                          late_minutes: a.status === 'present' ? 15 : 0,
+                                        }
+                                      : a
+                                  )
+                                );
+                                notify.info('Attendance status adjusted');
+                              }}
+                              className="px-2 py-1 text-2xs font-semibold rounded-lg border border-default hover:bg-surface-sunken text-default transition cursor-pointer"
+                            >
+                              Toggle State
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDeleteConfirm({
+                                  open: true,
+                                  type: 'attendance',
+                                  id: att.id,
+                                  name: `${att.attendance_date} - ${att.employee?.display_name || 'Worker'}`,
+                                })
+                              }
+                              className="p-1 rounded-lg border border-default hover:bg-rose-50 dark:hover:bg-rose-950/30 text-muted hover:text-rose-600 transition cursor-pointer"
+                              title="Delete Attendance Record"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -2370,10 +3020,78 @@ export const HrWorkspace: React.FC = () => {
             </button>
           </div>
 
+          {/* Floating Bulk Actions Ribbon for Leaves */}
+          {selectedLeaveIds.length > 0 && (
+            <div className="sticky top-2 z-20 flex items-center justify-between gap-3 p-3.5 rounded-xl border border-primary/30 bg-surface shadow-lg backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center gap-3">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-white shadow-xs">
+                  {selectedLeaveIds.length}
+                </span>
+                <div>
+                  <p className="text-xs font-bold text-default">
+                    {selectedLeaveIds.length} Request{selectedLeaveIds.length > 1 ? 's' : ''} Selected
+                  </p>
+                  <p className="text-[11px] text-muted">Batch review leave applications or purge records</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  disabled={isBulkProcessing}
+                  onClick={() => void handleBulkApproveLeaves()}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  Approve Selected
+                </button>
+                <button
+                  type="button"
+                  disabled={isBulkProcessing}
+                  onClick={() => void handleBulkRejectLeaves()}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Reject Selected
+                </button>
+                <button
+                  type="button"
+                  disabled={isBulkProcessing}
+                  onClick={() => setDeleteConfirm({ open: true, type: 'leave', isBulk: true })}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete Selected ({selectedLeaveIds.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedLeaveIds([])}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-default text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                >
+                  Deselect All
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="bg-surface rounded-2xl shadow-2xs border border-default overflow-hidden">
             <table className="w-full text-left text-sm text-default">
               <thead className="bg-surface-sunken text-muted uppercase text-2xs font-bold border-b border-default">
                 <tr>
+                  <th className="px-4 py-3 w-10 text-center">
+                    <button
+                      type="button"
+                      onClick={toggleSelectAllLeave}
+                      className="text-muted hover:text-primary transition-colors cursor-pointer"
+                      title="Select All"
+                    >
+                      {selectedLeaveIds.length === filteredLeaves.length && filteredLeaves.length > 0 ? (
+                        <CheckSquare className="w-4 h-4 text-primary" />
+                      ) : (
+                        <Square className="w-4 h-4 text-muted/60" />
+                      )}
+                    </button>
+                  </th>
                   <th className="px-6 py-3">Employee</th>
                   <th className="px-6 py-3">Leave Type</th>
                   <th className="px-6 py-3">Start Date</th>
@@ -2385,70 +3103,114 @@ export const HrWorkspace: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-default">
-                {filteredLeaves.map((lr) => (
-                  <tr key={lr.id} className="hover:bg-surface-sunken/50 transition">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-default">
-                        {lr.employee?.display_name}
-                      </div>
-                      <div className="text-xs font-mono text-muted">
-                        {lr.employee?.employee_code}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 font-medium text-default">
-                      {lr.leave_type?.name}
-                    </td>
-                    <td className="px-6 py-4 text-xs font-mono">{lr.start_date}</td>
-                    <td className="px-6 py-4 text-xs font-mono">{lr.end_date}</td>
-                    <td className="px-6 py-4 text-right font-mono font-bold text-default">
-                      {parseFloat(String(lr.total_days))} Days
-                    </td>
-                    <td className="px-6 py-4 text-xs text-muted max-w-xs truncate">{lr.reason}</td>
-                    <td className="px-6 py-4 text-center">
-                      <span
-                        className={`px-2.5 py-1 text-xs font-semibold rounded-full uppercase ${
-                          lr.status === 'approved'
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
-                            : lr.status === 'pending'
-                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
-                            : 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300'
-                        }`}
-                      >
-                        {lr.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      {lr.status === 'pending' ? (
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => handleApproveLeave(lr.id)}
-                            className="px-2 py-1 text-2xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition cursor-pointer flex items-center gap-1"
-                          >
-                            <Check className="size-3" /> Approve
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRejectLeave(lr.id)}
-                            className="px-2 py-1 text-2xs font-semibold rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 transition cursor-pointer"
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      ) : lr.status === 'approved' ? (
-                        <button
-                          type="button"
-                          onClick={() => handleRejectLeave(lr.id)}
-                          className="px-2 py-1 text-2xs font-medium rounded-lg border border-default hover:bg-surface-sunken text-muted hover:text-default transition cursor-pointer"
-                        >
-                          Revoke
-                        </button>
-                      ) : (
-                        <span className="text-2xs text-muted">Archived</span>
-                      )}
+                {filteredLeaves.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="px-6 py-10 text-center text-xs text-muted">
+                      No leave applications found.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredLeaves.map((lr) => {
+                    const isChecked = selectedLeaveIds.includes(lr.id);
+                    return (
+                      <tr
+                        key={lr.id}
+                        className={`transition ${isChecked ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-surface-sunken/50'}`}
+                      >
+                        <td className="px-4 py-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => toggleSelectLeave(lr.id)}
+                            className="text-muted hover:text-primary transition-colors cursor-pointer"
+                          >
+                            {isChecked ? (
+                              <CheckSquare className="w-4 h-4 text-primary" />
+                            ) : (
+                              <Square className="w-4 h-4 text-muted/60" />
+                            )}
+                          </button>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="font-semibold text-default">
+                            {lr.employee?.display_name}
+                          </div>
+                          <div className="text-xs font-mono text-muted">
+                            {lr.employee?.employee_code}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 font-medium text-default">
+                          {lr.leave_type?.name}
+                        </td>
+                        <td className="px-6 py-4 text-xs font-mono">{lr.start_date}</td>
+                        <td className="px-6 py-4 text-xs font-mono">{lr.end_date}</td>
+                        <td className="px-6 py-4 text-right font-mono font-bold text-default">
+                          {parseFloat(String(lr.total_days))} Days
+                        </td>
+                        <td className="px-6 py-4 text-xs text-muted max-w-xs truncate">{lr.reason}</td>
+                        <td className="px-6 py-4 text-center">
+                          <span
+                            className={`px-2.5 py-1 text-xs font-semibold rounded-full uppercase ${
+                              lr.status === 'approved'
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+                                : lr.status === 'pending'
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                                : 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300'
+                            }`}
+                          >
+                            {lr.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {lr.status === 'pending' ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleApproveLeave(lr.id)}
+                                  className="px-2 py-1 text-2xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition cursor-pointer flex items-center gap-1"
+                                >
+                                  <Check className="size-3" /> Approve
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRejectLeave(lr.id)}
+                                  className="px-2 py-1 text-2xs font-semibold rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 transition cursor-pointer"
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            ) : lr.status === 'approved' ? (
+                              <button
+                                type="button"
+                                onClick={() => handleRejectLeave(lr.id)}
+                                className="px-2 py-1 text-2xs font-medium rounded-lg border border-default hover:bg-surface-sunken text-muted hover:text-default transition cursor-pointer"
+                              >
+                                Revoke
+                              </button>
+                            ) : (
+                              <span className="text-2xs text-muted">Archived</span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDeleteConfirm({
+                                  open: true,
+                                  type: 'leave',
+                                  id: lr.id,
+                                  name: `${lr.employee?.display_name || 'Employee'} (${lr.leave_type?.name || 'Leave'})`,
+                                })
+                              }
+                              className="p-1 rounded-lg border border-default hover:bg-rose-50 dark:hover:bg-rose-950/30 text-muted hover:text-rose-600 transition cursor-pointer"
+                              title="Delete Leave Request"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -3553,6 +4315,56 @@ export const HrWorkspace: React.FC = () => {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Universal Delete Confirmation Modal */}
+      <Modal
+        open={deleteConfirm.open}
+        onClose={() => setDeleteConfirm({ open: false, type: 'employee' })}
+        title={
+          deleteConfirm.isBulk
+            ? `Confirm Bulk Deletion (${deleteConfirm.type})`
+            : `Delete ${deleteConfirm.type.charAt(0).toUpperCase() + deleteConfirm.type.slice(1)}`
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300">
+            <AlertTriangle className="size-5 shrink-0 mt-0.5 text-rose-600" />
+            <div className="text-xs space-y-1">
+              <p className="font-bold">
+                {deleteConfirm.isBulk
+                  ? `Are you sure you want to permanently delete selected ${deleteConfirm.type} records?`
+                  : `Are you sure you want to delete this ${deleteConfirm.type}?`}
+              </p>
+              {deleteConfirm.name && (
+                <p className="font-mono text-[11px] opacity-90">Target: {deleteConfirm.name}</p>
+              )}
+              <p className="text-[11px] opacity-80">
+                This action is permanent and cannot be reversed. Associated ledger or reporting entries will be updated.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-default">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setDeleteConfirm({ open: false, type: 'employee' })}
+              disabled={isBulkProcessing}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => void handleExecuteDelete()}
+              loading={isBulkProcessing}
+              className="bg-rose-600 hover:bg-rose-700 text-white border-transparent"
+            >
+              {deleteConfirm.isBulk ? 'Delete Selected' : 'Confirm Delete'}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

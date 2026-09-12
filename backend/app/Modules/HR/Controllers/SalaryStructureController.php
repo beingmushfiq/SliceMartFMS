@@ -10,6 +10,7 @@ use App\Modules\HR\Models\SalaryStructure;
 use App\Modules\HR\Models\SalaryStructureComponent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class SalaryStructureController extends Controller
@@ -66,7 +67,7 @@ class SalaryStructureController extends Controller
                 'updated_by' => $userId,
             ]);
 
-            if (!empty($validated['components'])) {
+            if (! empty($validated['components'])) {
                 foreach ($validated['components'] as $idx => $comp) {
                     SalaryStructureComponent::create([
                         'salary_structure_id' => $structure->id,
@@ -96,6 +97,53 @@ class SalaryStructureController extends Controller
 
         return response()->json([
             'data' => $structure,
+        ]);
+    }
+
+    public function destroy(int $id): JsonResponse
+    {
+        $structure = SalaryStructure::findOrFail($id);
+        $structure->components()->delete();
+        $structure->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Salary structure '{$structure->name}' deleted.",
+        ]);
+    }
+
+    public function toggleStatus(int $id): JsonResponse
+    {
+        $structure = SalaryStructure::findOrFail($id);
+        $structure->is_active = ! $structure->is_active;
+        $structure->updated_by = is_numeric(Auth::id()) ? (int) Auth::id() : 1;
+        $structure->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Salary structure is now '.($structure->is_active ? 'Active' : 'Disabled').'.',
+            'data' => $structure,
+        ]);
+    }
+
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+        ]);
+
+        $ids = array_map('intval', $validated['ids']);
+        $count = 0;
+
+        DB::transaction(function () use ($ids, &$count): void {
+            SalaryStructureComponent::whereIn('salary_structure_id', $ids)->delete();
+            $count = SalaryStructure::whereIn('id', $ids)->delete();
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => "Deleted {$count} salary structures.",
         ]);
     }
 }

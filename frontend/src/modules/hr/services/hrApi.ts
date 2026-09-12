@@ -145,15 +145,22 @@ export interface SalaryStructureApiItem {
   code: string;
   name: string;
   description?: string;
-  currency_code: string;
+  currency_code?: string;
+  currency?: string;
+  employees_count?: number;
   is_active: boolean;
   components?: Array<{
-    id: number;
-    salary_structure_id: number;
-    component_id: number;
-    calculation_type: 'fixed' | 'percentage';
-    amount_or_percentage: string | number;
-    sort_order: number;
+    id?: number;
+    salary_structure_id?: number;
+    component_id?: number;
+    salary_component_id?: number;
+    calculation_type?: 'fixed' | 'percentage';
+    calculation?: 'fixed' | 'percentage';
+    amount_or_percentage?: string | number;
+    value?: number;
+    name?: string;
+    type?: 'earning' | 'deduction';
+    sort_order?: number;
     component?: {
       code: string;
       name: string;
@@ -228,6 +235,17 @@ export interface PayrollAdvanceApiItem {
     department?: { name: string };
   };
 }
+
+export type ApiPayrollAdvance = PayrollAdvanceApiItem & {
+  employee_name?: string;
+  employee_code?: string;
+  department?: string;
+  request_date?: string;
+  created_at?: string;
+  reason?: string;
+};
+
+export type ApiSalaryStructure = SalaryStructureApiItem;
 
 export interface EmployeeDocumentApiItem {
   id: number;
@@ -364,8 +382,23 @@ export const hrApi = {
     return api.get<{ data: SalaryComponentApiItem[] }>('/hr/salary-structures/components');
   },
 
-  async createSalaryStructure(payload: { code: string; name: string; description?: string; components: Array<{ salary_component_id: number; calculation_type: 'fixed' | 'percentage'; value: number }> }) {
-    return api.post<{ data: SalaryStructureApiItem; message: string }>('/hr/salary-structures', payload);
+  async createSalaryStructure(payload: {
+    code: string;
+    name: string;
+    description?: string;
+    currency?: string;
+    is_active?: boolean;
+    components?: Array<{
+      salary_component_id?: number;
+      calculation_type?: 'fixed' | 'percentage';
+      calculation?: 'fixed' | 'percentage';
+      value?: number;
+      name?: string;
+      type?: 'earning' | 'deduction';
+      [key: string]: unknown;
+    }>;
+  }) {
+    return api.post<SalaryStructureApiItem>('/hr/salary-structures', payload);
   },
 
   // Payroll Periods, Payslips & Advances
@@ -418,6 +451,107 @@ export const hrApi = {
     return api.post<{ data: PayslipApiItem; message: string }>('/hr/payroll/payslips', payload);
   },
 
+  // Employee Deletion & Bulk
+  async deleteEmployee(id: number) {
+    return api.delete<{ success: boolean; message: string }>(`/hr/employees/${id}`);
+  },
+
+  async bulkDeleteEmployees(ids: number[]) {
+    return api.post<{ success: boolean; message: string }>('/hr/employees/bulk-delete', { ids });
+  },
+
+  async bulkStatusEmployees(ids: number[], status: string) {
+    return api.post<{ success: boolean; message: string }>('/hr/employees/bulk-status', { ids, status });
+  },
+
+  // Department Deletion & Bulk
+  async deleteDepartment(id: number) {
+    return api.delete<{ success: boolean; message: string }>(`/hr/departments/${id}`);
+  },
+
+  async bulkDeleteDepartments(ids: number[]) {
+    return api.post<{ success: boolean; message: string }>('/hr/departments/bulk-delete', { ids });
+  },
+
+  // Designation Deletion & Bulk
+  async deleteDesignation(id: number) {
+    return api.delete<{ success: boolean; message: string }>(`/hr/designations/${id}`);
+  },
+
+  async bulkDeleteDesignations(ids: number[]) {
+    return api.post<{ success: boolean; message: string }>('/hr/designations/bulk-delete', { ids });
+  },
+
+  // Shift Deletion & Bulk
+  async deleteShift(id: number) {
+    return api.delete<{ success: boolean; message: string }>(`/hr/shifts/${id}`);
+  },
+
+  async bulkDeleteShifts(ids: number[]) {
+    return api.post<{ success: boolean; message: string }>('/hr/shifts/bulk-delete', { ids });
+  },
+
+  // Attendance Deletion & Bulk
+  async deleteAttendance(id: number) {
+    return api.delete<{ success: boolean; message: string }>(`/hr/attendances/${id}`);
+  },
+
+  async bulkDeleteAttendances(ids: number[]) {
+    return api.post<{ success: boolean; message: string }>('/hr/attendances/bulk-delete', { ids });
+  },
+
+  async bulkStatusAttendances(ids: number[], status: string) {
+    return api.post<{ success: boolean; message: string }>('/hr/attendances/bulk-status', { ids, status });
+  },
+
+  // Leave Deletion & Bulk
+  async deleteLeave(id: number) {
+    return api.delete<{ success: boolean; message: string }>(`/hr/leaves/${id}`);
+  },
+
+  async bulkApproveLeaves(ids: number[]) {
+    return api.post<{ success: boolean; message: string }>('/hr/leaves/bulk-approve', { ids });
+  },
+
+  async bulkRejectLeaves(ids: number[], rejection_reason?: string) {
+    return api.post<{ success: boolean; message: string }>('/hr/leaves/bulk-reject', { ids, rejection_reason });
+  },
+
+  async bulkDeleteLeaves(ids: number[]) {
+    return api.post<{ success: boolean; message: string }>('/hr/leaves/bulk-delete', { ids });
+  },
+
+  // Salary Structures Deletion & Bulk
+  async deleteSalaryStructure(id: number) {
+    return api.delete<{ success: boolean; message: string }>(`/hr/salary-structures/${id}`);
+  },
+
+  async bulkDeleteSalaryStructures(ids: number[]) {
+    return api.post<{ success: boolean; message: string }>('/hr/salary-structures/bulk-delete', { ids });
+  },
+
+  async toggleSalaryStructureStatus(id: number) {
+    return api.post<{ success: boolean; message: string; data: unknown }>(`/hr/salary-structures/${id}/toggle-status`);
+  },
+
+  // Payroll Deletion & Bulk
+  async deletePayrollPeriod(id: number) {
+    return api.delete<{ success: boolean; message: string }>(`/hr/payroll/periods/${id}`);
+  },
+
+  async deletePayslip(id: number) {
+    return api.delete<{ success: boolean; message: string }>(`/hr/payroll/payslips/${id}`);
+  },
+
+  async bulkStatusPayslips(ids: number[], payment_status: string) {
+    return api.post<{ success: boolean; message: string }>('/hr/payroll/payslips/bulk-status', { ids, payment_status });
+  },
+
+  async bulkDeletePayslips(ids: number[]) {
+    return api.post<{ success: boolean; message: string }>('/hr/payroll/payslips/bulk-delete', { ids });
+  },
+
+  // Advances API
   async getPayrollAdvances(params?: { status?: string; employee_id?: number }) {
     const query = new URLSearchParams();
     if (params?.status) query.set('status', params.status);
@@ -426,8 +560,57 @@ export const hrApi = {
     return api.get<{ data: PayrollAdvanceApiItem[] }>(`/hr/payroll/advances${qs}`);
   },
 
-  async requestPayrollAdvance(payload: { employee_id: number; amount: number; issued_on: string; installment_amount: number; notes?: string }) {
-    return api.post<{ data: PayrollAdvanceApiItem; message: string }>('/hr/payroll/advances', payload);
+  async requestPayrollAdvance(payload: {
+    employee_id: number;
+    amount: number;
+    reason?: string;
+    repayment_terms?: string;
+    installment_amount?: number;
+    issued_on?: string;
+    notes?: string;
+  }) {
+    return api.post<PayrollAdvanceApiItem>('/hr/payroll/advances', payload);
+  },
+
+  async deletePayrollAdvance(id: number) {
+    return api.delete<{ success: boolean; message: string }>(`/hr/payroll/advances/${id}`);
+  },
+
+  async bulkStatusPayrollAdvances(ids: number[], status: string) {
+    return api.post<{ success: boolean; message: string }>('/hr/payroll/advances/bulk-status', { ids, status });
+  },
+
+  async bulkDeletePayrollAdvances(ids: number[]) {
+    return api.post<{ success: boolean; message: string }>('/hr/payroll/advances/bulk-delete', { ids });
+  },
+
+  // Leaves Alias
+  async getLeaves(params?: { status?: string; employee_id?: number }) {
+    return this.getLeaveRequests(params);
+  },
+
+  // Worker Production Entries
+  async getWorkerProductionEntries(params?: { date?: string }) {
+    const query = new URLSearchParams();
+    if (params?.date) query.set('work_date', params.date);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return api.get<{ data: Array<Record<string, unknown>> }>(`/production/worker-entries${qs}`);
+  },
+
+  async verifyWorkerProductionEntry(uuid: string | number) {
+    return api.post<{ message: string }>(`/production/worker-entries/${uuid}/verify`);
+  },
+
+  async deleteWorkerProductionEntry(uuid: string | number) {
+    return api.delete<{ message: string }>(`/production/worker-entries/${uuid}`);
+  },
+
+  async bulkVerifyWorkerProductionEntries(ids: Array<string | number>) {
+    return api.post<{ success: boolean; message: string }>('/production/worker-entries/bulk-verify', { ids });
+  },
+
+  async bulkDeleteWorkerProductionEntries(ids: Array<string | number>) {
+    return api.post<{ success: boolean; message: string }>('/production/worker-entries/bulk-delete', { ids });
   },
 };
 
