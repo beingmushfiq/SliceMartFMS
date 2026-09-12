@@ -50,7 +50,37 @@ final class TenantDashboardController extends Controller
         $today = Carbon::today();
         $startOfMonth = Carbon::now()->startOfMonth();
 
-        // ── 1. Commercial & Revenue ──────────────────────────────────
+        $commercial = $this->computeCommercialMetrics($tenantId, $today, $startOfMonth);
+        $production = $this->computeProductionMetrics($tenantId, $today);
+        $inventoryData = $this->computeInventoryMetrics($tenantId);
+        $quality = $this->computeQualityMetrics($tenantId, $startOfMonth);
+        $trends = $this->computeTrendMetrics(
+            $tenantId,
+            $startOfMonth,
+            $commercial['today_revenue'],
+            $production['today_output'],
+            $commercial['month_revenue']
+        );
+        $ops = $this->computeOperationalEntities($tenantId, $inventoryData['product_stock']);
+
+        return [
+            'commercial' => $commercial,
+            'production' => $production,
+            'inventory' => $inventoryData['metrics'],
+            'quality' => $quality,
+            'trends' => $trends,
+            'recent_batches' => $ops['recent_batches'],
+            'recent_qc' => $ops['recent_qc'],
+            'active_workers' => $ops['active_workers'],
+            'attention_items' => $ops['attention_items'],
+        ];
+    }
+
+    /**
+     * @return array{today_revenue: float, month_revenue: float, active_orders: int, today_orders_count: int, total_receivable_due: float}
+     */
+    private function computeCommercialMetrics(int $tenantId, Carbon $today, Carbon $startOfMonth): array
+    {
         $validInvoiceStatuses = ['paid', 'posted', 'partially_paid', 'completed'];
 
         $todayRevenue = (float) Invoice::where('tenant_id', $tenantId)
@@ -76,12 +106,24 @@ final class TenantDashboardController extends Controller
             ->selectRaw('SUM(total_amount - paid_amount) as total_due')
             ->value('total_due') ?? 0.0);
 
-        // ── 2. Production & Operations ───────────────────────────────
+        return [
+            'today_revenue' => $todayRevenue,
+            'month_revenue' => $monthRevenue,
+            'active_orders' => $activeOrdersCount,
+            'today_orders_count' => $todayOrdersCount,
+            'total_receivable_due' => $totalReceivableDue,
+        ];
+    }
+
+    /**
+     * @return array{today_output: float, target_output: float, achievement_rate: float, active_batches: int, total_batches: int}
+     */
+    private function computeProductionMetrics(int $tenantId, Carbon $today): array
+    {
         $todayOutput = (float) WorkerProductionEntry::where('tenant_id', $tenantId)
             ->whereDate('work_date', $today)
             ->sum('quantity');
 
-        // If no worker entries recorded yet today, check most recent production entry day for baseline display
         if ($todayOutput === 0.0) {
             $latestEntryDate = WorkerProductionEntry::where('tenant_id', $tenantId)->latest('work_date')->value('work_date');
             if ($latestEntryDate !== null) {
@@ -104,12 +146,24 @@ final class TenantDashboardController extends Controller
         $targetOutput = $activeBatchTarget > 0 ? $activeBatchTarget : 50.0;
         $achievementRate = $targetOutput > 0 ? round(($todayOutput / $targetOutput) * 100, 1) : 0.0;
 
-        // ── 3. Inventory & Valuation (Eliminated N+1 Query Loop) ──────
+        return [
+            'today_output' => $todayOutput,
+            'target_output' => $targetOutput,
+            'achievement_rate' => $achievementRate,
+            'active_batches' => $activeBatchesCount,
+            'total_batches' => $totalBatchesCount,
+        ];
+    }
+
+    /**
+     * @return array{metrics: array{total_valuation: float, low_stock_count: int}, product_stock: \Illuminate\Support\Collection}
+     */
+    private function computeInventoryMetrics(int $tenantId): array
+    {
         $totalStockValuation = (float) StockBalance::where('tenant_id', $tenantId)
             ->where('stock_state', 'available')
             ->sum('total_value');
 
-        // Pre-aggregate available stock per warehouse and per product in single queries
         $warehouseStock = StockBalance::where('tenant_id', $tenantId)
             ->where('stock_state', 'available')
             ->selectRaw('product_id, warehouse_id, SUM(quantity) as total_qty')
@@ -123,7 +177,6 @@ final class TenantDashboardController extends Controller
             ->groupBy('product_id')
             ->pluck('total_qty', 'product_id');
 
-        // Check products below warehouse threshold
         $thresholds = ProductWarehouseMinStock::where('tenant_id', $tenantId)->get(['product_id', 'warehouse_id', 'min_stock_alert']);
         $lowStockProductIds = [];
 
@@ -135,7 +188,6 @@ final class TenantDashboardController extends Controller
             }
         }
 
-        // Also check products with reorder_level set on the product master
         $productsWithReorder = Product::where('tenant_id', $tenantId)
             ->whereNotNull('reorder_level')
             ->where('reorder_level', '>', 0)
@@ -150,9 +202,21 @@ final class TenantDashboardController extends Controller
                 $lowStockProductIds[$p->id] = true;
             }
         }
-        $lowStockCount = count($lowStockProductIds);
 
-        // ── 4. Quality Assurance (Bounded Aggregate) ─────────────────
+        return [
+            'metrics' => [
+                'total_valuation' => $totalStockValuation,
+                'low_stock_count' => count($lowStockProductIds),
+            ],
+            'product_stock' => $productStock,
+        ];
+    }
+
+    /**
+     * @return array{qc_pass_rate: float, pending_inspections: int, total_inspections: int}
+     */
+    private function computeQualityMetrics(int $tenantId, Carbon $startOfMonth): array
+    {
         $totalInspections = QcInspection::where('tenant_id', $tenantId)
             ->where('created_at', '>=', $startOfMonth)
             ->count();
@@ -171,7 +235,19 @@ final class TenantDashboardController extends Controller
             ->whereIn('status', ['pending', 'draft', 'in_progress'])
             ->count();
 
-        // ── 5. Dynamic 7-Day Performance Trends (3 Aggregates vs 21) ──
+        return [
+            'qc_pass_rate' => $qcPassRate,
+            'pending_inspections' => $pendingQcCount,
+            'total_inspections' => $totalInspections,
+        ];
+    }
+
+    /**
+     * @return array{weekly: array<int, array<string, mixed>>, today: array<int, array<string, mixed>>, monthly: array<int, array<string, mixed>>}
+     */
+    private function computeTrendMetrics(int $tenantId, Carbon $startOfMonth, float $todayRevenue, float $todayOutput, float $monthRevenue): array
+    {
+        $validInvoiceStatuses = ['paid', 'posted', 'partially_paid', 'completed'];
         $sevenDaysAgo = Carbon::today()->subDays(6)->toDateString();
 
         $revByDate = Invoice::where('tenant_id', $tenantId)
@@ -216,7 +292,6 @@ final class TenantDashboardController extends Controller
             ];
         }
 
-        // ── 6. Today Hourly Trend ────────────────────────────────────
         $hourlySlots = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00'];
         $todayHourly = [];
         $slotProd = round($todayOutput / count($hourlySlots), 1);
@@ -231,13 +306,12 @@ final class TenantDashboardController extends Controller
             ];
         }
 
-        // ── 7. 30-Day / 4-Week Trend ─────────────────────────────────
-        $monthlyTrend = [];
         $totalMonthProd = (float) WorkerProductionEntry::where('tenant_id', $tenantId)
             ->where('work_date', '>=', $startOfMonth)
             ->sum('quantity');
         $weekProd = round($totalMonthProd / 4, 1);
         $weekRev = round($monthRevenue / 4, 2);
+        $monthlyTrend = [];
         for ($w = 1; $w <= 4; $w++) {
             $monthlyTrend[] = [
                 'time' => "Week {$w}",
@@ -248,7 +322,19 @@ final class TenantDashboardController extends Controller
             ];
         }
 
-        // ── 8. Recent Operational Entities ───────────────────────────
+        return [
+            'weekly' => $weeklyTrend,
+            'today' => $todayHourly,
+            'monthly' => $monthlyTrend,
+        ];
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection  $productStock
+     * @return array<string, mixed>
+     */
+    private function computeOperationalEntities(int $tenantId, $productStock): array
+    {
         $recentBatchesModels = ProductionBatch::where('tenant_id', $tenantId)
             ->with('product:id,name')
             ->latest()
@@ -301,7 +387,6 @@ final class TenantDashboardController extends Controller
                 ];
             });
 
-        // Top 5 active workers by output quantity directly aggregated in SQL
         $topWorkerStats = WorkerProductionEntry::where('tenant_id', $tenantId)
             ->selectRaw('employee_id, SUM(quantity) as total_output, COUNT(*) as shift_count, MAX(rate) as rate')
             ->groupBy('employee_id')
@@ -337,7 +422,6 @@ final class TenantDashboardController extends Controller
             ];
         })->values();
 
-        // Attention Items: Products with lowest stock using pre-aggregated stock balance
         $attentionItems = Product::where('tenant_id', $tenantId)
             ->take(5)
             ->get(['id', 'name', 'sku', 'reorder_level'])
@@ -358,34 +442,6 @@ final class TenantDashboardController extends Controller
             });
 
         return [
-            'commercial' => [
-                'today_revenue' => $todayRevenue,
-                'month_revenue' => $monthRevenue,
-                'active_orders' => $activeOrdersCount,
-                'today_orders_count' => $todayOrdersCount,
-                'total_receivable_due' => $totalReceivableDue,
-            ],
-            'production' => [
-                'today_output' => $todayOutput,
-                'target_output' => $targetOutput,
-                'achievement_rate' => $achievementRate,
-                'active_batches' => $activeBatchesCount,
-                'total_batches' => $totalBatchesCount,
-            ],
-            'inventory' => [
-                'total_valuation' => $totalStockValuation,
-                'low_stock_count' => $lowStockCount,
-            ],
-            'quality' => [
-                'qc_pass_rate' => $qcPassRate,
-                'pending_inspections' => $pendingQcCount,
-                'total_inspections' => $totalInspections,
-            ],
-            'trends' => [
-                'weekly' => $weeklyTrend,
-                'today' => $todayHourly,
-                'monthly' => $monthlyTrend,
-            ],
             'recent_batches' => $recentBatches,
             'recent_qc' => $recentQc,
             'active_workers' => $activeWorkers,

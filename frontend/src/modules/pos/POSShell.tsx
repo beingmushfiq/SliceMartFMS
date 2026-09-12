@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
+  ArrowLeftRight,
   CheckCircle2,
   Clock,
   CreditCard,
@@ -29,6 +30,7 @@ import { useDocumentPrint } from '../../components/print/useDocumentPrint';
 import { ThermalReceipt } from '../../components/print/receipts/ThermalReceipt';
 import { SalesInvoiceDocument } from '../../components/print/documents/SalesInvoiceDocument';
 import { useBusinessConfig } from '../../lib/document/useBusinessConfig';
+import { PosExchangeModal } from './components/PosExchangeModal';
 
 export type PosPaymentMethod = 'cash' | 'card' | 'mobile_banking' | 'credit_adjustment';
 
@@ -97,6 +99,30 @@ export function POSShell({ session, onExit }: POSShellProps) {
   const [parkNote, setParkNote] = useState('');
   const [isParkedDrawerOpen, setIsParkedDrawerOpen] = useState(false);
   const [holdingSale, setHoldingSale] = useState(false);
+  
+  // POS Counter Exchange State
+  const [isExchangeModalOpen, setIsExchangeModalOpen] = useState(false);
+  const [exchangeInitialInvoiceId, setExchangeInitialInvoiceId] = useState<number | null>(null);
+  const [exchangeInitialInvoiceNumber, setExchangeInitialInvoiceNumber] = useState<string | null>(null);
+  const [exchangeInitialOrderItems, setExchangeInitialOrderItems] = useState<
+    Array<{
+      product_id: number;
+      product_name?: string;
+      quantity: number | string;
+      unit_price: number | string;
+    }>
+  >([]);
+
+  const handleOpenExchangeModal = (
+    invoiceId?: number | null,
+    invoiceNum?: string | null,
+    items?: Array<{ product_id: number; product_name?: string; quantity: number | string; unit_price: number | string }>
+  ) => {
+    setExchangeInitialInvoiceId(invoiceId ?? null);
+    setExchangeInitialInvoiceNumber(invoiceNum ?? null);
+    setExchangeInitialOrderItems(items ?? []);
+    setIsExchangeModalOpen(true);
+  };
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const customerNameInputRef = useRef<HTMLInputElement>(null);
   const cashTenderedInputRef = useRef<HTMLInputElement>(null);
@@ -588,6 +614,15 @@ export function POSShell({ session, onExit }: POSShellProps) {
               </span>
             </div>
           </div>
+
+          <button
+            onClick={() => handleOpenExchangeModal()}
+            className="flex items-center gap-1.5 rounded-xl border border-default bg-surface px-3 py-1.5 text-xs font-semibold text-default hover:bg-surface-sunken cursor-pointer transition-colors shadow-2xs"
+            title="Process Counter Product Exchange / Return Swap"
+          >
+            <ArrowLeftRight className="h-4 w-4 text-primary" />
+            <span className="hidden sm:inline">Exchange</span>
+          </button>
 
           <button
             onClick={() => setIsParkedDrawerOpen(true)}
@@ -1446,6 +1481,26 @@ export function POSShell({ session, onExit }: POSShellProps) {
               </div>
               <button
                 type="button"
+                onClick={() => {
+                  const invoiceId = lastReceipt.invoice.id;
+                  const invoiceNum = lastReceipt.invoice.invoice_number;
+                  const orderItems = (lastReceipt.order.items ?? []).map((it) => ({
+                    product_id: it.product_id,
+                    product_name: it.product_name,
+                    quantity: it.quantity,
+                    unit_price: it.unit_price,
+                  }));
+                  setLastReceipt(null);
+                  handleOpenExchangeModal(invoiceId, invoiceNum, orderItems);
+                }}
+                className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-primary/40 bg-primary/5 py-2 px-3 text-xs font-semibold text-primary hover:bg-primary/10 cursor-pointer transition-all shadow-2xs"
+                title="Start Exchange for items from this sale"
+              >
+                <ArrowLeftRight className="h-3.5 w-3.5 text-primary" />
+                Exchange Items from This Sale
+              </button>
+              <button
+                type="button"
                 onClick={() => setLastReceipt(null)}
                 className="w-full rounded-xl bg-primary py-2.5 text-xs font-bold text-white hover:bg-primary-hover cursor-pointer transition-colors shadow-sm flex items-center justify-center gap-1.5"
               >
@@ -1455,6 +1510,20 @@ export function POSShell({ session, onExit }: POSShellProps) {
           </div>
         </div>
       )}
+
+      {/* POS Counter Product Exchange Modal */}
+      <PosExchangeModal
+        isOpen={isExchangeModalOpen}
+        onClose={() => setIsExchangeModalOpen(false)}
+        session={session}
+        products={products}
+        initialInvoiceId={exchangeInitialInvoiceId}
+        initialInvoiceNumber={exchangeInitialInvoiceNumber}
+        initialOrderItems={exchangeInitialOrderItems}
+        onExchangeCompleted={() => {
+          refetchProducts();
+        }}
+      />
     </div>
   );
 }

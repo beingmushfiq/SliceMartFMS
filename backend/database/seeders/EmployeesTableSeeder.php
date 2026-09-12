@@ -101,6 +101,8 @@ final class EmployeesTableSeeder extends Seeder
         }
 
         // 4. Employees
+        $userMap = DB::table('users')->where('tenant_id', $tenantId)->pluck('id', 'email')->toArray();
+
         $employees = [
             [
                 'code' => 'EMP-001',
@@ -112,6 +114,7 @@ final class EmployeesTableSeeder extends Seeder
                 'desg' => 'DESG-TECH',
                 'shift' => 'SHIFT-MORN',
                 'employment_type' => 'piece_rate',
+                'user_email' => 'production@slicemart.test',
             ],
             [
                 'code' => 'EMP-002',
@@ -123,6 +126,7 @@ final class EmployeesTableSeeder extends Seeder
                 'desg' => 'DESG-TECH',
                 'shift' => 'SHIFT-MORN',
                 'employment_type' => 'piece_rate',
+                'user_email' => null,
             ],
             [
                 'code' => 'EMP-003',
@@ -134,6 +138,7 @@ final class EmployeesTableSeeder extends Seeder
                 'desg' => 'DESG-QA',
                 'shift' => 'SHIFT-MORN',
                 'employment_type' => 'piece_rate',
+                'user_email' => 'qc@slicemart.test',
             ],
             [
                 'code' => 'EMP-004',
@@ -145,16 +150,31 @@ final class EmployeesTableSeeder extends Seeder
                 'desg' => 'DESG-PKG',
                 'shift' => 'SHIFT-EVE',
                 'employment_type' => 'hourly',
+                'user_email' => 'store@slicemart.test',
+            ],
+            [
+                'code' => 'EMP-005',
+                'first_name' => 'Kamal',
+                'last_name' => 'Hossain',
+                'phone' => '+8801711000105',
+                'email' => 'kamal.hossain@slicemart.internal',
+                'dept' => 'DEPT-PROD',
+                'desg' => 'DESG-PKG',
+                'shift' => 'SHIFT-MORN',
+                'employment_type' => 'monthly_salary',
+                'user_email' => 'sales@slicemart.test',
             ],
         ];
 
         foreach ($employees as $emp) {
+            $userId = ! empty($emp['user_email']) ? ($userMap[$emp['user_email']] ?? null) : null;
             $existing = DB::table('employees')->where('tenant_id', $tenantId)->where('employee_code', $emp['code'])->first();
             if (! $existing) {
                 DB::table('employees')->insert([
                     'tenant_id' => $tenantId,
                     'uuid' => (string) Str::uuid(),
                     'employee_code' => $emp['code'],
+                    'user_id' => $userId,
                     'company_id' => $companyId,
                     'branch_id' => $branchId,
                     'factory_id' => $factoryId,
@@ -173,6 +193,11 @@ final class EmployeesTableSeeder extends Seeder
                     'is_active' => 1,
                     'created_by' => $adminUserId,
                     'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            } else {
+                DB::table('employees')->where('id', $existing->id)->update([
+                    'user_id' => $userId ?? $existing->user_id,
                     'updated_at' => now(),
                 ]);
             }

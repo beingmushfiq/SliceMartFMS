@@ -59,6 +59,19 @@ export interface Employee {
   bank_name?: string | undefined;
   bank_account_number?: string | undefined;
   mobile_wallet_number?: string | undefined;
+  has_user_account?: boolean | undefined;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+    status: string;
+  } | undefined;
+  roles?: Array<{
+    id: number;
+    name: string;
+    slug: string;
+  }> | undefined;
+  primary_role?: string | null | undefined;
   is_active: boolean;
   created_at?: string | undefined;
 }

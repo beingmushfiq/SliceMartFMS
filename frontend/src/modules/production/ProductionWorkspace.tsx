@@ -13,10 +13,12 @@ import {
   BookOpen,
   Boxes,
   CheckCircle2,
+  TrendingUp,
 } from 'lucide-react';
 import { ProductionPlansSection } from './sections/ProductionPlansSection';
 import { ProductionBatchesSection } from './sections/ProductionBatchesSection';
 import { WorkerProductionSection } from './sections/WorkerProductionSection';
+import { ManufacturingVarianceRadar } from './components/ManufacturingVarianceRadar';
 import { ProductionFloorKioskView } from './components/ProductionFloorKioskView';
 import { LaunchBatchModal } from './modals/LaunchBatchModal';
 import { RecordBatchOutputModal } from './modals/RecordBatchOutputModal';
@@ -26,7 +28,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../lib/utils';
 
-export type ProductionTab = 'plans' | 'batches' | 'worker-entries';
+export type ProductionTab = 'plans' | 'batches' | 'worker-entries' | 'variance-radar';
 
 interface TabConfig {
   id: ProductionTab;
@@ -66,9 +68,18 @@ const tabs: TabConfig[] = [
     description: 'Daily touch entry for worker production output and output-based wage calculations',
     pillar: 2,
   },
+  {
+    id: 'variance-radar',
+    step: 4,
+    label: 'Cost Variance Radar',
+    badge: 'Flagship ABC',
+    icon: TrendingUp,
+    description: 'Standard vs. Actual ABC cost decomposition (material, labor, machine) with live waterfall variance',
+    pillar: 1,
+  },
 ];
 
-const VALID_TABS: readonly ProductionTab[] = ['plans', 'batches', 'worker-entries'];
+const VALID_TABS: readonly ProductionTab[] = ['plans', 'batches', 'worker-entries', 'variance-radar'];
 
 export default function ProductionWorkspace() {
   const [activeTab, setActiveTab] = useWorkspaceTab<ProductionTab>('batches', VALID_TABS);
@@ -367,6 +378,14 @@ export default function ProductionWorkspace() {
                 <Users className="size-3.5 text-primary" />
                 <span>Log Worker Wages</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('variance-radar')}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 shadow-2xs transition-all cursor-pointer"
+              >
+                <TrendingUp className="size-3.5" />
+                <span>Cost Variance Radar</span>
+              </button>
             </div>
           </div>
         </div>
@@ -379,11 +398,11 @@ export default function ProductionWorkspace() {
               <span>Manufacturing Stages Execution Ribbon</span>
             </div>
             <span className="text-[10px] text-muted font-mono">
-              3 Stages Available • Instant Access
+              4 Stages & Analytics Available • Instant Access
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5">
             {tabs.map((tab, idx) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -428,6 +447,7 @@ export default function ProductionWorkspace() {
         {activeTab === 'plans' && <ProductionPlansSection />}
         {activeTab === 'batches' && <ProductionBatchesSection />}
         {activeTab === 'worker-entries' && <WorkerProductionSection />}
+        {activeTab === 'variance-radar' && <ManufacturingVarianceRadar />}
       </div>
 
       {/* Explore Capabilities Modal Guide */}

@@ -13,10 +13,12 @@ import {
   ShoppingBag,
   ShoppingCart,
   Store,
+  Trash2,
   Truck,
   UserCheck,
   Users,
   Warehouse,
+  Zap,
 } from 'lucide-react';
 
 export interface DynamicNavItem {
@@ -287,6 +289,13 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
     title: 'Intelligence & System',
     items: [
       {
+        id: 'users',
+        defaultLabel: 'Staff & User Accounts',
+        to: '/settings/users',
+        icon: Users,
+        permission: ['core.user.view', 'core.role.manage', 'core.role.view'],
+      },
+      {
         id: 'roles',
         defaultLabel: 'Staff Roles & Permissions',
         to: '/settings/roles',
@@ -299,6 +308,20 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
         to: '/activity-logs',
         icon: ShieldCheck,
         permission: ['core.audit_log.view'],
+      },
+      {
+        id: 'bin',
+        defaultLabel: 'Data Bin & Recovery',
+        to: '/settings/bin',
+        icon: Trash2,
+        permission: ['core.setting.view', 'core.setting.manage', 'core.audit_log.view'],
+      },
+      {
+        id: 'workflows',
+        defaultLabel: 'SliceMart Flow (Automation)',
+        to: '/settings/workflows',
+        icon: Zap,
+        permission: ['core.setting.view', 'core.setting.manage'],
       },
       {
         id: 'settings',

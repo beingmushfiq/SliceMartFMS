@@ -21,10 +21,13 @@ import {
   Check,
   DollarSign,
   Scan,
+  RefreshCw,
 } from 'lucide-react';
+import { api } from '../../lib/api/client';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { useCurrency } from '../../hooks/useCurrency';
 import { Modal } from '../../components/ui/Modal';
+import { Button } from '../../components/ui/Button';
 import { notify } from '../../components/ui/Toast';
 import type {
   Employee,
@@ -85,6 +88,15 @@ const CATEGORIES: CategoryConfig[] = [
     defaultTab: 'payroll',
   },
 ];
+
+function generateRandomPassword(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%&*';
+  let pwd = '';
+  for (let i = 0; i < 12; i++) {
+    pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return pwd;
+}
 
 export const HrWorkspace: React.FC = () => {
   const { formatCurrency } = useCurrency();
@@ -206,7 +218,7 @@ export const HrWorkspace: React.FC = () => {
   ]);
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // 2. Employees State
+  // 2. Employees State & Live Data Loading
   // ─────────────────────────────────────────────────────────────────────────────
   const [employees, setEmployees] = useState<Employee[]>([
     {
@@ -274,6 +286,72 @@ export const HrWorkspace: React.FC = () => {
       is_active: true,
     },
   ]);
+
+  const [availableRoles, setAvailableRoles] = useState<Array<{ id: number; name: string; slug: string; description?: string }>>([]);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
+
+  const loadHrData = async (showLoading = false) => {
+    if (showLoading) {
+      setLoadingEmployees(true);
+    }
+    try {
+      const [empRes, deptRes, desgRes, rolesRes] = await Promise.all([
+        api.get<{ success: boolean; data: Employee[] }>('/hr/employees'),
+        api.get<{ data: Department[] }>('/hr/departments'),
+        api.get<{ data: Designation[] }>('/hr/designations').catch(() => ({ data: { data: [] } })),
+        api.get<Array<{ id: number; name: string; slug: string }>>('/roles').catch(() => ({ data: [] })),
+      ]);
+
+      if (empRes.data?.data && Array.isArray(empRes.data.data) && empRes.data.data.length > 0) {
+        setEmployees(empRes.data.data);
+      }
+      if (deptRes.data?.data && Array.isArray(deptRes.data.data) && deptRes.data.data.length > 0) {
+        setDepartments(deptRes.data.data);
+      }
+      if (desgRes.data?.data && Array.isArray(desgRes.data.data) && desgRes.data.data.length > 0) {
+        setDesignations(desgRes.data.data);
+      }
+      const loadedRoles = Array.isArray(rolesRes.data) ? rolesRes.data : [];
+      setAvailableRoles(loadedRoles);
+    } catch {
+      // Keep existing local defaults
+    } finally {
+      setLoadingEmployees(false);
+    }
+  };
+
+  useEffect(() => {
+    let ignore = false;
+
+    Promise.all([
+      api.get<{ success: boolean; data: Employee[] }>('/hr/employees'),
+      api.get<{ data: Department[] }>('/hr/departments'),
+      api.get<{ data: Designation[] }>('/hr/designations').catch(() => ({ data: { data: [] } })),
+      api.get<Array<{ id: number; name: string; slug: string }>>('/roles').catch(() => ({ data: [] })),
+    ])
+      .then(([empRes, deptRes, desgRes, rolesRes]) => {
+        if (ignore) return;
+        if (empRes.data?.data && Array.isArray(empRes.data.data) && empRes.data.data.length > 0) {
+          setEmployees(empRes.data.data);
+        }
+        if (deptRes.data?.data && Array.isArray(deptRes.data.data) && deptRes.data.data.length > 0) {
+          setDepartments(deptRes.data.data);
+        }
+        if (desgRes.data?.data && Array.isArray(desgRes.data.data) && desgRes.data.data.length > 0) {
+          setDesignations(desgRes.data.data);
+        }
+        const loadedRoles = Array.isArray(rolesRes.data) ? rolesRes.data : [];
+        setAvailableRoles(loadedRoles);
+      })
+      .catch(() => {
+        // Keep existing local defaults
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 3. Attendance State
@@ -462,9 +540,21 @@ export const HrWorkspace: React.FC = () => {
   const [newFirstName, setNewFirstName] = useState('');
   const [newLastName, setNewLastName] = useState('');
   const [newPhone, setNewPhone] = useState('');
+  const [newEmail, setNewEmail] = useState('');
   const [newEmpType, setNewEmpType] = useState<EmploymentType>('piece_rate');
   const [newDeptId, setNewDeptId] = useState(1);
+  const [newDesgId, setNewDesgId] = useState(1);
   const [newBankNumber, setNewBankNumber] = useState('');
+  const [grantUserAccess, setGrantUserAccess] = useState(false);
+  const [userPassword, setUserPassword] = useState('');
+  const [selectedRoleIds, setSelectedRoleIds] = useState<Set<number>>(new Set());
+  const [savingEmployee, setSavingEmployee] = useState(false);
+
+  // Manage Access & Roles for existing employee
+  const [accessModalEmp, setAccessModalEmp] = useState<Employee | null>(null);
+  const [accessRoleIds, setAccessRoleIds] = useState<Set<number>>(new Set());
+  const [accessPassword, setAccessPassword] = useState('');
+  const [savingAccess, setSavingAccess] = useState(false);
 
   // Mark Attendance Modal
   const [showMarkAttendanceModal, setShowMarkAttendanceModal] = useState(false);
@@ -517,54 +607,98 @@ export const HrWorkspace: React.FC = () => {
   // ─────────────────────────────────────────────────────────────────────────────
 
   // Onboard Employee
-  const handleOnboardEmployee = (e: React.FormEvent) => {
+  const handleOnboardEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
-    const dept = departments.find((d) => d.id === newDeptId);
-    const newEmp: Employee = {
-      id: employees.length + 1,
-      uuid: `emp-auto-${Date.now()}`,
-      employee_code: `EMP-${String(employees.length + 101).padStart(5, '0')}`,
-      first_name: newFirstName.trim(),
-      last_name: newLastName.trim(),
-      display_name: `${newFirstName.trim()} ${newLastName.trim()}`.trim(),
-      phone: newPhone.trim(),
-      company_id: 1,
-      department_id: newDeptId,
-      department: dept,
-      designation_id: 1,
-      designation: designations[0],
-      employment_type: newEmpType,
-      employment_status: 'active',
-      default_shift_id: 1,
-      default_shift: shifts[0],
-      date_of_joining: new Date().toISOString().slice(0, 10),
-      bank_account_number: newBankNumber.trim() || undefined,
-      is_active: true,
-    };
+    setSavingEmployee(true);
+    try {
+      const payload: Record<string, unknown> = {
+        first_name: newFirstName.trim(),
+        last_name: newLastName.trim(),
+        phone: newPhone.trim(),
+        email: newEmail.trim() || undefined,
+        department_id: newDeptId,
+        designation_id: newDesgId,
+        employment_type: newEmpType,
+        bank_account_number: newBankNumber.trim() || undefined,
+        grant_user_access: grantUserAccess,
+        user_password: grantUserAccess ? userPassword : undefined,
+        role_ids: grantUserAccess ? Array.from(selectedRoleIds) : [],
+      };
 
-    setEmployees([...employees, newEmp]);
-    setShowOnboardModal(false);
-    setNewFirstName('');
-    setNewLastName('');
-    setNewPhone('');
-    setNewBankNumber('');
-    notify.success(`Employee ${newEmp.display_name} onboarded successfully!`);
+      const res = await api.post<{ success: boolean; data: Employee; message?: string }>('/hr/employees', payload);
+      notify.success(res.data?.message || `Employee ${newFirstName} onboarded successfully!`);
+      setShowOnboardModal(false);
+      setNewFirstName('');
+      setNewLastName('');
+      setNewPhone('');
+      setNewEmail('');
+      setNewBankNumber('');
+      setGrantUserAccess(false);
+      setUserPassword('');
+      setSelectedRoleIds(new Set());
+      await loadHrData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to onboard employee';
+      notify.error(msg);
+    } finally {
+      setSavingEmployee(false);
+    }
   };
 
   // Toggle Employee Active Status
-  const handleToggleEmployeeStatus = (empId: number) => {
-    setEmployees((prev) =>
-      prev.map((e) =>
-        e.id === empId
-          ? {
-              ...e,
-              is_active: !e.is_active,
-              employment_status: e.is_active ? 'suspended' : 'active',
-            }
-          : e
-      )
-    );
-    notify.info('Employee status updated');
+  const handleToggleEmployeeStatus = async (empId: number) => {
+    try {
+      const res = await api.patch<{ success: boolean; message?: string }>(`/hr/employees/${empId}/status`);
+      notify.success(res.data?.message || 'Employee status updated');
+      await loadHrData();
+    } catch {
+      setEmployees((prev) =>
+        prev.map((e) =>
+          e.id === empId
+            ? { ...e, is_active: !e.is_active, employment_status: e.is_active ? 'suspended' : 'active' }
+            : e
+        )
+      );
+      notify.info('Employee status updated locally');
+    }
+  };
+
+  const handleOpenAccessModal = (emp: Employee) => {
+    setAccessModalEmp(emp);
+    const existingRoles = emp.roles ? emp.roles.map((r) => r.id) : [];
+    setAccessRoleIds(new Set(existingRoles));
+    setAccessPassword(emp.has_user_account ? '' : generateRandomPassword());
+  };
+
+  const handleSaveAccess = async () => {
+    if (!accessModalEmp) return;
+    setSavingAccess(true);
+    try {
+      if (accessModalEmp.has_user_account || accessModalEmp.user_id) {
+        await api.put(`/hr/employees/${accessModalEmp.id}/roles`, {
+          role_ids: Array.from(accessRoleIds),
+        });
+        notify.success('Security roles updated for employee.');
+      } else {
+        if (!accessPassword.trim()) {
+          notify.error('Please specify an initial password.');
+          setSavingAccess(false);
+          return;
+        }
+        await api.post(`/hr/employees/${accessModalEmp.id}/provision-user`, {
+          password: accessPassword,
+          role_ids: Array.from(accessRoleIds),
+        });
+        notify.success('User account created and roles assigned successfully!');
+      }
+      setAccessModalEmp(null);
+      await loadHrData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update employee access';
+      notify.error(msg);
+    } finally {
+      setSavingAccess(false);
+    }
   };
 
   // Export Staff Directory
@@ -1835,7 +1969,7 @@ export const HrWorkspace: React.FC = () => {
           {/* Employee Directory Toolbar */}
           <div className="bg-surface rounded-2xl border border-default p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-2xs">
             <div className="flex items-center gap-2.5 flex-wrap flex-1">
-              <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <div className="relative flex-1 min-w-50 max-w-sm">
                 <Search className="size-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
@@ -1882,6 +2016,16 @@ export const HrWorkspace: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 type="button"
+                onClick={() => loadHrData()}
+                disabled={loadingEmployees}
+                className="px-2.5 py-2 bg-surface hover:bg-surface-sunken border border-default text-default font-semibold rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+                title="Refresh from server"
+              >
+                <RefreshCw className={`size-3.5 text-muted ${loadingEmployees ? 'animate-spin' : ''}`} />
+                <span>Refresh</span>
+              </button>
+              <button
+                type="button"
                 onClick={handleExportStaff}
                 className="px-3 py-2 bg-surface hover:bg-surface-sunken border border-default text-default font-semibold rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs cursor-pointer"
               >
@@ -1890,7 +2034,17 @@ export const HrWorkspace: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setShowOnboardModal(true)}
+                onClick={() => {
+                  setNewFirstName('');
+                  setNewLastName('');
+                  setNewPhone('');
+                  setNewEmail('');
+                  setNewBankNumber('');
+                  setGrantUserAccess(false);
+                  setUserPassword(generateRandomPassword());
+                  setSelectedRoleIds(new Set());
+                  setShowOnboardModal(true);
+                }}
                 className="px-3.5 py-2 bg-primary hover:bg-primary/90 text-primary-fg font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs cursor-pointer"
               >
                 <UserPlus className="size-3.5" />
@@ -1907,6 +2061,7 @@ export const HrWorkspace: React.FC = () => {
                   <th className="px-6 py-3">Code</th>
                   <th className="px-6 py-3">Full Name</th>
                   <th className="px-6 py-3">Department & Designation</th>
+                  <th className="px-6 py-3">ERP Access & Role</th>
                   <th className="px-6 py-3">Phone</th>
                   <th className="px-6 py-3">Employment Type</th>
                   <th className="px-6 py-3">Shift</th>
@@ -1928,6 +2083,37 @@ export const HrWorkspace: React.FC = () => {
                         {emp.department?.name}
                       </div>
                       <div className="text-xs text-muted">{emp.designation?.name}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {emp.has_user_account || emp.user_id ? (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="size-2 rounded-full bg-emerald-500 inline-block" />
+                            <span className="text-xs font-semibold text-default">
+                              {emp.user?.email || emp.email || 'Active User'}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {emp.roles && emp.roles.length > 0 ? (
+                              emp.roles.map((r) => (
+                                <span
+                                  key={r.id}
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-3xs font-semibold bg-primary/10 text-primary border border-primary/20 capitalize"
+                                >
+                                  {r.name.replace(/[_-]/g, ' ')}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-3xs text-muted italic">No roles assigned</span>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-muted">
+                          <span className="size-2 rounded-full bg-muted-foreground/30 inline-block" />
+                          <span className="text-xs italic">No ERP Login</span>
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 font-mono text-xs text-muted">{emp.phone}</td>
                     <td className="px-6 py-4">
@@ -1957,6 +2143,14 @@ export const HrWorkspace: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenAccessModal(emp)}
+                          className="px-2 py-1 text-2xs bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 rounded-lg font-semibold border border-amber-500/20 transition cursor-pointer flex items-center gap-1"
+                          title="Manage ERP User Account and Security Roles"
+                        >
+                          <span>🔑 Access</span>
+                        </button>
                         <button
                           type="button"
                           onClick={() => setSelectedEmployeeForBadge(emp)}
@@ -2008,7 +2202,7 @@ export const HrWorkspace: React.FC = () => {
                 />
               </div>
 
-              <div className="relative flex-1 min-w-[180px] max-w-xs">
+              <div className="relative flex-1 min-w-45 max-w-xs">
                 <Search className="size-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
@@ -2143,7 +2337,7 @@ export const HrWorkspace: React.FC = () => {
           {/* Leaves Toolbar */}
           <div className="bg-surface rounded-2xl border border-default p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-2xs">
             <div className="flex items-center gap-2.5 flex-wrap flex-1">
-              <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <div className="relative flex-1 min-w-50 max-w-sm">
                 <Search className="size-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
@@ -2403,6 +2597,23 @@ export const HrWorkspace: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
+              <label htmlFor="onboard-email" className="block text-xs font-semibold text-default uppercase mb-1">
+                Email Address {grantUserAccess && <span className="text-rose-500">*</span>}
+              </label>
+              <input
+                id="onboard-email"
+                name="email"
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="name@company.com"
+                required={grantUserAccess}
+                autoComplete="off"
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none"
+              />
+            </div>
+
+            <div>
               <label htmlFor="onboard-phone" className="block text-xs font-semibold text-default uppercase mb-1">
                 Phone Number
               </label>
@@ -2414,22 +2625,6 @@ export const HrWorkspace: React.FC = () => {
                 onChange={(e) => setNewPhone(e.target.value)}
                 placeholder="+88017..."
                 required
-                autoComplete="off"
-                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm font-mono focus:border-primary focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="onboard-bank" className="block text-xs font-semibold text-default uppercase mb-1">
-                Bank Account # (Optional)
-              </label>
-              <input
-                id="onboard-bank"
-                name="bank_account"
-                type="text"
-                value={newBankNumber}
-                onChange={(e) => setNewBankNumber(e.target.value)}
-                placeholder="e.g. 205011928391"
                 autoComplete="off"
                 className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm font-mono focus:border-primary focus:outline-none"
               />
@@ -2457,6 +2652,27 @@ export const HrWorkspace: React.FC = () => {
             </div>
 
             <div>
+              <label htmlFor="onboard-desg" className="block text-xs font-semibold text-default uppercase mb-1">
+                Designation
+              </label>
+              <select
+                id="onboard-desg"
+                name="designation_id"
+                value={newDesgId}
+                onChange={(e) => setNewDesgId(parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none cursor-pointer"
+              >
+                {designations.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
               <label htmlFor="onboard-type" className="block text-xs font-semibold text-default uppercase mb-1">
                 Employment Type
               </label>
@@ -2473,21 +2689,126 @@ export const HrWorkspace: React.FC = () => {
                 <option value="daily_wage">Daily Wage</option>
               </select>
             </div>
+
+            <div>
+              <label htmlFor="onboard-bank" className="block text-xs font-semibold text-default uppercase mb-1">
+                Bank Account # (Optional)
+              </label>
+              <input
+                id="onboard-bank"
+                name="bank_account"
+                type="text"
+                value={newBankNumber}
+                onChange={(e) => setNewBankNumber(e.target.value)}
+                placeholder="e.g. 205011928391"
+                autoComplete="off"
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm font-mono focus:border-primary focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* ERP Access & Roles Provisioning Section */}
+          <div className="p-3.5 bg-surface-sunken border border-default rounded-xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-semibold text-default">Grant ERP Login Access</span>
+                <p className="text-2xs text-muted">Create a secure login credentials and assign ERP permissions</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={grantUserAccess}
+                  onChange={(e) => {
+                    setGrantUserAccess(e.target.checked);
+                    if (e.target.checked && !userPassword) {
+                      setUserPassword(generateRandomPassword());
+                    }
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-surface-hover peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-default after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary" />
+              </label>
+            </div>
+
+            {grantUserAccess && (
+              <div className="space-y-3 pt-2 border-t border-default/60">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-2xs font-semibold text-muted uppercase">
+                      Temporary Password
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setUserPassword(generateRandomPassword())}
+                      className="text-2xs text-primary hover:underline cursor-pointer"
+                    >
+                      Generate Random
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={userPassword}
+                    onChange={(e) => setUserPassword(e.target.value)}
+                    required={grantUserAccess}
+                    className="w-full px-3 py-1.5 border border-default rounded-lg bg-surface text-default text-xs font-mono focus:border-primary focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-2xs font-semibold text-muted uppercase mb-1.5">
+                    Assign ERP Roles ({selectedRoleIds.size} selected)
+                  </label>
+                  <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1">
+                    {availableRoles.map((role) => {
+                      const isChecked = selectedRoleIds.has(role.id);
+                      return (
+                        <label
+                          key={role.id}
+                          className={`flex items-center gap-2 p-2 rounded-lg border text-xs cursor-pointer transition ${
+                            isChecked
+                              ? 'bg-primary/10 border-primary/40 text-primary font-medium'
+                              : 'bg-surface border-default text-muted hover:border-default-hover'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const next = new Set(selectedRoleIds);
+                              if (e.target.checked) {
+                                next.add(role.id);
+                              } else {
+                                next.delete(role.id);
+                              }
+                              setSelectedRoleIds(next);
+                            }}
+                            className="rounded border-default text-primary focus:ring-primary size-3.5"
+                          />
+                          <span className="capitalize">{role.name.replace(/[_-]/g, ' ')}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-default">
             <button
               type="button"
               onClick={() => setShowOnboardModal(false)}
+              disabled={savingEmployee}
               className="px-4 py-2 text-xs font-semibold border border-default rounded-xl text-muted hover:text-default cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 text-xs bg-primary hover:bg-primary/90 text-primary-fg font-semibold rounded-xl shadow-xs cursor-pointer"
+              disabled={savingEmployee}
+              className="px-5 py-2 text-xs bg-primary hover:bg-primary/90 text-primary-fg font-semibold rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
             >
-              Complete Onboarding
+              {savingEmployee ? 'Saving...' : 'Complete Onboarding'}
             </button>
           </div>
         </form>
@@ -3108,6 +3429,131 @@ export const HrWorkspace: React.FC = () => {
           setAttendances([newAtt, ...attendances]);
         }}
       />
+
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Modal 9: Employee ERP Access & Security Roles
+          ───────────────────────────────────────────────────────────────────────────── */}
+      <Modal
+        open={Boolean(accessModalEmp)}
+        onClose={() => setAccessModalEmp(null)}
+        title={`ERP Access & Roles: ${accessModalEmp?.display_name || ''}`}
+        subtitle={`Staff Code: ${accessModalEmp?.employee_code || ''} • Email: ${accessModalEmp?.email || 'N/A'}`}
+        size="md"
+      >
+        {accessModalEmp && (
+          <div className="space-y-4 pt-1">
+            {!accessModalEmp.has_user_account && !accessModalEmp.user_id ? (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-1 text-amber-800 dark:text-amber-300 text-xs">
+                <p className="font-semibold flex items-center gap-1.5">
+                  <span>⚠️</span> No Active ERP Login Found
+                </p>
+                <p className="text-2xs opacity-90">
+                  Provisioning access will create a system user account associated with {accessModalEmp.email || 'this employee email'} so they can log into the application.
+                </p>
+              </div>
+            ) : (
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-300">
+                <div className="flex items-center gap-2">
+                  <span className="size-2 rounded-full bg-emerald-500" />
+                  <span className="font-semibold">Linked User Account:</span>
+                  <span className="font-mono">{accessModalEmp.user?.email || accessModalEmp.email}</span>
+                </div>
+                <span className="text-3xs uppercase px-2 py-0.5 rounded font-bold bg-emerald-500/20">
+                  Active
+                </span>
+              </div>
+            )}
+
+            {!accessModalEmp.has_user_account && !accessModalEmp.user_id && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-2xs font-semibold text-muted uppercase">
+                    Initial Account Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setAccessPassword(generateRandomPassword())}
+                    className="text-2xs text-primary hover:underline cursor-pointer"
+                  >
+                    Generate Random
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={accessPassword}
+                  onChange={(e) => setAccessPassword(e.target.value)}
+                  placeholder="Enter temporary password"
+                  className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-xs font-mono focus:border-primary focus:outline-none"
+                />
+              </div>
+            )}
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-2xs font-semibold text-muted uppercase">
+                  Assign System Roles & Permissions
+                </label>
+                <span className="text-2xs text-muted">
+                  {accessRoleIds.size} {accessRoleIds.size === 1 ? 'role' : 'roles'} selected
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-1">
+                {availableRoles.map((role) => {
+                  const isChecked = accessRoleIds.has(role.id);
+                  return (
+                    <label
+                      key={role.id}
+                      className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-xs cursor-pointer transition ${
+                        isChecked
+                          ? 'bg-primary/10 border-primary/40 text-primary font-medium shadow-2xs'
+                          : 'bg-surface-sunken border-default text-muted hover:border-default-hover'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          const next = new Set(accessRoleIds);
+                          if (e.target.checked) {
+                            next.add(role.id);
+                          } else {
+                            next.delete(role.id);
+                          }
+                          setAccessRoleIds(next);
+                        }}
+                        className="rounded border-default text-primary focus:ring-primary size-4 mt-0.5"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold capitalize truncate">{role.name.replace(/[_-]/g, ' ')}</div>
+                        <div className="text-3xs text-muted truncate">{role.description || 'System access role'}</div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-default">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setAccessModalEmp(null)}
+                disabled={savingAccess}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={handleSaveAccess}
+                loading={savingAccess}
+              >
+                {accessModalEmp.has_user_account || accessModalEmp.user_id ? 'Update Roles' : 'Provision User & Assign Roles'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

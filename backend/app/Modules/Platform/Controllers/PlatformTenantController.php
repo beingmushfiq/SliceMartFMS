@@ -165,70 +165,11 @@ class PlatformTenantController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'tenant' => [
-                    'id' => $tenant->id,
-                    'uuid' => $tenant->uuid,
-                    'name' => $tenant->name,
-                    'slug' => $tenant->slug,
-                    'status' => $tenant->status,
-                    'plan_id' => $tenant->plan_id,
-                    'plan' => $tenant->plan !== null ? [
-                        'id' => $tenant->plan->id,
-                        'uuid' => $tenant->plan->uuid,
-                        'name' => $tenant->plan->name,
-                        'code' => $tenant->plan->code,
-                        'price' => (float) $tenant->plan->price,
-                        'billing_period' => $tenant->plan->billing_period,
-                        'limits' => $tenant->plan->limits,
-                        'features' => $tenant->plan->features,
-                    ] : null,
-                    'currency_code' => $tenant->currency_code,
-                    'timezone' => $tenant->timezone,
-                    'locale' => $tenant->locale,
-                    'settings' => $tenant->settings,
-                    'custom_limits' => $tenant->settings['custom_limits'] ?? null,
-                    'branding' => $tenant->branding,
-                    'trial_ends_at' => $tenant->trial_ends_at?->toIso8601String(),
-                    'activated_at' => $tenant->activated_at?->toIso8601String(),
-                    'suspended_at' => $tenant->suspended_at?->toIso8601String(),
-                    'created_at' => $tenant->created_at?->toIso8601String(),
-                    'modules' => $tenant->modules->map(fn (TenantModule $m) => [
-                        'id' => $m->id,
-                        'module_key' => $m->module_key,
-                        'enabled' => (bool) $m->enabled,
-                        'plan_allowed' => (bool) $m->plan_allowed,
-                        'config' => $m->config,
-                    ]),
-                ],
-                'users' => $tenant->users->map(fn (User $u) => [
-                    'id' => $u->id,
-                    'uuid' => $u->uuid,
-                    'name' => $u->name,
-                    'email' => $u->email,
-                    'status' => $u->status,
-                    'last_login_at' => $u->last_login_at?->toIso8601String(),
-                ]),
-                'subscriptions' => $subscriptions->map(fn (TenantSubscription $s) => [
-                    'id' => $s->id,
-                    'uuid' => $s->uuid,
-                    'plan_id' => $s->plan_id,
-                    'status' => $s->status,
-                    'amount' => (float) $s->amount,
-                    'starts_at' => $s->starts_at?->toIso8601String(),
-                    'ends_at' => $s->ends_at?->toIso8601String(),
-                ]),
-                'usage_counters' => $usageCounters->map(fn (TenantUsageCounter $u) => [
-                    'metric' => $u->metric,
-                    'period' => $u->period,
-                    'value' => $u->value,
-                ]),
-                'recent_audit' => $recentAudit->map(fn (AuditLog $a) => [
-                    'id' => $a->id,
-                    'action' => $a->action,
-                    'actor_name' => $a->actor?->name ?? 'System',
-                    'created_at' => $a->created_at?->toIso8601String(),
-                    'details' => $a->after,
-                ]),
+                'tenant' => $this->formatTenantProfile($tenant),
+                'users' => $this->formatTenantUsers($tenant->users),
+                'subscriptions' => $this->formatTenantSubscriptions($subscriptions),
+                'usage_counters' => $this->formatTenantUsageCounters($usageCounters),
+                'recent_audit' => $this->formatTenantAuditLogs($recentAudit),
             ],
             'meta' => [
                 'correlation_id' => (string) $request->header('X-Correlation-Id', ''),
@@ -460,5 +401,110 @@ class PlatformTenantController extends Controller
                 'timestamp' => Carbon::now()->toIso8601String(),
             ],
         ]);
+    }
+
+    /**
+     * Format tenant details for profile response.
+     *
+     * @return array<string, mixed>
+     */
+    private function formatTenantProfile(Tenant $tenant): array
+    {
+        return [
+            'id' => $tenant->id,
+            'uuid' => $tenant->uuid,
+            'name' => $tenant->name,
+            'slug' => $tenant->slug,
+            'status' => $tenant->status,
+            'plan_id' => $tenant->plan_id,
+            'plan' => $tenant->plan !== null ? [
+                'id' => $tenant->plan->id,
+                'uuid' => $tenant->plan->uuid,
+                'name' => $tenant->plan->name,
+                'code' => $tenant->plan->code,
+                'price' => (float) $tenant->plan->price,
+                'billing_period' => $tenant->plan->billing_period,
+                'limits' => $tenant->plan->limits,
+                'features' => $tenant->plan->features,
+            ] : null,
+            'currency_code' => $tenant->currency_code,
+            'timezone' => $tenant->timezone,
+            'locale' => $tenant->locale,
+            'settings' => $tenant->settings,
+            'custom_limits' => $tenant->settings['custom_limits'] ?? null,
+            'branding' => $tenant->branding,
+            'trial_ends_at' => $tenant->trial_ends_at?->toIso8601String(),
+            'activated_at' => $tenant->activated_at?->toIso8601String(),
+            'suspended_at' => $tenant->suspended_at?->toIso8601String(),
+            'created_at' => $tenant->created_at?->toIso8601String(),
+            'modules' => $tenant->modules->map(fn (TenantModule $m): array => [
+                'id' => $m->id,
+                'module_key' => $m->module_key,
+                'enabled' => (bool) $m->enabled,
+                'plan_allowed' => (bool) $m->plan_allowed,
+                'config' => $m->config,
+            ]),
+        ];
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, User>  $users
+     * @return array<int, array<string, mixed>>
+     */
+    private function formatTenantUsers($users): array
+    {
+        return $users->map(fn (User $u): array => [
+            'id' => $u->id,
+            'uuid' => $u->uuid,
+            'name' => $u->name,
+            'email' => $u->email,
+            'status' => $u->status,
+            'last_login_at' => $u->last_login_at?->toIso8601String(),
+        ])->all();
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, TenantSubscription>  $subscriptions
+     * @return array<int, array<string, mixed>>
+     */
+    private function formatTenantSubscriptions($subscriptions): array
+    {
+        return $subscriptions->map(fn (TenantSubscription $s): array => [
+            'id' => $s->id,
+            'uuid' => $s->uuid,
+            'plan_id' => $s->plan_id,
+            'status' => $s->status,
+            'amount' => (float) $s->amount,
+            'starts_at' => $s->starts_at?->toIso8601String(),
+            'ends_at' => $s->ends_at?->toIso8601String(),
+        ])->all();
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, TenantUsageCounter>  $usageCounters
+     * @return array<int, array<string, mixed>>
+     */
+    private function formatTenantUsageCounters($usageCounters): array
+    {
+        return $usageCounters->map(fn (TenantUsageCounter $u): array => [
+            'metric' => $u->metric,
+            'period' => $u->period,
+            'value' => $u->value,
+        ])->all();
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, AuditLog>  $recentAudit
+     * @return array<int, array<string, mixed>>
+     */
+    private function formatTenantAuditLogs($recentAudit): array
+    {
+        return $recentAudit->map(fn (AuditLog $a): array => [
+            'id' => $a->id,
+            'action' => $a->action,
+            'actor_name' => $a->actor?->name ?? 'System',
+            'created_at' => $a->created_at?->toIso8601String(),
+            'details' => $a->after,
+        ])->all();
     }
 }

@@ -9,6 +9,8 @@ use App\Modules\Reports\Actions\CreateReportExportAction;
 use App\Modules\Reports\Models\ReportExport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\Response;
 
 class ReportExportController extends Controller
 {
@@ -28,6 +30,7 @@ class ReportExportController extends Controller
                 'file_path' => $export->file_path,
                 'row_count' => $export->row_count,
                 'file_size_bytes' => $export->file_size_bytes,
+                'download_url' => "/reports/exports/{$export->uuid}/download",
                 'expires_at' => $export->expires_at?->toIso8601String(),
             ],
         ], 202);
@@ -45,8 +48,28 @@ class ReportExportController extends Controller
                 'file_path' => $export->file_path,
                 'row_count' => $export->row_count,
                 'file_size_bytes' => $export->file_size_bytes,
+                'download_url' => "/reports/exports/{$export->uuid}/download",
                 'expires_at' => $export->expires_at?->toIso8601String(),
             ],
+        ]);
+    }
+
+    public function download(string $uuid): Response
+    {
+        $export = ReportExport::where('uuid', $uuid)->firstOrFail();
+
+        $user = auth()->user();
+        if ($user && !empty($user->tenant_id) && (int) $export->tenant_id !== (int) $user->tenant_id) {
+            abort(403, 'Unauthorized access to tenant export.');
+        }
+
+        if (!Storage::disk('local')->exists($export->file_path)) {
+            abort(404, 'Export file not found or expired on disk.');
+        }
+
+        $fileName = basename($export->file_path);
+        return Storage::disk('local')->download($export->file_path, $fileName, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 }

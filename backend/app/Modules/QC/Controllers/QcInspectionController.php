@@ -23,7 +23,7 @@ final class QcInspectionController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $allowed = ['production_batch_id', 'production_output_id', 'inspector_id', 'result', 'status', 'inspection_date', 'date_from', 'date_to', 'q', 'sort', 'page', 'per_page'];
+        $allowed = ['production_batch_id', 'production_output_id', 'inspector_id', 'result', 'status', 'inspection_date', 'date_from', 'date_to', 'inspection_type', 'q', 'sort', 'page', 'per_page'];
         $unknown = array_diff(array_keys($request->all()), $allowed);
         if ($unknown !== []) {
             return ErrorResponse::make(
@@ -36,6 +36,17 @@ final class QcInspectionController extends Controller
         }
 
         $query = QcInspection::query()->with(['productionBatch.product', 'productionOutput.product', 'inspector', 'results.qcParameter', 'defects.defectReason', 'approvedByUser']);
+
+        if ($request->filled('inspection_type')) {
+            $type = (string) $request->input('inspection_type');
+            if ($type === 'incoming') {
+                $query->whereNotNull('goods_receipt_id');
+            } elseif ($type === 'final') {
+                $query->whereNotNull('production_output_id');
+            } elseif ($type === 'in_process') {
+                $query->whereNotNull('production_batch_id');
+            }
+        }
 
         $batchUuid = $request->input('production_batch_id');
         if (is_string($batchUuid)) {

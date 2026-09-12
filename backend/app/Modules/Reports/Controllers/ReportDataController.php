@@ -33,8 +33,8 @@ class ReportDataController extends Controller
 
     public function data(string $code, Request $request, RunReportQueryAction $action): JsonResponse
     {
-        $page = (int) $request->query('page', 1);
-        $perPage = (int) $request->query('per_page', 25);
+        $page = $request->integer('page', 1);
+        $perPage = $request->integer('per_page', 25);
         $filters = $request->all();
 
         $result = $action->execute($code, $filters, $page, $perPage);

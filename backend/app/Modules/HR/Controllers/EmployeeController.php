@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\HR\Controllers;
 
+use App\Core\Audit\AuditAction;
+use App\Core\Audit\AuditLogger;
 use App\Http\Controllers\Controller;
+use App\Models\Role;
+use App\Models\User;
 use App\Modules\HR\Actions\CreateEmployeeAction;
 use App\Modules\HR\Models\Department;
 use App\Modules\HR\Models\Designation;
@@ -13,6 +17,8 @@ use App\Modules\HR\Models\EmployeeDocument;
 use App\Modules\HR\Models\Shift;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 class EmployeeController extends Controller
@@ -217,7 +223,14 @@ class EmployeeController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = Employee::query()->with(['department', 'designation', 'defaultShift', 'branch']);
+        $query = Employee::query()->with([
+            'department:id,name,code',
+            'designation:id,name,code',
+            'defaultShift:id,name,code',
+            'branch:id,name,code',
+            'user:id,name,email,status',
+            'user.roles:id,name,slug',
+        ]);
 
         if ($request->filled('search')) {
             $search = '%' . $request->query('search') . '%';
@@ -247,6 +260,8 @@ class EmployeeController extends Controller
                 'id' => $emp->id,
                 'uuid' => $emp->uuid,
                 'employee_code' => $emp->employee_code,
+                'user_id' => $emp->user_id,
+                'has_user_account' => !is_null($emp->user_id),
                 'first_name' => $emp->first_name,
                 'last_name' => $emp->last_name ?? '',
                 'full_name' => $emp->display_name ?: trim("{$emp->first_name} {$emp->last_name}"),
@@ -264,6 +279,18 @@ class EmployeeController extends Controller
                 'bank_account_number' => $emp->bank_account_number,
                 'mobile_wallet_number' => $emp->mobile_wallet_number,
                 'national_id' => $emp->national_id,
+                'user' => $emp->user ? [
+                    'id' => $emp->user->id,
+                    'name' => $emp->user->name,
+                    'email' => $emp->user->email,
+                    'status' => $emp->user->status ?? 'active',
+                ] : null,
+                'roles' => $emp->user ? $emp->user->roles->map(fn ($r) => [
+                    'id' => $r->id,
+                    'name' => $r->name,
+                    'slug' => $r->slug,
+                ]) : [],
+                'primary_role' => $emp->user?->roles->first()?->name,
             ];
         });
 
@@ -294,15 +321,21 @@ class EmployeeController extends Controller
             'bank_name' => 'nullable|string|max:100',
             'bank_account_number' => 'nullable|string|max:64',
             'mobile_wallet_number' => 'nullable|string|max:32',
+            'grant_user_access' => 'nullable|boolean',
+            'user_password' => 'nullable|string|min:8',
+            'role_ids' => 'nullable|array',
+            'role_ids.*' => 'integer|exists:roles,id',
+            'user_id' => 'nullable|integer|exists:users,id',
         ]);
 
         $validated['company_id'] = $validated['company_id'] ?? 1;
+        $validated['tenant_id'] = $request->user()?->tenant_id ?? 1;
 
         $userId = (int) ($request->user()?->id ?? 1);
         $employee = $this->createEmployeeAction->execute($validated, $userId);
 
         return response()->json([
-            'data' => $employee->load(['department', 'designation', 'defaultShift', 'branch']),
+            'data' => $employee->load(['department', 'designation', 'defaultShift', 'branch', 'user.roles']),
             'message' => 'Employee onboarded successfully.',
         ], 201);
     }
@@ -314,6 +347,7 @@ class EmployeeController extends Controller
             'designation',
             'defaultShift',
             'branch',
+            'user.roles',
             'salaryStructure.components.component',
         ])->findOrFail($id);
 
@@ -341,6 +375,7 @@ class EmployeeController extends Controller
             'bank_account_number' => 'nullable|string|max:64',
             'mobile_wallet_number' => 'nullable|string|max:32',
             'national_id' => 'nullable|string|max:64',
+            'user_id' => 'nullable|integer|exists:users,id',
         ]);
 
         $employee->update([
@@ -349,14 +384,14 @@ class EmployeeController extends Controller
         ]);
 
         return response()->json([
-            'data' => $employee->load(['department', 'designation', 'defaultShift', 'branch']),
+            'data' => $employee->load(['department', 'designation', 'defaultShift', 'branch', 'user.roles']),
             'message' => 'Employee profile updated successfully.',
         ]);
     }
 
     public function toggleStatus(int $id): JsonResponse
     {
-        $employee = Employee::findOrFail($id);
+        $employee = Employee::with('user')->findOrFail($id);
         $newStatus = ($employee->employment_status === 'active') ? 'terminated' : 'active';
         $employee->update([
             'employment_status' => $newStatus,
@@ -364,9 +399,214 @@ class EmployeeController extends Controller
             'updated_by' => auth()->id() ?? 1,
         ]);
 
+        // Security cascade: if employee is terminated, suspend user login and invalidate sessions immediately
+        if ($employee->user) {
+            $userStatus = ($newStatus === 'active') ? 'active' : 'suspended';
+            $employee->user->update([
+                'status' => $userStatus,
+                'token_version' => ($employee->user->token_version ?? 1) + 1,
+            ]);
+        }
+
         return response()->json([
-            'data' => $employee,
+            'data' => $employee->load(['user.roles']),
             'message' => "Employee status changed to {$newStatus}.",
+        ]);
+    }
+
+    /**
+     * Provision a user login account and assign roles for an existing employee.
+     */
+    public function provisionUser(int $id, Request $request, AuditLogger $auditLogger): JsonResponse
+    {
+        $employee = Employee::with('user')->findOrFail($id);
+
+        if ($employee->user_id || $employee->user) {
+            return response()->json([
+                'message' => 'Employee already has a system user account.',
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|string|min:8',
+            'role_ids' => 'required|array',
+            'role_ids.*' => 'integer|exists:roles,id',
+        ]);
+
+        $tenantId = $employee->tenant_id ?? (int) ($request->user()?->tenant_id ?? 1);
+
+        $user = DB::transaction(function () use ($employee, $validated, $tenantId, $auditLogger, $request) {
+            $user = User::create([
+                'uuid' => (string) Str::uuid(),
+                'tenant_id' => $tenantId,
+                'name' => $employee->display_name ?: trim("{$employee->first_name} {$employee->last_name}"),
+                'email' => strtolower(trim($validated['email'])),
+                'password' => Hash::make($validated['password']),
+                'phone' => $employee->phone,
+                'status' => 'active',
+                'token_version' => 1,
+                'perm_version' => 1,
+                'default_company_id' => $employee->company_id ?? 1,
+                'default_branch_id' => $employee->branch_id,
+                'default_factory_id' => $employee->factory_id,
+            ]);
+
+            $pivotData = [];
+            foreach ($validated['role_ids'] as $roleId) {
+                $pivotData[$roleId] = ['tenant_id' => $tenantId];
+            }
+            $user->roles()->sync($pivotData);
+
+            $employee->update([
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'updated_by' => (int) ($request->user()?->id ?? 1),
+            ]);
+
+            $auditLogger->record(
+                action: AuditAction::Created,
+                auditable: $user,
+                before: null,
+                after: [
+                    'action' => 'provisioned_for_employee',
+                    'employee_id' => $employee->id,
+                    'roles' => $validated['role_ids'],
+                ],
+                actor: $request->user(),
+                context: ['tenant_id' => $tenantId],
+                ip: $request->ip(),
+                userAgent: $request->userAgent()
+            );
+
+            return $user;
+        });
+
+        return response()->json([
+            'message' => "User account provisioned and roles assigned for '{$employee->display_name}'.",
+            'data' => $employee->load(['user.roles', 'department', 'designation']),
+        ], 201);
+    }
+
+    /**
+     * Update the assigned roles for an employee's user account.
+     */
+    public function updateRoles(int $id, Request $request, AuditLogger $auditLogger): JsonResponse
+    {
+        $employee = Employee::with('user')->findOrFail($id);
+
+        if (!$employee->user) {
+            return response()->json([
+                'message' => 'Employee does not have an active system user account.',
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'role_ids' => 'required|array',
+            'role_ids.*' => 'integer|exists:roles,id',
+        ]);
+
+        $tenantId = $employee->tenant_id ?? (int) ($request->user()?->tenant_id ?? 1);
+
+        DB::transaction(function () use ($employee, $validated, $tenantId, $auditLogger, $request) {
+            $pivotData = [];
+            foreach ($validated['role_ids'] as $roleId) {
+                $pivotData[$roleId] = ['tenant_id' => $tenantId];
+            }
+            $employee->user->roles()->sync($pivotData);
+            $employee->user->perm_version = ($employee->user->perm_version ?? 1) + 1;
+            $employee->user->save();
+
+            $auditLogger->record(
+                action: AuditAction::Updated,
+                auditable: $employee->user,
+                before: null,
+                after: [
+                    'action' => 'employee_roles_updated',
+                    'employee_id' => $employee->id,
+                    'roles' => $validated['role_ids'],
+                ],
+                actor: $request->user(),
+                context: ['tenant_id' => $tenantId],
+                ip: $request->ip(),
+                userAgent: $request->userAgent()
+            );
+        });
+
+        return response()->json([
+            'message' => "Roles updated for '{$employee->display_name}'.",
+            'data' => $employee->load(['user.roles']),
+        ]);
+    }
+
+    /**
+     * Link an existing user account to this employee.
+     */
+    public function linkUser(int $id, Request $request, AuditLogger $auditLogger): JsonResponse
+    {
+        $employee = Employee::findOrFail($id);
+
+        $validated = $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+        ]);
+
+        $tenantId = $employee->tenant_id ?? (int) ($request->user()?->tenant_id ?? 1);
+        $user = User::query()
+            ->when($tenantId, fn ($q) => $q->where('tenant_id', $tenantId))
+            ->findOrFail($validated['user_id']);
+
+        $employee->update([
+            'user_id' => $user->id,
+            'updated_by' => (int) ($request->user()?->id ?? 1),
+        ]);
+
+        $auditLogger->record(
+            action: AuditAction::Updated,
+            auditable: $employee,
+            before: null,
+            after: [
+                'action' => 'linked_user_account',
+                'user_id' => $user->id,
+            ],
+            actor: $request->user(),
+            context: ['tenant_id' => $tenantId],
+            ip: $request->ip(),
+            userAgent: $request->userAgent()
+        );
+
+        return response()->json([
+            'message' => "User account '{$user->name}' linked to '{$employee->display_name}'.",
+            'data' => $employee->load(['user.roles', 'department', 'designation']),
+        ]);
+    }
+
+    /**
+     * Unlink user account from this employee.
+     */
+    public function unlinkUser(int $id, Request $request, AuditLogger $auditLogger): JsonResponse
+    {
+        $employee = Employee::findOrFail($id);
+
+        $prevUserId = $employee->user_id;
+        $employee->update([
+            'user_id' => null,
+            'updated_by' => (int) ($request->user()?->id ?? 1),
+        ]);
+
+        $auditLogger->record(
+            action: AuditAction::Updated,
+            auditable: $employee,
+            before: ['user_id' => $prevUserId],
+            after: ['user_id' => null],
+            actor: $request->user(),
+            context: ['tenant_id' => $employee->tenant_id],
+            ip: $request->ip(),
+            userAgent: $request->userAgent()
+        );
+
+        return response()->json([
+            'message' => "User account unlinked from '{$employee->display_name}'.",
+            'data' => $employee->load(['department', 'designation']),
         ]);
     }
 

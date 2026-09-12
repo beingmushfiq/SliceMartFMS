@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import type { DeliveryOrder } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
+import { extractList } from '../../../lib/api/apiData';
 import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { DeliveryChallanDocument } from '../../../components/print/documents/DeliveryChallanDocument';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
@@ -190,8 +191,9 @@ export function DeliveriesSection() {
     queryFn: async () => {
       try {
         const res = await api.get<DeliveryOrder[]>('/sales/deliveries');
-        if (res.data && res.data.length > 0) {
-          return res.data;
+        const list = extractList<DeliveryOrder>(res);
+        if (list.length > 0) {
+          return list;
         }
       } catch {
         // Keep sample data

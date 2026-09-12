@@ -34,6 +34,7 @@ final class DatabaseSeeder extends Seeder
             StockTableSeeder::class,
             ReportDefinitionsTableSeeder::class,
             CrmLeadsTableSeeder::class,
+            EnterpriseDataSeeder::class,
         ]);
     }
 }

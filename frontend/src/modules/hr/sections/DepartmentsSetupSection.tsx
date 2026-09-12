@@ -4,9 +4,6 @@ import {
   Building2,
   Clock,
   Plus,
-  Edit2,
-  CheckCircle2,
-  XCircle,
 } from 'lucide-react';
 import type { Department, Designation, Shift } from '../../../types/api/hr';
 import { Modal } from '../../../components/ui/Modal';

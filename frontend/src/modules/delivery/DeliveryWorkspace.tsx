@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type {
   CourierProvider,
   CourierShipment,
@@ -13,6 +13,8 @@ import { CodReconciliationSection } from './sections/CodReconciliationSection';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { Truck, Bike, Building2, Banknote, RefreshCw, Zap } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { api } from '../../lib/api/client';
+import { extractList } from '../../lib/api/apiData';
 
 type DeliveryTab = 'shipments' | 'run_sheets' | 'providers' | 'cod_reconciliation';
 
@@ -141,6 +143,44 @@ export const DeliveryWorkspace: React.FC = () => {
       notes: 'Cash verified and banked in City Bank A/C',
     },
   ]);
+
+  // Live Logistics & Couriers Synchronization
+  useEffect(() => {
+    let active = true;
+
+    async function loadLiveDeliveryData() {
+      try {
+        const [courierRes, shipmentRes] = await Promise.allSettled([
+          api.get('/logistics/couriers'),
+          api.get('/logistics/shipments'),
+        ]);
+
+        if (!active) return;
+
+        if (courierRes.status === 'fulfilled') {
+          const list = extractList<CourierProvider>(courierRes.value);
+          if (list.length > 0) {
+            setProviders(list);
+          }
+        }
+
+        if (shipmentRes.status === 'fulfilled') {
+          const list = extractList<CourierShipment>(shipmentRes.value);
+          if (list.length > 0) {
+            setShipments(list);
+          }
+        }
+      } catch (err) {
+        console.error('Failed loading live delivery data', err);
+      }
+    }
+
+    loadLiveDeliveryData();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const [pendingDeliveries] = useState<DeliveryOrder[]>([
     {

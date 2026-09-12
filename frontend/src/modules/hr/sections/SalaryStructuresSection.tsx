@@ -72,7 +72,7 @@ const DEFAULT_STRUCTURES: SalaryStructureItem[] = [
 
 export const SalaryStructuresSection: React.FC = () => {
   const [structures, setStructures] = useState<SalaryStructureItem[]>(DEFAULT_STRUCTURES);
-  const [selectedStructure, setSelectedStructure] = useState<SalaryStructureItem | null>(DEFAULT_STRUCTURES[0]);
+  const [selectedStructure, setSelectedStructure] = useState<SalaryStructureItem | null>(DEFAULT_STRUCTURES[0] ?? null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // New Structure Form

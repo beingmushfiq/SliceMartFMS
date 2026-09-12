@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import type { PurchaseBill } from '../../../types/api/purchasing';
 import { api } from '../../../lib/api/client';
+import { extractList } from '../../../lib/api/apiData';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
 
@@ -223,8 +224,9 @@ export function PurchaseBillsSection() {
     queryFn: async () => {
       try {
         const res = await api.get<PurchaseBill[]>('/purchasing/bills');
-        if (res.data && res.data.length > 0) {
-          return res.data;
+        const list = extractList<PurchaseBill>(res);
+        if (list.length > 0) {
+          return list;
         }
       } catch {
         // Fallback to sample bills

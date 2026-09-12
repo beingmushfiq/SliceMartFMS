@@ -95,6 +95,16 @@ final class AuditLog extends Model
     }
 
     /**
+     * Alias for user() representing the actor.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function actor(): BelongsTo
+    {
+        return $this->user();
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

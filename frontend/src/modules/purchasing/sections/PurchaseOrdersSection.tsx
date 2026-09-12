@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import type { PurchaseOrder } from '../../../types/api/purchasing';
 import { api } from '../../../lib/api/client';
+import { extractList } from '../../../lib/api/apiData';
 import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { PurchaseOrderDocument } from '../../../components/print/documents/PurchaseOrderDocument';
 import { EmptyState, SkeletonLine } from '../../../components/ui/Feedback';
@@ -257,8 +258,9 @@ export function PurchaseOrdersSection({ onReceivePo, onCreateBill }: PurchaseOrd
     queryFn: async () => {
       try {
         const res = await api.get<PurchaseOrder[]>('/purchasing/orders');
-        if (res.data && res.data.length > 0) {
-          return res.data;
+        const list = extractList<PurchaseOrder>(res);
+        if (list.length > 0) {
+          return list;
         }
       } catch {
         // Fallback to sample orders

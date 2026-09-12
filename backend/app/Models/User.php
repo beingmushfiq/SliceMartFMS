@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -122,6 +123,16 @@ class User extends Authenticatable
     public function refreshTokens(): HasMany
     {
         return $this->hasMany(RefreshToken::class, 'user_id');
+    }
+
+    /**
+     * Associated employee profile (if this user is linked to an employee).
+     *
+     * @return HasOne<\App\Modules\HR\Models\Employee, $this>
+     */
+    public function employee(): HasOne
+    {
+        return $this->hasOne(\App\Modules\HR\Models\Employee::class, 'user_id');
     }
 
     /**

@@ -34,6 +34,11 @@ const ActivityLogWorkspace = lazy(() =>
     default: m.ActivityLogWorkspace,
   }))
 );
+const UsersManagementWorkspace = lazy(() =>
+  import('../pages/settings/UsersManagementWorkspace').then((m) => ({
+    default: m.UsersManagementWorkspace,
+  }))
+);
 const RolesManagementWorkspace = lazy(() =>
   import('../pages/settings/RolesManagementWorkspace').then((m) => ({
     default: m.RolesManagementWorkspace,
@@ -52,6 +57,16 @@ const ProfileSettingsWorkspace = lazy(() =>
 const SeoDiscoverabilityWorkspace = lazy(() =>
   import('../pages/settings/SeoDiscoverabilityWorkspace').then((m) => ({
     default: m.SeoDiscoverabilityWorkspace,
+  }))
+);
+const DataBinWorkspace = lazy(() =>
+  import('../pages/settings/DataBinWorkspace').then((m) => ({
+    default: m.DataBinWorkspace,
+  }))
+);
+const WorkflowAutomationWorkspace = lazy(() =>
+  import('../modules/settings/WorkflowAutomationWorkspace').then((m) => ({
+    default: m.WorkflowAutomationWorkspace,
   }))
 );
 const OnboardingWizard = lazy(() =>
@@ -364,12 +379,20 @@ export const router = createBrowserRouter([
             element: <Navigate to="/audit-logs" replace />,
           },
           {
+            path: 'users',
+            element: <UsersManagementWorkspace />,
+          },
+          {
             path: 'roles',
             element: <RolesManagementWorkspace />,
           },
           {
             path: 'settings',
             element: <SettingsCenterWorkspace />,
+          },
+          {
+            path: 'settings/users',
+            element: <UsersManagementWorkspace />,
           },
           {
             path: 'settings/roles',
@@ -386,6 +409,22 @@ export const router = createBrowserRouter([
           {
             path: 'settings/seo',
             element: <SeoDiscoverabilityWorkspace />,
+          },
+          {
+            path: 'settings/bin',
+            element: <DataBinWorkspace />,
+          },
+          {
+            path: 'bin',
+            element: <Navigate to="/settings/bin" replace />,
+          },
+          {
+            path: 'settings/workflows',
+            element: <WorkflowAutomationWorkspace />,
+          },
+          {
+            path: 'workflows',
+            element: <Navigate to="/settings/workflows" replace />,
           },
           {
             path: 'seo',

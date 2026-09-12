@@ -31,7 +31,10 @@ import {
   CornerDownLeft,
   PanelLeftClose,
   PanelLeftOpen,
+  Trash2,
+  Brain,
 } from 'lucide-react';
+import { SliceMartBrainModal } from './SliceMartBrainModal';
 import { useAuthStore } from '../../lib/auth/authStore';
 import { useTenantCapabilityStore } from '../../lib/capabilities/tenantCapabilityStore';
 import { PLATFORM_NAV_DEFINITIONS } from '../../lib/capabilities/navRegistry';
@@ -71,6 +74,7 @@ export function AppHeader({
   const [isBranchMenuOpen, setIsBranchMenuOpen] = useState(false);
   const [isNotifMenuOpen, setIsNotifMenuOpen] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [isBrainOpen, setIsBrainOpen] = useState(false);
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -110,6 +114,18 @@ export function AppHeader({
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
   });
+
+  // Global Keyboard Shortcuts for Omnisearch and Brain Agent
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.code === 'Space' || e.key === 'j')) {
+        e.preventDefault();
+        setIsBrainOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Global hotkey: Ctrl+K or Cmd+K to trigger search
   useEffect(() => {
@@ -667,6 +683,27 @@ export function AppHeader({
           )}
         </div>
 
+        {/* SliceMart Brain Local Agentic AI */}
+        <button
+          type="button"
+          onClick={() => setIsBrainOpen(true)}
+          className="flex items-center gap-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/25 px-2.5 py-1 text-xs font-bold transition-all cursor-pointer shadow-2xs group"
+          title="SliceMart Brain — 100% Local Agentic AI (Ctrl+Space)"
+        >
+          <Brain className="size-3.5 group-hover:scale-110 transition-transform" />
+          <span className="hidden sm:inline">Brain</span>
+          <span className="size-1.5 rounded-full bg-purple-500 animate-pulse hidden sm:inline" />
+        </button>
+
+        {/* Data Bin & Recovery Vault Quick Link */}
+        <Link
+          to="/settings/bin"
+          className="rounded-lg p-2 text-muted hover:bg-surface-sunken hover:text-red-500 transition-token-colors focus-visible:ring-focus relative group cursor-pointer"
+          title="Data Bin & Recovery Vault"
+        >
+          <Trash2 className="size-4" />
+        </Link>
+
         {/* Theme Toggle */}
         <button
           type="button"
@@ -715,6 +752,15 @@ export function AppHeader({
                 >
                   <User className="size-3.5 text-primary" />
                   <span>Profile & Account</span>
+                </Link>
+
+                <Link
+                  to="/settings/bin"
+                  onClick={() => setIsUserMenuOpen(false)}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium text-default hover:bg-surface-sunken transition-token-colors focus-visible:ring-focus"
+                >
+                  <Trash2 className="size-3.5 text-red-500" />
+                  <span>Data Bin & Recovery</span>
                 </Link>
 
                 <button
@@ -788,6 +834,9 @@ export function AppHeader({
           </div>
         </div>
       )}
+
+      {/* SliceMart Brain Agent Modal */}
+      <SliceMartBrainModal open={isBrainOpen} onClose={() => setIsBrainOpen(false)} />
     </header>
   );
 }

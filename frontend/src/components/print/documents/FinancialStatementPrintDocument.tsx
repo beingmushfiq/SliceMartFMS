@@ -4,8 +4,8 @@ import { formatCurrency, formatDocumentDate } from '../../../lib/document/format
 import { generateBarcodeSvg } from '../../../lib/barcode/engine';
 
 export interface FinancialStatementData {
-  periodTitle?: string;
-  reportCode?: string;
+  periodTitle: string;
+  reportCode: string;
   revenue: {
     grossSales: number;
     cogs: number;

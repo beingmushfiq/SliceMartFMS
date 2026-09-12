@@ -10,6 +10,7 @@ use App\Core\Tenancy\TenantContext;
 use App\Http\Controllers\Controller;
 use App\Models\Permission;
 use App\Models\Role;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -346,6 +347,185 @@ class RoleController extends Controller
 
         return response()->json([
             'message' => 'Role deleted successfully.',
+        ]);
+    }
+
+    /**
+     * List all users holding this role.
+     */
+    public function users(int $id, Request $request): JsonResponse
+    {
+        $tenantId = $this->resolveTenantId($request);
+
+        $role = Role::query()
+            ->where(function ($query) use ($tenantId) {
+                if ($tenantId) {
+                    $query->where('tenant_id', $tenantId)
+                          ->orWhereNull('tenant_id');
+                } else {
+                    $query->whereNull('tenant_id');
+                }
+            })
+            ->findOrFail($id);
+
+        $query = $role->users()
+            ->when($tenantId, fn ($q) => $q->where('users.tenant_id', $tenantId))
+            ->with([
+                'employee:id,uuid,employee_code,first_name,last_name,display_name,department_id,designation_id,user_id',
+                'employee.department:id,name',
+                'employee.designation:id,name',
+            ]);
+
+        if ($request->filled('search')) {
+            $search = '%' . $request->query('search') . '%';
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', $search)
+                    ->orWhere('email', 'like', $search);
+            });
+        }
+
+        $users = $query->orderBy('name')->paginate($request->integer('per_page', 50));
+
+        $formatted = $users->through(function (User $user) {
+            return [
+                'id' => $user->id,
+                'uuid' => $user->uuid,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'status' => $user->status ?? 'active',
+                'is_active' => $user->is_active,
+                'last_login_at' => $user->last_login_at?->toISOString(),
+                'employee' => $user->employee ? [
+                    'id' => $user->employee->id,
+                    'employee_code' => $user->employee->employee_code,
+                    'display_name' => $user->employee->display_name,
+                    'department' => $user->employee->department?->name,
+                    'designation' => $user->employee->designation?->name,
+                ] : null,
+            ];
+        });
+
+        return response()->json([
+            'data' => $formatted->items(),
+            'meta' => [
+                'current_page' => $users->currentPage(),
+                'last_page' => $users->lastPage(),
+                'per_page' => $users->perPage(),
+                'total' => $users->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * Assign a user to this role.
+     */
+    public function assignUser(int $id, Request $request, AuditLogger $auditLogger): JsonResponse
+    {
+        $tenantId = $this->resolveTenantId($request);
+
+        $role = Role::query()
+            ->where(function ($query) use ($tenantId) {
+                if ($tenantId) {
+                    $query->where('tenant_id', $tenantId)
+                          ->orWhereNull('tenant_id');
+                } else {
+                    $query->whereNull('tenant_id');
+                }
+            })
+            ->findOrFail($id);
+
+        $validated = $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+        ]);
+
+        $user = User::query()
+            ->when($tenantId, fn ($q) => $q->where('tenant_id', $tenantId), fn ($q) => $q->whereNull('tenant_id'))
+            ->findOrFail($validated['user_id']);
+
+        if ($user->roles()->where('roles.id', $role->id)->exists()) {
+            return response()->json([
+                'message' => "User '{$user->name}' is already assigned to the '{$role->name}' role.",
+            ], Response::HTTP_CONFLICT);
+        }
+
+        DB::transaction(function () use ($role, $user, $tenantId, $auditLogger, $request) {
+            $user->roles()->attach($role->id, ['tenant_id' => $tenantId]);
+            $user->perm_version = ($user->perm_version ?? 1) + 1;
+            $user->save();
+
+            $auditLogger->record(
+                action: \App\Core\Audit\AuditAction::Updated,
+                auditable: $role,
+                before: null,
+                after: [
+                    'action' => 'user_assigned_to_role',
+                    'user_id' => $user->id,
+                    'user_name' => $user->name,
+                    'role_name' => $role->name,
+                ],
+                actor: $request->user(),
+                context: ['tenant_id' => $tenantId],
+                ip: $request->ip(),
+                userAgent: $request->userAgent()
+            );
+        });
+
+        return response()->json([
+            'message' => "User '{$user->name}' successfully assigned to '{$role->name}' role.",
+            'data' => [
+                'role_id' => $role->id,
+                'user_id' => $user->id,
+            ],
+        ], Response::HTTP_CREATED);
+    }
+
+    /**
+     * Remove a user from this role.
+     */
+    public function removeUser(int $id, int $userId, Request $request, AuditLogger $auditLogger): JsonResponse
+    {
+        $tenantId = $this->resolveTenantId($request);
+
+        $role = Role::query()
+            ->where(function ($query) use ($tenantId) {
+                if ($tenantId) {
+                    $query->where('tenant_id', $tenantId)
+                          ->orWhereNull('tenant_id');
+                } else {
+                    $query->whereNull('tenant_id');
+                }
+            })
+            ->findOrFail($id);
+
+        $user = User::query()
+            ->when($tenantId, fn ($q) => $q->where('tenant_id', $tenantId), fn ($q) => $q->whereNull('tenant_id'))
+            ->findOrFail($userId);
+
+        DB::transaction(function () use ($role, $user, $tenantId, $auditLogger, $request) {
+            $user->roles()->detach($role->id);
+            $user->perm_version = ($user->perm_version ?? 1) + 1;
+            $user->save();
+
+            $auditLogger->record(
+                action: \App\Core\Audit\AuditAction::Updated,
+                auditable: $role,
+                before: null,
+                after: [
+                    'action' => 'user_removed_from_role',
+                    'user_id' => $user->id,
+                    'user_name' => $user->name,
+                    'role_name' => $role->name,
+                ],
+                actor: $request->user(),
+                context: ['tenant_id' => $tenantId],
+                ip: $request->ip(),
+                userAgent: $request->userAgent()
+            );
+        });
+
+        return response()->json([
+            'message' => "User '{$user->name}' removed from '{$role->name}' role.",
         ]);
     }
 }

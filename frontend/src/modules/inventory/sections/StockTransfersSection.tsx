@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import type { StockTransfer } from '../../../types/api/inventory';
 import { api } from '../../../lib/api/client';
+import { extractList } from '../../../lib/api/apiData';
 import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { StockTransferDocument } from '../../../components/print/documents/StockTransferDocument';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
@@ -162,8 +163,9 @@ export function StockTransfersSection() {
     queryFn: async () => {
       try {
         const res = await api.get<StockTransfer[]>('/inventory/transfers');
-        if (res.data && res.data.length > 0) {
-          return res.data;
+        const list = extractList<StockTransfer>(res);
+        if (list.length > 0) {
+          return list;
         }
       } catch {
         // Keep sample data

@@ -10,6 +10,7 @@ import {
   Users,
   FileSpreadsheet,
   ChevronRight,
+  Trash2,
 } from 'lucide-react';
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
@@ -50,6 +51,7 @@ export const SettingsOverviewHub: React.FC<SettingsOverviewHubProps> = ({
     { label: 'System Security Audit Trail', group: 'audit_logs', icon: ShieldCheck },
     { label: 'ERP Modules & Navigation Order', group: 'modules', icon: Sparkles },
     { label: 'Factory Production Stages', group: 'production_stages', icon: Factory },
+    { label: 'Data Bin & Recovery Vault', group: 'bin', icon: Trash2 },
   ];
 
   const categoryGroups = [
@@ -60,6 +62,7 @@ export const SettingsOverviewHub: React.FC<SettingsOverviewHubProps> = ({
         { key: 'general', title: 'General Profile & Prefixes', desc: 'Legal entity, currency, date formats, document serials' },
         { key: 'roles', title: 'Roles & Staff Permissions', desc: 'Manage RBAC permissions matrix and access control' },
         { key: 'audit_logs', title: 'Security Audit Trail', desc: 'Immutable activity log, delta diffs, and compliance' },
+        { key: 'bin', title: 'Data Bin & Recovery Vault', desc: 'Inspect, restore, or permanently purge soft-deleted records across all ERP entities' },
         { key: 'profile', title: 'Workstation & Profile', desc: 'Personal preferences, branch context, and regional locale' },
       ],
     },

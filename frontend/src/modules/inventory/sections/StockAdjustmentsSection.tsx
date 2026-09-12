@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import type { StockAdjustment } from '../../../types/api/inventory';
 import { api } from '../../../lib/api/client';
+import { extractList } from '../../../lib/api/apiData';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
 
@@ -135,8 +136,9 @@ export function StockAdjustmentsSection() {
     queryFn: async () => {
       try {
         const res = await api.get<StockAdjustment[]>('/inventory/adjustments');
-        if (res.data && res.data.length > 0) {
-          return res.data;
+        const list = extractList<StockAdjustment>(res);
+        if (list.length > 0) {
+          return list;
         }
       } catch {
         // Keep sample data

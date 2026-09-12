@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import type { GoodsReceipt } from '../../../types/api/purchasing';
 import { api } from '../../../lib/api/client';
+import { extractList } from '../../../lib/api/apiData';
 import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { GoodsReceiptDocument } from '../../../components/print/documents/GoodsReceiptDocument';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
@@ -154,8 +155,9 @@ export function GoodsReceiptsSection() {
     queryFn: async () => {
       try {
         const res = await api.get<GoodsReceipt[]>('/purchasing/goods-receipts');
-        if (res.data && res.data.length > 0) {
-          return res.data;
+        const list = extractList<GoodsReceipt>(res);
+        if (list.length > 0) {
+          return list;
         }
       } catch {
         // Keep sample data

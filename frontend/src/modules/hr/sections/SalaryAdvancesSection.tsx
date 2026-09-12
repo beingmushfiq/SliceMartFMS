@@ -73,7 +73,7 @@ export const SalaryAdvancesSection: React.FC = () => {
   const [empName, setEmpName] = useState('Abdul Karim (EMP-00101)');
   const [loanAmount, setLoanAmount] = useState('12000');
   const [monthlyInstallment, setMonthlyInstallment] = useState('3000');
-  const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
+  const [issueDate, setIssueDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState('');
 
   const filteredAdvances = advances.filter((adv) => {
@@ -103,13 +103,13 @@ export const SalaryAdvancesSection: React.FC = () => {
       id: Date.now(),
       advanceNumber: `ADV-${new Date().toISOString().slice(0, 7).replace('-', '')}-${Math.floor(1000 + Math.random() * 9000)}`,
       employeeId: 1,
-      employeeName: empName.split('(')[0].trim(),
+      employeeName: (empName.split('(')[0] ?? empName).trim(),
       employeeCode: empName.match(/\((.*?)\)/)?.[1] || 'EMP-00000',
       department: 'Bakery Production',
       amount: amt,
       installmentAmount: inst,
       recoveredAmount: 0,
-      issuedOn: issueDate,
+      issuedOn: issueDate || new Date().toISOString().slice(0, 10),
       status: 'active',
       notes: notes.trim() || 'Approved salary advance.',
     };

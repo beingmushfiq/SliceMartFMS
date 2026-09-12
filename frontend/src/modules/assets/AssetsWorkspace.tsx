@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type {
   Asset,
   AssetCategory,
@@ -12,6 +12,8 @@ import { useCurrency } from '../../hooks/useCurrency';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { Modal } from '../../components/ui/Modal';
 import { notify } from '../../components/ui/Toast';
+import { api } from '../../lib/api/client';
+import { extractList } from '../../lib/api/apiData';
 import {
   Building2,
   TrendingDown,
@@ -241,6 +243,44 @@ export const AssetsWorkspace: React.FC = () => {
       performed_by: 'Navana Motors Workshop',
     },
   ]);
+
+  // Live Backend Assets & Categories Synchronization
+  useEffect(() => {
+    let active = true;
+
+    async function loadLiveAssets() {
+      try {
+        const [assetRes, catRes] = await Promise.allSettled([
+          api.get('/assets'),
+          api.get('/assets/categories'),
+        ]);
+
+        if (!active) return;
+
+        if (assetRes.status === 'fulfilled') {
+          const fetchedAssets = extractList<Asset>(assetRes.value);
+          if (fetchedAssets.length > 0) {
+            setAssets(fetchedAssets);
+          }
+        }
+
+        if (catRes.status === 'fulfilled') {
+          const fetchedCats = extractList<AssetCategory>(catRes.value);
+          if (fetchedCats.length > 0) {
+            setCategories(fetchedCats);
+          }
+        }
+      } catch (err) {
+        console.error('Failed loading live asset data', err);
+      }
+    }
+
+    loadLiveAssets();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 3. Modal States & Form Fields
@@ -1336,7 +1376,7 @@ export const AssetsWorkspace: React.FC = () => {
           {/* Asset Register Toolbar */}
           <div className="bg-surface rounded-2xl border border-default p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-2xs">
             <div className="flex items-center gap-2.5 flex-wrap flex-1">
-              <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <div className="relative flex-1 min-w-50 max-w-sm">
                 <Search className="size-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"

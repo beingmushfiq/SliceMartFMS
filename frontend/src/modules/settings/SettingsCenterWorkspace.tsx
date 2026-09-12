@@ -54,6 +54,7 @@ import {
   Boxes,
   Search,
   User,
+  Zap,
 } from 'lucide-react';
 import { m, AnimatePresence } from 'framer-motion';
 import { api } from '../../lib/api/client';
@@ -72,8 +73,10 @@ import { CustomFieldsManagerSection } from './sections/CustomFieldsManagerSectio
 import { TerminologySection } from './sections/TerminologySection';
 import { RolesManagementWorkspace } from '../../pages/settings/RolesManagementWorkspace';
 import { ActivityLogWorkspace } from '../../pages/settings/ActivityLogWorkspace';
+import { DataBinWorkspace } from '../../pages/settings/DataBinWorkspace';
 import { ProfileSettingsWorkspace } from '../../pages/settings/ProfileSettingsWorkspace';
 import { SeoDiscoverabilityWorkspace } from '../../pages/settings/SeoDiscoverabilityWorkspace';
+import { WorkflowAutomationWorkspace } from './WorkflowAutomationWorkspace';
 import { SettingsOverviewHub } from './components/SettingsOverviewHub';
 import { SettingsOmniSearch } from './components/SettingsOmniSearch';
 import { SettingFieldDispatcher } from './components/SettingFieldDispatcher';
@@ -95,6 +98,7 @@ const GROUP_ICONS: Record<string, React.ElementType> = {
   audit_logs: Activity,
   profile: User,
   seo: Globe,
+  workflows: Zap,
   modules: Boxes,
   terminology: FileSpreadsheet,
   production_stages: Factory,
@@ -116,6 +120,7 @@ const GROUP_ICONS: Record<string, React.ElementType> = {
   notifications: Bell,
   security: ShieldCheck,
   reports: FileSpreadsheet,
+  bin: Trash2,
 };
 
 const GROUP_LABELS: Record<string, string> = {
@@ -125,6 +130,7 @@ const GROUP_LABELS: Record<string, string> = {
   audit_logs: 'Security Audit Trail',
   profile: 'Workstation & Profile',
   seo: 'SEO & Discoverability',
+  workflows: 'SliceMart Flow (Automation)',
   custom_domains: 'Custom Domains & SSL',
   modules: 'ERP Modules & Navigation Order',
   terminology: 'Vocabulary & Terminology',
@@ -146,6 +152,7 @@ const GROUP_LABELS: Record<string, string> = {
   notifications: 'Multi-Channel Alerts',
   security: 'Session & Auth Hardening',
   reports: 'Reports & Export Defaults',
+  bin: 'Data Bin & Recovery Vault',
 };
 
 const CATEGORIES = [
@@ -155,11 +162,11 @@ const CATEGORIES = [
   },
   {
     name: 'Company & Governance',
-    groups: ['general', 'roles', 'audit_logs', 'profile'],
+    groups: ['general', 'roles', 'audit_logs', 'bin', 'profile'],
   },
   {
     name: 'Architecture & Customization',
-    groups: ['modules', 'terminology', 'production_stages', 'custom_fields', 'documents'],
+    groups: ['modules', 'workflows', 'terminology', 'production_stages', 'custom_fields', 'documents'],
   },
   {
     name: 'Manufacturing & Stock',
@@ -197,7 +204,9 @@ export const SettingsCenterWorkspace: React.FC = () => {
       'general',
       'roles',
       'audit_logs',
+      'bin',
       'profile',
+      'workflows',
       'modules',
       'terminology',
       'production_stages',
@@ -810,6 +819,25 @@ export const SettingsCenterWorkspace: React.FC = () => {
                   </div>
                   <ActivityLogWorkspace />
                 </div>
+              ) : activeGroup === 'bin' ? (
+                /* Data Bin & Recovery Vault Workspace Embedded */
+                <div className="bg-surface rounded-(--card-radius) border border-default p-6 space-y-6 shadow-xs">
+                  <div className="flex items-center justify-between pb-4 border-b border-default">
+                    <div className="flex items-center gap-2.5">
+                      <Trash2 className="size-5 text-danger" />
+                      <div>
+                        <h2 className="text-sm font-bold text-default">Data Bin & Recovery Vault</h2>
+                        <p className="text-2xs text-muted">
+                          Safely inspect, restore, or permanently purge soft-deleted records across all ERP domains.
+                        </p>
+                      </div>
+                    </div>
+                    <Button variant="secondary" size="sm" onClick={() => setActiveGroup('overview')}>
+                      Back to Hub
+                    </Button>
+                  </div>
+                  <DataBinWorkspace />
+                </div>
               ) : activeGroup === 'profile' ? (
                 /* Profile & Workstation Settings Embedded */
                 <div className="bg-surface rounded-(--card-radius) border border-default p-6 space-y-6 shadow-xs">
@@ -833,6 +861,11 @@ export const SettingsCenterWorkspace: React.FC = () => {
                 /* SEO & Search Engine Discoverability Embedded */
                 <div className="space-y-6">
                   <SeoDiscoverabilityWorkspace onBackToHub={() => setActiveGroup('overview')} />
+                </div>
+              ) : activeGroup === 'workflows' ? (
+                /* SliceMart Flow Workflow Automation Hub Embedded */
+                <div className="space-y-6">
+                  <WorkflowAutomationWorkspace />
                 </div>
               ) : activeGroup === 'modules' ? (
                 /* Dynamic Module Activation */

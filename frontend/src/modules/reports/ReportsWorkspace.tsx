@@ -42,6 +42,7 @@ import {
   getReportFallbackData,
 } from './reportCatalogue';
 import { api } from '../../lib/api/client';
+import { notify } from '../../components/ui/Toast';
 
 const MODULE_ICONS: Record<string, React.FC<{ className?: string }>> = {
   all: Layers,
@@ -335,14 +336,42 @@ export const ReportsWorkspace: React.FC = () => {
     }
   };
 
-  // Direct client-side file download for immediate feedback + async queue trigger
-  const handleExport = () => {
-    if (!reportResult) return;
+  // Real backend server export with client-side instant fallback
+  const handleExport = async () => {
+    if (!reportResult || !activeDef) return;
 
-    setExportStatus('Generating download package...');
+    setExportStatus('Generating authenticated export package...');
 
     try {
-      // Build CSV content
+      const resp = await api.post<{
+        uuid: string;
+        download_url: string;
+        row_count: number;
+        file_size_bytes: number;
+      }>(`/reports/${activeDef.code}/export`, {
+        format: exportFormat,
+        filters: {
+          date_from: startDate,
+          date_to: endDate,
+        },
+      });
+
+      if (resp.data?.download_url) {
+        // Trigger authenticated download link
+        const downloadUrl = `/api/v1${resp.data.download_url}`;
+        window.open(downloadUrl, '_blank');
+        setExportStatus(
+          `Export completed! ${resp.data.row_count} rows (${Math.round(resp.data.file_size_bytes / 1024)} KB) downloaded.`
+        );
+        notify.success(`Export ready: ${resp.data.row_count} rows streamed.`);
+        return;
+      }
+    } catch {
+      // Graceful local fallback if network interrupted
+    }
+
+    try {
+      // Local CSV build fallback
       const headers = Object.values(reportResult.columns).map((c) => `"${c.label}"`);
       const colKeys = Object.keys(reportResult.columns);
       const rows = reportResult.data.map((row) => {
@@ -356,18 +385,18 @@ export const ReportsWorkspace: React.FC = () => {
       link.setAttribute('href', url);
       link.setAttribute(
         'download',
-        `SliceMart_${activeDef?.code || 'report'}_${new Date().toISOString().split('T')[0]}.${exportFormat === 'csv' ? 'csv' : 'csv'}`
+        `SliceMart_${activeDef?.code || 'report'}_${new Date().toISOString().split('T')[0]}.csv`
       );
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      setExportStatus(
-        `Export successful! (Queued Task #SM-EXP-${Math.floor(Math.random() * 90000 + 10000)})`
-      );
+      setExportStatus('Export successful! Local download complete.');
+      notify.success('Report exported to CSV successfully.');
     } catch {
-      setExportStatus('Queued (Worker Task #SM-EXP-49201)');
+      setExportStatus('Export failed. Please try again.');
+      notify.error('Failed to export report.');
     }
   };
 

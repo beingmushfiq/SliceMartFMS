@@ -19,12 +19,14 @@ import {
   ArrowRight,
   Zap,
   Check,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { SalesOrdersSection } from './sections/SalesOrdersSection';
 import { InvoicesSection } from './sections/InvoicesSection';
 import { DeliveriesSection } from './sections/DeliveriesSection';
 import { PaymentsSection } from './sections/PaymentsSection';
 import { SalesReturnsSection } from './sections/SalesReturnsSection';
+import { ExchangesSection } from './sections/ExchangesSection';
 import { LeadsSection } from './sections/LeadsSection';
 import { CustomersSection } from './sections/CustomersSection';
 import { SalesmenProfilesSection } from './sections/SalesmenProfilesSection';
@@ -43,6 +45,7 @@ export type SalesTab =
   | 'deliveries'
   | 'payments'
   | 'returns'
+  | 'exchanges'
   | 'customers'
   | 'leads'
   | 'salesmen'
@@ -56,6 +59,7 @@ const VALID_TABS: readonly SalesTab[] = [
   'deliveries',
   'payments',
   'returns',
+  'exchanges',
   'customers',
   'leads',
   'salesmen',
@@ -93,12 +97,12 @@ const CATEGORIES: CategoryConfig[] = [
   {
     id: 'operations',
     label: 'Orders & Invoicing',
-    tagline: 'Sales Orders, Invoices, Dispatch & Payments',
+    tagline: 'Sales Orders, Invoices, Dispatch, Payments & Exchanges',
     icon: Layers,
-    tabs: ['orders', 'invoices', 'deliveries', 'payments', 'returns'],
+    tabs: ['orders', 'invoices', 'deliveries', 'payments', 'returns', 'exchanges'],
     defaultTab: 'orders',
     shortcut: '1',
-    badge: '5 Capabilities',
+    badge: '6 Capabilities',
   },
   {
     id: 'crm',
@@ -172,6 +176,16 @@ const TABS: TabConfig[] = [
     icon: Undo2,
     description: 'Process returned items, issue credit notes and restock good inventory',
     highlights: ['Condition inspection', 'Credit note refunds', 'Automatic warehouse restock'],
+  },
+  {
+    id: 'exchanges',
+    label: 'Product Exchanges',
+    shortLabel: 'Exchanges',
+    category: 'operations',
+    badge: 'Exchange',
+    icon: ArrowLeftRight,
+    description: 'Swap returned products for replacements in one atomic transaction with auto-calculated difference',
+    highlights: ['Return + dispatch in one step', 'Auto difference calculation', 'POS & B2B support'],
   },
   {
     id: 'leads',
@@ -825,6 +839,7 @@ export default function SalesWorkspace() {
         {activeTab === 'deliveries' && <DeliveriesSection />}
         {activeTab === 'payments' && <PaymentsSection />}
         {activeTab === 'returns' && <SalesReturnsSection />}
+        {activeTab === 'exchanges' && <ExchangesSection />}
         {activeTab === 'customers' && <CustomersSection />}
         {activeTab === 'leads' && <LeadsSection />}
         {activeTab === 'salesmen' && (

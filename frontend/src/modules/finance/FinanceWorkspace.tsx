@@ -49,6 +49,8 @@ import { TransferMoneyModal } from './modals/TransferMoneyModal';
 import type { TransferMoneySuccessPayload } from './modals/TransferMoneyModal';
 import { PrintPreviewModal, FinancialStatementPrintDocument } from '../../components/print';
 import { useBusinessConfig } from '../../lib/document/useBusinessConfig';
+import { api } from '../../lib/api/client';
+import { extractList } from '../../lib/api/apiData';
 
 export type FinanceTab =
   'coa' | 'journal' | 'banking' | 'expenses' | 'costing' | 'statements' | 'due-collection';
@@ -632,6 +634,60 @@ export const FinanceWorkspace: React.FC = () => {
       calculated_at: '2026-08-28 08:30:00',
     },
   ]);
+
+  // Live Backend Data Synchronization
+  useEffect(() => {
+    let active = true;
+
+    async function loadLiveFinanceData() {
+      try {
+        const [accRes, jvRes, bankRes, expRes] = await Promise.allSettled([
+          api.get('/finance/accounts'),
+          api.get('/finance/journal-entries'),
+          api.get('/finance/bank-accounts'),
+          api.get('/finance/expenses'),
+        ]);
+
+        if (!active) return;
+
+        if (accRes.status === 'fulfilled') {
+          const fetchedAccs = extractList<ChartOfAccount>(accRes.value);
+          if (fetchedAccs.length > 0) {
+            setAccounts(fetchedAccs);
+          }
+        }
+
+        if (jvRes.status === 'fulfilled') {
+          const fetchedJvs = extractList<JournalEntry>(jvRes.value);
+          if (fetchedJvs.length > 0) {
+            setJournalEntries(fetchedJvs);
+          }
+        }
+
+        if (bankRes.status === 'fulfilled') {
+          const fetchedBanks = extractList<BankAccount>(bankRes.value);
+          if (fetchedBanks.length > 0) {
+            setBankAccounts(fetchedBanks);
+          }
+        }
+
+        if (expRes.status === 'fulfilled') {
+          const fetchedExps = extractList<Expense>(expRes.value);
+          if (fetchedExps.length > 0) {
+            setExpenses(fetchedExps);
+          }
+        }
+      } catch (err) {
+        console.error('Failed loading live finance data', err);
+      }
+    }
+
+    loadLiveFinanceData();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Account Modal State
   const [showNewAccountModal, setShowNewAccountModal] = useState(false);

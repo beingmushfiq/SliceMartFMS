@@ -23,7 +23,7 @@ class StockValuationReportQuery implements ReportQueryInterface
 
     public function query(array $filters, int $page = 1, int $perPage = 25): array
     {
-        $tenantId = $filters['tenant_id'] ?? auth()->user()?->tenant_id ?? 1;
+        $tenantId = $filters['tenant_id'] ?? \Illuminate\Support\Facades\Auth::user()?->tenant_id ?? 1;
 
         $query = DB::table('stock_balances as sb')
             ->join('products as p', 'sb.product_id', '=', 'p.id')
@@ -34,8 +34,8 @@ class StockValuationReportQuery implements ReportQueryInterface
                 'p.sku',
                 'p.name as product_name',
                 'w.name as warehouse_name',
-                'sb.quantity_on_hand',
-                'p.cost_price as unit_cost',
+                'sb.quantity as quantity_on_hand',
+                'p.standard_cost as unit_cost',
             ]);
 
         if (!empty($filters['warehouse_id'])) {
@@ -76,7 +76,7 @@ class StockValuationReportQuery implements ReportQueryInterface
 
     public function summary(array $filters): array
     {
-        $tenantId = $filters['tenant_id'] ?? auth()->user()?->tenant_id ?? 1;
+        $tenantId = $filters['tenant_id'] ?? \Illuminate\Support\Facades\Auth::user()?->tenant_id ?? 1;
 
         $query = DB::table('stock_balances as sb')
             ->join('products as p', 'sb.product_id', '=', 'p.id')
@@ -88,8 +88,8 @@ class StockValuationReportQuery implements ReportQueryInterface
 
         $stats = $query->selectRaw('
             COUNT(sb.id) as total_items,
-            COALESCE(SUM(sb.quantity_on_hand), 0) as total_units,
-            COALESCE(SUM(sb.quantity_on_hand * p.cost_price), 0) as total_inventory_valuation
+            COALESCE(SUM(sb.quantity), 0) as total_units,
+            COALESCE(SUM(sb.quantity * p.standard_cost), 0) as total_inventory_valuation
         ')->first();
 
         return [

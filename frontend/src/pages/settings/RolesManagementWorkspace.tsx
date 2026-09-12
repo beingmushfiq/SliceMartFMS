@@ -18,6 +18,8 @@ import {
   CheckSquare,
   Square,
   Layers,
+  UserPlus,
+  UserMinus,
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
 import { useAuthStore } from '../../lib/auth/authStore';
@@ -86,6 +88,15 @@ export const RolesManagementWorkspace: React.FC = () => {
   const [roleToDelete, setRoleToDelete] = useState<RoleData | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Role Members Modal
+  const [membersRole, setMembersRole] = useState<RoleData | null>(null);
+  const [roleMembers, setRoleMembers] = useState<any[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [allUsersList, setAllUsersList] = useState<any[]>([]);
+  const [selectedUserToAdd, setSelectedUserToAdd] = useState<string>('');
+  const [addingMember, setAddingMember] = useState(false);
+  const [removingMemberId, setRemovingMemberId] = useState<number | null>(null);
 
   // Load Roles & Permission Catalog
   useEffect(() => {
@@ -299,6 +310,72 @@ export const RolesManagementWorkspace: React.FC = () => {
     }
   };
 
+  // Role Members Management
+  const handleOpenMembersModal = async (role: RoleData) => {
+    setMembersRole(role);
+    setLoadingMembers(true);
+    setSelectedUserToAdd('');
+    try {
+      const [membersRes, usersRes] = await Promise.all([
+        api.get<any>(`/roles/${role.id}/users`),
+        allUsersList.length === 0 ? api.get<any>('/users') : Promise.resolve({ data: allUsersList }),
+      ]);
+      const members = membersRes.data?.data || (Array.isArray(membersRes.data) ? membersRes.data : []);
+      setRoleMembers(members);
+
+      const users = usersRes.data?.data || (Array.isArray(usersRes.data) ? usersRes.data : []);
+      setAllUsersList(users);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to load role members';
+      notify.error(msg);
+    } finally {
+      setLoadingMembers(false);
+    }
+  };
+
+  const handleAssignUserToRole = async () => {
+    if (!membersRole || !selectedUserToAdd) return;
+    setAddingMember(true);
+    try {
+      await api.post(`/roles/${membersRole.id}/users`, {
+        user_id: parseInt(selectedUserToAdd, 10),
+      });
+      notify.success('User assigned to role successfully.');
+      setSelectedUserToAdd('');
+      const membersRes = await api.get<any>(`/roles/${membersRole.id}/users`);
+      const members = membersRes.data?.data || (Array.isArray(membersRes.data) ? membersRes.data : []);
+      setRoleMembers(members);
+      setRoles((prev) =>
+        prev.map((r) => (r.id === membersRole.id ? { ...r, users_count: (r.users_count ?? 0) + 1 } : r))
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to assign user to role';
+      notify.error(msg);
+    } finally {
+      setAddingMember(false);
+    }
+  };
+
+  const handleRemoveUserFromRole = async (userId: number) => {
+    if (!membersRole) return;
+    setRemovingMemberId(userId);
+    try {
+      await api.delete(`/roles/${membersRole.id}/users/${userId}`);
+      notify.success('User removed from role.');
+      setRoleMembers((prev) => prev.filter((m) => m.id !== userId));
+      setRoles((prev) =>
+        prev.map((r) =>
+          r.id === membersRole.id ? { ...r, users_count: Math.max(0, (r.users_count ?? 1) - 1) } : r
+        )
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to remove user from role';
+      notify.error(msg);
+    } finally {
+      setRemovingMemberId(null);
+    }
+  };
+
   // Filtered Roles List
   const filteredRoles = useMemo(() => {
     if (!roleSearch.trim()) return roles;
@@ -487,10 +564,15 @@ export const RolesManagementWorkspace: React.FC = () => {
                   </div>
 
                   <div className="flex items-center justify-between text-xs pt-1">
-                    <div className="flex items-center gap-1.5 text-muted text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenMembersModal(role)}
+                      className="flex items-center gap-1.5 text-primary hover:underline text-[11px] font-medium cursor-pointer transition-colors"
+                      title="View & manage assigned users"
+                    >
                       <Users className="size-3.5" />
                       <span>{role.users_count ?? 0} Users Assigned</span>
-                    </div>
+                    </button>
 
                     <Button
                       variant="secondary"
@@ -854,6 +936,130 @@ export const RolesManagementWorkspace: React.FC = () => {
               >
                 {deleting ? 'Deleting...' : 'Confirm Delete'}
               </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Role Members Management Modal */}
+      {membersRole && (
+        <Modal
+          open={!!membersRole}
+          onClose={() => setMembersRole(null)}
+          title={`Role Members: ${membersRole.name}`}
+          subtitle={`Manage staff and user accounts holding the ${membersRole.name} security role`}
+          size="lg"
+          footer={
+            <div className="flex justify-between items-center w-full">
+              <span className="text-xs text-muted font-medium">
+                {roleMembers.length} {roleMembers.length === 1 ? 'member' : 'members'} assigned
+              </span>
+              <Button variant="secondary" size="sm" onClick={() => setMembersRole(null)}>
+                Close
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-4 py-2">
+            {/* Quick Assign Box */}
+            <div className="p-3.5 rounded-xl border border-default bg-surface-sunken space-y-2.5">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-default">
+                <UserPlus className="size-3.5 text-primary" />
+                <span>Assign Staff Member or User to this Role</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedUserToAdd}
+                  onChange={(e) => setSelectedUserToAdd(e.target.value)}
+                  className="flex-1 px-3 py-2 text-xs bg-surface border border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 text-default cursor-pointer"
+                >
+                  <option value="">-- Select user to assign --</option>
+                  {allUsersList
+                    .filter((u) => !roleMembers.some((m) => m.id === u.id))
+                    .map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} ({u.email}) {u.employee ? `— ${u.employee.employee_code}` : ''}
+                      </option>
+                    ))}
+                </select>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleAssignUserToRole}
+                  disabled={!selectedUserToAdd || addingMember}
+                  className="h-8 text-xs gap-1"
+                >
+                  <UserPlus className="size-3.5" />
+                  {addingMember ? 'Assigning...' : 'Assign User'}
+                </Button>
+              </div>
+            </div>
+
+            {/* Members List */}
+            <div className="space-y-2">
+              <div className="text-xs font-semibold text-default uppercase tracking-wider">
+                Currently Assigned Accounts
+              </div>
+              {loadingMembers ? (
+                <div className="p-8 text-center text-xs text-muted">
+                  Loading role members...
+                </div>
+              ) : roleMembers.length === 0 ? (
+                <div className="p-8 text-center text-xs text-muted border border-dashed border-default rounded-xl">
+                  No staff or users are currently assigned to this role. Use the selector above to assign members.
+                </div>
+              ) : (
+                <div className="border border-default rounded-xl overflow-hidden divide-y divide-default max-h-80 overflow-y-auto">
+                  {roleMembers.map((member) => (
+                    <div
+                      key={member.id}
+                      className="p-3 bg-surface hover:bg-surface-sunken transition-colors flex items-center justify-between gap-3 text-xs"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="size-8 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-xs shrink-0">
+                          {member.name.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-default flex items-center gap-2">
+                            <span>{member.name}</span>
+                            <span
+                              className={`inline-block size-1.5 rounded-full ${
+                                member.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'
+                              }`}
+                            />
+                          </div>
+                          <div className="text-[11px] text-muted font-mono truncate">{member.email}</div>
+                          {member.employee && (
+                            <div className="text-[10px] text-muted flex items-center gap-1.5 mt-0.5">
+                              <span className="font-mono font-semibold text-default bg-surface-sunken px-1 rounded border border-default">
+                                {member.employee.employee_code}
+                              </span>
+                              {member.employee.department && (
+                                <span>• {member.employee.department}</span>
+                              )}
+                              {member.employee.designation && (
+                                <span>• {member.employee.designation}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveUserFromRole(member.id)}
+                        disabled={removingMemberId === member.id}
+                        className="h-7 px-2 text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 text-xs gap-1"
+                        title="Remove user from this role"
+                      >
+                        <UserMinus className="size-3.5" />
+                        <span>Remove</span>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </Modal>
