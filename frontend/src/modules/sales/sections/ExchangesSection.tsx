@@ -21,6 +21,9 @@ import {
   ChevronDown,
   ChevronUp,
   Ban,
+  FileText,
+  Zap,
+  Link2,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
@@ -169,30 +172,129 @@ const SAMPLE_EXCHANGES: Exchange[] = [
   },
 ];
 
-// ─── Form state type ──────────────────────────────────────────────────────────
+// ─── Form state & dropdown option types ─────────────────────────────────────
 
 interface FormReturnItem {
+  product_id: number;
   product_name: string;
   quantity: string;
+  unit_id: number;
   unit_price: string;
   condition: string;
   restock: boolean;
 }
 
 interface FormReplacementItem {
+  product_id: number;
   product_name: string;
   quantity: string;
+  unit_id: number;
   unit_price: string;
 }
 
 interface ExchangeFormData {
+  original_invoice_id: number | null;
+  party_id: number | null;
   customer_name: string;
+  warehouse_id: number;
   warehouse_name: string;
   exchange_date: string;
+  reason_code_id: number;
   reason: string;
   notes: string;
   return_items: FormReturnItem[];
   replacement_items: FormReplacementItem[];
+}
+
+interface InvoiceOptionItem {
+  id: number;
+  product_id: number;
+  product_name?: string;
+  quantity: string;
+  unit_id: number;
+  unit_price: string;
+  line_total: string;
+}
+
+interface InvoiceOption {
+  id: number;
+  uuid: string;
+  invoice_number: string;
+  party_id?: number | null;
+  customer_name?: string | null;
+  total_amount: string;
+  paid_amount: string;
+  status: string;
+  items?: InvoiceOptionItem[];
+}
+
+interface CustomerOption {
+  id: string;
+  party_id?: number;
+  code?: string;
+  name: string;
+  label?: string;
+  phone?: string | null;
+}
+
+interface WarehouseOption {
+  id: string;
+  warehouse_id?: number;
+  code?: string;
+  name?: string;
+  label: string;
+}
+
+interface ProductOption {
+  id: string;
+  product_id: number;
+  name: string;
+  sku: string;
+  unit_id?: number;
+  default_sale_price?: string | null;
+}
+
+const REASON_OPTIONS = [
+  { id: 1, name: 'Manufacturing defect' },
+  { id: 2, name: 'Customer product upgrade' },
+  { id: 3, name: 'Wrong item shipped' },
+  { id: 4, name: 'Size or specification mismatch' },
+  { id: 5, name: 'Customer request / general exchange' },
+];
+
+const FALLBACK_PRODUCTS: ProductOption[] = [
+  { id: '1', product_id: 1, name: 'Infrared Cooker 2200W (SM-IC220)', sku: 'SM-IC220', unit_id: 1, default_sale_price: '2850.00' },
+  { id: '2', product_id: 2, name: 'Infrared Cooker 2500W Pro (SM-IC250)', sku: 'SM-IC250', unit_id: 1, default_sale_price: '3500.00' },
+  { id: '3', product_id: 3, name: 'Double Burner Gas Stove (SM-GS2B)', sku: 'SM-GS2B', unit_id: 1, default_sale_price: '2700.00' },
+  { id: '4', product_id: 4, name: 'Smart Digital Induction Cooker (SM-IC300)', sku: 'SM-IC300', unit_id: 1, default_sale_price: '4200.00' },
+  { id: '5', product_id: 5, name: 'Electric Pressure Cooker 6L (SM-EPC60)', sku: 'SM-EPC60', unit_id: 1, default_sale_price: '4800.00' },
+  { id: '6', product_id: 6, name: 'Heavy Duty Range Hood 90cm (SM-RH90)', sku: 'SM-RH90', unit_id: 1, default_sale_price: '11500.00' },
+  { id: '7', product_id: 7, name: 'A-Grade Microcrystalline Ceramic Panel', sku: 'RAW-CERAMIC-PANEL', unit_id: 1, default_sale_price: '1200.00' },
+  { id: '8', product_id: 8, name: '2200W Heating Coil & Element', sku: 'RAW-COIL-2200W', unit_id: 1, default_sale_price: '850.00' },
+  { id: '9', product_id: 9, name: '3500W Dual-Zone Infrared Heating Element', sku: 'RAW-COIL-3500W', unit_id: 1, default_sale_price: '1400.00' },
+  { id: '10', product_id: 10, name: 'Smart Digital Touch PCBA Board with IGBT', sku: 'RAW-PCB-DIGITAL', unit_id: 1, default_sale_price: '1650.00' },
+];
+
+const FALLBACK_CUSTOMERS: CustomerOption[] = [
+  { id: 'cust-1', party_id: 1, code: 'CUST-001', name: 'Apex Retail Showroom', label: 'Apex Retail Showroom (CUST-001)' },
+  { id: 'cust-2', party_id: 2, code: 'CUST-002', name: 'Pran-RFL Group (Catering Div)', label: 'Pran-RFL Group (Catering Div) (CUST-002)' },
+  { id: 'cust-3', party_id: 3, code: 'CUST-003', name: 'Dhaka Modern Electronics', label: 'Dhaka Modern Electronics (CUST-003)' },
+  { id: 'cust-4', party_id: 4, code: 'CUST-004', name: 'Chittagong Appliance Hub', label: 'Chittagong Appliance Hub (CUST-004)' },
+];
+
+const FALLBACK_WAREHOUSES: WarehouseOption[] = [
+  { id: 'wh-1', warehouse_id: 1, name: 'Main Distribution Hub (Dhaka)', label: 'Main Distribution Hub (Dhaka)' },
+  { id: 'wh-2', warehouse_id: 2, name: 'Chittagong Regional Depot', label: 'Chittagong Regional Depot' },
+  { id: 'wh-3', warehouse_id: 3, name: 'QC Electrical Testing & Burn-In Hold Depot', label: 'QC Electrical Testing & Burn-In Hold Depot' },
+  { id: 'wh-4', warehouse_id: 4, name: 'North Distribution Hub (Rajshahi)', label: 'North Distribution Hub (Rajshahi)' },
+];
+
+function extractArray<T>(resData: unknown): T[] {
+  if (Array.isArray(resData)) return resData as T[];
+  if (resData && typeof resData === 'object' && 'data' in resData && Array.isArray((resData as { data?: unknown }).data)) {
+    return (resData as { data: T[] }).data;
+  }
+  return [];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -266,23 +368,44 @@ export function ExchangesSection() {
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   const [formData, setFormData] = useState<ExchangeFormData>({
-    customer_name: '',
-    warehouse_name: 'Main Distribution Hub (Dhaka)',
+    original_invoice_id: null,
+    party_id: FALLBACK_CUSTOMERS[0]?.party_id ?? 1,
+    customer_name: FALLBACK_CUSTOMERS[0]?.name ?? 'Apex Retail Showroom',
+    warehouse_id: FALLBACK_WAREHOUSES[0]?.warehouse_id ?? 1,
+    warehouse_name: FALLBACK_WAREHOUSES[0]?.name ?? 'Main Distribution Hub (Dhaka)',
     exchange_date: new Date().toISOString().slice(0, 10),
+    reason_code_id: 1,
     reason: 'Manufacturing defect',
     notes: '',
-    return_items: [{ product_name: '', quantity: '1', unit_price: '', condition: 'good', restock: true }],
-    replacement_items: [{ product_name: '', quantity: '1', unit_price: '' }],
+    return_items: [
+      {
+        product_id: FALLBACK_PRODUCTS[0]?.product_id ?? 1,
+        product_name: FALLBACK_PRODUCTS[0]?.name ?? 'Infrared Cooker 2200W (SM-IC220)',
+        quantity: '1',
+        unit_id: FALLBACK_PRODUCTS[0]?.unit_id ?? 1,
+        unit_price: FALLBACK_PRODUCTS[0]?.default_sale_price ?? '2850.00',
+        condition: 'good',
+        restock: true,
+      },
+    ],
+    replacement_items: [
+      {
+        product_id: FALLBACK_PRODUCTS[1]?.product_id ?? 2,
+        product_name: FALLBACK_PRODUCTS[1]?.name ?? 'Infrared Cooker 2500W Pro (SM-IC250)',
+        quantity: '1',
+        unit_id: FALLBACK_PRODUCTS[1]?.unit_id ?? 1,
+        unit_price: FALLBACK_PRODUCTS[1]?.default_sale_price ?? '3500.00',
+      },
+    ],
   });
 
-  // ── Query ────────────────────────────────────────────────────────────────
+  // ── Query Exchanges ───────────────────────────────────────────────────────
   const { data: exchanges = SAMPLE_EXCHANGES, isLoading, refetch } = useQuery<Exchange[]>({
     queryKey: ['sales', 'exchanges'],
     queryFn: async () => {
       try {
-        const res = await api.get<{ data: Exchange[] }>('/sales/exchanges');
-        const raw = res.data;
-        const rows = Array.isArray(raw) ? raw : (raw as { data?: Exchange[] })?.data ?? [];
+        const res = await api.get<unknown>('/sales/exchanges');
+        const rows = extractArray<Exchange>(res.data);
         if (rows.length > 0) return rows;
       } catch {
         // fallback to sample
@@ -291,6 +414,76 @@ export function ExchangesSection() {
     },
     initialData: SAMPLE_EXCHANGES,
   });
+
+  // ── Dropdown Options Queries ─────────────────────────────────────────────
+  const { data: invoiceOptions = [] } = useQuery<InvoiceOption[]>({
+    queryKey: ['sales', 'invoices'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<unknown>('/sales/invoices');
+        const rows = extractArray<InvoiceOption>(res.data);
+        return rows;
+      } catch {
+        return [];
+      }
+    },
+  });
+
+  const { data: customerOptions = FALLBACK_CUSTOMERS } = useQuery<CustomerOption[]>({
+    queryKey: ['catalogue', 'parties', 'customers'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<unknown>('/parties/options?is_customer=true');
+        const rows = extractArray<CustomerOption>(res.data);
+        if (rows.length > 0) return rows;
+      } catch {
+        // fallback
+      }
+      return FALLBACK_CUSTOMERS;
+    },
+    initialData: FALLBACK_CUSTOMERS,
+  });
+
+  const { data: warehouseOptions = FALLBACK_WAREHOUSES } = useQuery<WarehouseOption[]>({
+    queryKey: ['catalogue', 'warehouses', 'options'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<unknown>('/warehouses/options');
+        const rows = extractArray<WarehouseOption>(res.data);
+        if (rows.length > 0) return rows;
+      } catch {
+        // fallback
+      }
+      return FALLBACK_WAREHOUSES;
+    },
+    initialData: FALLBACK_WAREHOUSES,
+  });
+
+  const { data: productOptions = FALLBACK_PRODUCTS } = useQuery<ProductOption[]>({
+    queryKey: ['catalogue', 'products', 'dropdown'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<unknown>('/products?per_page=100');
+        const list = extractArray<Record<string, unknown>>(res.data);
+        if (list.length > 0) {
+          return list.map((p, idx) => ({
+            id: String(p['id'] ?? p['uuid'] ?? idx + 1),
+            product_id: Number(p['product_id'] ?? p['id'] ?? idx + 1),
+            name: String(p['name'] ?? `Product #${idx + 1}`),
+            sku: String(p['sku'] ?? `SKU-${idx + 1}`),
+            unit_id: Number(p['unit_id'] ?? p['base_unit_id'] ?? 1),
+            default_sale_price: String(p['default_sale_price'] ?? '0.00'),
+          }));
+        }
+      } catch {
+        // fallback
+      }
+      return FALLBACK_PRODUCTS;
+    },
+    initialData: FALLBACK_PRODUCTS,
+  });
+
+  const selectedInvoice = invoiceOptions.find((inv) => inv.id === formData.original_invoice_id);
 
   // ── Calculations ─────────────────────────────────────────────────────────
   const returnTotal = formData.return_items.reduce(
@@ -316,10 +509,9 @@ export function ExchangesSection() {
     setActionLoading(id);
     try {
       await api.post(`/sales/exchanges/${id}/approve`, {});
-      toast.success('Exchange approved — stock movements recorded.');
-      queryClient.setQueryData<Exchange[]>(['sales', 'exchanges'], (prev = []) =>
-        prev.map((e) => (e.id === id ? { ...e, status: 'approved', approved_at: new Date().toISOString() } : e))
-      );
+      toast.success('Exchange approved — stock movements recorded and linked invoice balance updated.');
+      queryClient.invalidateQueries({ queryKey: ['sales', 'exchanges'] });
+      queryClient.invalidateQueries({ queryKey: ['sales', 'invoices'] });
     } catch {
       toast.success('Exchange approved (offline mode).');
       queryClient.setQueryData<Exchange[]>(['sales', 'exchanges'], (prev = []) =>
@@ -335,9 +527,7 @@ export function ExchangesSection() {
     try {
       await api.post(`/sales/exchanges/${id}/cancel`, {});
       toast.success('Exchange cancelled.');
-      queryClient.setQueryData<Exchange[]>(['sales', 'exchanges'], (prev = []) =>
-        prev.map((e) => (e.id === id ? { ...e, status: 'cancelled' } : e))
-      );
+      queryClient.invalidateQueries({ queryKey: ['sales', 'exchanges'] });
     } catch {
       toast.success('Exchange cancelled (offline mode).');
       queryClient.setQueryData<Exchange[]>(['sales', 'exchanges'], (prev = []) =>
@@ -354,9 +544,11 @@ export function ExchangesSection() {
       id: createLocalExchangeId(),
       uuid: createLocalExchangeUuid(),
       exchange_number: createLocalExchangeNumber(),
-      warehouse_id: 1,
+      original_invoice_id: formData.original_invoice_id,
+      party_id: formData.party_id,
+      warehouse_id: formData.warehouse_id,
       exchange_date: formData.exchange_date,
-      reason_code_id: 1,
+      reason_code_id: formData.reason_code_id,
       exchange_type: diff > 0 ? 'upgrade' : diff < 0 ? 'downgrade' : 'like_for_like',
       return_subtotal: returnTotal.toFixed(4),
       replacement_subtotal: replacementTotal.toFixed(4),
@@ -370,10 +562,10 @@ export function ExchangesSection() {
       reason_code_name: formData.reason,
       return_items: formData.return_items.map((it, idx) => ({
         id: createLocalExchangeId() + idx,
-        product_id: idx + 1,
-        product_name: it.product_name,
+        product_id: it.product_id || (idx + 1),
+        product_name: it.product_name || `Product #${it.product_id}`,
         quantity: it.quantity,
-        unit_id: 1,
+        unit_id: it.unit_id || 1,
         unit_price: it.unit_price,
         line_total: (parseFloat(it.quantity || '0') * parseFloat(it.unit_price || '0')).toFixed(4),
         condition: it.condition,
@@ -381,10 +573,10 @@ export function ExchangesSection() {
       })),
       replacement_items: formData.replacement_items.map((it, idx) => ({
         id: createLocalExchangeId() + idx + 100,
-        product_id: idx + 1,
-        product_name: it.product_name,
+        product_id: it.product_id || (idx + 1),
+        product_name: it.product_name || `Product #${it.product_id}`,
         quantity: it.quantity,
-        unit_id: 1,
+        unit_id: it.unit_id || 1,
         unit_price: it.unit_price,
         line_total: (parseFloat(it.quantity || '0') * parseFloat(it.unit_price || '0')).toFixed(4),
       })),
@@ -393,33 +585,38 @@ export function ExchangesSection() {
     try {
       await api.post('/sales/exchanges', {
         exchange_date: formData.exchange_date,
-        warehouse_id: 1,
-        reason_code_id: 1,
-        notes: formData.notes,
+        warehouse_id: formData.warehouse_id,
+        reason_code_id: formData.reason_code_id,
+        original_invoice_id: formData.original_invoice_id,
+        party_id: formData.party_id,
+        notes: formData.notes || undefined,
         return_items: formData.return_items.map((it) => ({
-          product_id: 1,
+          product_id: it.product_id || 1,
           quantity: it.quantity,
-          unit_id: 1,
+          unit_id: it.unit_id || 1,
           unit_price: it.unit_price,
           condition: it.condition,
           restock: it.restock,
         })),
         replacement_items: formData.replacement_items.map((it) => ({
-          product_id: 1,
+          product_id: it.product_id || 1,
           quantity: it.quantity,
-          unit_id: 1,
+          unit_id: it.unit_id || 1,
           unit_price: it.unit_price,
         })),
       });
       toast.success('Exchange created successfully!');
     } catch {
-      // local state update
+      // local state update fallback
     }
 
+    queryClient.invalidateQueries({ queryKey: ['sales', 'exchanges'] });
+    queryClient.invalidateQueries({ queryKey: ['sales', 'invoices'] });
     queryClient.setQueryData<Exchange[]>(['sales', 'exchanges'], (prev = []) => [newExchange, ...prev]);
     setShowCreateModal(false);
     toast.success(`Exchange ${newExchange.exchange_number} created as draft.`);
   };
+
 
   const filtered = exchanges.filter((e) => {
     const matchStatus = statusFilter === 'all' || e.status === statusFilter;
@@ -731,18 +928,134 @@ export function ExchangesSection() {
             </div>
 
             <form onSubmit={handleCreate} className="p-5 space-y-5">
-              {/* Meta */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-muted mb-1">Customer Name</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Apex Retail Showroom"
-                    value={formData.customer_name}
-                    onChange={(e) => setFormData((f) => ({ ...f, customer_name: e.target.value }))}
-                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-default bg-surface-sunken text-default placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary/40"
-                  />
+              {/* ── Invoice Correlation Picker (Dynamic Auto-fill & Sync) ── */}
+              <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4 space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <FileText className="size-4 text-violet-500" />
+                    <div>
+                      <h4 className="text-xs font-bold text-default">Sales Invoice Correlation (Dynamic)</h4>
+                      <p className="text-[10px] text-muted">Select an invoice to link financial settlements and enable 1-click line item returns</p>
+                    </div>
+                  </div>
+                  {selectedInvoice && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-500/15 text-violet-600 border border-violet-500/30">
+                      <Link2 className="size-3" /> Linked to {selectedInvoice.invoice_number}
+                    </span>
+                  )}
                 </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="block text-[10px] font-semibold text-muted mb-1">Select Sales Invoice</label>
+                    <select
+                      value={formData.original_invoice_id ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value ? parseInt(e.target.value, 10) : null;
+                        const inv = invoiceOptions.find((i) => i.id === val);
+                        setFormData((f) => ({
+                          ...f,
+                          original_invoice_id: val,
+                          party_id: inv?.party_id ?? f.party_id,
+                          customer_name: inv?.customer_name ?? f.customer_name,
+                        }));
+                        if (inv) {
+                          toast.info(`Linked Invoice ${inv.invoice_number}. Customer auto-filled.`);
+                        }
+                      }}
+                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-default bg-surface text-default focus:outline-none focus:ring-1 focus:ring-violet-500/50"
+                    >
+                      <option value="">— No Linked Invoice (Direct Counter / Walk-in Exchange) —</option>
+                      {invoiceOptions.map((inv) => (
+                        <option key={inv.id} value={inv.id}>
+                          {inv.invoice_number} · {inv.customer_name ?? 'Counter Customer'} · {currencySymbol}{parseFloat(inv.total_amount || '0').toLocaleString()} ({inv.status})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-muted mb-1">Linked Invoice Amount</label>
+                    <div className="px-3 py-1.5 text-xs rounded-lg border border-default bg-surface-sunken font-mono text-default flex items-center justify-between">
+                      <span className="text-muted text-[11px]">Total:</span>
+                      <span className="font-bold text-violet-600 dark:text-violet-400">
+                        {selectedInvoice ? `${currencySymbol}${parseFloat(selectedInvoice.total_amount || '0').toFixed(2)}` : '—'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick-pick items from selected invoice */}
+                {selectedInvoice && selectedInvoice.items && selectedInvoice.items.length > 0 && (
+                  <div className="pt-2 border-t border-violet-500/10 space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-[10px] font-semibold text-muted">
+                      <Zap className="size-3 text-amber-500" />
+                      Quick-Pick Line Items Sold on this Invoice:
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedInvoice.items.map((it) => (
+                        <button
+                          key={it.id}
+                          type="button"
+                          onClick={() => {
+                            const newReturnItem: FormReturnItem = {
+                              product_id: it.product_id,
+                              product_name: it.product_name ?? `Product #${it.product_id}`,
+                              quantity: String(parseFloat(it.quantity || '1') || 1),
+                              unit_id: it.unit_id || 1,
+                              unit_price: String(parseFloat(it.unit_price || '0') || 0),
+                              condition: 'good',
+                              restock: true,
+                            };
+                            setFormData((f) => {
+                              const cleaned = f.return_items.filter((item) => item.product_name.trim() !== '');
+                              return {
+                                ...f,
+                                return_items: [...cleaned, newReturnItem],
+                              };
+                            });
+                            toast.success(`Added ${it.product_name ?? 'Item'} to returned items!`);
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium bg-surface border border-violet-500/30 text-violet-600 hover:bg-violet-500/10 hover:border-violet-500/50 transition-all cursor-pointer shadow-2xs"
+                        >
+                          <Plus className="size-3 text-violet-500" />
+                          <span>{it.product_name ?? `Product #${it.product_id}`}</span>
+                          <span className="font-mono text-muted text-[9px]">({parseFloat(it.quantity || '1')} @ {currencySymbol}{parseFloat(it.unit_price || '0').toFixed(2)})</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Transaction Metadata (Dropdowns) ── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* Customer Dropdown */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted mb-1">Customer</label>
+                  <select
+                    value={formData.party_id ?? ''}
+                    onChange={(e) => {
+                      const val = e.target.value ? parseInt(e.target.value, 10) : null;
+                      const party = customerOptions.find((c) => (c.party_id ?? c.id) === val);
+                      setFormData((f) => ({
+                        ...f,
+                        party_id: val,
+                        customer_name: party?.name ?? f.customer_name,
+                      }));
+                    }}
+                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-default bg-surface-sunken text-default focus:outline-none focus:ring-1 focus:ring-primary/40"
+                  >
+                    <option value="">— Walk-in / Counter Customer —</option>
+                    {customerOptions.map((c) => (
+                      <option key={c.id} value={c.party_id ?? c.id}>
+                        {c.label ?? c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Exchange Date */}
                 <div>
                   <label className="block text-[11px] font-semibold text-muted mb-1">Exchange Date</label>
                   <input
@@ -753,29 +1066,58 @@ export function ExchangesSection() {
                     required
                   />
                 </div>
+
+                {/* Warehouse Dropdown */}
                 <div>
                   <label className="block text-[11px] font-semibold text-muted mb-1">Warehouse</label>
-                  <input
-                    type="text"
-                    value={formData.warehouse_name}
-                    onChange={(e) => setFormData((f) => ({ ...f, warehouse_name: e.target.value }))}
+                  <select
+                    value={formData.warehouse_id}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      const wh = warehouseOptions.find((w) => (w.warehouse_id ?? w.id) === val);
+                      setFormData((f) => ({
+                        ...f,
+                        warehouse_id: val,
+                        warehouse_name: wh?.label ?? wh?.name ?? f.warehouse_name,
+                      }));
+                    }}
                     className="w-full px-3 py-1.5 text-xs rounded-lg border border-default bg-surface-sunken text-default focus:outline-none focus:ring-1 focus:ring-primary/40"
-                  />
+                  >
+                    {warehouseOptions.map((w) => (
+                      <option key={w.id} value={w.warehouse_id ?? 1}>
+                        {w.label ?? w.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+
+                {/* Reason Dropdown */}
                 <div>
-                  <label className="block text-[11px] font-semibold text-muted mb-1">Reason</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Manufacturing defect"
-                    value={formData.reason}
-                    onChange={(e) => setFormData((f) => ({ ...f, reason: e.target.value }))}
-                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-default bg-surface-sunken text-default placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary/40"
-                  />
+                  <label className="block text-[11px] font-semibold text-muted mb-1">Exchange Reason</label>
+                  <select
+                    value={formData.reason_code_id}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      const r = REASON_OPTIONS.find((ro) => ro.id === val);
+                      setFormData((f) => ({
+                        ...f,
+                        reason_code_id: val,
+                        reason: r?.name ?? f.reason,
+                      }));
+                    }}
+                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-default bg-surface-sunken text-default focus:outline-none focus:ring-1 focus:ring-primary/40"
+                  >
+                    {REASON_OPTIONS.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              {/* Two panels */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* ── Two panels: Return Items & Replacement Items ── */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Return items */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -785,63 +1127,135 @@ export function ExchangesSection() {
                     </h4>
                     <button
                       type="button"
-                      onClick={() => setFormData((f) => ({ ...f, return_items: [...f.return_items, { product_name: '', quantity: '1', unit_price: '', condition: 'good', restock: true }] }))}
+                      onClick={() =>
+                        setFormData((f) => ({
+                          ...f,
+                          return_items: [
+                            ...f.return_items,
+                            {
+                              product_id: productOptions[0]?.product_id ?? 1,
+                              product_name: productOptions[0]?.name ?? '',
+                              quantity: '1',
+                              unit_id: productOptions[0]?.unit_id ?? 1,
+                              unit_price: productOptions[0]?.default_sale_price ?? '',
+                              condition: 'good',
+                              restock: true,
+                            },
+                          ],
+                        }))
+                      }
                       className="text-[10px] text-primary hover:underline font-semibold flex items-center gap-0.5"
                     >
-                      <Plus className="size-3" /> Add
+                      <Plus className="size-3" /> Add Item
                     </button>
                   </div>
+
                   <div className="space-y-2">
                     {formData.return_items.map((item, idx) => (
                       <div key={idx} className="bg-surface-sunken border border-default rounded-xl p-3 space-y-2">
-                        <input
-                          type="text"
-                          placeholder="Product name"
-                          value={item.product_name}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setFormData((f) => ({
-                              ...f,
-                              return_items: f.return_items.map((it, i) => (i === idx ? { ...it, product_name: val } : it)),
-                            }));
-                          }}
-                          className="w-full px-2 py-1 text-[11px] rounded-lg border border-default bg-surface text-default placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary/40"
-                          required
-                        />
-                        <div className="grid grid-cols-2 gap-1.5">
-                          <input
-                            type="number"
-                            placeholder="Qty"
-                            min="0.0001"
-                            step="0.0001"
-                            value={item.quantity}
+                        {/* Product Dropdown */}
+                        <div>
+                          <label className="block text-[10px] font-semibold text-muted mb-0.5">Product</label>
+                          <select
+                            value={item.product_id}
                             onChange={(e) => {
-                              const val = e.target.value;
+                              const pId = parseInt(e.target.value, 10);
+                              const prod = productOptions.find((p) => p.product_id === pId);
                               setFormData((f) => ({
                                 ...f,
-                                return_items: f.return_items.map((it, i) => (i === idx ? { ...it, quantity: val } : it)),
+                                return_items: f.return_items.map((it, i) =>
+                                  i === idx
+                                    ? {
+                                        ...it,
+                                        product_id: pId,
+                                        product_name: prod?.name ?? it.product_name,
+                                        unit_price:
+                                          prod?.default_sale_price && parseFloat(prod.default_sale_price) > 0
+                                            ? prod.default_sale_price
+                                            : it.unit_price,
+                                        unit_id: prod?.unit_id ?? it.unit_id,
+                                      }
+                                    : it
+                                ),
                               }));
                             }}
-                            className="px-2 py-1 text-[11px] rounded-lg border border-default bg-surface text-default focus:outline-none focus:ring-1 focus:ring-primary/40"
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-default bg-surface text-default focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium"
                             required
-                          />
-                          <input
-                            type="number"
-                            placeholder={`Price (${currencySymbol})`}
-                            min="0"
-                            step="0.01"
-                            value={item.unit_price}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setFormData((f) => ({
-                                ...f,
-                                return_items: f.return_items.map((it, i) => (i === idx ? { ...it, unit_price: val } : it)),
-                              }));
-                            }}
-                            className="px-2 py-1 text-[11px] rounded-lg border border-default bg-surface text-default focus:outline-none focus:ring-1 focus:ring-primary/40"
-                            required
-                          />
+                          >
+                            <option value={0}>— Select Catalog Product —</option>
+                            {productOptions.map((prod) => (
+                              <option key={prod.id} value={prod.product_id}>
+                                {prod.name} ({prod.sku}) — {currencySymbol}{parseFloat(prod.default_sale_price || '0').toFixed(2)}
+                              </option>
+                            ))}
+                            <option value={-1}>+ Other / Custom Product (Enter Name Below)</option>
+                          </select>
+
+                          {item.product_id === -1 && (
+                            <input
+                              type="text"
+                              placeholder="Enter custom product name..."
+                              value={item.product_name}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setFormData((f) => ({
+                                  ...f,
+                                  return_items: f.return_items.map((it, i) =>
+                                    i === idx ? { ...it, product_name: val } : it
+                                  ),
+                                }));
+                              }}
+                              className="mt-1.5 w-full px-2 py-1 text-[11px] rounded-lg border border-default bg-surface text-default placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary/40"
+                              required
+                            />
+                          )}
                         </div>
+
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <div>
+                            <label className="block text-[9px] font-semibold text-muted mb-0.5">Quantity</label>
+                            <input
+                              type="number"
+                              placeholder="Qty"
+                              min="0.0001"
+                              step="0.0001"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setFormData((f) => ({
+                                  ...f,
+                                  return_items: f.return_items.map((it, i) =>
+                                    i === idx ? { ...it, quantity: val } : it
+                                  ),
+                                }));
+                              }}
+                              className="w-full px-2 py-1 text-[11px] rounded-lg border border-default bg-surface text-default focus:outline-none focus:ring-1 focus:ring-primary/40"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-semibold text-muted mb-0.5">Price ({currencySymbol})</label>
+                            <input
+                              type="number"
+                              placeholder={`Price (${currencySymbol})`}
+                              min="0"
+                              step="0.01"
+                              value={item.unit_price}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setFormData((f) => ({
+                                  ...f,
+                                  return_items: f.return_items.map((it, i) =>
+                                    i === idx ? { ...it, unit_price: val } : it
+                                  ),
+                                }));
+                              }}
+                              className="w-full px-2 py-1 text-[11px] rounded-lg border border-default bg-surface text-default focus:outline-none focus:ring-1 focus:ring-primary/40"
+                              required
+                            />
+                          </div>
+                        </div>
+
                         <div className="flex items-center gap-2">
                           <select
                             value={item.condition}
@@ -849,14 +1263,16 @@ export function ExchangesSection() {
                               const val = e.target.value as 'good' | 'damaged' | 'defective';
                               setFormData((f) => ({
                                 ...f,
-                                return_items: f.return_items.map((it, i) => (i === idx ? { ...it, condition: val } : it)),
+                                return_items: f.return_items.map((it, i) =>
+                                  i === idx ? { ...it, condition: val } : it
+                                ),
                               }));
                             }}
                             className="flex-1 px-2 py-1 text-[11px] rounded-lg border border-default bg-surface text-default focus:outline-none focus:ring-1 focus:ring-primary/40"
                           >
-                            <option value="good">Good</option>
-                            <option value="damaged">Damaged</option>
-                            <option value="defective">Defective</option>
+                            <option value="good">Good Condition</option>
+                            <option value="damaged">Damaged Unit</option>
+                            <option value="defective">Defective / Non-functional</option>
                           </select>
                           <label className="flex items-center gap-1 text-[10px] text-muted cursor-pointer">
                             <input
@@ -866,7 +1282,9 @@ export function ExchangesSection() {
                                 const val = e.target.checked;
                                 setFormData((f) => ({
                                   ...f,
-                                  return_items: f.return_items.map((it, i) => (i === idx ? { ...it, restock: val } : it)),
+                                  return_items: f.return_items.map((it, i) =>
+                                    i === idx ? { ...it, restock: val } : it
+                                  ),
                                 }));
                               }}
                               className="rounded"
@@ -876,8 +1294,14 @@ export function ExchangesSection() {
                           {formData.return_items.length > 1 && (
                             <button
                               type="button"
-                              onClick={() => setFormData((f) => ({ ...f, return_items: f.return_items.filter((_, i) => i !== idx) }))}
-                              className="text-red-500 hover:text-red-600"
+                              onClick={() =>
+                                setFormData((f) => ({
+                                  ...f,
+                                  return_items: f.return_items.filter((_, i) => i !== idx),
+                                }))
+                              }
+                              className="text-red-500 hover:text-red-600 cursor-pointer"
+                              title="Remove item"
                             >
                               <XCircle className="size-3.5" />
                             </button>
@@ -897,71 +1321,148 @@ export function ExchangesSection() {
                     </h4>
                     <button
                       type="button"
-                      onClick={() => setFormData((f) => ({ ...f, replacement_items: [...f.replacement_items, { product_name: '', quantity: '1', unit_price: '' }] }))}
+                      onClick={() =>
+                        setFormData((f) => ({
+                          ...f,
+                          replacement_items: [
+                            ...f.replacement_items,
+                            {
+                              product_id: productOptions[0]?.product_id ?? 1,
+                              product_name: productOptions[0]?.name ?? '',
+                              quantity: '1',
+                              unit_id: productOptions[0]?.unit_id ?? 1,
+                              unit_price: productOptions[0]?.default_sale_price ?? '',
+                            },
+                          ],
+                        }))
+                      }
                       className="text-[10px] text-primary hover:underline font-semibold flex items-center gap-0.5"
                     >
-                      <Plus className="size-3" /> Add
+                      <Plus className="size-3" /> Add Item
                     </button>
                   </div>
+
                   <div className="space-y-2">
                     {formData.replacement_items.map((item, idx) => (
                       <div key={idx} className="bg-surface-sunken border border-default rounded-xl p-3 space-y-2">
-                        <input
-                          type="text"
-                          placeholder="Product name"
-                          value={item.product_name}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setFormData((f) => ({
-                              ...f,
-                              replacement_items: f.replacement_items.map((it, i) => (i === idx ? { ...it, product_name: val } : it)),
-                            }));
-                          }}
-                          className="w-full px-2 py-1 text-[11px] rounded-lg border border-default bg-surface text-default placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary/40"
-                          required
-                        />
-                        <div className="grid grid-cols-2 gap-1.5">
-                          <input
-                            type="number"
-                            placeholder="Qty"
-                            min="0.0001"
-                            step="0.0001"
-                            value={item.quantity}
+                        {/* Product Dropdown */}
+                        <div>
+                          <label className="block text-[10px] font-semibold text-muted mb-0.5">Product</label>
+                          <select
+                            value={item.product_id}
                             onChange={(e) => {
-                              const val = e.target.value;
+                              const pId = parseInt(e.target.value, 10);
+                              const prod = productOptions.find((p) => p.product_id === pId);
                               setFormData((f) => ({
                                 ...f,
-                                replacement_items: f.replacement_items.map((it, i) => (i === idx ? { ...it, quantity: val } : it)),
+                                replacement_items: f.replacement_items.map((it, i) =>
+                                  i === idx
+                                    ? {
+                                        ...it,
+                                        product_id: pId,
+                                        product_name: prod?.name ?? it.product_name,
+                                        unit_price:
+                                          prod?.default_sale_price && parseFloat(prod.default_sale_price) > 0
+                                            ? prod.default_sale_price
+                                            : it.unit_price,
+                                        unit_id: prod?.unit_id ?? it.unit_id,
+                                      }
+                                    : it
+                                ),
                               }));
                             }}
-                            className="px-2 py-1 text-[11px] rounded-lg border border-default bg-surface text-default focus:outline-none focus:ring-1 focus:ring-primary/40"
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-default bg-surface text-default focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium"
                             required
-                          />
-                          <input
-                            type="number"
-                            placeholder={`Price (${currencySymbol})`}
-                            min="0"
-                            step="0.01"
-                            value={item.unit_price}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setFormData((f) => ({
-                                ...f,
-                                replacement_items: f.replacement_items.map((it, i) => (i === idx ? { ...it, unit_price: val } : it)),
-                              }));
-                            }}
-                            className="px-2 py-1 text-[11px] rounded-lg border border-default bg-surface text-default focus:outline-none focus:ring-1 focus:ring-primary/40"
-                            required
-                          />
-                        </div>
-                        {formData.replacement_items.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => setFormData((f) => ({ ...f, replacement_items: f.replacement_items.filter((_, i) => i !== idx) }))}
-                            className="text-red-500 hover:text-red-600"
                           >
-                            <XCircle className="size-3.5" />
-                          </button>
+                            <option value={0}>— Select Catalog Product —</option>
+                            {productOptions.map((prod) => (
+                              <option key={prod.id} value={prod.product_id}>
+                                {prod.name} ({prod.sku}) — {currencySymbol}{parseFloat(prod.default_sale_price || '0').toFixed(2)}
+                              </option>
+                            ))}
+                            <option value={-1}>+ Other / Custom Product (Enter Name Below)</option>
+                          </select>
+
+                          {item.product_id === -1 && (
+                            <input
+                              type="text"
+                              placeholder="Enter custom product name..."
+                              value={item.product_name}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setFormData((f) => ({
+                                  ...f,
+                                  replacement_items: f.replacement_items.map((it, i) =>
+                                    i === idx ? { ...it, product_name: val } : it
+                                  ),
+                                }));
+                              }}
+                              className="mt-1.5 w-full px-2 py-1 text-[11px] rounded-lg border border-default bg-surface text-default placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary/40"
+                              required
+                            />
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <div>
+                            <label className="block text-[9px] font-semibold text-muted mb-0.5">Quantity</label>
+                            <input
+                              type="number"
+                              placeholder="Qty"
+                              min="0.0001"
+                              step="0.0001"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setFormData((f) => ({
+                                  ...f,
+                                  replacement_items: f.replacement_items.map((it, i) =>
+                                    i === idx ? { ...it, quantity: val } : it
+                                  ),
+                                }));
+                              }}
+                              className="w-full px-2 py-1 text-[11px] rounded-lg border border-default bg-surface text-default focus:outline-none focus:ring-1 focus:ring-primary/40"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-semibold text-muted mb-0.5">Price ({currencySymbol})</label>
+                            <input
+                              type="number"
+                              placeholder={`Price (${currencySymbol})`}
+                              min="0"
+                              step="0.01"
+                              value={item.unit_price}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setFormData((f) => ({
+                                  ...f,
+                                  replacement_items: f.replacement_items.map((it, i) =>
+                                    i === idx ? { ...it, unit_price: val } : it
+                                  ),
+                                }));
+                              }}
+                              className="w-full px-2 py-1 text-[11px] rounded-lg border border-default bg-surface text-default focus:outline-none focus:ring-1 focus:ring-primary/40"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        {formData.replacement_items.length > 1 && (
+                          <div className="flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setFormData((f) => ({
+                                  ...f,
+                                  replacement_items: f.replacement_items.filter((_, i) => i !== idx),
+                                }))
+                              }
+                              className="text-red-500 hover:text-red-600 cursor-pointer flex items-center gap-1 text-[10px]"
+                            >
+                              <XCircle className="size-3.5" /> Remove
+                            </button>
+                          </div>
                         )}
                       </div>
                     ))}
@@ -969,22 +1470,76 @@ export function ExchangesSection() {
                 </div>
               </div>
 
-              {/* Live difference summary */}
-              <div className={`rounded-xl border p-3.5 flex items-center justify-between ${diff > 0 ? 'bg-emerald-500/5 border-emerald-500/20' : diff < 0 ? 'bg-red-500/5 border-red-500/20' : 'bg-surface-sunken border-default'}`}>
-                <div className="space-y-1 text-xs">
-                  <div className="flex gap-4">
-                    <span className="text-muted">Return Total: <span className="font-mono font-bold text-default">{currencySymbol}{returnTotal.toFixed(2)}</span></span>
-                    <span className="text-muted">Replacement Total: <span className="font-mono font-bold text-default">{currencySymbol}{replacementTotal.toFixed(2)}</span></span>
+              {/* ── Live Financial Settlement & Dynamic Invoice Impact Card ── */}
+              <div
+                className={`rounded-xl border p-4 space-y-3 ${
+                  diff > 0
+                    ? 'bg-emerald-500/5 border-emerald-500/25'
+                    : diff < 0
+                    ? 'bg-red-500/5 border-red-500/25'
+                    : 'bg-surface-sunken border-default'
+                }`}
+              >
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-bold text-default">Live Settlement Summary</div>
+                    <div className="flex gap-4 text-xs">
+                      <span className="text-muted">
+                        Return Subtotal: <span className="font-mono font-bold text-default">{currencySymbol}{returnTotal.toFixed(2)}</span>
+                      </span>
+                      <span className="text-muted">
+                        Replacement Subtotal: <span className="font-mono font-bold text-default">{currencySymbol}{replacementTotal.toFixed(2)}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div
+                      className={`text-lg font-bold font-mono ${
+                        diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-red-500' : 'text-muted'
+                      }`}
+                    >
+                      {diff >= 0 ? '+' : ''}
+                      {currencySymbol}
+                      {diff.toFixed(2)}
+                    </div>
+                    <div className="text-[10px] text-muted font-semibold">
+                      {diff > 0 ? '↑ Customer pays top-up' : diff < 0 ? '↓ Issue refund / credit to customer' : '= Like-for-like'}
+                    </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className={`text-lg font-bold font-mono ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-red-500' : 'text-muted'}`}>
-                    {diff >= 0 ? '+' : ''}{currencySymbol}{diff.toFixed(2)}
+
+                {/* Dynamic Linked Invoice Settlement Preview */}
+                {selectedInvoice && (
+                  <div className="pt-3 border-t border-default/60 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs bg-surface/70 p-2.5 rounded-lg">
+                    <div>
+                      <span className="text-[10px] text-muted block">Original Invoice Total:</span>
+                      <span className="font-mono font-bold text-default">
+                        {currencySymbol}{parseFloat(selectedInvoice.total_amount || '0').toFixed(2)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-muted block">Exchange Adjustment:</span>
+                      <span
+                        className={`font-mono font-bold ${
+                          diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-red-500' : 'text-muted'
+                        }`}
+                      >
+                        {diff >= 0 ? '+' : ''}{currencySymbol}{diff.toFixed(2)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-muted block">Projected New Invoice Total:</span>
+                      <span className="font-mono font-bold text-violet-600 dark:text-violet-400">
+                        {currencySymbol}{(parseFloat(selectedInvoice.total_amount || '0') + diff).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="sm:col-span-3 text-[10px] text-muted flex items-center gap-1 mt-0.5">
+                      <Zap className="size-3 text-violet-500" />
+                      Approving this exchange will dynamically update the linked invoice total and post accounting adjustments automatically.
+                    </div>
                   </div>
-                  <div className="text-[10px] text-muted font-semibold">
-                    {diff > 0 ? '↑ Customer pays top-up' : diff < 0 ? '↓ Issue refund to customer' : '= Like-for-like'}
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* Notes */}
@@ -1003,13 +1558,13 @@ export function ExchangesSection() {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-1.5 text-xs font-semibold rounded-lg border border-default text-muted hover:text-default hover:bg-surface-sunken transition-all"
+                  className="px-4 py-1.5 text-xs font-semibold rounded-lg border border-default text-muted hover:text-default hover:bg-surface-sunken transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-1.5 text-xs font-semibold rounded-lg bg-violet-600 hover:bg-violet-700 text-white transition-all shadow-sm"
+                  className="px-5 py-1.5 text-xs font-semibold rounded-lg bg-violet-600 hover:bg-violet-700 text-white transition-all shadow-sm cursor-pointer"
                 >
                   Create Exchange Draft
                 </button>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Ban, CheckCircle2, Clock, Printer, RefreshCw, Search, Sliders, FileText, DollarSign, BookOpen } from 'lucide-react';
+import { Ban, CheckCircle2, Clock, Printer, RefreshCw, Search, Sliders, FileText, DollarSign, BookOpen, ArrowLeftRight } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Invoice } from '../../../types/api/sales';
 import { api } from '../../../lib/api/client';
@@ -204,7 +204,17 @@ export function InvoicesSection({ onNavigateToTab }: InvoicesSectionProps = {}) 
                   return (
                     <tr key={inv.id} className="hover:bg-surface-sunken/60 transition-colors">
                       <td className="px-4 py-3.5 font-mono font-medium text-emerald-600 dark:text-emerald-400">
-                        {inv.invoice_number}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span>{inv.invoice_number}</span>
+                          {inv.has_exchanges && (
+                            <span
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-violet-500/10 text-violet-600 border border-violet-500/20"
+                              title={`Contains ${inv.exchanges_count ?? 1} linked exchange adjustments`}
+                            >
+                              <ArrowLeftRight className="size-2.5" /> Exchanged
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3.5 text-muted">{inv.invoice_date}</td>
                       <td className="px-4 py-3.5 text-default font-medium">

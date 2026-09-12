@@ -160,4 +160,12 @@ final class Invoice extends Model
     {
         return $this->hasMany(PaymentAllocation::class, 'invoice_id');
     }
+
+    /**
+     * @return HasMany<Exchange, $this>
+     */
+    public function exchanges(): HasMany
+    {
+        return $this->hasMany(Exchange::class, 'original_invoice_id');
+    }
 }

@@ -75,7 +75,39 @@ final class ApproveExchangeAction
                 $item->save();
             }
 
-            // Step 3: Mark approved
+            // Step 3: Correlate and dynamically update linked Sales Invoice
+            if ($exchange->original_invoice_id) {
+                $invoice = \App\Modules\Sales\Models\Invoice::find($exchange->original_invoice_id);
+                if ($invoice) {
+                    $diffAmount = (float) $exchange->difference_amount;
+
+                    if ($exchange->difference_settlement === 'customer_paid') {
+                        // Customer paid the upgrade delta: both total and paid amount increment
+                        $invoice->total_amount = (string) round((float) $invoice->total_amount + $diffAmount, 4);
+                        $invoice->paid_amount  = (string) round((float) $invoice->paid_amount + $diffAmount, 4);
+                    } elseif ($exchange->difference_settlement === 'top_up') {
+                        // Upgrade difference added to invoice receivable
+                        $invoice->total_amount = (string) round((float) $invoice->total_amount + $diffAmount, 4);
+                    } elseif ($exchange->difference_settlement === 'refund') {
+                        // Store refund: reduce invoice total
+                        $invoice->total_amount = (string) max(0.0, round((float) $invoice->total_amount + $diffAmount, 4));
+                    }
+
+                    // Append exchange correlation note
+                    $prevNotes = $invoice->void_reason ?? '';
+                    $exchangeNote = sprintf(
+                        '[Exchange %s linked on %s: Diff %s Tk (%s)]',
+                        $exchange->exchange_number,
+                        now()->toDateString(),
+                        $exchange->difference_amount,
+                        $exchange->difference_settlement
+                    );
+                    $invoice->void_reason = trim($prevNotes . ' ' . $exchangeNote);
+                    $invoice->save();
+                }
+            }
+
+            // Step 4: Mark approved
             $exchange->status      = 'approved';
             $exchange->approved_by = $userId;
             $exchange->approved_at = now();

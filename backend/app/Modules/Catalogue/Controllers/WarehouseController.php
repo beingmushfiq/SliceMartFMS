@@ -83,7 +83,7 @@ final class WarehouseController extends Controller
             ->orderBy('name')
             ->limit(500)
             ->get(['uuid', 'name', 'code'])
-            ->map(static fn (Warehouse $warehouse) => ['id' => (string) $warehouse->uuid, 'label' => $warehouse->name.' ('.$warehouse->code.')'])
+            ->map(static fn (Warehouse $warehouse) => ['id' => (string) $warehouse->uuid, 'warehouse_id' => $warehouse->id, 'label' => $warehouse->name.' ('.$warehouse->code.')'])
             ->values();
 
         return response()->json(['success' => true, 'data' => $items->all(), 'meta' => ['correlation_id' => (string) $request->header('X-Correlation-Id', '')]]);

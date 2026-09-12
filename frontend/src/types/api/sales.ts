@@ -132,6 +132,8 @@ export interface Invoice {
   posted_at?: string | null;
   created_at?: string;
   items?: InvoiceItem[];
+  exchanges_count?: number;
+  has_exchanges?: boolean;
 }
 
 export interface DeliveryOrderItem {

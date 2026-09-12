@@ -40,6 +40,8 @@ final class InvoiceResource extends JsonResource
             'voided_at'        => $this->voided_at?->toIso8601String(),
             'void_reason'      => $this->void_reason,
             'items'            => InvoiceItemResource::collection($this->whenLoaded('items')),
+            'exchanges_count'  => $this->relationLoaded('exchanges') ? $this->exchanges->count() : $this->exchanges()->count(),
+            'has_exchanges'    => $this->relationLoaded('exchanges') ? $this->exchanges->isNotEmpty() : $this->exchanges()->exists(),
             'created_at'       => $this->created_at?->toIso8601String(),
         ];
     }
