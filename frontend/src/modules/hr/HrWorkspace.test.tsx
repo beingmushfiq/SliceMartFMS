@@ -1,0 +1,175 @@
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { HrWorkspace } from './HrWorkspace';
+
+// Mock Toast notification
+vi.mock('../../components/ui/Toast', () => ({
+  notify: {
+    success: vi.fn(),
+    info: vi.fn(),
+    warning: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+// Mock Currency hook
+vi.mock('../../hooks/useCurrency', () => ({
+  useCurrency: () => ({
+    formatCurrency: (val: number | string) => `৳ ${parseFloat(String(val)).toLocaleString()}`,
+  }),
+}));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: false },
+  },
+});
+
+const renderWithProviders = (initialEntries = ['/hr']) => {
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={initialEntries}>
+        <HrWorkspace />
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+};
+
+describe('HrWorkspace Component & Action Controls', () => {
+  it('renders module title and contextual action controls on Payroll tab', () => {
+    renderWithProviders(['/hr?tab=payroll']);
+
+    expect(screen.getByRole('heading', { level: 1, name: /Team, Attendance & Payroll/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /New Pay Period/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('button', { name: /Export Bank Advice/i }).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders payslip action buttons and opens itemized breakdown modal', () => {
+    renderWithProviders(['/hr?tab=payroll']);
+
+    const viewItemsButtons = screen.getAllByRole('button', { name: /View Items/i });
+    expect(viewItemsButtons.length).toBeGreaterThanOrEqual(1);
+    expect(viewItemsButtons[0]).toBeDefined();
+
+    fireEvent.click(viewItemsButtons[0]!);
+    expect(screen.getByText(/Payslip Breakdown:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Net Payable Payout/i)).toBeInTheDocument();
+  });
+
+  it('renders contextual actions on Staff Directory tab and opens profile modal with document vault', () => {
+    renderWithProviders(['/hr?tab=employees']);
+
+    expect(screen.getAllByRole('button', { name: /Add Employee/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('button', { name: /Export Staff/i }).length).toBeGreaterThanOrEqual(1);
+
+    const profileButtons = screen.getAllByRole('button', { name: /^Profile$/i });
+    expect(profileButtons.length).toBeGreaterThanOrEqual(1);
+    expect(profileButtons[0]).toBeDefined();
+
+    fireEvent.click(profileButtons[0]!);
+    expect(screen.getByText(/Employee Profile:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Employee Document Vault & Compliance/i)).toBeInTheDocument();
+  });
+
+  it('renders ID Badge button and opens security pass modal', () => {
+    renderWithProviders(['/hr?tab=employees']);
+
+    const badgeButtons = screen.getAllByRole('button', { name: /ID Badge/i });
+    expect(badgeButtons.length).toBeGreaterThanOrEqual(1);
+    expect(badgeButtons[0]).toBeDefined();
+
+    fireEvent.click(badgeButtons[0]!);
+    expect(screen.getByText(/Workforce Security ID Card/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Print Badge/i })).toBeInTheDocument();
+  });
+
+  it('renders interactive Approve and Reject actions for pending leave requests', () => {
+    renderWithProviders(['/hr?tab=leaves']);
+
+    expect(screen.getAllByRole('button', { name: /Request Leave/i }).length).toBeGreaterThanOrEqual(1);
+
+    // There should be an Approve button for the pending leave request
+    const approveButtons = screen.getAllByRole('button', { name: /Approve/i });
+    expect(approveButtons.length).toBeGreaterThanOrEqual(1);
+    expect(approveButtons[0]).toBeDefined();
+
+    // Click Approve
+    fireEvent.click(approveButtons[0]!);
+
+    // Should now show approved / revoke
+    expect(screen.getAllByRole('button', { name: /Revoke/i }).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders contextual actions on Daily Attendance tab and launches biometric kiosk', () => {
+    renderWithProviders(['/hr?tab=attendance']);
+
+    expect(screen.getAllByRole('button', { name: /Mark Attendance/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('button', { name: /Export Log/i }).length).toBeGreaterThanOrEqual(1);
+
+    const kioskButtons = screen.getAllByRole('button', { name: /Biometric Kiosk/i });
+    expect(kioskButtons.length).toBeGreaterThanOrEqual(1);
+
+    fireEvent.click(kioskButtons[0]!);
+    expect(screen.getByText(/Biometric & NFC Attendance Punch Terminal/i)).toBeInTheDocument();
+    expect(screen.getByText(/SliceMart Workforce Clock/i)).toBeInTheDocument();
+  });
+
+  it('renders Compensation & Salary Structures tab with interactive calculation', () => {
+    renderWithProviders(['/hr?tab=salary-structures']);
+
+    expect(screen.getByText(/Compensation Tiers & Salary Structures/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /\+ New Salary Structure/i })).toBeInTheDocument();
+    expect(screen.getByText(/Benchmark Simulation Calculator/i)).toBeInTheDocument();
+  });
+
+  it('renders Salary Advances & Loans tab with loan granting modal', () => {
+    renderWithProviders(['/hr?tab=advances']);
+
+    expect(screen.getByText(/Total Disbursed Advances/i)).toBeInTheDocument();
+    expect(screen.getByText(/Active Outstanding Balance/i)).toBeInTheDocument();
+
+    const grantButtons = screen.getAllByRole('button', { name: /\+ Grant Advance/i });
+    expect(grantButtons.length).toBeGreaterThanOrEqual(1);
+
+    fireEvent.click(grantButtons[0]!);
+    expect(screen.getByText(/Approve Employee Salary Advance \/ Emergency Loan/i)).toBeInTheDocument();
+  });
+
+  it('renders Create Payslip button and opens the Create Payslip modal', () => {
+    renderWithProviders(['/hr?tab=payroll']);
+
+    const createButtons = screen.getAllByRole('button', { name: /Create Payslip/i });
+    expect(createButtons.length).toBeGreaterThanOrEqual(1);
+
+    fireEvent.click(createButtons[0]!);
+    expect(screen.getByText(/Create New Payslip/i)).toBeInTheDocument();
+    expect(screen.getByText(/Earnings Calculation/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Issue & Save Payslip/i })).toBeInTheDocument();
+  });
+
+  it('switches pay periods and executes automated batch payroll for open period', () => {
+    renderWithProviders(['/hr?tab=payroll']);
+
+    // Period switcher buttons should exist
+    const period9Button = screen.getByRole('button', { name: /PAY-202609/i });
+    expect(period9Button).toBeInTheDocument();
+
+    // Click PAY-202609 to switch to open period
+    fireEvent.click(period9Button);
+
+    // Empty state should be visible initially for PAY-202609
+    expect(screen.getByText(/No payslips generated for this period yet/i)).toBeInTheDocument();
+
+    // Run batch payroll
+    const batchButtons = screen.getAllByRole('button', { name: /⚡ Run Payroll/i });
+    expect(batchButtons.length).toBeGreaterThanOrEqual(1);
+    fireEvent.click(batchButtons[0]!);
+
+    // Now payslips should be generated and View Items buttons should be rendered
+    const viewButtons = screen.getAllByRole('button', { name: /View Items/i });
+    expect(viewButtons.length).toBeGreaterThanOrEqual(1);
+  });
+});
+

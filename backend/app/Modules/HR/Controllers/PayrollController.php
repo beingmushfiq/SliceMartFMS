@@ -6,10 +6,15 @@ namespace App\Modules\HR\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\HR\Actions\ProcessPayrollRunAction;
+use App\Modules\HR\Models\Employee;
+use App\Modules\HR\Models\PayrollAdvance;
 use App\Modules\HR\Models\PayrollPeriod;
 use App\Modules\HR\Models\Payslip;
+use App\Modules\HR\Models\PayslipItem;
+use App\Modules\HR\Models\SalaryComponent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PayrollController extends Controller
 {
@@ -27,7 +32,7 @@ class PayrollController extends Controller
     public function storePeriod(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'company_id' => 'required|integer',
+            'company_id' => 'nullable|integer',
             'period_code' => 'required|string|max:64',
             'pay_frequency' => 'required|string|in:monthly,weekly,daily,piece_rate',
             'period_start' => 'required|date',
@@ -36,7 +41,12 @@ class PayrollController extends Controller
         ]);
 
         $period = PayrollPeriod::create([
-            ...$validated,
+            'company_id' => $validated['company_id'] ?? 1,
+            'period_code' => $validated['period_code'],
+            'pay_frequency' => $validated['pay_frequency'],
+            'period_start' => $validated['period_start'],
+            'period_end' => $validated['period_end'],
+            'payment_date' => $validated['payment_date'],
             'status' => 'open',
             'total_gross' => '0.0000',
             'total_deductions' => '0.0000',
@@ -63,9 +73,69 @@ class PayrollController extends Controller
         ], 200);
     }
 
+    public function disburse(int $id, Request $request): JsonResponse
+    {
+        $period = PayrollPeriod::findOrFail($id);
+
+        $validated = $request->validate([
+            'bank_reference' => 'nullable|string|max:64',
+            'payment_method' => 'nullable|string|in:bank_transfer,cash,mobile_wallet',
+            'disbursement_date' => 'nullable|date',
+        ]);
+
+        DB::transaction(function () use ($period, $validated, $request) {
+            $period->update([
+                'status' => 'paid',
+                'updated_by' => (int) ($request->user()?->id ?? 1),
+            ]);
+
+            Payslip::where('payroll_period_id', $period->id)->update([
+                'status' => 'paid',
+                'payment_method' => $validated['payment_method'] ?? 'bank_transfer',
+                'paid_at' => $validated['disbursement_date'] ?? now(),
+                'updated_by' => (int) ($request->user()?->id ?? 1),
+            ]);
+        });
+
+        return response()->json([
+            'data' => $period,
+            'message' => "Payroll period {$period->period_code} disbursed successfully via {$validated['payment_method']}.",
+        ]);
+    }
+
+    public function bankAdvice(int $id): JsonResponse
+    {
+        $period = PayrollPeriod::findOrFail($id);
+
+        $payslips = Payslip::with(['employee.department'])
+            ->where('payroll_period_id', $period->id)
+            ->get()
+            ->map(function ($ps) {
+                return [
+                    'payslip_number' => $ps->payslip_number,
+                    'employee_code' => $ps->employee?->employee_code,
+                    'employee_name' => $ps->employee?->display_name,
+                    'department' => $ps->employee?->department?->name,
+                    'bank_name' => $ps->employee?->bank_name ?? 'Prime Bank Ltd.',
+                    'bank_account' => $ps->employee?->bank_account_number ?? '0000-000-0000',
+                    'mobile_wallet' => $ps->employee?->mobile_wallet_number,
+                    'net_payable' => (float) $ps->net_salary,
+                ];
+            });
+
+        return response()->json([
+            'period_code' => $period->period_code,
+            'period_start' => $period->period_start,
+            'period_end' => $period->period_end,
+            'total_net' => (float) $period->total_net,
+            'count' => $payslips->count(),
+            'advice_records' => $payslips,
+        ]);
+    }
+
     public function payslips(Request $request): JsonResponse
     {
-        $query = Payslip::query()->with(['employee.department', 'payrollPeriod', 'items']);
+        $query = Payslip::query()->with(['employee.department', 'employee.designation', 'payrollPeriod', 'items']);
 
         if ($request->filled('payroll_period_id')) {
             $query->where('payroll_period_id', $request->query('payroll_period_id'));
@@ -75,7 +145,7 @@ class PayrollController extends Controller
             $query->where('employee_id', $request->query('employee_id'));
         }
 
-        $payslips = $query->orderByDesc('id')->paginate(20);
+        $payslips = $query->orderByDesc('id')->paginate(30);
 
         return response()->json($payslips);
     }
@@ -87,5 +157,148 @@ class PayrollController extends Controller
         return response()->json([
             'data' => $payslip,
         ]);
+    }
+
+    public function storePayslip(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'payroll_period_id' => 'required|integer',
+            'employee_id' => 'required|integer',
+            'gross_amount' => 'required|numeric|min:0',
+            'total_deductions' => 'nullable|numeric|min:0',
+            'payment_method' => 'nullable|string|in:bank,cash,mobile_wallet,bank_transfer',
+            'produced_quantity' => 'nullable|numeric|min:0',
+            'items' => 'nullable|array',
+            'items.*.component_code' => 'required|string',
+            'items.*.component_type' => 'required|string|in:earning,deduction',
+            'items.*.amount' => 'required|numeric',
+        ]);
+
+        $period = PayrollPeriod::findOrFail($validated['payroll_period_id']);
+        $employee = Employee::findOrFail($validated['employee_id']);
+        $userId = (int) ($request->user()?->id ?? 1);
+
+        $payslip = DB::transaction(function () use ($validated, $period, $employee, $userId) {
+            $deductions = (float) ($validated['total_deductions'] ?? 0);
+            $gross = (float) $validated['gross_amount'];
+            $net = max(0.0, $gross - $deductions);
+
+            $seq = Payslip::where('payroll_period_id', $period->id)->count() + 1;
+            $payslipNum = "PS-{$period->period_code}-" . str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
+
+            $payslip = Payslip::create([
+                'payroll_period_id' => $period->id,
+                'employee_id' => $employee->id,
+                'payslip_number' => $payslipNum,
+                'gross_amount' => (string) $gross,
+                'total_earnings' => (string) $gross,
+                'total_deductions' => (string) $deductions,
+                'net_amount' => (string) $net,
+                'produced_quantity' => isset($validated['produced_quantity']) ? (string) $validated['produced_quantity'] : null,
+                'payment_method' => $validated['payment_method'] ?? 'bank',
+                'payment_status' => 'unpaid',
+                'created_by' => $userId,
+                'updated_by' => $userId,
+            ]);
+
+            if (!empty($validated['items'])) {
+                foreach ($validated['items'] as $idx => $item) {
+                    $component = SalaryComponent::firstOrCreate(
+                        ['code' => $item['component_code']],
+                        [
+                            'name' => ucwords(str_replace('_', ' ', $item['component_code'])),
+                            'component_type' => $item['component_type'],
+                            'is_taxable' => true,
+                            'affects_gross' => true,
+                            'is_active' => true,
+                            'created_by' => $userId,
+                        ]
+                    );
+
+                    PayslipItem::create([
+                        'payslip_id' => $payslip->id,
+                        'salary_component_id' => $component->id,
+                        'component_code' => $item['component_code'],
+                        'component_type' => $item['component_type'],
+                        'amount' => (string) $item['amount'],
+                        'sort_order' => $idx + 1,
+                        'created_by' => $userId,
+                        'updated_by' => $userId,
+                    ]);
+                }
+            }
+
+            // Recalculate Period aggregates
+            $periodPayslips = Payslip::where('payroll_period_id', $period->id)->get();
+            $pGross = $periodPayslips->sum(fn ($ps) => (float) $ps->gross_amount);
+            $pDeductions = $periodPayslips->sum(fn ($ps) => (float) $ps->total_deductions);
+            $pNet = $periodPayslips->sum(fn ($ps) => (float) $ps->net_amount);
+
+            $period->update([
+                'total_gross' => (string) $pGross,
+                'total_deductions' => (string) $pDeductions,
+                'total_net' => (string) $pNet,
+                'employee_count' => $periodPayslips->count(),
+                'updated_by' => $userId,
+            ]);
+
+            return $payslip;
+        });
+
+        return response()->json([
+            'data' => $payslip->load(['employee.department', 'payrollPeriod', 'items']),
+            'message' => "Payslip {$payslip->payslip_number} generated successfully.",
+        ], 201);
+    }
+
+    public function advances(Request $request): JsonResponse
+    {
+        $query = PayrollAdvance::with(['employee.department', 'recoveryStartPeriod']);
+
+        if ($request->filled('employee_id')) {
+            $query->where('employee_id', $request->query('employee_id'));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->query('status'));
+        }
+
+        $advances = $query->orderByDesc('issued_on')->paginate(20);
+
+        return response()->json($advances);
+    }
+
+    public function storeAdvance(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'employee_id' => 'required|integer',
+            'amount' => 'required|numeric|min:1',
+            'issued_on' => 'required|date',
+            'installment_amount' => 'required|numeric|min:1',
+            'recovery_start_period_id' => 'nullable|integer',
+            'notes' => 'nullable|string',
+        ]);
+
+        $advanceNumber = 'ADV-' . date('Ym') . '-' . str_pad((string) random_int(100, 9999), 4, '0', STR_PAD_LEFT);
+        $userId = (int) ($request->user()?->id ?? 1);
+
+        $advance = PayrollAdvance::create([
+            'employee_id' => $validated['employee_id'],
+            'advance_number' => $advanceNumber,
+            'amount' => $validated['amount'],
+            'issued_on' => $validated['issued_on'],
+            'installment_amount' => $validated['installment_amount'],
+            'recovered_amount' => 0.0,
+            'recovery_start_period_id' => $validated['recovery_start_period_id'] ?? null,
+            'status' => 'active',
+            'notes' => $validated['notes'] ?? null,
+            'created_by' => $userId,
+            'updated_by' => $userId,
+        ]);
+
+        return response()->json([
+            'data' => $advance->load(['employee']),
+            'message' => "Salary advance of ৳" . number_format((float) $validated['amount'], 2) . " approved for recovery.",
+        ], 201);
     }
 }

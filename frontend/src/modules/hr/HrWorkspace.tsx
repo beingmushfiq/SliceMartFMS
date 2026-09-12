@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Users,
   Building2,
@@ -10,9 +10,22 @@ import {
   SlidersHorizontal,
   X,
   UserPlus,
+  Plus,
+  Download,
+  Printer,
+  CheckCircle2,
+  Eye,
+  Filter,
+  FileSpreadsheet,
+  CreditCard,
+  Check,
+  DollarSign,
+  Scan,
 } from 'lucide-react';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
 import { useCurrency } from '../../hooks/useCurrency';
+import { Modal } from '../../components/ui/Modal';
+import { notify } from '../../components/ui/Toast';
 import type {
   Employee,
   Department,
@@ -27,8 +40,21 @@ import type {
 
 import { WorkerPerformanceSection } from './sections/WorkerPerformanceSection';
 import { DepartmentsSetupSection } from './sections/DepartmentsSetupSection';
+import { SalaryStructuresSection } from './sections/SalaryStructuresSection';
+import { SalaryAdvancesSection } from './sections/SalaryAdvancesSection';
+import { BadgePunchTerminalModal } from './components/BadgePunchTerminalModal';
+import { CreatePayslipModal } from './components/CreatePayslipModal';
 
-export type HrTab = 'employees' | 'attendance' | 'leaves' | 'payroll' | 'performance' | 'departments';
+export type HrTab =
+  | 'employees'
+  | 'attendance'
+  | 'leaves'
+  | 'payroll'
+  | 'performance'
+  | 'departments'
+  | 'salary-structures'
+  | 'advances';
+
 export type HrCategory = 'people' | 'compensation';
 type EmploymentType = 'permanent' | 'contract' | 'daily_wage' | 'piece_rate';
 
@@ -52,10 +78,10 @@ const CATEGORIES: CategoryConfig[] = [
   },
   {
     id: 'compensation',
-    label: 'Payroll & Time Off',
-    tagline: 'Salary payouts, daily attendance & leave requests',
+    label: 'Payroll, Attendance & Loans',
+    tagline: 'Salary payouts, daily attendance, advances, structures & leave requests',
     icon: Wallet,
-    tabs: ['payroll', 'attendance', 'leaves'],
+    tabs: ['payroll', 'attendance', 'leaves', 'salary-structures', 'advances'],
     defaultTab: 'payroll',
   },
 ];
@@ -64,11 +90,20 @@ export const HrWorkspace: React.FC = () => {
   const { formatCurrency } = useCurrency();
   const [activeTab, setActiveTab] = useWorkspaceTab<HrTab>(
     'payroll',
-    ['employees', 'attendance', 'leaves', 'payroll', 'performance', 'departments'] as const
+    [
+      'employees',
+      'attendance',
+      'leaves',
+      'payroll',
+      'performance',
+      'departments',
+      'salary-structures',
+      'advances',
+    ] as const
   );
-  const [selectedEmployeeForBadge, setSelectedEmployeeForBadge] = useState<Employee | null>(null);
   const [quickJumpOpen, setQuickJumpOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isKioskModalOpen, setIsKioskModalOpen] = useState(false);
   const quickJumpRef = useRef<HTMLDivElement>(null);
 
   const activeCategory = CATEGORIES.find((cat) => cat.tabs.includes(activeTab))?.id ?? 'compensation';
@@ -106,21 +141,23 @@ export const HrWorkspace: React.FC = () => {
     setActiveTab(targetTab);
   };
 
-  // Master Reference Data
-  const [departments] = useState<Department[]>([
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 1. Master Reference Data State
+  // ─────────────────────────────────────────────────────────────────────────────
+  const [departments, setDepartments] = useState<Department[]>([
     { id: 1, uuid: 'dep-01', code: 'PROD', name: 'Factory Production Floor', is_active: true },
     { id: 2, uuid: 'dep-02', code: 'LOG', name: 'Logistics & Fleet Dispatch', is_active: true },
     { id: 3, uuid: 'dep-03', code: 'ADMIN', name: 'Accounts & Corporate Admin', is_active: true },
   ]);
 
-  const [designations] = useState<Designation[]>([
+  const [designations, setDesignations] = useState<Designation[]>([
     { id: 1, uuid: 'des-01', code: 'CUT_OP', name: 'Fabric Cutting Operator', is_active: true },
     { id: 2, uuid: 'des-02', code: 'SEW_OP', name: 'Industrial Sewing Machinist', is_active: true },
     { id: 3, uuid: 'des-03', code: 'RIDER', name: 'Delivery Courier Rider', is_active: true },
     { id: 4, uuid: 'des-04', code: 'ACC', name: 'Senior Accountant', is_active: true },
   ]);
 
-  const [shifts] = useState<Shift[]>([
+  const [shifts, setShifts] = useState<Shift[]>([
     {
       id: 1,
       uuid: 'sh-01',
@@ -168,7 +205,9 @@ export const HrWorkspace: React.FC = () => {
     },
   ]);
 
-  // Employees State
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 2. Employees State
+  // ─────────────────────────────────────────────────────────────────────────────
   const [employees, setEmployees] = useState<Employee[]>([
     {
       id: 1,
@@ -236,8 +275,10 @@ export const HrWorkspace: React.FC = () => {
     },
   ]);
 
-  // Attendance State
-  const [attendances] = useState<Attendance[]>([
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 3. Attendance State
+  // ─────────────────────────────────────────────────────────────────────────────
+  const [attendances, setAttendances] = useState<Attendance[]>([
     {
       id: 1,
       uuid: 'att-01',
@@ -272,8 +313,10 @@ export const HrWorkspace: React.FC = () => {
     },
   ]);
 
-  // Leave Requests State
-  const [leaveRequests] = useState<LeaveRequest[]>([
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 4. Leave Requests State
+  // ─────────────────────────────────────────────────────────────────────────────
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([
     {
       id: 1,
       uuid: 'lr-01',
@@ -287,10 +330,40 @@ export const HrWorkspace: React.FC = () => {
       reason: 'Family wedding event',
       status: 'approved',
     },
+    {
+      id: 2,
+      uuid: 'lr-02',
+      employee_id: 1,
+      employee: employees[0],
+      leave_type_id: 2,
+      leave_type: leaveTypes[1],
+      start_date: '2026-09-15',
+      end_date: '2026-09-16',
+      total_days: '2.0000',
+      reason: 'Medical checkup & prescription rest',
+      status: 'pending',
+    },
   ]);
 
-  // Payroll Periods & Runs State
-  const [payrollPeriods] = useState<PayrollPeriod[]>([
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 5. Payroll Periods & Payslips State
+  // ─────────────────────────────────────────────────────────────────────────────
+  const [payrollPeriods, setPayrollPeriods] = useState<PayrollPeriod[]>([
+    {
+      id: 2,
+      uuid: 'pp-02',
+      company_id: 1,
+      period_code: 'PAY-202609',
+      pay_frequency: 'monthly',
+      period_start: '2026-09-01',
+      period_end: '2026-09-30',
+      payment_date: '2026-10-01',
+      status: 'open',
+      total_gross: '0.0000',
+      total_deductions: '0.0000',
+      total_net: '0.0000',
+      employee_count: 0,
+    },
     {
       id: 1,
       uuid: 'pp-01',
@@ -304,12 +377,12 @@ export const HrWorkspace: React.FC = () => {
       total_gross: '98500.0000',
       total_deductions: '3500.0000',
       total_net: '95000.0000',
-      employee_count: 3,
+      employee_count: 2,
       locked_at: '2026-08-28 10:00:00',
     },
   ]);
 
-  const [payslips] = useState<Payslip[]>([
+  const [payslips, setPayslips] = useState<Payslip[]>([
     {
       id: 1,
       uuid: 'ps-01',
@@ -377,17 +450,73 @@ export const HrWorkspace: React.FC = () => {
     },
   ]);
 
-  // Selected payslip view state
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 6. Interactive Modal States
+  // ─────────────────────────────────────────────────────────────────────────────
   const [selectedPayslip, setSelectedPayslip] = useState<Payslip | null>(null);
+  const [selectedEmployeeForBadge, setSelectedEmployeeForBadge] = useState<Employee | null>(null);
+  const [viewingEmployeeProfile, setViewingEmployeeProfile] = useState<Employee | null>(null);
 
-  // Onboard Employee Modal State
+  // Onboard Employee Modal
   const [showOnboardModal, setShowOnboardModal] = useState(false);
   const [newFirstName, setNewFirstName] = useState('');
   const [newLastName, setNewLastName] = useState('');
   const [newPhone, setNewPhone] = useState('');
-  const [newEmpType, setNewEmpType] = useState<Employee['employment_type']>('piece_rate');
+  const [newEmpType, setNewEmpType] = useState<EmploymentType>('piece_rate');
   const [newDeptId, setNewDeptId] = useState(1);
+  const [newBankNumber, setNewBankNumber] = useState('');
 
+  // Mark Attendance Modal
+  const [showMarkAttendanceModal, setShowMarkAttendanceModal] = useState(false);
+  const [attEmpId, setAttEmpId] = useState(employees[0]?.id || 1);
+  const [attShiftId, setAttShiftId] = useState(1);
+  const [attDate, setAttDate] = useState(new Date().toISOString().slice(0, 10));
+  const [attCheckIn, setAttCheckIn] = useState('09:00');
+  const [attCheckOut, setAttCheckOut] = useState('17:00');
+  const [attStatus, setAttStatus] = useState<Attendance['status']>('present');
+  const [attRemarks, setAttRemarks] = useState('');
+
+  // Leave Request Modal
+  const [showLeaveRequestModal, setShowLeaveRequestModal] = useState(false);
+  const [leaveEmpId, setLeaveEmpId] = useState(employees[0]?.id || 1);
+  const [leaveTypeId, setLeaveTypeId] = useState(1);
+  const [leaveStartDate, setLeaveStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [leaveEndDate, setLeaveEndDate] = useState(new Date().toISOString().slice(0, 10));
+  const [leaveDays, setLeaveDays] = useState('1');
+  const [leaveReason, setLeaveReason] = useState('');
+
+  // New Pay Period Modal
+  const [showNewPeriodModal, setShowNewPeriodModal] = useState(false);
+  const [newPeriodCode, setNewPeriodCode] = useState('PAY-202610');
+  const [newPeriodStart, setNewPeriodStart] = useState('2026-10-01');
+  const [newPeriodEnd, setNewPeriodEnd] = useState('2026-10-31');
+  const [newPaymentDate, setNewPaymentDate] = useState('2026-11-01');
+
+  // Create Payslip Modal State & Selected Period Filter
+  const [showCreatePayslipModal, setShowCreatePayslipModal] = useState(false);
+  const [selectedPeriodId, setSelectedPeriodId] = useState<number | 'all'>(1);
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 7. Filtering & Search States
+  // ─────────────────────────────────────────────────────────────────────────────
+  const [empSearch, setEmpSearch] = useState('');
+  const [empDeptFilter, setEmpDeptFilter] = useState<number | 'all'>('all');
+  const [empTypeFilter, setEmpTypeFilter] = useState<string>('all');
+
+  const [attSearch, setAttSearch] = useState('');
+  const [attStatusFilter, setAttStatusFilter] = useState<string>('all');
+  const [attDateFilter, setAttDateFilter] = useState<string>('2026-08-28');
+
+  const [leaveSearch, setLeaveSearch] = useState('');
+  const [leaveStatusFilter, setLeaveStatusFilter] = useState<string>('all');
+
+  const [payrollSearch, setPayrollSearch] = useState('');
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 8. Action Handlers
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  // Onboard Employee
   const handleOnboardEmployee = (e: React.FormEvent) => {
     e.preventDefault();
     const dept = departments.find((d) => d.id === newDeptId);
@@ -395,18 +524,21 @@ export const HrWorkspace: React.FC = () => {
       id: employees.length + 1,
       uuid: `emp-auto-${Date.now()}`,
       employee_code: `EMP-${String(employees.length + 101).padStart(5, '0')}`,
-      first_name: newFirstName,
-      last_name: newLastName,
-      display_name: `${newFirstName} ${newLastName}`.trim(),
-      phone: newPhone,
+      first_name: newFirstName.trim(),
+      last_name: newLastName.trim(),
+      display_name: `${newFirstName.trim()} ${newLastName.trim()}`.trim(),
+      phone: newPhone.trim(),
       company_id: 1,
       department_id: newDeptId,
       department: dept,
+      designation_id: 1,
+      designation: designations[0],
       employment_type: newEmpType,
       employment_status: 'active',
       default_shift_id: 1,
       default_shift: shifts[0],
       date_of_joining: new Date().toISOString().slice(0, 10),
+      bank_account_number: newBankNumber.trim() || undefined,
       is_active: true,
     };
 
@@ -415,81 +547,644 @@ export const HrWorkspace: React.FC = () => {
     setNewFirstName('');
     setNewLastName('');
     setNewPhone('');
+    setNewBankNumber('');
+    notify.success(`Employee ${newEmp.display_name} onboarded successfully!`);
   };
+
+  // Toggle Employee Active Status
+  const handleToggleEmployeeStatus = (empId: number) => {
+    setEmployees((prev) =>
+      prev.map((e) =>
+        e.id === empId
+          ? {
+              ...e,
+              is_active: !e.is_active,
+              employment_status: e.is_active ? 'suspended' : 'active',
+            }
+          : e
+      )
+    );
+    notify.info('Employee status updated');
+  };
+
+  // Export Staff Directory
+  const handleExportStaff = () => {
+    const csvRows = [
+      'Employee Code,Display Name,Department,Designation,Phone,Type,Status,Joining Date',
+      ...employees.map(
+        (e) =>
+          `"${e.employee_code}","${e.display_name}","${e.department?.name || ''}","${e.designation?.name || ''}","${e.phone}","${e.employment_type}","${e.employment_status}","${e.date_of_joining}"`
+      ),
+    ];
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `staff_directory_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    notify.success('Staff directory exported to CSV');
+  };
+
+  // Mark Attendance
+  const handleCreateAttendance = (e: React.FormEvent) => {
+    e.preventDefault();
+    const targetEmp = employees.find((emp) => emp.id === attEmpId);
+    const targetShift = shifts.find((sh) => sh.id === attShiftId);
+
+    const checkInDateTime = `${attDate} ${attCheckIn}:00`;
+    const checkOutDateTime = `${attDate} ${attCheckOut}:00`;
+
+    const newAtt: Attendance = {
+      id: attendances.length + 1,
+      uuid: `att-auto-${Date.now()}`,
+      employee_id: attEmpId,
+      employee: targetEmp,
+      attendance_date: attDate,
+      shift_id: attShiftId,
+      shift: targetShift,
+      check_in_at: checkInDateTime,
+      check_out_at: checkOutDateTime,
+      worked_minutes: 480,
+      late_minutes: attStatus === 'late' ? 25 : 0,
+      overtime_minutes: 0,
+      status: attStatus,
+      remarks: attRemarks || 'Floor shift attendance recorded',
+    };
+
+    setAttendances([newAtt, ...attendances]);
+    setShowMarkAttendanceModal(false);
+    setAttRemarks('');
+    notify.success(`Attendance logged for ${targetEmp?.display_name}!`);
+  };
+
+  // Export Attendance CSV
+  const handleExportAttendance = () => {
+    const csvRows = [
+      'Date,Employee Code,Employee Name,Shift,Check In,Check Out,Worked Minutes,Status',
+      ...attendances.map(
+        (a) =>
+          `"${a.attendance_date}","${a.employee?.employee_code || ''}","${a.employee?.display_name || ''}","${a.shift?.name || ''}","${a.check_in_at || ''}","${a.check_out_at || ''}",${a.worked_minutes},"${a.status}"`
+      ),
+    ];
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `attendance_log_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    notify.success('Attendance records exported to CSV');
+  };
+
+  // Submit Leave Request
+  const handleCreateLeaveRequest = (e: React.FormEvent) => {
+    e.preventDefault();
+    const targetEmp = employees.find((emp) => emp.id === leaveEmpId);
+    const targetType = leaveTypes.find((lt) => lt.id === leaveTypeId);
+
+    const newReq: LeaveRequest = {
+      id: leaveRequests.length + 1,
+      uuid: `lr-auto-${Date.now()}`,
+      employee_id: leaveEmpId,
+      employee: targetEmp,
+      leave_type_id: leaveTypeId,
+      leave_type: targetType,
+      start_date: leaveStartDate,
+      end_date: leaveEndDate,
+      total_days: parseFloat(leaveDays).toFixed(4),
+      reason: leaveReason.trim(),
+      status: 'pending',
+    };
+
+    setLeaveRequests([newReq, ...leaveRequests]);
+    setShowLeaveRequestModal(false);
+    setLeaveReason('');
+    notify.success(`Leave request submitted for ${targetEmp?.display_name}!`);
+  };
+
+  // Approve / Reject Leave
+  const handleApproveLeave = (id: number) => {
+    setLeaveRequests((prev) =>
+      prev.map((lr) => (lr.id === id ? { ...lr, status: 'approved' } : lr))
+    );
+    notify.success('Leave request approved');
+  };
+
+  const handleRejectLeave = (id: number) => {
+    setLeaveRequests((prev) =>
+      prev.map((lr) => (lr.id === id ? { ...lr, status: 'rejected' } : lr))
+    );
+    notify.warning('Leave request rejected');
+  };
+
+  // Disburse Payroll
+  const handleDisbursePayroll = (periodId: number) => {
+    setPayrollPeriods((prev) =>
+      prev.map((p) => (p.id === periodId ? { ...p, status: 'paid' } : p))
+    );
+    setPayslips((prev) =>
+      prev.map((ps) =>
+        ps.payroll_period_id === periodId ? { ...ps, payment_status: 'paid' } : ps
+      )
+    );
+    notify.success('Payroll disbursed and GL disbursement journal posted!');
+  };
+
+  // Export Bank Advice
+  const handleExportBankAdvice = () => {
+    const csvRows = [
+      'Payslip Number,Employee Code,Beneficiary Name,Bank Account,Net Payable Amount (BDT),Payment Status',
+      ...payslips.map(
+        (ps) =>
+          `"${ps.payslip_number}","${ps.employee?.employee_code || ''}","${ps.employee?.display_name || ''}","${ps.employee?.bank_account_number || 'N/A'}",${ps.net_amount},"${ps.payment_status}"`
+      ),
+    ];
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bank_payroll_advice_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    notify.success('Bank payout advice exported to CSV');
+  };
+
+  // Create New Pay Period
+  const handleCreateNewPeriod = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newId = Math.max(...payrollPeriods.map((p) => p.id), 0) + 1;
+    const newPeriod: PayrollPeriod = {
+      id: newId,
+      uuid: `pp-auto-${Date.now()}`,
+      company_id: 1,
+      period_code: newPeriodCode.trim().toUpperCase(),
+      pay_frequency: 'monthly',
+      period_start: newPeriodStart,
+      period_end: newPeriodEnd,
+      payment_date: newPaymentDate,
+      status: 'open',
+      total_gross: '0.0000',
+      total_deductions: '0.0000',
+      total_net: '0.0000',
+      employee_count: 0,
+    };
+
+    setPayrollPeriods([newPeriod, ...payrollPeriods]);
+    setSelectedPeriodId(newId);
+    setShowNewPeriodModal(false);
+    notify.success(`New pay period ${newPeriod.period_code} initialized and ready!`);
+  };
+
+  // Create Payslip Success Callback
+  const handleCreatePayslipSuccess = (newPayslip: Payslip) => {
+    setPayslips((prev) => [newPayslip, ...prev]);
+
+    // Recalculate the affected payroll period
+    setPayrollPeriods((prev) =>
+      prev.map((period) => {
+        if (period.id === newPayslip.payroll_period_id) {
+          const matchingPayslips = [
+            ...payslips.filter((p) => p.payroll_period_id === period.id),
+            newPayslip,
+          ];
+          const gross = matchingPayslips.reduce(
+            (sum, p) => sum + parseFloat(p.gross_amount || '0'),
+            0
+          );
+          const deductions = matchingPayslips.reduce(
+            (sum, p) => sum + parseFloat(p.total_deductions || '0'),
+            0
+          );
+          const net = matchingPayslips.reduce(
+            (sum, p) => sum + parseFloat(p.net_amount || '0'),
+            0
+          );
+          const uniqueEmps = new Set(matchingPayslips.map((p) => p.employee_id)).size;
+
+          return {
+            ...period,
+            total_gross: gross.toFixed(4),
+            total_deductions: deductions.toFixed(4),
+            total_net: net.toFixed(4),
+            employee_count: uniqueEmps,
+          };
+        }
+        return period;
+      })
+    );
+  };
+
+  // Run Batch Payroll for an open period
+  const handleRunBatchPayroll = (targetPeriodId: number) => {
+    const period = payrollPeriods.find((p) => p.id === targetPeriodId);
+    if (!period) return;
+    if (period.status === 'closed' || period.status === 'paid') {
+      notify.error(`Cannot generate payslips for a ${period.status} period`);
+      return;
+    }
+
+    // Identify active employees who do not yet have a payslip in this period
+    const existingEmpIds = new Set(
+      payslips.filter((p) => p.payroll_period_id === targetPeriodId).map((p) => p.employee_id)
+    );
+    const eligibleEmployees = employees.filter((e) => e.is_active && !existingEmpIds.has(e.id));
+
+    if (eligibleEmployees.length === 0) {
+      notify.info('All active employees already have payslips generated for this period.');
+      return;
+    }
+
+    const newGeneratedPayslips: Payslip[] = eligibleEmployees.map((emp, idx) => {
+      const isPieceRate = emp.employment_type === 'piece_rate';
+      const seq = String(idx + 1).padStart(4, '0');
+      const pNum = `PS-${period.period_code.replace('PAY-', '')}-${seq}`;
+
+      if (isPieceRate) {
+        const qty = 1250;
+        const rate = 30;
+        const gross = qty * rate; // 37500
+        const deductions = 500;
+        const net = gross - deductions;
+
+        return {
+          id: Date.now() + idx,
+          uuid: `ps-auto-${Date.now()}-${idx}`,
+          payroll_period_id: targetPeriodId,
+          payroll_period: period,
+          employee_id: emp.id,
+          employee: emp,
+          payslip_number: pNum,
+          gross_amount: gross.toFixed(4),
+          total_earnings: gross.toFixed(4),
+          total_deductions: deductions.toFixed(4),
+          net_amount: net.toFixed(4),
+          produced_quantity: qty.toFixed(4),
+          payment_method: 'bank',
+          payment_status: 'draft',
+          items: [
+            {
+              salary_component_id: 101,
+              component_code: 'PIECE_RATE',
+              component_type: 'earning',
+              quantity: qty.toFixed(4),
+              rate: rate.toFixed(4),
+              amount: gross.toFixed(4),
+            },
+            {
+              salary_component_id: 401,
+              component_code: 'PROVIDENT_FUND',
+              component_type: 'deduction',
+              quantity: '1.0000',
+              rate: deductions.toFixed(4),
+              amount: deductions.toFixed(4),
+            },
+          ],
+          created_at: new Date().toISOString(),
+        };
+      } else {
+        const basic = 50000;
+        const houseRent = 15000;
+        const gross = basic + houseRent; // 65000
+        const deductions = 2500;
+        const net = gross - deductions; // 62500
+
+        return {
+          id: Date.now() + idx,
+          uuid: `ps-auto-${Date.now()}-${idx}`,
+          payroll_period_id: targetPeriodId,
+          payroll_period: period,
+          employee_id: emp.id,
+          employee: emp,
+          payslip_number: pNum,
+          gross_amount: gross.toFixed(4),
+          total_earnings: gross.toFixed(4),
+          total_deductions: deductions.toFixed(4),
+          net_amount: net.toFixed(4),
+          payment_method: 'bank',
+          payment_status: 'draft',
+          items: [
+            {
+              salary_component_id: 201,
+              component_code: 'BASIC_SALARY',
+              component_type: 'earning',
+              quantity: '1.0000',
+              rate: basic.toFixed(4),
+              amount: basic.toFixed(4),
+            },
+            {
+              salary_component_id: 202,
+              component_code: 'HOUSE_RENT',
+              component_type: 'earning',
+              quantity: '1.0000',
+              rate: houseRent.toFixed(4),
+              amount: houseRent.toFixed(4),
+            },
+            {
+              salary_component_id: 402,
+              component_code: 'INCOME_TAX',
+              component_type: 'deduction',
+              quantity: '1.0000',
+              rate: deductions.toFixed(4),
+              amount: deductions.toFixed(4),
+            },
+          ],
+          created_at: new Date().toISOString(),
+        };
+      }
+    });
+
+    const updatedPayslips = [...newGeneratedPayslips, ...payslips];
+    setPayslips(updatedPayslips);
+
+    // Update period totals
+    setPayrollPeriods((prev) =>
+      prev.map((p) => {
+        if (p.id === targetPeriodId) {
+          const allForPeriod = updatedPayslips.filter(
+            (x) => x.payroll_period_id === targetPeriodId
+          );
+          const gross = allForPeriod.reduce(
+            (sum, x) => sum + parseFloat(x.gross_amount || '0'),
+            0
+          );
+          const deductions = allForPeriod.reduce(
+            (sum, x) => sum + parseFloat(x.total_deductions || '0'),
+            0
+          );
+          const net = allForPeriod.reduce(
+            (sum, x) => sum + parseFloat(x.net_amount || '0'),
+            0
+          );
+          const uniqueEmps = new Set(allForPeriod.map((x) => x.employee_id)).size;
+
+          return {
+            ...p,
+            total_gross: gross.toFixed(4),
+            total_deductions: deductions.toFixed(4),
+            total_net: net.toFixed(4),
+            employee_count: uniqueEmps,
+          };
+        }
+        return p;
+      })
+    );
+
+    notify.success(
+      `Batch Payroll executed! Generated ${newGeneratedPayslips.length} payslips for ${period.period_code}.`
+    );
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 9. Filtered Datasets
+  // ─────────────────────────────────────────────────────────────────────────────
+  const filteredEmployees = useMemo(() => {
+    return employees.filter((e) => {
+      if (empDeptFilter !== 'all' && e.department_id !== empDeptFilter) return false;
+      if (empTypeFilter !== 'all' && e.employment_type !== empTypeFilter) return false;
+      if (empSearch.trim()) {
+        const q = empSearch.toLowerCase();
+        const matchName = e.display_name.toLowerCase().includes(q);
+        const matchCode = e.employee_code.toLowerCase().includes(q);
+        const matchPhone = e.phone.toLowerCase().includes(q);
+        if (!matchName && !matchCode && !matchPhone) return false;
+      }
+      return true;
+    });
+  }, [employees, empDeptFilter, empTypeFilter, empSearch]);
+
+  const filteredAttendances = useMemo(() => {
+    return attendances.filter((a) => {
+      if (attDateFilter && a.attendance_date !== attDateFilter) return false;
+      if (attStatusFilter !== 'all' && a.status !== attStatusFilter) return false;
+      if (attSearch.trim()) {
+        const q = attSearch.toLowerCase();
+        const matchName = a.employee?.display_name.toLowerCase().includes(q);
+        const matchCode = a.employee?.employee_code.toLowerCase().includes(q);
+        if (!matchName && !matchCode) return false;
+      }
+      return true;
+    });
+  }, [attendances, attDateFilter, attStatusFilter, attSearch]);
+
+  const filteredLeaves = useMemo(() => {
+    return leaveRequests.filter((lr) => {
+      if (leaveStatusFilter !== 'all' && lr.status !== leaveStatusFilter) return false;
+      if (leaveSearch.trim()) {
+        const q = leaveSearch.toLowerCase();
+        const matchName = lr.employee?.display_name.toLowerCase().includes(q);
+        const matchCode = lr.employee?.employee_code.toLowerCase().includes(q);
+        if (!matchName && !matchCode) return false;
+      }
+      return true;
+    });
+  }, [leaveRequests, leaveStatusFilter, leaveSearch]);
+
+  const filteredPayslips = useMemo(() => {
+    return payslips.filter((ps) => {
+      if (selectedPeriodId !== 'all' && ps.payroll_period_id !== selectedPeriodId) {
+        return false;
+      }
+      if (payrollSearch.trim()) {
+        const q = payrollSearch.toLowerCase();
+        const matchNum = ps.payslip_number.toLowerCase().includes(q);
+        const matchName = ps.employee?.display_name.toLowerCase().includes(q);
+        const matchCode = ps.employee?.employee_code.toLowerCase().includes(q);
+        if (!matchNum && !matchName && !matchCode) return false;
+      }
+      return true;
+    });
+  }, [payslips, selectedPeriodId, payrollSearch]);
 
   const pieceRateCount = employees.filter((e) => e.employment_type === 'piece_rate').length;
   const salariedCount = employees.filter((e) => e.employment_type !== 'piece_rate').length;
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Module Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 max-w-7xl mx-auto py-2">
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Module Header & Contextual Action Controls
+          ───────────────────────────────────────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-default pb-5">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <span>👥</span> Team, Attendance & Payroll
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-primary bg-primary-subtle px-2.5 py-0.5 rounded-full border border-primary/20 flex items-center gap-1">
+              <Users className="size-3 text-primary" />
+              Enterprise Human Capital & Payroll
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-default">
+            Team, Attendance & Payroll
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Employee Directory, Shift Attendance, Factory Worker Output Tracking & Monthly Salary Payouts
+          <p className="mt-1 text-xs text-muted max-w-2xl leading-relaxed">
+            Employee directory, shift attendance tracking, factory worker piece-rate output, and automated payroll payouts.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowOnboardModal(true)}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow transition flex items-center gap-1 text-sm cursor-pointer"
-          >
-            <span>+</span> Add Employee
-          </button>
+
+        {/* Contextual Action Buttons in Header */}
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
+          {activeTab === 'payroll' ? (
+            <>
+              <button
+                type="button"
+                onClick={handleExportBankAdvice}
+                className="px-3 py-2 bg-surface hover:bg-surface-sunken border border-default text-default font-semibold rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+                title="Export Bank Advice to CSV"
+              >
+                <FileSpreadsheet className="size-3.5 text-emerald-600" />
+                <span>Export Bank Advice</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowNewPeriodModal(true)}
+                className="px-3 py-2 bg-surface hover:bg-surface-sunken border border-default text-default font-semibold rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+              >
+                <Plus className="size-3.5 text-muted" />
+                <span>New Pay Period</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCreatePayslipModal(true)}
+                className="px-3.5 py-2 bg-primary hover:bg-primary/90 text-primary-fg font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+              >
+                <Plus className="size-3.5" />
+                <span>Create Payslip</span>
+              </button>
+            </>
+          ) : activeTab === 'attendance' ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setIsKioskModalOpen(true)}
+                className="px-3 py-2 bg-slate-950 hover:bg-slate-900 text-emerald-400 font-semibold rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs cursor-pointer border border-slate-800"
+                title="Open Biometric & RFID Attendance Kiosk"
+              >
+                <Scan className="size-3.5 text-emerald-400" />
+                <span>Biometric Kiosk</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleExportAttendance}
+                className="px-3 py-2 bg-surface hover:bg-surface-sunken border border-default text-default font-semibold rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+              >
+                <Download className="size-3.5 text-muted" />
+                <span>Export Log</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowMarkAttendanceModal(true)}
+                className="px-3.5 py-2 bg-primary hover:bg-primary/90 text-primary-fg font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+              >
+                <Clock className="size-3.5" />
+                <span>Mark Attendance</span>
+              </button>
+            </>
+          ) : activeTab === 'leaves' ? (
+            <button
+              type="button"
+              onClick={() => setShowLeaveRequestModal(true)}
+              className="px-3.5 py-2 bg-primary hover:bg-primary/90 text-primary-fg font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+            >
+              <Plus className="size-3.5" />
+              <span>Request Leave</span>
+            </button>
+          ) : activeTab === 'salary-structures' ? (
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-xs font-semibold flex items-center gap-1.5">
+                <CheckCircle2 className="size-3.5 text-emerald-600" />
+                <span>Salary Packages Active</span>
+              </span>
+            </div>
+          ) : activeTab === 'advances' ? (
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-semibold flex items-center gap-1.5">
+                <CreditCard className="size-3.5 text-amber-600" />
+                <span>Auto-Payroll Recovery Linked</span>
+              </span>
+            </div>
+          ) : activeTab === 'employees' ? (
+            <>
+              <button
+                type="button"
+                onClick={handleExportStaff}
+                className="px-3 py-2 bg-surface hover:bg-surface-sunken border border-default text-default font-semibold rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+              >
+                <Download className="size-3.5 text-muted" />
+                <span>Export Staff</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowOnboardModal(true)}
+                className="px-3.5 py-2 bg-primary hover:bg-primary/90 text-primary-fg font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+              >
+                <UserPlus className="size-3.5" />
+                <span>Add Employee</span>
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowOnboardModal(true)}
+              className="px-3.5 py-2 bg-primary hover:bg-primary/90 text-primary-fg font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+            >
+              <UserPlus className="size-3.5" />
+              <span>Add Employee</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          KPI Cards
+          ───────────────────────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <div className="bg-surface rounded-2xl p-5 shadow-2xs border border-default">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted">
             Active Workforce
           </div>
-          <div className="text-2xl font-extrabold text-gray-900 dark:text-gray-100 mt-2">
+          <div className="text-2xl font-extrabold text-default mt-2">
             {employees.length} Personnel
           </div>
-          <div className="text-xs text-gray-400 mt-1">
+          <div className="text-xs text-muted mt-1">
             {pieceRateCount} Production Output | {salariedCount} Monthly Salary
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <div className="bg-surface rounded-2xl p-5 shadow-2xs border border-default">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted">
             Monthly Payroll Run
           </div>
-          <div className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-2 font-mono">
+          <div className="text-2xl font-extrabold text-primary mt-2 font-mono">
             {formatCurrency(payrollPeriods[0]?.total_net || '0')}
           </div>
-          <div className="text-xs text-gray-400 mt-1">
-            Period: {payrollPeriods[0]?.period_code} (LOCKED)
+          <div className="text-xs text-muted mt-1">
+            Period: {payrollPeriods[0]?.period_code} ({payrollPeriods[0]?.status.toUpperCase()})
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <div className="bg-surface rounded-2xl p-5 shadow-2xs border border-default">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted">
             Today's Present Rate
           </div>
           <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-2">
             100%
           </div>
-          <div className="text-xs text-gray-400 mt-1">Shift Grace In: 15 Minutes</div>
+          <div className="text-xs text-muted mt-1">Shift Grace In: 15 Minutes</div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-            Approved Leave Requests
+        <div className="bg-surface rounded-2xl p-5 shadow-2xs border border-default">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted">
+            Pending / Approved Leaves
           </div>
           <div className="text-2xl font-extrabold text-blue-600 dark:text-blue-400 mt-2">
             {leaveRequests.length} Scheduled
           </div>
-          <div className="text-xs text-gray-400 mt-1">Casual & Medical Quota</div>
+          <div className="text-xs text-muted mt-1">Casual & Medical Quota</div>
         </div>
       </div>
 
-      {/* Universal Workforce & HR Quick-Action Ribbon */}
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Universal Workforce & HR Quick-Action Ribbon
+          ───────────────────────────────────────────────────────────────────────────── */}
       <div className="rounded-2xl border border-primary/20 bg-linear-to-r from-primary/5 via-surface to-surface-raised p-3.5 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
@@ -504,6 +1199,14 @@ export const HrWorkspace: React.FC = () => {
           <div className="flex items-center gap-2 flex-wrap">
             <button
               type="button"
+              onClick={() => setIsKioskModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-950 hover:bg-slate-900 text-emerald-400 border border-slate-800 shadow-2xs transition-all cursor-pointer"
+            >
+              <Scan className="size-3.5 text-emerald-400" />
+              <span>Biometric Kiosk</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setShowOnboardModal(true)}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer"
             >
@@ -512,7 +1215,10 @@ export const HrWorkspace: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('attendance')}
+              onClick={() => {
+                setActiveTab('attendance');
+                setShowMarkAttendanceModal(true);
+              }}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
             >
               <Clock className="size-3.5 text-primary" />
@@ -520,7 +1226,10 @@ export const HrWorkspace: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('leaves')}
+              onClick={() => {
+                setActiveTab('leaves');
+                setShowLeaveRequestModal(true);
+              }}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
             >
               <CalendarCheck className="size-3.5 text-blue-500" />
@@ -528,17 +1237,22 @@ export const HrWorkspace: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('payroll')}
+              onClick={() => {
+                setActiveTab('payroll');
+                handleExportBankAdvice();
+              }}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
             >
               <Wallet className="size-3.5 text-emerald-600" />
-              <span>Payroll Payouts</span>
+              <span>Payroll Advice</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Intuitive Two-Tier HR Navigation */}
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Intuitive Two-Tier HR Navigation
+          ───────────────────────────────────────────────────────────────────────────── */}
       <div className="space-y-3">
         {/* Tier 1: Category Pillars */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -602,6 +1316,8 @@ export const HrWorkspace: React.FC = () => {
               { id: 'payroll', label: 'Salary Payouts & Payslips', category: 'compensation', icon: Wallet, count: payslips.length },
               { id: 'attendance', label: 'Daily Attendance & Shifts', category: 'compensation', icon: Clock, count: attendances.length },
               { id: 'leaves', label: 'Leave & Time Off', category: 'compensation', icon: CalendarCheck, count: leaveRequests.length },
+              { id: 'salary-structures', label: 'Salary Structures & Tiers', category: 'compensation', icon: DollarSign, count: 3 },
+              { id: 'advances', label: 'Salary Advances & Loans', category: 'compensation', icon: CreditCard, count: 3 },
               { id: 'employees', label: 'Staff Directory', category: 'people', icon: Users, count: employees.length },
               { id: 'departments', label: 'Departments & Roles', category: 'people', icon: Building2, count: departments.length },
               { id: 'performance', label: 'Factory Output & Wages', category: 'people', icon: Zap, count: 4 },
@@ -648,12 +1364,12 @@ export const HrWorkspace: React.FC = () => {
                   ? 'bg-surface-sunken text-default border border-default'
                   : 'text-muted hover:text-default hover:bg-surface-sunken/60 border border-transparent'
               }`}
-              title="Jump directly to any of the 6 HR views"
+              title="Jump directly to any of the 8 HR views"
             >
               <SlidersHorizontal className="size-3.5 text-muted" />
               <span>All Views</span>
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-sunken text-muted border border-default">
-                6
+                8
               </span>
             </button>
 
@@ -672,7 +1388,7 @@ export const HrWorkspace: React.FC = () => {
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-default"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-default cursor-pointer"
                     >
                       <X className="size-3" />
                     </button>
@@ -685,6 +1401,8 @@ export const HrWorkspace: React.FC = () => {
                       { id: 'payroll', label: 'Payroll Runs & Payslips', category: 'compensation', icon: Wallet, count: payslips.length },
                       { id: 'attendance', label: 'Shifts & Attendance', category: 'compensation', icon: Clock, count: attendances.length },
                       { id: 'leaves', label: 'Leave Management', category: 'compensation', icon: CalendarCheck, count: leaveRequests.length },
+                      { id: 'salary-structures', label: 'Salary Structures & Tiers', category: 'compensation', icon: DollarSign, count: 3 },
+                      { id: 'advances', label: 'Salary Advances & Loans', category: 'compensation', icon: CreditCard, count: 3 },
                       { id: 'employees', label: 'Employee Directory', category: 'people', icon: Users, count: employees.length },
                       { id: 'departments', label: 'Departments & Setup', category: 'people', icon: Building2, count: departments.length },
                       { id: 'performance', label: 'Worker Performance', category: 'people', icon: Zap, count: 4 },
@@ -754,63 +1472,235 @@ export const HrWorkspace: React.FC = () => {
         </div>
       </div>
 
-      {/* Tab 1: Payroll Runs & Payslips */}
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Tab 1: Payroll Runs & Payslips
+          ───────────────────────────────────────────────────────────────────────────── */}
       {activeTab === 'payroll' && (
-        <div className="space-y-6">
-          {/* Payroll Period Header Card */}
-          {payrollPeriods.map((period) => (
-            <div
-              key={period.id}
-              className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 space-y-4"
-            >
-              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                <div>
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 font-mono">
-                      {period.period_code}
-                    </h3>
-                    <span className="px-3 py-1 text-xs font-extrabold rounded-full bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300 uppercase tracking-wide">
-                      🔒 {period.status} & LOCKED
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Dates: {period.period_start} to {period.period_end} | Disbursed:{' '}
-                    {period.payment_date}
-                  </p>
-                </div>
+        <div className="space-y-4">
+          {/* Pay Period Switcher Ribbon */}
+          <div className="bg-surface rounded-2xl border border-default p-3.5 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-2xs">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-2xs font-bold uppercase tracking-wider text-muted mr-1">
+                Pay Period:
+              </span>
+              {payrollPeriods.map((period) => (
+                <button
+                  key={period.id}
+                  type="button"
+                  onClick={() => setSelectedPeriodId(period.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                    selectedPeriodId === period.id
+                      ? 'bg-primary text-primary-fg shadow-xs font-bold'
+                      : 'bg-surface-sunken hover:bg-surface text-default border border-default'
+                  }`}
+                >
+                  <span className="font-mono">{period.period_code}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.5 rounded-full uppercase font-bold ${
+                      period.status === 'paid'
+                        ? 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-300'
+                        : period.status === 'open'
+                        ? 'bg-blue-500/20 text-blue-800 dark:text-blue-300'
+                        : period.status === 'draft'
+                        ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300'
+                        : 'bg-slate-500/20 text-slate-800 dark:text-slate-300'
+                    }`}
+                  >
+                    {period.status}
+                  </span>
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setSelectedPeriodId('all')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                  selectedPeriodId === 'all'
+                    ? 'bg-primary text-primary-fg shadow-xs font-bold'
+                    : 'bg-surface-sunken hover:bg-surface text-default border border-default'
+                }`}
+              >
+                All Periods
+              </button>
+            </div>
 
-                <div className="flex gap-6 text-right">
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowNewPeriodModal(true)}
+                className="px-3 py-1.5 rounded-xl border border-default hover:bg-surface-sunken text-default text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+              >
+                <Plus className="size-3.5 text-muted" />
+                <span>New Period</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCreatePayslipModal(true)}
+                className="px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-fg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+              >
+                <Plus className="size-3.5" />
+                <span>+ Create Payslip</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Payroll Period Summary Card */}
+          {payrollPeriods
+            .filter((p) => selectedPeriodId === 'all' || p.id === selectedPeriodId)
+            .map((period) => (
+              <div
+                key={period.id}
+                className="bg-surface rounded-2xl p-6 shadow-2xs border border-default space-y-4"
+              >
+                <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                   <div>
-                    <span className="text-xs text-gray-400 uppercase font-semibold">
-                      Total Gross
-                    </span>
-                    <div className="text-lg font-bold font-mono text-gray-900 dark:text-gray-100">
-                      {formatCurrency(period.total_gross)}
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-xl font-bold text-default font-mono">
+                        {period.period_code}
+                      </h3>
+                      <span
+                        className={`px-3 py-1 text-xs font-extrabold rounded-full uppercase tracking-wide flex items-center gap-1 ${
+                          period.status === 'paid'
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+                            : period.status === 'closed'
+                            ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300'
+                            : period.status === 'open'
+                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
+                            : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                        }`}
+                      >
+                        {period.status === 'paid' ? (
+                          <CheckCircle2 className="size-3" />
+                        ) : period.status === 'closed' ? (
+                          '🔒'
+                        ) : (
+                          '⚡'
+                        )}
+                        {period.status === 'paid'
+                          ? 'DISBURSED & PAID'
+                          : period.status === 'closed'
+                          ? 'CLOSED & LOCKED'
+                          : `${period.status.toUpperCase()} & READY`}
+                      </span>
                     </div>
+                    <p className="text-xs text-muted mt-1">
+                      Dates: {period.period_start} to {period.period_end} | Disbursed:{' '}
+                      {period.payment_date} | {period.employee_count} Enrolled Staff
+                    </p>
                   </div>
-                  <div>
-                    <span className="text-xs text-gray-400 uppercase font-semibold">
-                      Total Net Payout
-                    </span>
-                    <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                      {formatCurrency(period.total_net)}
+
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <div className="text-right">
+                      <span className="text-2xs text-muted uppercase font-semibold block">
+                        Total Gross
+                      </span>
+                      <div className="text-lg font-bold font-mono text-default">
+                        {formatCurrency(period.total_gross)}
+                      </div>
+                    </div>
+                    <div className="text-right border-l border-default pl-4">
+                      <span className="text-2xs text-muted uppercase font-semibold block">
+                        Total Net Payout
+                      </span>
+                      <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                        {formatCurrency(period.total_net)}
+                      </div>
+                    </div>
+
+                    {/* Actions Bar on Period Card */}
+                    <div className="flex items-center gap-2 border-l border-default pl-4 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => setShowCreatePayslipModal(true)}
+                        className="px-3 py-1.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-fg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+                      >
+                        <Plus className="size-3.5" />
+                        <span>Create Payslip</span>
+                      </button>
+
+                      {period.status !== 'closed' && period.status !== 'paid' && (
+                        <button
+                          type="button"
+                          onClick={() => handleRunBatchPayroll(period.id)}
+                          className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+                          title="Generate payslips for all active employees without one"
+                        >
+                          <Zap className="size-3.5" />
+                          <span>⚡ Run Payroll</span>
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={handleExportBankAdvice}
+                        className="px-3 py-1.5 rounded-xl border border-default hover:bg-surface-sunken text-default text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                        title="Download bank CSV file"
+                      >
+                        <FileSpreadsheet className="size-3.5 text-emerald-600" />
+                        <span>Advice CSV</span>
+                      </button>
+
+                      {period.status !== 'paid' ? (
+                        <button
+                          type="button"
+                          onClick={() => handleDisbursePayroll(period.id)}
+                          className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+                        >
+                          <CreditCard className="size-3.5" />
+                          <span>Disburse</span>
+                        </button>
+                      ) : (
+                        <span className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-semibold flex items-center gap-1 border border-emerald-200 dark:border-emerald-800">
+                          <Check className="size-3" /> Disbursed
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
 
           {/* Payslip Items Table */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
-              <h3 className="font-bold text-gray-900 dark:text-gray-100">
-                Itemized Worker Payslips
-              </h3>
-              <span className="text-xs text-gray-500">Includes Phase 3 Piece-Rate Auto-Rollup</span>
+          <div className="bg-surface rounded-2xl shadow-2xs border border-default overflow-hidden">
+            <div className="p-4 border-b border-default flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="font-bold text-default text-sm">
+                  Itemized Worker Payslips
+                </h3>
+                <span className="text-xs text-muted">
+                  {selectedPeriodId === 'all'
+                    ? 'Showing all payslips across all pay periods'
+                    : `Filtered for ${
+                        payrollPeriods.find((p) => p.id === selectedPeriodId)?.period_code ||
+                        'current period'
+                      } • ${filteredPayslips.length} issued`}
+                </span>
+              </div>
+
+              {/* Payslip Search & Quick Create Button */}
+              <div className="flex items-center gap-2">
+                <div className="relative w-full sm:w-64">
+                  <Search className="size-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={payrollSearch}
+                    onChange={(e) => setPayrollSearch(e.target.value)}
+                    placeholder="Search payslip or worker..."
+                    className="w-full pl-8 pr-3 py-1.5 border border-default rounded-xl bg-surface-sunken text-default text-xs focus:border-primary focus:outline-none"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCreatePayslipModal(true)}
+                  className="px-3 py-1.5 bg-primary hover:bg-primary/90 text-primary-fg text-xs font-semibold rounded-xl flex items-center gap-1 shrink-0 transition cursor-pointer shadow-xs"
+                >
+                  <Plus className="size-3.5" />
+                  <span>+ Create Payslip</span>
+                </button>
+              </div>
             </div>
-            <table className="w-full text-left text-sm text-gray-600 dark:text-gray-300">
-              <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-700 dark:text-gray-200 uppercase text-xs">
+
+            <table className="w-full text-left text-sm text-default">
+              <thead className="bg-surface-sunken text-muted uppercase text-2xs font-bold border-b border-default">
                 <tr>
                   <th className="px-6 py-3">Payslip Number</th>
                   <th className="px-6 py-3">Employee Name</th>
@@ -819,55 +1709,278 @@ export const HrWorkspace: React.FC = () => {
                   <th className="px-6 py-3 text-right">Gross Amount</th>
                   <th className="px-6 py-3 text-right">Deductions</th>
                   <th className="px-6 py-3 text-right">Net Payable</th>
-                  <th className="px-6 py-3 text-center">Action</th>
+                  <th className="px-6 py-3 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {payslips.map((ps) => (
-                  <tr key={ps.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                    <td className="px-6 py-4 font-mono font-semibold text-indigo-600 dark:text-indigo-400">
-                      {ps.payslip_number}
+              <tbody className="divide-y divide-default">
+                {filteredPayslips.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center justify-center max-w-sm mx-auto text-center space-y-3">
+                        <div className="size-12 rounded-2xl bg-surface-sunken border border-default flex items-center justify-center text-muted">
+                          <DollarSign className="size-6 text-primary" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-sm text-default">
+                            No payslips generated for this period yet
+                          </h4>
+                          <p className="text-xs text-muted mt-1">
+                            Run automated payroll to roll up all piece-rate output and monthly salaries, or create an individual worker payslip.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 pt-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const targetId =
+                                selectedPeriodId === 'all'
+                                  ? payrollPeriods[0]?.id
+                                  : selectedPeriodId;
+                              if (targetId) handleRunBatchPayroll(targetId);
+                            }}
+                            className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 cursor-pointer shadow-xs transition"
+                          >
+                            <Zap className="size-3.5" />
+                            <span>⚡ Run Payroll (Batch)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowCreatePayslipModal(true)}
+                            className="px-4 py-2 text-xs font-semibold rounded-xl bg-surface hover:bg-surface-sunken text-default border border-default flex items-center gap-1.5 cursor-pointer shadow-2xs transition"
+                          >
+                            <Plus className="size-3.5" />
+                            <span>+ Create Payslip</span>
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredPayslips.map((ps) => (
+                    <tr key={ps.id} className="hover:bg-surface-sunken/50 transition">
+                      <td className="px-6 py-4 font-mono font-bold text-primary">
+                        {ps.payslip_number}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="font-semibold text-default">
+                          {ps.employee?.display_name}
+                        </div>
+                        <div className="text-xs font-mono text-muted">
+                          {ps.employee?.employee_code}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-2 py-0.5 text-xs font-semibold rounded ${
+                            ps.employee?.employment_type === 'piece_rate'
+                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                              : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
+                          }`}
+                        >
+                          {ps.employee?.employment_type.replace('_', ' ').toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right font-mono font-semibold text-default">
+                        {ps.produced_quantity
+                          ? `${parseFloat(ps.produced_quantity).toFixed(0)} Pcs`
+                          : '—'}
+                      </td>
+                      <td className="px-6 py-4 text-right font-mono text-default">
+                        {formatCurrency(ps.gross_amount)}
+                      </td>
+                      <td className="px-6 py-4 text-right font-mono text-rose-600 dark:text-rose-400">
+                        {formatCurrency(ps.total_deductions)}
+                      </td>
+                      <td className="px-6 py-4 text-right font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+                        {formatCurrency(ps.net_amount)}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPayslip(ps)}
+                            className="px-2.5 py-1 text-2xs bg-surface border border-default hover:bg-surface-sunken text-default rounded-lg font-semibold transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                          >
+                            <Eye className="size-3 text-primary" />
+                            <span>View Items</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedPayslip(ps);
+                              setTimeout(() => window.print(), 200);
+                            }}
+                            className="px-2.5 py-1 text-2xs bg-surface border border-default hover:bg-surface-sunken text-muted hover:text-default rounded-lg font-semibold transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                            title="Print official payslip"
+                          >
+                            <Printer className="size-3 text-muted" />
+                            <span>Print</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Tab 2: Employee Directory
+          ───────────────────────────────────────────────────────────────────────────── */}
+      {activeTab === 'employees' && (
+        <div className="space-y-4">
+          {/* Employee Directory Toolbar */}
+          <div className="bg-surface rounded-2xl border border-default p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-2xs">
+            <div className="flex items-center gap-2.5 flex-wrap flex-1">
+              <div className="relative flex-1 min-w-[200px] max-w-sm">
+                <Search className="size-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={empSearch}
+                  onChange={(e) => setEmpSearch(e.target.value)}
+                  placeholder="Search employee name, code, phone..."
+                  className="w-full pl-8 pr-3 py-1.5 border border-default rounded-xl bg-surface-sunken text-default text-xs focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              {/* Department Dropdown Filter */}
+              <div className="flex items-center gap-1.5">
+                <Filter className="size-3.5 text-muted" />
+                <select
+                  value={empDeptFilter}
+                  onChange={(e) =>
+                    setEmpDeptFilter(e.target.value === 'all' ? 'all' : parseInt(e.target.value))
+                  }
+                  className="px-2.5 py-1.5 border border-default rounded-xl bg-surface text-default text-xs focus:border-primary focus:outline-none font-medium cursor-pointer"
+                >
+                  <option value="all">All Departments</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Type Filter */}
+              <select
+                value={empTypeFilter}
+                onChange={(e) => setEmpTypeFilter(e.target.value)}
+                className="px-2.5 py-1.5 border border-default rounded-xl bg-surface text-default text-xs focus:border-primary focus:outline-none font-medium cursor-pointer"
+              >
+                <option value="all">All Employment Types</option>
+                <option value="piece_rate">Piece-Rate Worker</option>
+                <option value="permanent">Permanent Salaried</option>
+                <option value="contract">Contract Staff</option>
+                <option value="daily_wage">Daily Wage</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleExportStaff}
+                className="px-3 py-2 bg-surface hover:bg-surface-sunken border border-default text-default font-semibold rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+              >
+                <Download className="size-3.5 text-muted" />
+                <span>Export Staff</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowOnboardModal(true)}
+                className="px-3.5 py-2 bg-primary hover:bg-primary/90 text-primary-fg font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+              >
+                <UserPlus className="size-3.5" />
+                <span>Add Employee</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Employees Table */}
+          <div className="bg-surface rounded-2xl shadow-2xs border border-default overflow-hidden">
+            <table className="w-full text-left text-sm text-default">
+              <thead className="bg-surface-sunken text-muted uppercase text-2xs font-bold border-b border-default">
+                <tr>
+                  <th className="px-6 py-3">Code</th>
+                  <th className="px-6 py-3">Full Name</th>
+                  <th className="px-6 py-3">Department & Designation</th>
+                  <th className="px-6 py-3">Phone</th>
+                  <th className="px-6 py-3">Employment Type</th>
+                  <th className="px-6 py-3">Shift</th>
+                  <th className="px-6 py-3 text-center">Status</th>
+                  <th className="px-6 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-default">
+                {filteredEmployees.map((emp) => (
+                  <tr key={emp.id} className="hover:bg-surface-sunken/50 transition">
+                    <td className="px-6 py-4 font-mono font-bold text-primary">
+                      {emp.employee_code}
+                    </td>
+                    <td className="px-6 py-4 font-semibold text-default">
+                      {emp.display_name}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="font-semibold text-gray-900 dark:text-gray-100">
-                        {ps.employee?.display_name}
+                      <div className="font-medium text-default">
+                        {emp.department?.name}
                       </div>
-                      <div className="text-xs font-mono text-gray-500">
-                        {ps.employee?.employee_code}
-                      </div>
+                      <div className="text-xs text-muted">{emp.designation?.name}</div>
                     </td>
+                    <td className="px-6 py-4 font-mono text-xs text-muted">{emp.phone}</td>
                     <td className="px-6 py-4">
                       <span
-                        className={`px-2 py-0.5 text-xs font-semibold rounded ${
-                          ps.employee?.employment_type === 'piece_rate'
+                        className={`px-2.5 py-1 text-xs font-semibold rounded-full capitalize ${
+                          emp.employment_type === 'piece_rate'
                             ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
-                            : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
+                            : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
                         }`}
                       >
-                        {ps.employee?.employment_type.replace('_', ' ').toUpperCase()}
+                        {emp.employment_type.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right font-mono font-semibold text-gray-900 dark:text-gray-100">
-                      {ps.produced_quantity
-                        ? `${parseFloat(ps.produced_quantity).toFixed(0)} Pcs`
-                        : '—'}
-                    </td>
-                    <td className="px-6 py-4 text-right font-mono text-gray-900 dark:text-gray-100">
-                      {formatCurrency(ps.gross_amount)}
-                    </td>
-                    <td className="px-6 py-4 text-right font-mono text-rose-600 dark:text-rose-400">
-                      {formatCurrency(ps.total_deductions)}
-                    </td>
-                    <td className="px-6 py-4 text-right font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
-                      {formatCurrency(ps.net_amount)}
+                    <td className="px-6 py-4 text-xs text-muted">
+                      {emp.default_shift?.name || 'Standard Shift'}
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <button
-                        onClick={() => setSelectedPayslip(ps)}
-                        className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded font-medium transition"
+                      <span
+                        className={`px-2 py-0.5 text-xs font-bold rounded-full ${
+                          emp.is_active
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+                            : 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300'
+                        }`}
                       >
-                        View Items
-                      </button>
+                        {emp.is_active ? 'ACTIVE' : 'INACTIVE'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedEmployeeForBadge(emp)}
+                          className="px-2 py-1 text-2xs bg-primary/10 hover:bg-primary/20 text-primary rounded-lg font-semibold border border-primary/20 transition cursor-pointer flex items-center gap-1"
+                          title="Generate and print Security ID Card"
+                        >
+                          <span>🪪 ID Badge</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setViewingEmployeeProfile(emp)}
+                          className="px-2 py-1 text-2xs bg-surface border border-default hover:bg-surface-sunken text-default rounded-lg font-semibold transition cursor-pointer"
+                          title="View complete employee record"
+                        >
+                          Profile
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleEmployeeStatus(emp.id)}
+                          className="px-2 py-1 text-2xs border border-default hover:bg-surface-sunken text-muted hover:text-default rounded-lg font-medium transition cursor-pointer"
+                        >
+                          {emp.is_active ? 'Deactivate' : 'Activate'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -877,78 +1990,71 @@ export const HrWorkspace: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 2: Employee Directory */}
-      {activeTab === 'employees' && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <table className="w-full text-left text-sm text-gray-600 dark:text-gray-300">
-            <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-700 dark:text-gray-200 uppercase text-xs">
-              <tr>
-                <th className="px-6 py-3">Code</th>
-                <th className="px-6 py-3">Full Name</th>
-                <th className="px-6 py-3">Department & Designation</th>
-                <th className="px-6 py-3">Phone</th>
-                <th className="px-6 py-3">Employment Type</th>
-                <th className="px-6 py-3">Shift</th>
-                <th className="px-6 py-3 text-center">Status</th>
-                <th className="px-6 py-3 text-right">Badge</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {employees.map((emp) => (
-                <tr key={emp.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                  <td className="px-6 py-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                    {emp.employee_code}
-                  </td>
-                  <td className="px-6 py-4 font-semibold text-gray-900 dark:text-gray-100">
-                    {emp.display_name}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="font-medium text-gray-900 dark:text-gray-100">
-                      {emp.department?.name}
-                    </div>
-                    <div className="text-xs text-gray-500">{emp.designation?.name}</div>
-                  </td>
-                  <td className="px-6 py-4 font-mono text-xs">{emp.phone}</td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-full capitalize ${
-                        emp.employment_type === 'piece_rate'
-                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
-                          : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
-                      }`}
-                    >
-                      {emp.employment_type.replace('_', ' ')}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-xs">
-                    {emp.default_shift?.name || 'Standard Shift'}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
-                      ACTIVE
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => setSelectedEmployeeForBadge(emp)}
-                      className="px-2.5 py-1 text-xs bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 rounded font-semibold border border-indigo-200 dark:border-indigo-800 transition"
-                    >
-                      🪪 ID Badge
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Tab 3: Shifts & Attendance */}
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Tab 3: Shifts & Daily Attendance
+          ───────────────────────────────────────────────────────────────────────────── */}
       {activeTab === 'attendance' && (
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <table className="w-full text-left text-sm text-gray-600 dark:text-gray-300">
-              <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-700 dark:text-gray-200 uppercase text-xs">
+        <div className="space-y-4">
+          {/* Attendance Toolbar */}
+          <div className="bg-surface rounded-2xl border border-default p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-2xs">
+            <div className="flex items-center gap-2.5 flex-wrap flex-1">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 border border-default rounded-xl bg-surface">
+                <span className="text-xs font-semibold text-muted">Date:</span>
+                <input
+                  type="date"
+                  value={attDateFilter}
+                  onChange={(e) => setAttDateFilter(e.target.value)}
+                  className="bg-transparent text-xs font-mono font-bold text-default focus:outline-none cursor-pointer"
+                />
+              </div>
+
+              <div className="relative flex-1 min-w-[180px] max-w-xs">
+                <Search className="size-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={attSearch}
+                  onChange={(e) => setAttSearch(e.target.value)}
+                  placeholder="Filter by worker name/code..."
+                  className="w-full pl-8 pr-3 py-1.5 border border-default rounded-xl bg-surface-sunken text-default text-xs focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <select
+                value={attStatusFilter}
+                onChange={(e) => setAttStatusFilter(e.target.value)}
+                className="px-2.5 py-1.5 border border-default rounded-xl bg-surface text-default text-xs focus:border-primary focus:outline-none font-medium cursor-pointer"
+              >
+                <option value="all">All Attendance Statuses</option>
+                <option value="present">Present</option>
+                <option value="late">Late Check-in</option>
+                <option value="absent">Absent</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleExportAttendance}
+                className="px-3 py-2 bg-surface hover:bg-surface-sunken border border-default text-default font-semibold rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+              >
+                <Download className="size-3.5 text-muted" />
+                <span>Export Records</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowMarkAttendanceModal(true)}
+                className="px-3.5 py-2 bg-primary hover:bg-primary/90 text-primary-fg font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+              >
+                <Clock className="size-3.5" />
+                <span>Mark Attendance</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Attendance Table */}
+          <div className="bg-surface rounded-2xl shadow-2xs border border-default overflow-hidden">
+            <table className="w-full text-left text-sm text-default">
+              <thead className="bg-surface-sunken text-muted uppercase text-2xs font-bold border-b border-default">
                 <tr>
                   <th className="px-6 py-3">Date</th>
                   <th className="px-6 py-3">Employee</th>
@@ -957,41 +2063,195 @@ export const HrWorkspace: React.FC = () => {
                   <th className="px-6 py-3 text-right">Worked (Mins)</th>
                   <th className="px-6 py-3 text-right">Late (Mins)</th>
                   <th className="px-6 py-3 text-center">Status</th>
+                  <th className="px-6 py-3 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {attendances.map((att) => (
-                  <tr
-                    key={att.id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
-                  >
-                    <td className="px-6 py-4">{att.attendance_date}</td>
+              <tbody className="divide-y divide-default">
+                {filteredAttendances.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-10 text-center text-xs text-muted">
+                      No attendance records found for this date.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredAttendances.map((att) => (
+                    <tr key={att.id} className="hover:bg-surface-sunken/50 transition">
+                      <td className="px-6 py-4 font-mono text-xs">{att.attendance_date}</td>
+                      <td className="px-6 py-4">
+                        <div className="font-semibold text-default">
+                          {att.employee?.display_name}
+                        </div>
+                        <div className="text-xs font-mono text-muted">
+                          {att.employee?.employee_code}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 font-mono text-xs">{att.check_in_at}</td>
+                      <td className="px-6 py-4 font-mono text-xs">{att.check_out_at}</td>
+                      <td className="px-6 py-4 text-right font-mono font-bold text-default">
+                        {att.worked_minutes} mins ({(att.worked_minutes / 60).toFixed(1)} hrs)
+                      </td>
+                      <td className="px-6 py-4 text-right font-mono text-rose-600 dark:text-rose-400">
+                        {att.late_minutes} mins
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span
+                          className={`px-2.5 py-1 text-xs font-semibold rounded-full uppercase ${
+                            att.status === 'present'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                          }`}
+                        >
+                          {att.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAttendances((prev) =>
+                              prev.map((a) =>
+                                a.id === att.id
+                                  ? {
+                                      ...a,
+                                      status: a.status === 'present' ? 'late' : 'present',
+                                      late_minutes: a.status === 'present' ? 15 : 0,
+                                    }
+                                  : a
+                              )
+                            );
+                            notify.info('Attendance status adjusted');
+                          }}
+                          className="px-2 py-1 text-2xs font-semibold rounded-lg border border-default hover:bg-surface-sunken text-default transition cursor-pointer"
+                        >
+                          Toggle State
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Tab 4: Leave Management
+          ───────────────────────────────────────────────────────────────────────────── */}
+      {activeTab === 'leaves' && (
+        <div className="space-y-4">
+          {/* Leaves Toolbar */}
+          <div className="bg-surface rounded-2xl border border-default p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-2xs">
+            <div className="flex items-center gap-2.5 flex-wrap flex-1">
+              <div className="relative flex-1 min-w-[200px] max-w-sm">
+                <Search className="size-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={leaveSearch}
+                  onChange={(e) => setLeaveSearch(e.target.value)}
+                  placeholder="Filter by employee name or code..."
+                  className="w-full pl-8 pr-3 py-1.5 border border-default rounded-xl bg-surface-sunken text-default text-xs focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <select
+                value={leaveStatusFilter}
+                onChange={(e) => setLeaveStatusFilter(e.target.value)}
+                className="px-2.5 py-1.5 border border-default rounded-xl bg-surface text-default text-xs focus:border-primary focus:outline-none font-medium cursor-pointer"
+              >
+                <option value="all">All Request Statuses</option>
+                <option value="pending">Pending Review</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowLeaveRequestModal(true)}
+              className="px-3.5 py-2 bg-primary hover:bg-primary/90 text-primary-fg font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs cursor-pointer"
+            >
+              <Plus className="size-3.5" />
+              <span>Request Leave</span>
+            </button>
+          </div>
+
+          <div className="bg-surface rounded-2xl shadow-2xs border border-default overflow-hidden">
+            <table className="w-full text-left text-sm text-default">
+              <thead className="bg-surface-sunken text-muted uppercase text-2xs font-bold border-b border-default">
+                <tr>
+                  <th className="px-6 py-3">Employee</th>
+                  <th className="px-6 py-3">Leave Type</th>
+                  <th className="px-6 py-3">Start Date</th>
+                  <th className="px-6 py-3">End Date</th>
+                  <th className="px-6 py-3 text-right">Days</th>
+                  <th className="px-6 py-3">Reason</th>
+                  <th className="px-6 py-3 text-center">Status</th>
+                  <th className="px-6 py-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-default">
+                {filteredLeaves.map((lr) => (
+                  <tr key={lr.id} className="hover:bg-surface-sunken/50 transition">
                     <td className="px-6 py-4">
-                      <div className="font-semibold text-gray-900 dark:text-gray-100">
-                        {att.employee?.display_name}
+                      <div className="font-semibold text-default">
+                        {lr.employee?.display_name}
                       </div>
-                      <div className="text-xs font-mono text-gray-500">
-                        {att.employee?.employee_code}
+                      <div className="text-xs font-mono text-muted">
+                        {lr.employee?.employee_code}
                       </div>
                     </td>
-                    <td className="px-6 py-4 font-mono text-xs">{att.check_in_at}</td>
-                    <td className="px-6 py-4 font-mono text-xs">{att.check_out_at}</td>
-                    <td className="px-6 py-4 text-right font-mono font-bold text-gray-900 dark:text-gray-100">
-                      {att.worked_minutes} mins ({(att.worked_minutes / 60).toFixed(1)} hrs)
+                    <td className="px-6 py-4 font-medium text-default">
+                      {lr.leave_type?.name}
                     </td>
-                    <td className="px-6 py-4 text-right font-mono text-rose-600 dark:text-rose-400">
-                      {att.late_minutes} mins
+                    <td className="px-6 py-4 text-xs font-mono">{lr.start_date}</td>
+                    <td className="px-6 py-4 text-xs font-mono">{lr.end_date}</td>
+                    <td className="px-6 py-4 text-right font-mono font-bold text-default">
+                      {parseFloat(String(lr.total_days))} Days
                     </td>
+                    <td className="px-6 py-4 text-xs text-muted max-w-xs truncate">{lr.reason}</td>
                     <td className="px-6 py-4 text-center">
                       <span
                         className={`px-2.5 py-1 text-xs font-semibold rounded-full uppercase ${
-                          att.status === 'present'
+                          lr.status === 'approved'
                             ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
-                            : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                            : lr.status === 'pending'
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                            : 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300'
                         }`}
                       >
-                        {att.status}
+                        {lr.status}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      {lr.status === 'pending' ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleApproveLeave(lr.id)}
+                            className="px-2 py-1 text-2xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition cursor-pointer flex items-center gap-1"
+                          >
+                            <Check className="size-3" /> Approve
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRejectLeave(lr.id)}
+                            className="px-2 py-1 text-2xs font-semibold rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 transition cursor-pointer"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      ) : lr.status === 'approved' ? (
+                        <button
+                          type="button"
+                          onClick={() => handleRejectLeave(lr.id)}
+                          className="px-2 py-1 text-2xs font-medium rounded-lg border border-default hover:bg-surface-sunken text-muted hover:text-default transition cursor-pointer"
+                        >
+                          Revoke
+                        </button>
+                      ) : (
+                        <span className="text-2xs text-muted">Archived</span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -1001,101 +2261,62 @@ export const HrWorkspace: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 4: Leave Management */}
-      {activeTab === 'leaves' && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <table className="w-full text-left text-sm text-gray-600 dark:text-gray-300">
-            <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-700 dark:text-gray-200 uppercase text-xs">
-              <tr>
-                <th className="px-6 py-3">Employee</th>
-                <th className="px-6 py-3">Leave Type</th>
-                <th className="px-6 py-3">Start Date</th>
-                <th className="px-6 py-3">End Date</th>
-                <th className="px-6 py-3 text-right">Days</th>
-                <th className="px-6 py-3">Reason</th>
-                <th className="px-6 py-3 text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {leaveRequests.map((lr) => (
-                <tr key={lr.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                  <td className="px-6 py-4">
-                    <div className="font-semibold text-gray-900 dark:text-gray-100">
-                      {lr.employee?.display_name}
-                    </div>
-                    <div className="text-xs font-mono text-gray-500">
-                      {lr.employee?.employee_code}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
-                    {lr.leave_type?.name}
-                  </td>
-                  <td className="px-6 py-4 text-xs">{lr.start_date}</td>
-                  <td className="px-6 py-4 text-xs">{lr.end_date}</td>
-                  <td className="px-6 py-4 text-right font-mono font-bold text-gray-900 dark:text-gray-100">
-                    {parseFloat(String(lr.total_days))} Days
-                  </td>
-                  <td className="px-6 py-4 text-gray-600 dark:text-gray-300">{lr.reason}</td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 uppercase">
-                      {lr.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Tab 5: Worker Production Performance */}
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Tab 5: Worker Production Performance
+          ───────────────────────────────────────────────────────────────────────────── */}
       {activeTab === 'performance' && <WorkerPerformanceSection />}
 
-      {/* Tab 6: Departments & Setup */}
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Tab 6: Departments & Roles Setup
+          ───────────────────────────────────────────────────────────────────────────── */}
       {activeTab === 'departments' && (
         <DepartmentsSetupSection
           departments={departments}
           designations={designations}
           shifts={shifts}
+          onAddDepartment={(d) => setDepartments([...departments, d])}
+          onAddDesignation={(des) => setDesignations([...designations, des])}
+          onAddShift={(s) => setShifts([...shifts, s])}
         />
       )}
 
-      {/* View Payslip Breakdown Modal */}
-      {selectedPayslip && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-6">
-            <div className="flex items-center justify-between border-b pb-4 dark:border-gray-700">
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                  Payslip Details ({selectedPayslip.payslip_number})
-                </h3>
-                <p className="text-xs text-gray-500">
-                  Employee: {selectedPayslip.employee?.display_name}
-                </p>
-              </div>
-              <button
-                onClick={() => setSelectedPayslip(null)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-              >
-                ✕
-              </button>
-            </div>
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Tab 7: Compensation Packages & Salary Structures
+          ───────────────────────────────────────────────────────────────────────────── */}
+      {activeTab === 'salary-structures' && <SalaryStructuresSection />}
 
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Tab 8: Salary Advances & Employee Loans
+          ───────────────────────────────────────────────────────────────────────────── */}
+      {activeTab === 'advances' && <SalaryAdvancesSection />}
+
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Modal 1: View Payslip Breakdown
+          ───────────────────────────────────────────────────────────────────────────── */}
+      <Modal
+        open={Boolean(selectedPayslip)}
+        onClose={() => setSelectedPayslip(null)}
+        title={`Payslip Breakdown: ${selectedPayslip?.payslip_number || ''}`}
+        subtitle={`Employee: ${selectedPayslip?.employee?.display_name || ''} (${selectedPayslip?.employee?.employee_code || ''})`}
+        size="md"
+      >
+        {selectedPayslip && (
+          <div className="space-y-5 pt-1">
             <div className="space-y-3">
-              <div className="text-xs font-semibold text-gray-500 uppercase">
-                Itemized Salary & Piece-Rate Earnings
+              <div className="text-2xs font-semibold text-muted uppercase tracking-wider">
+                Itemized Salary & Production Output Earnings
               </div>
               {selectedPayslip.items?.map((item, idx) => (
                 <div
                   key={idx}
-                  className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg"
+                  className="flex justify-between items-center p-3 bg-surface-sunken rounded-xl border border-default"
                 >
                   <div>
-                    <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 font-mono">
+                    <div className="font-semibold text-sm text-default font-mono">
                       {item.component_code}
                     </div>
                     {item.quantity && item.rate && (
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-muted">
                         {parseFloat(item.quantity).toFixed(0)} units @ {formatCurrency(item.rate)}
                       </div>
                     )}
@@ -1107,157 +2328,574 @@ export const HrWorkspace: React.FC = () => {
               ))}
             </div>
 
-            <div className="pt-4 border-t dark:border-gray-700 flex justify-between items-center">
+            <div className="pt-4 border-t border-default flex justify-between items-center">
               <div>
-                <span className="text-xs text-gray-500">Net Payable Amount</span>
+                <span className="text-2xs text-muted block uppercase font-semibold">Net Payable Payout</span>
                 <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
                   {formatCurrency(selectedPayslip.net_amount)}
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedPayslip(null)}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Onboard Employee Modal */}
-      {showOnboardModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-6">
-            <div className="flex items-center justify-between border-b pb-4 dark:border-gray-700">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                Onboard New Workforce Member
-              </h3>
-              <button
-                onClick={() => setShowOnboardModal(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleOnboardEmployee} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase mb-1">
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    value={newFirstName}
-                    onChange={(e) => setNewFirstName(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase mb-1">
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    value={newLastName}
-                    onChange={(e) => setNewLastName(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase mb-1">
-                  Phone Number
-                </label>
-                <input
-                  type="text"
-                  value={newPhone}
-                  onChange={(e) => setNewPhone(e.target.value)}
-                  placeholder="+88017..."
-                  required
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700 text-sm font-mono"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase mb-1">
-                    Department
-                  </label>
-                  <select
-                    value={newDeptId}
-                    onChange={(e) => setNewDeptId(parseInt(e.target.value))}
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700 text-sm"
-                  >
-                    {departments.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase mb-1">
-                    Employment Type
-                  </label>
-                  <select
-                    value={newEmpType}
-                    onChange={(e) => setNewEmpType(e.target.value as EmploymentType)}
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700 text-sm"
-                  >
-                    <option value="piece_rate">Piece-Rate Worker</option>
-                    <option value="permanent">Permanent Salaried</option>
-                    <option value="contract">Contract Staff</option>
-                    <option value="daily_wage">Daily Wage</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowOnboardModal(false)}
-                  className="px-4 py-2 text-sm border rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50"
+                  onClick={() => window.print()}
+                  className="px-3.5 py-2 text-xs border border-default rounded-xl bg-surface hover:bg-surface-sunken text-default font-semibold flex items-center gap-1.5 cursor-pointer"
                 >
-                  Cancel
+                  <Printer className="size-3.5" />
+                  <span>Print Receipt</span>
                 </button>
                 <button
-                  type="submit"
-                  className="px-5 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow"
+                  type="button"
+                  onClick={() => setSelectedPayslip(null)}
+                  className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-fg text-xs font-semibold rounded-xl cursor-pointer"
                 >
-                  Complete Onboarding
+                  Done
                 </button>
               </div>
-            </form>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
-      {/* Employee ID Badge Print Modal */}
-      {selectedEmployeeForBadge && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b pb-3 dark:border-gray-700">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                <span>🪪 Workforce ID Card</span>
-              </h3>
-              <button
-                onClick={() => setSelectedEmployeeForBadge(null)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-              >
-                ✕
-              </button>
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Modal 2: Onboard Employee
+          ───────────────────────────────────────────────────────────────────────────── */}
+      <Modal
+        open={showOnboardModal}
+        onClose={() => setShowOnboardModal(false)}
+        title="Onboard New Workforce Member"
+        subtitle="Register personnel profile, department, wage structure, and banking info."
+        size="md"
+      >
+        <form onSubmit={handleOnboardEmployee} className="space-y-4 pt-1">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="onboard-first-name" className="block text-xs font-semibold text-default uppercase mb-1">
+                First Name
+              </label>
+              <input
+                id="onboard-first-name"
+                name="first_name"
+                type="text"
+                value={newFirstName}
+                onChange={(e) => setNewFirstName(e.target.value)}
+                required
+                autoComplete="off"
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none"
+              />
             </div>
 
-            {/* Standard CR80 Card Layout Preview */}
-            <div className="border-2 border-indigo-500/40 rounded-2xl p-5 bg-linear-to-b from-indigo-900/10 to-transparent flex flex-col items-center text-center space-y-3">
-              <div className="w-full flex items-center justify-between border-b border-indigo-500/20 pb-2">
-                <span className="font-extrabold text-xs tracking-wider text-indigo-600 dark:text-indigo-400 uppercase">
+            <div>
+              <label htmlFor="onboard-last-name" className="block text-xs font-semibold text-default uppercase mb-1">
+                Last Name
+              </label>
+              <input
+                id="onboard-last-name"
+                name="last_name"
+                type="text"
+                value={newLastName}
+                onChange={(e) => setNewLastName(e.target.value)}
+                autoComplete="off"
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="onboard-phone" className="block text-xs font-semibold text-default uppercase mb-1">
+                Phone Number
+              </label>
+              <input
+                id="onboard-phone"
+                name="phone"
+                type="text"
+                value={newPhone}
+                onChange={(e) => setNewPhone(e.target.value)}
+                placeholder="+88017..."
+                required
+                autoComplete="off"
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm font-mono focus:border-primary focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="onboard-bank" className="block text-xs font-semibold text-default uppercase mb-1">
+                Bank Account # (Optional)
+              </label>
+              <input
+                id="onboard-bank"
+                name="bank_account"
+                type="text"
+                value={newBankNumber}
+                onChange={(e) => setNewBankNumber(e.target.value)}
+                placeholder="e.g. 205011928391"
+                autoComplete="off"
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm font-mono focus:border-primary focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="onboard-dept" className="block text-xs font-semibold text-default uppercase mb-1">
+                Department
+              </label>
+              <select
+                id="onboard-dept"
+                name="department_id"
+                value={newDeptId}
+                onChange={(e) => setNewDeptId(parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none cursor-pointer"
+              >
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="onboard-type" className="block text-xs font-semibold text-default uppercase mb-1">
+                Employment Type
+              </label>
+              <select
+                id="onboard-type"
+                name="employment_type"
+                value={newEmpType}
+                onChange={(e) => setNewEmpType(e.target.value as EmploymentType)}
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none cursor-pointer"
+              >
+                <option value="piece_rate">Piece-Rate Worker</option>
+                <option value="permanent">Permanent Salaried</option>
+                <option value="contract">Contract Staff</option>
+                <option value="daily_wage">Daily Wage</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-default">
+            <button
+              type="button"
+              onClick={() => setShowOnboardModal(false)}
+              className="px-4 py-2 text-xs font-semibold border border-default rounded-xl text-muted hover:text-default cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2 text-xs bg-primary hover:bg-primary/90 text-primary-fg font-semibold rounded-xl shadow-xs cursor-pointer"
+            >
+              Complete Onboarding
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Modal 3: Mark Shift Attendance
+          ───────────────────────────────────────────────────────────────────────────── */}
+      <Modal
+        open={showMarkAttendanceModal}
+        onClose={() => setShowMarkAttendanceModal(false)}
+        title="Mark Shift Attendance"
+        subtitle="Log employee daily check-in, check-out, and shift hours."
+        size="md"
+      >
+        <form onSubmit={handleCreateAttendance} className="space-y-4 pt-1">
+          <div>
+            <label htmlFor="att-emp-select" className="block text-xs font-semibold text-default uppercase mb-1">
+              Select Employee
+            </label>
+            <select
+              id="att-emp-select"
+              name="employee_id"
+              value={attEmpId}
+              onChange={(e) => setAttEmpId(parseInt(e.target.value))}
+              className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none cursor-pointer"
+            >
+              {employees.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.employee_code} — {e.display_name} ({e.department?.name})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="att-shift-select" className="block text-xs font-semibold text-default uppercase mb-1">
+                Shift Schedule
+              </label>
+              <select
+                id="att-shift-select"
+                name="shift_id"
+                value={attShiftId}
+                onChange={(e) => setAttShiftId(parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none cursor-pointer"
+              >
+                {shifts.map((sh) => (
+                  <option key={sh.id} value={sh.id}>
+                    {sh.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="att-status-select" className="block text-xs font-semibold text-default uppercase mb-1">
+                Attendance Status
+              </label>
+              <select
+                id="att-status-select"
+                name="status"
+                value={attStatus}
+                onChange={(e) => setAttStatus(e.target.value as Attendance['status'])}
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none cursor-pointer"
+              >
+                <option value="present">Present (On Time)</option>
+                <option value="late">Late Check-in</option>
+                <option value="half_day">Half Day</option>
+                <option value="absent">Absent</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label htmlFor="att-date" className="block text-xs font-semibold text-default uppercase mb-1">
+                Date
+              </label>
+              <input
+                id="att-date"
+                name="att_date"
+                type="date"
+                value={attDate}
+                onChange={(e) => setAttDate(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="att-in-time" className="block text-xs font-semibold text-default uppercase mb-1">
+                Check In
+              </label>
+              <input
+                id="att-in-time"
+                name="check_in"
+                type="time"
+                value={attCheckIn}
+                onChange={(e) => setAttCheckIn(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="att-out-time" className="block text-xs font-semibold text-default uppercase mb-1">
+                Check Out
+              </label>
+              <input
+                id="att-out-time"
+                name="check_out"
+                type="time"
+                value={attCheckOut}
+                onChange={(e) => setAttCheckOut(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="att-remarks" className="block text-xs font-semibold text-default uppercase mb-1">
+              Floor Remarks / Location
+            </label>
+            <input
+              id="att-remarks"
+              name="remarks"
+              type="text"
+              value={attRemarks}
+              onChange={(e) => setAttRemarks(e.target.value)}
+              placeholder="e.g. Cutting floor station #2"
+              autoComplete="off"
+              className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-default">
+            <button
+              type="button"
+              onClick={() => setShowMarkAttendanceModal(false)}
+              className="px-4 py-2 text-xs font-semibold border border-default rounded-xl text-muted hover:text-default cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2 text-xs bg-primary hover:bg-primary/90 text-primary-fg font-semibold rounded-xl shadow-xs cursor-pointer"
+            >
+              Save Attendance Record
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Modal 4: Submit Leave Request
+          ───────────────────────────────────────────────────────────────────────────── */}
+      <Modal
+        open={showLeaveRequestModal}
+        onClose={() => setShowLeaveRequestModal(false)}
+        title="Submit Leave Request"
+        subtitle="Apply for scheduled time off or medical emergency quota."
+        size="md"
+      >
+        <form onSubmit={handleCreateLeaveRequest} className="space-y-4 pt-1">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="leave-emp" className="block text-xs font-semibold text-default uppercase mb-1">
+                Employee
+              </label>
+              <select
+                id="leave-emp"
+                name="employee_id"
+                value={leaveEmpId}
+                onChange={(e) => setLeaveEmpId(parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none cursor-pointer"
+              >
+                {employees.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.display_name} ({e.employee_code})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="leave-type" className="block text-xs font-semibold text-default uppercase mb-1">
+                Leave Category
+              </label>
+              <select
+                id="leave-type"
+                name="leave_type_id"
+                value={leaveTypeId}
+                onChange={(e) => setLeaveTypeId(parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none cursor-pointer"
+              >
+                {leaveTypes.map((lt) => (
+                  <option key={lt.id} value={lt.id}>
+                    {lt.name} ({parseFloat(lt.annual_quota_days)}d/yr)
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label htmlFor="leave-start" className="block text-xs font-semibold text-default uppercase mb-1">
+                Start Date
+              </label>
+              <input
+                id="leave-start"
+                name="start_date"
+                type="date"
+                value={leaveStartDate}
+                onChange={(e) => setLeaveStartDate(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="leave-end" className="block text-xs font-semibold text-default uppercase mb-1">
+                End Date
+              </label>
+              <input
+                id="leave-end"
+                name="end_date"
+                type="date"
+                value={leaveEndDate}
+                onChange={(e) => setLeaveEndDate(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="leave-days" className="block text-xs font-semibold text-default uppercase mb-1">
+                Total Days
+              </label>
+              <input
+                id="leave-days"
+                name="total_days"
+                type="number"
+                step="0.5"
+                value={leaveDays}
+                onChange={(e) => setLeaveDays(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm font-mono text-right focus:border-primary focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="leave-reason" className="block text-xs font-semibold text-default uppercase mb-1">
+              Reason & Remarks
+            </label>
+            <textarea
+              id="leave-reason"
+              name="reason"
+              value={leaveReason}
+              onChange={(e) => setLeaveReason(e.target.value)}
+              placeholder="State reason for absence or medical appointment..."
+              required
+              rows={3}
+              className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-default">
+            <button
+              type="button"
+              onClick={() => setShowLeaveRequestModal(false)}
+              className="px-4 py-2 text-xs font-semibold border border-default rounded-xl text-muted hover:text-default cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2 text-xs bg-primary hover:bg-primary/90 text-primary-fg font-semibold rounded-xl shadow-xs cursor-pointer"
+            >
+              Submit Application
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Modal 5: Create New Pay Period
+          ───────────────────────────────────────────────────────────────────────────── */}
+      <Modal
+        open={showNewPeriodModal}
+        onClose={() => setShowNewPeriodModal(false)}
+        title="Initialize New Payroll Period"
+        subtitle="Open a new monthly salary disbursement and piece-rate calculation period."
+        size="md"
+      >
+        <form onSubmit={handleCreateNewPeriod} className="space-y-4 pt-1">
+          <div>
+            <label htmlFor="new-period-code" className="block text-xs font-semibold text-default uppercase mb-1">
+              Period Code
+            </label>
+            <input
+              id="new-period-code"
+              name="period_code"
+              type="text"
+              value={newPeriodCode}
+              onChange={(e) => setNewPeriodCode(e.target.value.toUpperCase())}
+              placeholder="e.g. PAY-202609"
+              required
+              autoComplete="off"
+              className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm font-mono focus:border-primary focus:outline-none"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="period-start" className="block text-xs font-semibold text-default uppercase mb-1">
+                Start Date
+              </label>
+              <input
+                id="period-start"
+                name="period_start"
+                type="date"
+                value={newPeriodStart}
+                onChange={(e) => setNewPeriodStart(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="period-end" className="block text-xs font-semibold text-default uppercase mb-1">
+                End Date
+              </label>
+              <input
+                id="period-end"
+                name="period_end"
+                type="date"
+                value={newPeriodEnd}
+                onChange={(e) => setNewPeriodEnd(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="payment-date" className="block text-xs font-semibold text-default uppercase mb-1">
+              Scheduled Disbursement Date
+            </label>
+            <input
+              id="payment-date"
+              name="payment_date"
+              type="date"
+              value={newPaymentDate}
+              onChange={(e) => setNewPaymentDate(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-default rounded-xl bg-surface-sunken text-default text-sm focus:border-primary focus:outline-none"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-default">
+            <button
+              type="button"
+              onClick={() => setShowNewPeriodModal(false)}
+              className="px-4 py-2 text-xs font-semibold border border-default rounded-xl text-muted hover:text-default cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2 text-xs bg-primary hover:bg-primary/90 text-primary-fg font-semibold rounded-xl shadow-xs cursor-pointer"
+            >
+              Open Pay Period
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Modal 5B: Create Payslip Modal
+          ───────────────────────────────────────────────────────────────────────────── */}
+      <CreatePayslipModal
+        open={showCreatePayslipModal}
+        onClose={() => setShowCreatePayslipModal(false)}
+        employees={employees}
+        payrollPeriods={payrollPeriods}
+        activePeriodId={selectedPeriodId === 'all' ? payrollPeriods[0]?.id : selectedPeriodId}
+        onSuccess={handleCreatePayslipSuccess}
+      />
+
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Modal 6: Employee ID Badge Print
+          ───────────────────────────────────────────────────────────────────────────── */}
+      <Modal
+        open={Boolean(selectedEmployeeForBadge)}
+        onClose={() => setSelectedEmployeeForBadge(null)}
+        title="Workforce Security ID Card"
+        subtitle="Standard CR80 employee pass with encrypted identification barcode."
+        size="sm"
+      >
+        {selectedEmployeeForBadge && (
+          <div className="space-y-4 pt-1">
+            <div className="border-2 border-primary/30 rounded-2xl p-5 bg-linear-to-b from-primary/10 to-transparent flex flex-col items-center text-center space-y-3">
+              <div className="w-full flex items-center justify-between border-b border-primary/20 pb-2">
+                <span className="font-extrabold text-xs tracking-wider text-primary uppercase">
                   SLICE MART FMS
                 </span>
                 <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 uppercase">
@@ -1265,31 +2903,31 @@ export const HrWorkspace: React.FC = () => {
                 </span>
               </div>
 
-              {/* Photo Avatar */}
-              <div className="size-20 rounded-2xl bg-indigo-100 dark:bg-indigo-950 border-2 border-indigo-400/40 flex items-center justify-center text-2xl font-bold text-indigo-600 dark:text-indigo-300 shadow-inner">
+              {/* Avatar */}
+              <div className="size-20 rounded-2xl bg-primary/10 border-2 border-primary/40 flex items-center justify-center text-2xl font-bold text-primary shadow-inner">
                 {selectedEmployeeForBadge.first_name[0]}{selectedEmployeeForBadge.last_name?.[0] ?? ''}
               </div>
 
               <div>
-                <div className="font-extrabold text-base text-gray-900 dark:text-gray-100">
+                <div className="font-extrabold text-base text-default">
                   {selectedEmployeeForBadge.display_name}
                 </div>
-                <div className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                <div className="text-xs font-semibold text-primary">
                   {selectedEmployeeForBadge.designation?.name ?? 'Factory Operator'}
                 </div>
-                <div className="text-[11px] text-gray-500 dark:text-gray-400">
+                <div className="text-[11px] text-muted">
                   {selectedEmployeeForBadge.department?.name ?? 'Production Floor'}
                 </div>
               </div>
 
-              <div className="w-full grid grid-cols-2 gap-2 text-left bg-gray-50 dark:bg-gray-900/60 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-[11px] font-mono">
+              <div className="w-full grid grid-cols-2 gap-2 text-left bg-surface-sunken p-2.5 rounded-xl border border-default text-[11px] font-mono">
                 <div>
-                  <span className="text-[9px] text-gray-400 uppercase block font-sans">ID Code</span>
-                  <span className="font-bold text-gray-900 dark:text-gray-100">{selectedEmployeeForBadge.employee_code}</span>
+                  <span className="text-[9px] text-muted uppercase block font-sans">ID Code</span>
+                  <span className="font-bold text-default">{selectedEmployeeForBadge.employee_code}</span>
                 </div>
                 <div>
-                  <span className="text-[9px] text-gray-400 uppercase block font-sans">Phone</span>
-                  <span className="text-gray-700 dark:text-gray-300">{selectedEmployeeForBadge.phone}</span>
+                  <span className="text-[9px] text-muted uppercase block font-sans">Phone</span>
+                  <span className="text-default">{selectedEmployeeForBadge.phone}</span>
                 </div>
               </div>
 
@@ -1308,21 +2946,168 @@ export const HrWorkspace: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSelectedEmployeeForBadge(null)}
-                className="flex-1 px-3 py-2 text-xs border rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50"
+                className="flex-1 px-3 py-2 text-xs border border-default rounded-xl text-muted hover:text-default cursor-pointer"
               >
                 Close
               </button>
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="flex-1 px-3 py-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow cursor-pointer"
+                className="flex-1 px-3 py-2 text-xs bg-primary hover:bg-primary/90 text-primary-fg font-bold rounded-xl shadow cursor-pointer flex items-center justify-center gap-1"
               >
-                🖨️ Print Badge
+                <Printer className="size-3.5" />
+                <span>Print Badge</span>
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
+
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Modal 7: Employee Profile & Specs
+          ───────────────────────────────────────────────────────────────────────────── */}
+      <Modal
+        open={Boolean(viewingEmployeeProfile)}
+        onClose={() => setViewingEmployeeProfile(null)}
+        title={`Employee Profile: ${viewingEmployeeProfile?.display_name || ''}`}
+        subtitle={`Staff Code: ${viewingEmployeeProfile?.employee_code || ''} • Status: ${viewingEmployeeProfile?.employment_status?.toUpperCase() || ''}`}
+        size="md"
+      >
+        {viewingEmployeeProfile && (
+          <div className="space-y-4 pt-1">
+            <div className="grid grid-cols-2 gap-3 p-3.5 bg-surface-sunken rounded-xl border border-default text-xs">
+              <div>
+                <span className="text-2xs uppercase text-muted font-semibold block">Department</span>
+                <span className="font-semibold text-default">{viewingEmployeeProfile.department?.name}</span>
+              </div>
+              <div>
+                <span className="text-2xs uppercase text-muted font-semibold block">Designation</span>
+                <span className="font-semibold text-default">{viewingEmployeeProfile.designation?.name}</span>
+              </div>
+              <div>
+                <span className="text-2xs uppercase text-muted font-semibold block">Employment Type</span>
+                <span className="capitalize text-default font-semibold">
+                  {viewingEmployeeProfile.employment_type.replace('_', ' ')}
+                </span>
+              </div>
+              <div>
+                <span className="text-2xs uppercase text-muted font-semibold block">Default Shift</span>
+                <span className="text-default font-semibold">
+                  {viewingEmployeeProfile.default_shift?.name || 'Standard Morning'}
+                </span>
+              </div>
+              <div>
+                <span className="text-2xs uppercase text-muted font-semibold block">Phone Contact</span>
+                <span className="font-mono text-default">{viewingEmployeeProfile.phone}</span>
+              </div>
+              <div>
+                <span className="text-2xs uppercase text-muted font-semibold block">Bank Account #</span>
+                <span className="font-mono text-default">
+                  {viewingEmployeeProfile.bank_account_number || 'Cash / Unassigned'}
+                </span>
+              </div>
+              <div>
+                <span className="text-2xs uppercase text-muted font-semibold block">Date of Joining</span>
+                <span className="font-mono text-default">{viewingEmployeeProfile.date_of_joining}</span>
+              </div>
+              <div>
+                <span className="text-2xs uppercase text-muted font-semibold block">Company Registry</span>
+                <span className="text-default font-semibold">SliceMart Factory Operations</span>
+              </div>
+            </div>
+
+            {/* Employee Document Vault & Compliance */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-default uppercase tracking-wider">
+                  Employee Document Vault & Compliance
+                </span>
+                <button
+                  type="button"
+                  onClick={() => notify.success('Document uploaded to employee dossier.')}
+                  className="text-[11px] text-primary hover:underline font-semibold"
+                >
+                  + Upload File
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="p-2.5 rounded-lg border border-default bg-surface-sunken text-xs space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-default">National ID</span>
+                    <span className="text-[10px] text-emerald-600 font-semibold">Verified</span>
+                  </div>
+                  <p className="text-[11px] text-muted font-mono">NID-8829102910</p>
+                </div>
+                <div className="p-2.5 rounded-lg border border-default bg-surface-sunken text-xs space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-default">Contract</span>
+                    <span className="text-[10px] text-emerald-600 font-semibold">Active</span>
+                  </div>
+                  <p className="text-[11px] text-muted font-mono">Signed 2026</p>
+                </div>
+                <div className="p-2.5 rounded-lg border border-default bg-surface-sunken text-xs space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-default">Health Pass</span>
+                    <span className="text-[10px] text-emerald-600 font-semibold">Passed</span>
+                  </div>
+                  <p className="text-[11px] text-muted font-mono">Exp: 2027-03</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-default">
+              <button
+                type="button"
+                onClick={() => {
+                  const emp = viewingEmployeeProfile;
+                  setViewingEmployeeProfile(null);
+                  setSelectedEmployeeForBadge(emp);
+                }}
+                className="px-3.5 py-1.5 text-xs bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 font-semibold rounded-xl cursor-pointer flex items-center gap-1"
+              >
+                <span>🪪 Print ID Card</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewingEmployeeProfile(null)}
+                className="px-4 py-1.5 text-xs border border-default rounded-xl text-default hover:bg-surface-sunken cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          Modal 8: Biometric & NFC Kiosk Punch Terminal
+          ───────────────────────────────────────────────────────────────────────────── */}
+      <BadgePunchTerminalModal
+        isOpen={isKioskModalOpen}
+        onClose={() => setIsKioskModalOpen(false)}
+        onPunchSuccess={(punch) => {
+          const targetEmp =
+            employees.find((e) => e.employee_code === punch.employee.employee_code) ?? employees[0];
+          if (!targetEmp) return;
+          const todayDate = new Date().toISOString().slice(0, 10);
+          const newAtt: Attendance = {
+            id: attendances.length + 1,
+            uuid: `att-kiosk-${Date.now()}`,
+            employee_id: targetEmp.id,
+            employee: targetEmp,
+            attendance_date: todayDate,
+            shift_id: 1,
+            shift: shifts[0],
+            check_in_at: new Date().toISOString().replace('T', ' ').slice(0, 19),
+            worked_minutes: 480,
+            late_minutes: punch.status === 'late' ? 15 : 0,
+            overtime_minutes: 0,
+            status: punch.status === 'late' ? 'late' : 'present',
+            remarks: 'Biometric / RFID Kiosk Punch',
+          };
+          setAttendances([newAtt, ...attendances]);
+        }}
+      />
     </div>
   );
 };

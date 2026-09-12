@@ -115,7 +115,7 @@ export interface LeaveRequest {
 }
 
 export type PayrollPeriodStatus =
-  'open' | 'calculating' | 'calculated' | 'approved' | 'paid' | 'closed';
+  'open' | 'draft' | 'calculating' | 'calculated' | 'approved' | 'paid' | 'closed';
 
 export interface PayrollPeriod {
   id: number;

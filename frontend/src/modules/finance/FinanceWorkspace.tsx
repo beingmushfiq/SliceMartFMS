@@ -47,6 +47,8 @@ import { MoneyInModal } from './modals/MoneyInModal';
 import type { MoneyInSuccessPayload } from './modals/MoneyInModal';
 import { TransferMoneyModal } from './modals/TransferMoneyModal';
 import type { TransferMoneySuccessPayload } from './modals/TransferMoneyModal';
+import { PrintPreviewModal, FinancialStatementPrintDocument } from '../../components/print';
+import { useBusinessConfig } from '../../lib/document/useBusinessConfig';
 
 export type FinanceTab =
   'coa' | 'journal' | 'banking' | 'expenses' | 'costing' | 'statements' | 'due-collection';
@@ -208,6 +210,8 @@ function createManualJournalEntry(
 
 export const FinanceWorkspace: React.FC = () => {
   const { formatCurrency } = useCurrency();
+  const { config: businessConfig } = useBusinessConfig();
+  const [showPrintStatementModal, setShowPrintStatementModal] = useState(false);
   const [activeTab, setActiveTab] = useWorkspaceTab<FinanceTab>('banking', [
     'banking',
     'expenses',
@@ -2086,8 +2090,9 @@ export const FinanceWorkspace: React.FC = () => {
               </p>
             </div>
             <button
-              onClick={() => window.print()}
-              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow flex items-center gap-1.5 cursor-pointer"
+              type="button"
+              onClick={() => setShowPrintStatementModal(true)}
+              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow flex items-center gap-1.5 cursor-pointer transition-colors"
             >
               🖨️ Print Financial Statement
             </button>
@@ -2959,6 +2964,44 @@ export const FinanceWorkspace: React.FC = () => {
           </div>
         </div>
       </Modal>
+      {/* Financial Statement Corporate Print Preview Modal */}
+      {showPrintStatementModal && (
+        <PrintPreviewModal
+          isOpen={showPrintStatementModal}
+          onClose={() => setShowPrintStatementModal(false)}
+          title="Print Financial Statement: Profit & Loss and Financial Position"
+          documentNumber="FS-PL-2026-Q3"
+          documentType="Official Financial Statement"
+          pageClass="print-page-a4"
+        >
+          <FinancialStatementPrintDocument
+            businessConfig={businessConfig}
+            fiscalPeriodText="Q3 FY2026 (1 Jul 2026 – 30 Sep 2026)"
+            generatedBy="Chief Financial Controller"
+            data={{
+              periodTitle: 'Q3 FY2026 (1 Jul 2026 – 30 Sep 2026)',
+              reportCode: 'FS-PL-2026-Q3',
+              revenue: {
+                grossSales: 950000,
+                cogs: 480000,
+                directLabour: 145000,
+              },
+              expenses: {
+                logistics: 38500,
+                utilities: 24000,
+                administrative: 18200,
+              },
+              balanceSheet: {
+                cashAndBanks: 970000,
+                accountsReceivable: 340000,
+                accountsPayable: 210000,
+                contributedCapital: 500000,
+                retainedEarnings: 600000,
+              },
+            }}
+          />
+        </PrintPreviewModal>
+      )}
     </div>
   );
 };

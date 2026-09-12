@@ -775,49 +775,70 @@ Route::middleware(['auth.jwt', 'tenant.resolve', 'tenant.active'])
 
         // ── Human Resources & Payroll ─────────────────────────────────
         Route::prefix('hr')->name('hr.')->group(static function (): void {
-            Route::get('departments', [App\Modules\HR\Controllers\EmployeeController::class, 'departments'])
-                ->middleware('permission:hr.employee.view')->name('departments');
-            Route::get('designations', [App\Modules\HR\Controllers\EmployeeController::class, 'designations'])
-                ->middleware('permission:hr.employee.view')->name('designations');
-            Route::get('shifts', [App\Modules\HR\Controllers\EmployeeController::class, 'shifts'])
-                ->middleware('permission:hr.employee.view')->name('shifts');
+            // Departments
+            Route::get('departments', [App\Modules\HR\Controllers\EmployeeController::class, 'departments'])->name('departments');
+            Route::post('departments', [App\Modules\HR\Controllers\EmployeeController::class, 'storeDepartment'])->name('departments.store');
+            Route::put('departments/{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'updateDepartment'])->name('departments.update');
 
+            // Designations
+            Route::get('designations', [App\Modules\HR\Controllers\EmployeeController::class, 'designations'])->name('designations');
+            Route::post('designations', [App\Modules\HR\Controllers\EmployeeController::class, 'storeDesignation'])->name('designations.store');
+            Route::put('designations/{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'updateDesignation'])->name('designations.update');
+
+            // Shifts
+            Route::get('shifts', [App\Modules\HR\Controllers\EmployeeController::class, 'shifts'])->name('shifts');
+            Route::post('shifts', [App\Modules\HR\Controllers\EmployeeController::class, 'storeShift'])->name('shifts.store');
+            Route::put('shifts/{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'updateShift'])->name('shifts.update');
+
+            // Employees
             Route::prefix('employees')->name('employees.')->group(static function (): void {
-                Route::get('/', [App\Modules\HR\Controllers\EmployeeController::class, 'index'])
-                    ->middleware('permission:hr.employee.view')->name('index');
-                Route::post('/', [App\Modules\HR\Controllers\EmployeeController::class, 'store'])
-                    ->middleware('permission:hr.employee.create')->name('store');
-                Route::get('{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'show'])
-                    ->middleware('permission:hr.employee.view')->name('show');
+                Route::get('/', [App\Modules\HR\Controllers\EmployeeController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\HR\Controllers\EmployeeController::class, 'store'])->name('store');
+                Route::get('{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'show'])->name('show');
+                Route::put('{id}', [App\Modules\HR\Controllers\EmployeeController::class, 'update'])->name('update');
+                Route::post('{id}/toggle-status', [App\Modules\HR\Controllers\EmployeeController::class, 'toggleStatus'])->name('toggle-status');
+                Route::get('{id}/documents', [App\Modules\HR\Controllers\EmployeeController::class, 'documents'])->name('documents');
+                Route::post('{id}/documents', [App\Modules\HR\Controllers\EmployeeController::class, 'storeDocument'])->name('documents.store');
             });
 
+            // Attendance & Kiosk Punch
             Route::prefix('attendances')->name('attendances.')->group(static function (): void {
-                Route::get('/', [App\Modules\HR\Controllers\AttendanceController::class, 'index'])
-                    ->middleware('permission:hr.attendance.view')->name('index');
-                Route::post('/', [App\Modules\HR\Controllers\AttendanceController::class, 'store'])
-                    ->middleware('permission:hr.attendance.create')->name('store');
+                Route::get('/', [App\Modules\HR\Controllers\AttendanceController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\HR\Controllers\AttendanceController::class, 'store'])->name('store');
+                Route::get('summary', [App\Modules\HR\Controllers\AttendanceController::class, 'summary'])->name('summary');
+                Route::post('punch-badge', [App\Modules\HR\Controllers\AttendanceController::class, 'punchBadge'])->name('punch-badge');
             });
 
+            // Leaves & Balances
             Route::prefix('leaves')->name('leaves.')->group(static function (): void {
-                Route::get('types', [App\Modules\HR\Controllers\LeaveRequestController::class, 'leaveTypes'])
-                    ->middleware('permission:hr.leave.view')->name('types');
-                Route::get('/', [App\Modules\HR\Controllers\LeaveRequestController::class, 'index'])
-                    ->middleware('permission:hr.leave.view')->name('index');
-                Route::post('/', [App\Modules\HR\Controllers\LeaveRequestController::class, 'store'])
-                    ->middleware('permission:hr.leave.create')->name('store');
+                Route::get('types', [App\Modules\HR\Controllers\LeaveRequestController::class, 'leaveTypes'])->name('types');
+                Route::get('balances', [App\Modules\HR\Controllers\LeaveRequestController::class, 'balances'])->name('balances');
+                Route::get('/', [App\Modules\HR\Controllers\LeaveRequestController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\HR\Controllers\LeaveRequestController::class, 'store'])->name('store');
+                Route::post('{id}/approve', [App\Modules\HR\Controllers\LeaveRequestController::class, 'approve'])->name('approve');
+                Route::post('{id}/reject', [App\Modules\HR\Controllers\LeaveRequestController::class, 'reject'])->name('reject');
             });
 
+            // Salary Structures & Compensation
+            Route::prefix('salary-structures')->name('salary-structures.')->group(static function (): void {
+                Route::get('/', [App\Modules\HR\Controllers\SalaryStructureController::class, 'index'])->name('index');
+                Route::post('/', [App\Modules\HR\Controllers\SalaryStructureController::class, 'store'])->name('store');
+                Route::get('components', [App\Modules\HR\Controllers\SalaryStructureController::class, 'components'])->name('components');
+                Route::get('{id}', [App\Modules\HR\Controllers\SalaryStructureController::class, 'show'])->name('show');
+            });
+
+            // Payroll & Advances
             Route::prefix('payroll')->name('payroll.')->group(static function (): void {
-                Route::get('periods', [App\Modules\HR\Controllers\PayrollController::class, 'periods'])
-                    ->middleware('permission:hr.payroll.view')->name('periods');
-                Route::post('periods', [App\Modules\HR\Controllers\PayrollController::class, 'storePeriod'])
-                    ->middleware('permission:hr.payroll.create')->name('periods.store');
-                Route::post('periods/{id}/process', [App\Modules\HR\Controllers\PayrollController::class, 'process'])
-                    ->middleware('permission:hr.payroll.approve')->name('periods.process');
-                Route::get('payslips', [App\Modules\HR\Controllers\PayrollController::class, 'payslips'])
-                    ->middleware('permission:hr.payslip.view')->name('payslips');
-                Route::get('payslips/{id}', [App\Modules\HR\Controllers\PayrollController::class, 'showPayslip'])
-                    ->middleware('permission:hr.payslip.view')->name('payslips.show');
+                Route::get('periods', [App\Modules\HR\Controllers\PayrollController::class, 'periods'])->name('periods');
+                Route::post('periods', [App\Modules\HR\Controllers\PayrollController::class, 'storePeriod'])->name('periods.store');
+                Route::post('periods/{id}/process', [App\Modules\HR\Controllers\PayrollController::class, 'process'])->name('periods.process');
+                Route::post('periods/{id}/disburse', [App\Modules\HR\Controllers\PayrollController::class, 'disburse'])->name('periods.disburse');
+                Route::get('periods/{id}/bank-advice', [App\Modules\HR\Controllers\PayrollController::class, 'bankAdvice'])->name('periods.bank-advice');
+                Route::get('payslips', [App\Modules\HR\Controllers\PayrollController::class, 'payslips'])->name('payslips');
+                Route::post('payslips', [App\Modules\HR\Controllers\PayrollController::class, 'storePayslip'])->name('payslips.store');
+                Route::get('payslips/{id}', [App\Modules\HR\Controllers\PayrollController::class, 'showPayslip'])->name('payslips.show');
+                Route::get('advances', [App\Modules\HR\Controllers\PayrollController::class, 'advances'])->name('advances');
+                Route::post('advances', [App\Modules\HR\Controllers\PayrollController::class, 'storeAdvance'])->name('advances.store');
             });
         });
 

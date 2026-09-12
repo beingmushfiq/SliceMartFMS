@@ -63,22 +63,68 @@ export function Sidebar({ isOpen, onClose, isCollapsed = false, onToggleCollapse
   }, [user]);
 
   const isItemActive = (to: string, isActive: boolean) => {
+    // 1. If 'to' specifies exact query parameters (e.g., '/sales?tab=leads')
     if (to.includes('?')) {
       const [toPath, toQuery] = to.split('?');
-      const currentFull = location.pathname + location.search;
-      if (toQuery && (currentFull === to || (location.pathname === toPath && location.search.includes(toQuery)))) {
+      if (toPath && toQuery && location.pathname === toPath && location.search.includes(toQuery)) {
         return true;
       }
       return false;
     }
-    if (location.search && (to === '/sales' || to === '/hr' || to === '/finance' || to === '/assets')) {
-      return false;
+
+    // 2. Special case for '/sales': if URL has 'tab=leads', CRM Leads is the active nav item
+    if (to === '/sales') {
+      if (location.pathname === '/sales' && location.search.includes('tab=leads')) {
+        return false;
+      }
+      return location.pathname === '/sales' || location.pathname.startsWith('/sales/');
     }
-    if (isActive) return true;
-    if (to === '/hr' && (location.pathname.startsWith('/workforce') || location.pathname.startsWith('/employees') || location.pathname.startsWith('/attendance'))) {
+
+    // 3. Special case for '/settings': if URL is '/settings/roles', Roles is the active nav item
+    if (to === '/settings') {
+      if (location.pathname.startsWith('/settings/roles')) {
+        return false;
+      }
+      return location.pathname === '/settings' || location.pathname.startsWith('/settings/');
+    }
+
+    // 4. Aliases for HR module
+    if (to === '/hr') {
+      return (
+        location.pathname === '/hr' ||
+        location.pathname.startsWith('/hr/') ||
+        location.pathname.startsWith('/workforce') ||
+        location.pathname.startsWith('/employees') ||
+        location.pathname.startsWith('/attendance') ||
+        location.pathname.startsWith('/payroll')
+      );
+    }
+
+    // 5. Aliases for Finance module
+    if (to === '/finance') {
+      return (
+        location.pathname === '/finance' ||
+        location.pathname.startsWith('/finance/') ||
+        location.pathname.startsWith('/accounting')
+      );
+    }
+
+    // 6. Aliases for Delivery / Logistics module
+    if (to === '/logistics') {
+      return (
+        location.pathname === '/logistics' ||
+        location.pathname.startsWith('/logistics/') ||
+        location.pathname.startsWith('/delivery')
+      );
+    }
+
+    // 7. Standard matching: check pathname match regardless of search/tab parameters
+    const [toPath] = to.split('?');
+    if (location.pathname === toPath || location.pathname.startsWith(`${toPath}/`)) {
       return true;
     }
-    return false;
+
+    return isActive;
   };
 
   const navSections = useMemo(
