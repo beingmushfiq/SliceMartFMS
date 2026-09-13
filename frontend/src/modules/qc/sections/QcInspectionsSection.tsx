@@ -15,6 +15,7 @@ import {
   XCircle,
   Boxes,
   RotateCcw,
+  ChevronDown,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
@@ -22,6 +23,7 @@ import { Button } from '../../../components/ui/Button';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
 import { StatusBadge } from '../../../components/ui/Badge';
 import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
+import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
 import { isApiError } from '../../../lib/api/errors';
 import type { QcInspection, QcParameter } from '../../../types/api/qc';
 import type { ProductionBatch } from '../../../types/api/production';
@@ -80,6 +82,8 @@ export function QcInspectionsSection() {
     notes: '',
   });
   const [deletingInspection, setDeletingInspection] = useState<QcInspection | null>(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [draft, setDraft] = useState<CreateInspectionDraft>({
@@ -323,157 +327,224 @@ export function QcInspectionsSection() {
         isFetching={inspectionsQuery.isFetching}
       >
         <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
-          <table className="w-full text-left text-xs text-default">
-            <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
-              <tr>
-                <th className="py-3.5 pl-4 pr-3">Inspection #</th>
-                <th className="py-3.5 px-3">Type & Date</th>
-                <th className="py-3.5 px-3">Product / Batch</th>
-                <th className="py-3.5 px-3">Sample / Inspected</th>
-                <th className="py-3.5 px-3">Passed / Rejected</th>
-                <th className="py-3.5 px-3">Status</th>
-                <th className="py-3.5 pr-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-default">
-              {inspections.length === 0 ? (
+          <div className="overflow-x-auto min-h-75">
+            <table className="w-full text-left text-xs text-default">
+              <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-muted">
-                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-surface-sunken border border-default mb-2">
-                      <Microscope className="h-5 w-5 text-muted" />
-                    </div>
-                    <div className="text-sm font-medium text-default">No inspections logged</div>
-                    <div className="text-xs text-muted mt-1">
-                      Execute physical, chemical or packaging QA runs on materials and floor output.
-                    </div>
-                  </td>
+                  <th className="py-3.5 pl-4 pr-3">Inspection #</th>
+                  <th className="py-3.5 px-3">Type & Date</th>
+                  <th className="py-3.5 px-3">Product / Batch</th>
+                  <th className="py-3.5 px-3">Sample / Inspected</th>
+                  <th className="py-3.5 px-3">Passed / Rejected</th>
+                  <th className="py-3.5 px-3">Status</th>
+                  <th className="py-3.5 pr-4 text-right">Actions</th>
                 </tr>
-              ) : (
-                inspections.map((insp) => (
-                  <tr key={insp.id} className="hover:bg-surface-sunken/60 transition-colors">
-                    <td className="py-3.5 pl-4 pr-3 font-mono font-medium text-emerald-600 dark:text-emerald-400">
-                      {insp.inspection_number}
-                    </td>
-                    <td className="py-3.5 px-3">
-                      <div className="capitalize font-medium text-default">
-                        {(insp.inspection_type ?? 'final').replace('_', ' ')}
+              </thead>
+              <tbody className="divide-y divide-default">
+                {inspections.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-muted">
+                      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-surface-sunken border border-default mb-2">
+                        <Microscope className="h-5 w-5 text-muted" />
                       </div>
-                      <div className="text-[10px] text-muted">{insp.inspection_date}</div>
-                    </td>
-                    <td className="py-3.5 px-3">
-                      <div className="text-default font-medium">
-                        {insp.product_name ?? insp.product_id}
-                      </div>
-                      {insp.batch_number && (
-                        <div className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400">
-                          Batch: {insp.batch_number}
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-3 font-mono text-muted">
-                      {insp.sample_size} <span className="text-muted">/</span>{' '}
-                      {insp.inspected_quantity}
-                    </td>
-                    <td className="py-3.5 px-3 font-mono">
-                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                        {insp.passed_quantity}
-                      </span>
-                      <span className="text-muted"> / </span>
-                      <span className="text-rose-600 dark:text-rose-400 font-semibold">
-                        {insp.rejected_quantity ?? insp.failed_quantity ?? '0.0000'}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-3">
-                      <select
-                        value={insp.status ?? 'draft'}
-                        onChange={(e) =>
-                          updateStatusMutation.mutate({
-                            id: insp.id,
-                            status: e.target.value,
-                          })
-                        }
-                        className="rounded-lg border border-default bg-surface py-1 px-2 text-[11px] font-medium text-default focus:border-primary focus:outline-none"
-                      >
-                        <option value="draft">Draft</option>
-                        <option value="submitted">Submitted</option>
-                        <option value="approved">Approved</option>
-                        <option value="rejected">Rejected</option>
-                      </select>
-                    </td>
-                    <td className="py-3.5 pr-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                        {insp.status !== 'approved' && (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => approveMutation.mutate(insp.id)}
-                            disabled={approveMutation.isPending}
-                            className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 min-h-8"
-                            title="Approve & pass inspection"
-                          >
-                            <ShieldCheck className="h-3.5 w-3.5" />
-                            <span>Approve Pass</span>
-                          </Button>
-                        )}
-
-                        {/* Release to Stock action when approved or passed */}
-                        {(insp.status === 'approved' || insp.result === 'pass') && (
-                          <Link
-                            to="/inventory"
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700 hover:bg-blue-100 transition-colors shadow-2xs"
-                            title="Goods approved - view and manage in warehouse stock"
-                          >
-                            <Boxes className="size-3.5" />
-                            <span>Release to Stock</span>
-                          </Link>
-                        )}
-
-                        {/* Route to Rework when defective items found */}
-                        {(insp.result === 'fail' || insp.result === 'partial' || parseFloat(insp.rejected_quantity || insp.failed_quantity || '0') > 0) && (
-                          <Link
-                            to="/qc?tab=rework"
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700 hover:bg-amber-100 transition-colors shadow-2xs"
-                            title="Defects detected - send to secondary workstation for rework"
-                          >
-                            <RotateCcw className="size-3.5" />
-                            <span>Route to Rework</span>
-                          </Link>
-                        )}
-
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditModal(insp)}
-                          className="text-xs text-muted hover:text-default"
-                          title="Edit inspection"
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedInspection(insp)}
-                          className="text-xs text-muted hover:text-default"
-                          title="View inspection details"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeletingInspection(insp)}
-                          className="text-xs text-muted hover:text-rose-600 dark:hover:text-rose-400"
-                          title="Delete inspection"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                      <div className="text-sm font-medium text-default">No inspections logged</div>
+                      <div className="text-xs text-muted mt-1">
+                        Execute physical, chemical or packaging QA runs on materials and floor output.
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  inspections.map((insp) => (
+                    <tr key={insp.id} className="hover:bg-surface-sunken/60 transition-colors">
+                      <td className="py-3.5 pl-4 pr-3 font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                        {insp.inspection_number}
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <div className="capitalize font-medium text-default">
+                          {(insp.inspection_type ?? 'final').replace('_', ' ')}
+                        </div>
+                        <div className="text-[10px] text-muted">{insp.inspection_date}</div>
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <div className="text-default font-medium">
+                          {insp.product_name ?? insp.product_id}
+                        </div>
+                        {insp.batch_number && (
+                          <div className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400">
+                            Batch: {insp.batch_number}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-3 font-mono text-muted">
+                        {insp.sample_size} <span className="text-muted">/</span>{' '}
+                        {insp.inspected_quantity}
+                      </td>
+                      <td className="py-3.5 px-3 font-mono">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                          {insp.passed_quantity}
+                        </span>
+                        <span className="text-muted"> / </span>
+                        <span className="text-rose-600 dark:text-rose-400 font-semibold">
+                          {insp.rejected_quantity ?? insp.failed_quantity ?? '0.0000'}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <select
+                          value={insp.status ?? 'draft'}
+                          onChange={(e) =>
+                            updateStatusMutation.mutate({
+                              id: insp.id,
+                              status: e.target.value,
+                            })
+                          }
+                          className="rounded-lg border border-default bg-surface py-1 px-2 text-[11px] font-medium text-default focus:border-primary focus:outline-none"
+                        >
+                          <option value="draft">Draft</option>
+                          <option value="submitted">Submitted</option>
+                          <option value="approved">Approved</option>
+                          <option value="rejected">Rejected</option>
+                        </select>
+                      </td>
+                      <td className="py-3.5 pr-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedInspection(insp)}
+                            className="px-2.5 py-1 text-xs bg-surface border border-default hover:bg-surface-sunken text-default rounded-lg font-medium transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                            title="View inspection details"
+                          >
+                            <Eye className="size-3 text-primary shrink-0" />
+                            <span>Details</span>
+                          </button>
+
+                          {/* Prominent Actions Dropdown Button */}
+                          <div className="relative inline-block text-left">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (openActionMenuId === insp.id) {
+                                  setOpenActionMenuId(null);
+                                  setActionMenuAnchor(null);
+                                } else {
+                                  setOpenActionMenuId(insp.id);
+                                  setActionMenuAnchor(e.currentTarget);
+                                }
+                              }}
+                              className={`px-2.5 py-1 text-xs rounded-lg border font-medium transition cursor-pointer flex items-center gap-1 shadow-2xs ${
+                                openActionMenuId === insp.id
+                                  ? 'border-primary bg-primary/10 text-primary'
+                                  : 'border-default bg-surface hover:bg-surface-sunken text-default'
+                              }`}
+                              title={`More options for ${insp.inspection_number}`}
+                              aria-label={`More options for inspection ${insp.inspection_number}`}
+                            >
+                              <span>Actions</span>
+                              <ChevronDown className="size-3 text-muted" />
+                            </button>
+
+                            <ActionMenuPortal
+                              isOpen={openActionMenuId === insp.id}
+                              anchorEl={actionMenuAnchor}
+                              onClose={() => {
+                                setOpenActionMenuId(null);
+                                setActionMenuAnchor(null);
+                              }}
+                              width={210}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenActionMenuId(null);
+                                  setActionMenuAnchor(null);
+                                  setSelectedInspection(insp);
+                                }}
+                                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                              >
+                                <Eye className="size-3.5 text-primary shrink-0" />
+                                <span>View Run Details</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenActionMenuId(null);
+                                  setActionMenuAnchor(null);
+                                  openEditModal(insp);
+                                }}
+                                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                              >
+                                <Edit2 className="size-3.5 text-muted shrink-0" />
+                                <span>Edit Parameters & Form</span>
+                              </button>
+
+                              {insp.status !== 'approved' && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionMenuId(null);
+                                    setActionMenuAnchor(null);
+                                    approveMutation.mutate(insp.id);
+                                  }}
+                                  disabled={approveMutation.isPending}
+                                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer"
+                                >
+                                  <ShieldCheck className="size-3.5 text-emerald-600 shrink-0" />
+                                  <span>Approve Pass Run</span>
+                                </button>
+                              )}
+
+                              {(insp.status === 'approved' || insp.result === 'pass') && (
+                                <Link
+                                  to="/inventory"
+                                  onClick={() => {
+                                    setOpenActionMenuId(null);
+                                    setActionMenuAnchor(null);
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-blue-600 dark:text-blue-400 hover:bg-surface-sunken transition-colors cursor-pointer"
+                                >
+                                  <Boxes className="size-3.5 text-blue-500 shrink-0" />
+                                  <span>Release to Stock</span>
+                                </Link>
+                              )}
+
+                              {(insp.result === 'fail' || insp.result === 'partial' || parseFloat(insp.rejected_quantity || insp.failed_quantity || '0') > 0) && (
+                                <Link
+                                  to="/qc?tab=rework"
+                                  onClick={() => {
+                                    setOpenActionMenuId(null);
+                                    setActionMenuAnchor(null);
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-amber-600 dark:text-amber-400 hover:bg-surface-sunken transition-colors cursor-pointer"
+                                >
+                                  <RotateCcw className="size-3.5 text-amber-500 shrink-0" />
+                                  <span>Route to Rework</span>
+                                </Link>
+                              )}
+
+                              <div className="my-1 border-t border-default/50" />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenActionMenuId(null);
+                                  setActionMenuAnchor(null);
+                                  setDeletingInspection(insp);
+                                }}
+                                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="size-3.5 text-rose-600 shrink-0" />
+                                <span>Delete Inspection</span>
+                              </button>
+                            </ActionMenuPortal>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </QueryBoundary>
 

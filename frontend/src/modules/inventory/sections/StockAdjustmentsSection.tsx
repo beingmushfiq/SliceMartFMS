@@ -16,12 +16,15 @@ import {
   Trash2,
   Printer,
   FileSpreadsheet,
+  ChevronDown,
 } from 'lucide-react';
 import type { StockAdjustment } from '../../../types/api/inventory';
 import { api } from '../../../lib/api/client';
 import { extractList } from '../../../lib/api/apiData';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
+import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
+import { cn } from '../../../lib/utils';
 
 interface AdjFormItem {
   product_name: string;
@@ -110,6 +113,8 @@ export function StockAdjustmentsSection() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [activeAdjustment, setActiveAdjustment] = useState<StockAdjustment | null>(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -437,7 +442,7 @@ export function StockAdjustmentsSection() {
 
       {/* Adjustments Table */}
       <div className="rounded-2xl border border-default bg-surface shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-75">
           <table className="w-full text-left text-xs text-default">
             <thead className="bg-surface-sunken text-[11px] font-semibold text-muted uppercase tracking-wider border-b border-default">
               <tr>
@@ -509,71 +514,34 @@ export function StockAdjustmentsSection() {
                             setActiveAdjustment(a);
                             setShowViewModal(true);
                           }}
-                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface-sunken hover:bg-surface border border-default text-default transition-colors cursor-pointer"
                           title="View Voucher"
                         >
-                          <Eye className="size-3.5" />
+                          <Eye className="size-3.5 text-muted" />
+                          <span>View</span>
                         </button>
 
                         <button
-                          onClick={() => {
-                            setActiveAdjustment(a);
-                            setFormData({
-                              adjustment_number: a.adjustment_number,
-                              warehouse_name: a.warehouse_name || '',
-                              adjustment_date: a.adjustment_date,
-                              reason_name: a.reason_name || '',
-                              reason_code: a.reason_code || 'VARIANCE',
-                              notes: a.notes || '',
-                              items: a.items?.map((it) => ({
-                                product_name: it.product_name || '',
-                                product_sku: it.product_sku || '',
-                                direction: it.direction,
-                                quantity: it.quantity,
-                                unit_cost: it.unit_cost,
-                                batch_code: it.batch_code || '',
-                              })) || [],
-                            });
-                            setShowEditModal(true);
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (openActionMenuId === a.id) {
+                              setOpenActionMenuId(null);
+                              setActionMenuAnchor(null);
+                            } else {
+                              setOpenActionMenuId(a.id);
+                              setActionMenuAnchor(e.currentTarget);
+                            }
                           }}
-                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                          title="Edit Adjustment"
+                          className={cn(
+                            'inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg border transition-colors cursor-pointer',
+                            openActionMenuId === a.id
+                              ? 'bg-primary text-primary-fg border-primary shadow-xs'
+                              : 'bg-surface hover:bg-surface-sunken border-default text-default'
+                          )}
                         >
-                          <Edit2 className="size-3.5" />
-                        </button>
-
-                        {a.status === 'draft' && (
-                          <button
-                            onClick={() => handleApprove(a.id)}
-                            disabled={actionLoading === a.id}
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors cursor-pointer"
-                            title="Approve & Post"
-                          >
-                            <CheckCircle2 className="size-3" />
-                            <span>{actionLoading === a.id ? '...' : 'Approve'}</span>
-                          </button>
-                        )}
-
-                        <button
-                          onClick={() => {
-                            setActiveAdjustment(a);
-                            window.print();
-                          }}
-                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                          title="Print Adjustment Voucher"
-                        >
-                          <Printer className="size-3.5" />
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            setActiveAdjustment(a);
-                            setShowDeleteModal(true);
-                          }}
-                          className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                          title="Void Adjustment"
-                        >
-                          <Trash2 className="size-3.5" />
+                          <span>Actions</span>
+                          <ChevronDown className="size-3 text-muted" />
                         </button>
                       </div>
                     </td>
@@ -582,6 +550,101 @@ export function StockAdjustmentsSection() {
               )}
             </tbody>
           </table>
+
+          {openActionMenuId && (() => {
+            const a = filteredAdjustments.find((item) => item.id === openActionMenuId);
+            if (!a) return null;
+            return (
+              <ActionMenuPortal
+                isOpen={Boolean(openActionMenuId && actionMenuAnchor)}
+                anchorEl={actionMenuAnchor}
+                onClose={() => {
+                  setOpenActionMenuId(null);
+                  setActionMenuAnchor(null);
+                }}
+                width="13rem"
+              >
+                <div className="px-3 py-2 border-b border-default text-2xs text-muted font-mono truncate">
+                  {a.adjustment_number}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenActionMenuId(null);
+                    setActionMenuAnchor(null);
+                    setActiveAdjustment(a);
+                    setFormData({
+                      adjustment_number: a.adjustment_number,
+                      warehouse_name: a.warehouse_name || '',
+                      adjustment_date: a.adjustment_date,
+                      reason_name: a.reason_name || '',
+                      reason_code: a.reason_code || 'VARIANCE',
+                      notes: a.notes || '',
+                      items: a.items?.map((it) => ({
+                        product_name: it.product_name || '',
+                        product_sku: it.product_sku || '',
+                        direction: it.direction,
+                        quantity: it.quantity,
+                        unit_cost: it.unit_cost,
+                        batch_code: it.batch_code || '',
+                      })) || [],
+                    });
+                    setShowEditModal(true);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                >
+                  <Edit2 className="size-3.5 text-muted" />
+                  <span>Edit Adjustment</span>
+                </button>
+
+                {a.status === 'draft' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      handleApprove(a.id);
+                    }}
+                    disabled={actionLoading === a.id}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-emerald-600 hover:bg-emerald-500/10 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <CheckCircle2 className="size-3.5 text-emerald-500" />
+                    <span>Approve & Post</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenActionMenuId(null);
+                    setActionMenuAnchor(null);
+                    setActiveAdjustment(a);
+                    window.print();
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                >
+                  <Printer className="size-3.5 text-muted" />
+                  <span>Print Voucher</span>
+                </button>
+
+                <div className="my-1 border-t border-default" />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenActionMenuId(null);
+                    setActionMenuAnchor(null);
+                    setActiveAdjustment(a);
+                    setShowDeleteModal(true);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-600 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                >
+                  <Trash2 className="size-3.5 text-rose-500" />
+                  <span>Void / Delete</span>
+                </button>
+              </ActionMenuPortal>
+            );
+          })()}
         </div>
       </div>
 

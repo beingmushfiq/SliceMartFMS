@@ -32,7 +32,10 @@ class AuthenticateJwt
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $token = $request->bearerToken();
+        $token = $request->bearerToken() ?? $request->query('token') ?? $request->query('access_token');
+        if (is_string($token)) {
+            $token = trim($token);
+        }
 
         if ($token === null || trim($token) === '') {
             return ErrorResponse::make(

@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import type { CodReconciliation, RunSheet, CourierProvider } from '../../../types/api/delivery';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
+import { ChevronDown, Eye, FileText } from 'lucide-react';
+import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
+import { cn } from '../../../lib/utils';
 
 interface CodReconciliationSectionProps {
   reconciliations: CodReconciliation[];
@@ -30,6 +33,9 @@ export const CodReconciliationSection: React.FC<CodReconciliationSectionProps> =
   const [receivedAmount, setReceivedAmount] = useState<string>('0.00');
   const [notes, setNotes] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
+  const [activeItemForDetails, setActiveItemForDetails] = useState<CodReconciliation | null>(null);
 
   const handleSourceSelect = (type: 'run_sheet' | 'courier_provider', id: number) => {
     setSourceType(type);
@@ -129,14 +135,7 @@ export const CodReconciliationSection: React.FC<CodReconciliationSectionProps> =
       </div>
 
       {/* Table */}
-      <div
-        style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: 8,
-          border: '1px solid #E5E7EB',
-          overflow: 'hidden',
-        }}
-      >
+      <div className="overflow-x-auto min-h-75 bg-surface rounded-2xl border border-default shadow-2xs">
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr
@@ -156,13 +155,14 @@ export const CodReconciliationSection: React.FC<CodReconciliationSectionProps> =
               <th style={{ padding: '12px 16px' }}>Status</th>
               <th style={{ padding: '12px 16px' }}>Reconciled Date</th>
               <th style={{ padding: '12px 16px' }}>Auditor</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody style={{ fontSize: '0.875rem', color: '#111827' }}>
             {reconciliations.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={9}
                   style={{ padding: '32px 16px', textAlign: 'center', color: '#6B7280' }}
                 >
                   No COD reconciliation records found.
@@ -201,12 +201,166 @@ export const CodReconciliationSection: React.FC<CodReconciliationSectionProps> =
                   <td style={{ padding: '12px 16px', color: '#4B5563' }}>
                     {r.reconciled_by_name || 'System Auto'}
                   </td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setActiveItemForDetails(r)}
+                        className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface hover:bg-surface-sunken border border-default text-default transition-colors cursor-pointer"
+                      >
+                        Details
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (openActionMenuId === r.id) {
+                            setOpenActionMenuId(null);
+                            setActionMenuAnchor(null);
+                          } else {
+                            setOpenActionMenuId(r.id);
+                            setActionMenuAnchor(e.currentTarget);
+                          }
+                        }}
+                        className={cn(
+                          'inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg border transition-colors cursor-pointer',
+                          openActionMenuId === r.id
+                            ? 'bg-primary text-primary-fg border-primary shadow-xs'
+                            : 'bg-surface hover:bg-surface-sunken border-default text-default'
+                        )}
+                      >
+                        <span>Actions</span>
+                        <ChevronDown className="size-3 text-muted" />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
+
+        {/* Floating Action Menu via ActionMenuPortal */}
+        {openActionMenuId !== null && actionMenuAnchor !== null && (
+          <ActionMenuPortal
+            anchorEl={actionMenuAnchor}
+            open={true}
+            onClose={() => {
+              setOpenActionMenuId(null);
+              setActionMenuAnchor(null);
+            }}
+          >
+            {(() => {
+              const activeItem = reconciliations.find((r) => r.id === openActionMenuId);
+              if (!activeItem) return null;
+              return (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      setActiveItemForDetails(activeItem);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-default hover:bg-surface-sunken transition-colors cursor-pointer text-left"
+                  >
+                    <Eye className="size-3.5 text-primary" />
+                    <span>View Audit Details</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      navigator.clipboard?.writeText(activeItem.reconciliation_number);
+                      alert(`Copied ${activeItem.reconciliation_number} to clipboard!`);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-default hover:bg-surface-sunken transition-colors cursor-pointer text-left"
+                  >
+                    <FileText className="size-3.5 text-emerald-600" />
+                    <span>Copy Rec Reference</span>
+                  </button>
+                </>
+              );
+            })()}
+          </ActionMenuPortal>
+        )}
       </div>
+
+      {/* Details Modal */}
+      {activeItemForDetails && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 50,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 12,
+              padding: 24,
+              width: '100%',
+              maxWidth: 480,
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+            }}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-default mb-4">
+              <div>
+                <h3 className="text-base font-bold text-default">
+                  {activeItemForDetails.reconciliation_number}
+                </h3>
+                <p className="text-xs text-muted">
+                  Source: {activeItemForDetails.source_type} #{activeItemForDetails.source_id}
+                </p>
+              </div>
+              <div>{getStatusBadge(activeItemForDetails.status)}</div>
+            </div>
+
+            <div className="space-y-2.5 text-xs text-default">
+              <div className="flex justify-between py-1 border-b border-default/40">
+                <span className="text-muted">Expected COD:</span>
+                <span className="font-semibold">{formatCurrency(activeItemForDetails.expected_amount)}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-default/40">
+                <span className="text-muted">Received Amount:</span>
+                <span className="font-semibold text-emerald-600">{formatCurrency(activeItemForDetails.received_amount)}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-default/40">
+                <span className="text-muted">Variance:</span>
+                <span className={cn("font-bold", Number(activeItemForDetails.variance_amount) === 0 ? "text-emerald-600" : "text-rose-600")}>
+                  {Number(activeItemForDetails.variance_amount) > 0 ? '+' : ''}{Number(activeItemForDetails.variance_amount).toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-default/40">
+                <span className="text-muted">Audited By:</span>
+                <span>{activeItemForDetails.reconciled_by_name || 'System Auto'}</span>
+              </div>
+              {activeItemForDetails.notes && (
+                <div className="pt-2">
+                  <span className="text-muted block mb-1">Notes:</span>
+                  <p className="p-2.5 bg-surface-sunken rounded-lg text-default border border-default/60">{activeItemForDetails.notes}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setActiveItemForDetails(null)}
+                className="px-4 py-1.5 text-xs font-semibold rounded-lg bg-surface hover:bg-surface-sunken border border-default text-default transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Reconcile Modal */}
       {isModalOpen && (

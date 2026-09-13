@@ -18,7 +18,8 @@ class ResolveStorefrontTenant
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $host = strtolower($request->header('X-Storefront-Domain') ?: $request->getHost());
+        $rawHost = $request->header('X-Storefront-Domain') ?: $request->getHost();
+        $host = preg_replace('/:\d+$/', '', strtolower($rawHost));
 
         // 1. Check verified custom domain in tenant_domains table
         $tenantDomain = \App\Models\TenantDomain::withoutTenantScope()
@@ -40,10 +41,14 @@ class ResolveStorefrontTenant
                 ?: $this->extractSubdomainFromHost($host);
 
             if (empty($subdomain)) {
-                // Default to first active storefront if running in local test environment
-                $storefront = Storefront::withoutTenantScope()
-                    ->where('status', '!=', 'suspended')
-                    ->first();
+                // Default to first active storefront only if running in local/test environment without an explicit unverified domain header
+                if (app()->environment('local', 'testing') && ! $request->header('X-Storefront-Domain')) {
+                    $storefront = Storefront::withoutTenantScope()
+                        ->where('status', '!=', 'suspended')
+                        ->first();
+                } else {
+                    $storefront = null;
+                }
             } else {
                 $storefront = Storefront::withoutTenantScope()
                     ->where(function ($query) use ($subdomain): void {

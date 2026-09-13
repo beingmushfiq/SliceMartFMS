@@ -13,11 +13,13 @@ import {
   Eye,
   Edit2,
   Trash2,
+  ChevronDown,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
+import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
 import type { ProductionBatch } from '../../../types/api/production';
 import type { Product } from '../../../types/api/catalog';
 
@@ -134,6 +136,8 @@ export function ReworkSection() {
   const [editingOrder, setEditingOrder] = useState<ReworkOrder | null>(null);
   const [deletingOrder, setDeletingOrder] = useState<ReworkOrder | null>(null);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
 
   // Form State for Add
   const [formData, setFormData] = useState({
@@ -526,7 +530,7 @@ export function ReworkSection() {
 
       {/* Rework Orders Table */}
       <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-75">
           <table className="w-full text-left text-xs text-default">
             <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
@@ -615,56 +619,127 @@ export function ReworkSection() {
                     <td className="px-4 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
+                          type="button"
                           onClick={() => setViewingOrder(order)}
-                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                          className="px-2.5 py-1 text-xs bg-surface border border-default hover:bg-surface-sunken text-default rounded-lg font-medium transition cursor-pointer flex items-center gap-1 shadow-2xs"
                           title="View Details"
                         >
-                          <Eye className="size-3.5" />
+                          <Eye className="size-3 text-primary shrink-0" />
+                          <span>Details</span>
                         </button>
 
-                        <button
-                          onClick={() => openEditModal(order)}
-                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                          title="Edit Rework Order"
-                        >
-                          <Edit2 className="size-3.5" />
-                        </button>
-
-                        {order.status === 'pending' && (
+                        {/* Prominent Actions Dropdown Button */}
+                        <div className="relative inline-block text-left">
                           <button
-                            onClick={() => handleStartRework(order.id)}
-                            className="rounded-lg bg-sky-500/10 border border-sky-500/20 px-2 py-1 text-[10px] font-semibold text-sky-700 dark:text-sky-300 hover:bg-sky-500/20 transition-colors cursor-pointer"
-                            title="Start Processing"
-                          >
-                            Start
-                          </button>
-                        )}
-
-                        {order.status === 'in_rework' && (
-                          <button
-                            onClick={() => {
-                              setSelectedOrder(order);
-                              setCompleteData({
-                                salvage_qty: String(order.qty_defective),
-                                scrap_qty: '0',
-                                actual_cost: order.rework_cost,
-                              });
-                              setShowCompleteModal(true);
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (openActionMenuId === order.id) {
+                                setOpenActionMenuId(null);
+                                setActionMenuAnchor(null);
+                              } else {
+                                setOpenActionMenuId(order.id);
+                                setActionMenuAnchor(e.currentTarget);
+                              }
                             }}
-                            className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 transition-colors cursor-pointer"
-                            title="Yield & Close"
+                            className={`px-2.5 py-1 text-xs rounded-lg border font-medium transition cursor-pointer flex items-center gap-1 shadow-2xs ${
+                              openActionMenuId === order.id
+                                ? 'border-primary bg-primary/10 text-primary'
+                                : 'border-default bg-surface hover:bg-surface-sunken text-default'
+                            }`}
+                            title={`More options for rework ${order.rework_number}`}
+                            aria-label={`More options for rework order ${order.rework_number}`}
                           >
-                            Yield
+                            <span>Actions</span>
+                            <ChevronDown className="size-3 text-muted" />
                           </button>
-                        )}
 
-                        <button
-                          onClick={() => setDeletingOrder(order)}
-                          className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                          title="Delete Order"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </button>
+                          <ActionMenuPortal
+                            isOpen={openActionMenuId === order.id}
+                            anchorEl={actionMenuAnchor}
+                            onClose={() => {
+                              setOpenActionMenuId(null);
+                              setActionMenuAnchor(null);
+                            }}
+                            width={208}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenActionMenuId(null);
+                                setActionMenuAnchor(null);
+                                setViewingOrder(order);
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                            >
+                              <Eye className="size-3.5 text-primary shrink-0" />
+                              <span>View Order Details</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenActionMenuId(null);
+                                setActionMenuAnchor(null);
+                                openEditModal(order);
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                            >
+                              <Edit2 className="size-3.5 text-muted shrink-0" />
+                              <span>Edit Rework Order</span>
+                            </button>
+
+                            {order.status === 'pending' && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenActionMenuId(null);
+                                  setActionMenuAnchor(null);
+                                  handleStartRework(order.id);
+                                }}
+                                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/30 transition-colors cursor-pointer"
+                              >
+                                <RefreshCw className="size-3.5 text-sky-500 shrink-0" />
+                                <span>Start Processing</span>
+                              </button>
+                            )}
+
+                            {order.status === 'in_rework' && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenActionMenuId(null);
+                                  setActionMenuAnchor(null);
+                                  setSelectedOrder(order);
+                                  setCompleteData({
+                                    salvage_qty: String(order.qty_defective),
+                                    scrap_qty: '0',
+                                    actual_cost: order.rework_cost,
+                                  });
+                                  setShowCompleteModal(true);
+                                }}
+                                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer"
+                              >
+                                <Sparkles className="size-3.5 text-emerald-500 shrink-0" />
+                                <span>Yield & Close Job</span>
+                              </button>
+                            )}
+
+                            <div className="my-1 border-t border-default/50" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenActionMenuId(null);
+                                setActionMenuAnchor(null);
+                                setDeletingOrder(order);
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="size-3.5 text-rose-600 shrink-0" />
+                              <span>Delete Rework Order</span>
+                            </button>
+                          </ActionMenuPortal>
+                        </div>
                       </div>
                     </td>
                   </tr>

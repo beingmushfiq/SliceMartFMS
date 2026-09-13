@@ -32,6 +32,7 @@ import { StockTransferDocument } from './documents/StockTransferDocument';
 import { ThermalReceipt } from './receipts/ThermalReceipt';
 import { BarcodeLabel } from './labels/BarcodeLabel';
 import { ReportPrintDocument } from './reports/ReportPrintDocument';
+import { PayslipDocument } from './documents/PayslipDocument';
 
 export interface DocumentEnginePortalProps {
   isOpen: boolean;
@@ -205,6 +206,8 @@ export function DocumentEnginePortal({
         return <ThermalReceipt invoice={data as unknown as ComponentProps<typeof ThermalReceipt>['invoice']} businessConfig={businessConfig} paperWidth={documentType === 'pos_receipt_58mm' ? '58mm' : '80mm'} />;
       case 'barcode_label':
         return <BarcodeLabel product={data as unknown as ComponentProps<typeof BarcodeLabel>['product']} preset="standard_50x35" />;
+      case 'payslip':
+        return <PayslipDocument payslip={data as unknown as ComponentProps<typeof PayslipDocument>['payslip']} businessConfig={businessConfig} />;
       case 'report':
         return (
           <ReportPrintDocument

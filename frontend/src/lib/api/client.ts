@@ -403,6 +403,21 @@ async function execute<T>(
     headers['If-Match'] = options.ifMatch;
   }
 
+  // Auto-propagate custom storefront domain context to backend if on a custom host
+  if (typeof window !== 'undefined' && window.location && !headers['X-Storefront-Domain']) {
+    const host = window.location.hostname.toLowerCase().split(':')[0] ?? '';
+    if (
+      host &&
+      !['localhost', '127.0.0.1'].includes(host) &&
+      !host.startsWith('admin.') &&
+      !host.startsWith('platform.') &&
+      !host.startsWith('app.') &&
+      !host.startsWith('erp.')
+    ) {
+      headers['X-Storefront-Domain'] = host;
+    }
+  }
+
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const hasBody = method !== 'GET' && options.body !== undefined;
   if (hasBody && !isFormData) {

@@ -15,4 +15,5 @@ export * from './receipts/ThermalReceipt';
 export * from './reports/ReportPrintDocument';
 export * from './documents/FinancialStatementPrintDocument';
 export * from './documents/EmployeeIdBadgeDocument';
+export * from './documents/PayslipDocument';
 export * from './DocumentEnginePortal';

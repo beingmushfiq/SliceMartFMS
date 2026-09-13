@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import type {
   Asset,
   AssetCategory,
@@ -38,10 +38,12 @@ import {
   Play,
   Upload,
   FileSpreadsheet,
+  ChevronDown,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { UniversalImportModal } from '../../components/import/UniversalImportModal';
 import { fixedAssetImportSchema } from '../finance/schemas/fixedAssetImportSchema';
+import { ActionMenuPortal } from '../../components/ui/ActionMenuPortal';
 
 type AssetTab = 'machinery' | 'maintenance' | 'assets' | 'depreciation' | 'categories';
 type PerspectiveMode = 'all' | 'operations' | 'finance';
@@ -62,6 +64,8 @@ export const AssetsWorkspace: React.FC = () => {
   );
   const [perspective, setPerspective] = useState<PerspectiveMode>('all');
   const { formatCurrency } = useCurrency();
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 1. Asset Categories State
@@ -249,34 +253,31 @@ export const AssetsWorkspace: React.FC = () => {
   ]);
 
   // Live Backend Assets & Categories Synchronization
-  const loadLiveAssets = async () => {
-    try {
-      const [assetRes, catRes] = await Promise.allSettled([
-        api.get('/assets'),
-        api.get('/assets/categories'),
-      ]);
-
-      if (assetRes.status === 'fulfilled') {
-        const fetchedAssets = extractList<Asset>(assetRes.value);
+  const loadLiveAssets = useCallback(() => {
+    api
+      .get('/assets')
+      .then((res) => {
+        const fetchedAssets = extractList<Asset>(res);
         if (fetchedAssets.length > 0) {
           setAssets(fetchedAssets);
         }
-      }
+      })
+      .catch((err) => console.error('Failed loading live assets', err));
 
-      if (catRes.status === 'fulfilled') {
-        const fetchedCats = extractList<AssetCategory>(catRes.value);
+    api
+      .get('/assets/categories')
+      .then((res) => {
+        const fetchedCats = extractList<AssetCategory>(res);
         if (fetchedCats.length > 0) {
           setCategories(fetchedCats);
         }
-      }
-    } catch (err) {
-      console.error('Failed loading live asset data', err);
-    }
-  };
+      })
+      .catch((err) => console.error('Failed loading live asset categories', err));
+  }, []);
 
   useEffect(() => {
     loadLiveAssets();
-  }, []);
+  }, [loadLiveAssets]);
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 3. Modal States & Form Fields
@@ -625,8 +626,8 @@ export const AssetsWorkspace: React.FC = () => {
       `"${a.useful_life_months || 60}"`,
       `"${a.status}"`,
       `"${a.serial_number || ''}"`,
-      `"${(a as any).model || ''}"`,
-      `"${(a as any).manufacturer || ''}"`,
+      `"${a.model || ''}"`,
+      `"${a.manufacturer || ''}"`,
     ]);
     const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -718,6 +719,91 @@ export const AssetsWorkspace: React.FC = () => {
     return categories.find((c) => c.id === selectedCategoryFilter)?.name;
   }, [categories, selectedCategoryFilter]);
 
+  // Keyboard shortcuts 1..5
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+      const num = parseInt(e.key, 10);
+      if (num >= 1 && num <= 5) {
+        const stageMap: Record<number, AssetTab> = {
+          1: 'machinery',
+          2: 'maintenance',
+          3: 'assets',
+          4: 'depreciation',
+          5: 'categories',
+        };
+        const target = stageMap[num];
+        if (target) {
+          e.preventDefault();
+          setActiveTab(target);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setActiveTab]);
+
+  const stages = [
+    {
+      id: 'machinery' as const,
+      step: 1,
+      label: 'Plant Machinery & Workstations',
+      shortLabel: 'Machinery',
+      icon: Cpu,
+      count: plantMachines.length,
+      group: 'operations' as const,
+      description: 'Line interlocks & runtime monitoring',
+    },
+    {
+      id: 'maintenance' as const,
+      step: 2,
+      label: 'Maintenance & Work Orders',
+      shortLabel: 'Maintenance',
+      icon: Wrench,
+      count: maintenanceOrders.length,
+      group: 'operations' as const,
+      description: 'PM routines & corrective work orders',
+    },
+    {
+      id: 'assets' as const,
+      step: 3,
+      label: 'Fixed Asset Register',
+      shortLabel: 'Asset Register',
+      icon: Building2,
+      count: assets.length,
+      group: 'finance' as const,
+      description: 'Capital asset costs & book values',
+    },
+    {
+      id: 'depreciation' as const,
+      step: 4,
+      label: 'Monthly Depreciation Logs',
+      shortLabel: 'Depreciation',
+      icon: TrendingDown,
+      count: depreciationEntries.length,
+      group: 'finance' as const,
+      description: 'Straight-line amortization & GL entries',
+    },
+    {
+      id: 'categories' as const,
+      step: 5,
+      label: 'Asset Categories & Policies',
+      shortLabel: 'Categories',
+      icon: Tag,
+      count: categories.length,
+      group: 'finance' as const,
+      description: 'Useful life & salvage value setup',
+    },
+  ];
+
+  const currentStage = (stages.find((s) => s.id === activeTab) || stages[0])!;
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto py-2">
       {/* ─────────────────────────────────────────────────────────────────────────────
@@ -725,10 +811,14 @@ export const AssetsWorkspace: React.FC = () => {
           ───────────────────────────────────────────────────────────────────────────── */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-default pb-5">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-primary bg-primary-subtle px-2.5 py-0.5 rounded-full border border-primary/20 flex items-center gap-1">
               <Layers className="size-3 text-primary" />
               Enterprise Asset & Machinery Lifecycle
+            </span>
+            <span className="text-muted text-xs">•</span>
+            <span className="text-xs font-semibold text-primary">
+              Stage {currentStage.step} of 5: {currentStage.label}
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-default">
@@ -1037,86 +1127,60 @@ export const AssetsWorkspace: React.FC = () => {
         </div>
       </div>
 
-      {/* ─────────────────────────────────────────────────────────────────────────────
-          Navigation Tabs
-          ───────────────────────────────────────────────────────────────────────────── */}
-      <div className="flex overflow-x-auto p-1.5 bg-surface-sunken rounded-2xl border border-default shadow-2xs">
-        <div className="flex gap-1.5 min-w-full sm:min-w-0" aria-label="Asset Sections">
-          {(
-            [
-              {
-                id: 'machinery',
-                label: 'Plant Machinery & Workstations',
-                icon: Cpu,
-                count: plantMachines.length,
-                group: 'operations',
-              },
-              {
-                id: 'maintenance',
-                label: 'Maintenance & Repairs',
-                icon: Wrench,
-                count: maintenanceOrders.length,
-                group: 'operations',
-              },
-              {
-                id: 'assets',
-                label: 'Fixed Asset Register',
-                icon: Building2,
-                count: assets.length,
-                group: 'finance',
-              },
-              {
-                id: 'depreciation',
-                label: 'Monthly Depreciation Logs',
-                icon: TrendingDown,
-                count: depreciationEntries.length,
-                group: 'finance',
-              },
-              {
-                id: 'categories',
-                label: 'Asset Categories & Policies',
-                icon: Tag,
-                count: categories.length,
-                group: 'finance',
-              },
-            ] as {
-              id: AssetTab;
-              label: string;
-              icon: typeof Building2;
-              count: number;
-              group: 'operations' | 'finance';
-            }[]
-          )
+      {/* 5-Stage Execution Ribbon (Grid with 1..5 shortcuts, non-colliding labels, zero scrollbar) */}
+      <div className="bg-surface rounded-2xl border border-default p-2 shadow-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+          {stages
             .filter((tab) => {
               if (perspective === 'operations') return tab.group === 'operations';
               if (perspective === 'finance') return tab.group === 'finance';
               return true;
             })
-            .map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
+            .map((stage) => {
+              const Icon = stage.icon;
+              const isActive = activeTab === stage.id;
               return (
                 <button
-                  key={tab.id}
+                  key={stage.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => setActiveTab(stage.id)}
                   className={cn(
-                    'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer',
+                    'flex items-center gap-2.5 p-2.5 rounded-xl border text-left transition-all cursor-pointer min-w-0',
                     isActive
-                      ? 'bg-primary text-primary-fg font-semibold shadow-xs border border-primary'
-                      : 'text-muted hover:text-default hover:bg-surface/50 border border-transparent'
+                      ? 'bg-primary text-primary-fg border-primary shadow-sm'
+                      : 'bg-surface hover:bg-surface-sunken border-default/70 hover:border-default text-default'
                   )}
                 >
-                  <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
-                  <span>{tab.label}</span>
-                  <span
+                  <div
                     className={cn(
-                      'text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold',
-                      isActive ? 'bg-white/20 text-white' : 'bg-surface text-muted border border-default'
+                      'size-7 rounded-lg flex items-center justify-center shrink-0 font-mono text-xs font-bold transition-colors',
+                      isActive ? 'bg-primary-fg/20 text-primary-fg' : 'bg-surface-sunken text-muted'
                     )}
                   >
-                    {tab.count}
-                  </span>
+                    {stage.step}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <Icon className={cn('size-3.5 shrink-0', isActive ? 'text-primary-fg' : 'text-primary')} />
+                      <span className="text-xs font-bold truncate">{stage.shortLabel}</span>
+                      <span
+                        className={cn(
+                          'text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ml-auto shrink-0',
+                          isActive ? 'bg-white/20 text-white' : 'bg-surface-sunken text-muted border border-default/50'
+                        )}
+                      >
+                        {stage.count}
+                      </span>
+                    </div>
+                    <p
+                      className={cn(
+                        'text-[10px] truncate mt-0.5',
+                        isActive ? 'text-primary-fg/80' : 'text-muted'
+                      )}
+                    >
+                      {stage.description}
+                    </p>
+                  </div>
                 </button>
               );
             })}
@@ -1320,25 +1384,25 @@ export const AssetsWorkspace: React.FC = () => {
             </button>
           </div>
 
-          <div className="bg-surface rounded-2xl shadow-2xs border border-default overflow-hidden">
+          <div className="overflow-x-auto min-h-75 bg-surface rounded-2xl shadow-2xs border border-default">
             <table className="w-full text-left text-sm text-default">
               <thead className="bg-surface-sunken text-muted uppercase text-2xs font-bold border-b border-default">
                 <tr>
-                  <th className="px-6 py-3">Order Number</th>
-                  <th className="px-6 py-3">Target Asset</th>
+                  <th className="px-6 py-3">Order #</th>
+                  <th className="px-6 py-3">Asset</th>
                   <th className="px-6 py-3">Type & Priority</th>
-                  <th className="px-6 py-3">Service Scope</th>
-                  <th className="px-6 py-3">Scheduled Date</th>
-                  <th className="px-6 py-3 text-right">Cost (BDT)</th>
+                  <th className="px-6 py-3">Issue / Task</th>
+                  <th className="px-6 py-3">Scheduled</th>
+                  <th className="px-6 py-3 text-right">Cost</th>
                   <th className="px-6 py-3 text-center">Status</th>
-                  <th className="px-6 py-3 text-right">Action</th>
+                  <th className="px-6 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-default">
                 {filteredOrders.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-6 py-10 text-center text-xs text-muted">
-                      No maintenance work orders found matching current filters.
+                      No maintenance work orders found matching the filter criteria.
                     </td>
                   </tr>
                 ) : (
@@ -1392,36 +1456,38 @@ export const AssetsWorkspace: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {mo.status === 'scheduled' ? (
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleStartOrder(mo.id)}
-                              className="px-2 py-1 text-2xs font-semibold rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 transition cursor-pointer flex items-center gap-1"
-                            >
-                              <Play className="size-2.5" /> Start
-                            </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {mo.status === 'scheduled' ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleStartOrder(mo.id)}
+                                className="px-2 py-1 text-2xs font-semibold rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 transition cursor-pointer flex items-center gap-1"
+                              >
+                                <Play className="size-2.5" /> Start
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleCompleteOrder(mo.id)}
+                                className="px-2 py-1 text-2xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition cursor-pointer"
+                              >
+                                Complete
+                              </button>
+                            </>
+                          ) : mo.status === 'in_progress' ? (
                             <button
                               type="button"
                               onClick={() => handleCompleteOrder(mo.id)}
-                              className="px-2 py-1 text-2xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition cursor-pointer"
+                              className="px-2.5 py-1 text-2xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition cursor-pointer flex items-center gap-1 ml-auto"
                             >
-                              Complete
+                              <CheckCircle2 className="size-3" /> Complete
                             </button>
-                          </div>
-                        ) : mo.status === 'in_progress' ? (
-                          <button
-                            type="button"
-                            onClick={() => handleCompleteOrder(mo.id)}
-                            className="px-2.5 py-1 text-2xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition cursor-pointer flex items-center gap-1 ml-auto"
-                          >
-                            <CheckCircle2 className="size-3" /> Complete
-                          </button>
-                        ) : (
-                          <span className="text-2xs text-muted flex items-center justify-end gap-1">
-                            <CheckCircle2 className="size-3 text-emerald-500" /> Done
-                          </span>
-                        )}
+                          ) : (
+                            <span className="text-2xs text-muted flex items-center justify-end gap-1">
+                              <CheckCircle2 className="size-3 text-emerald-500" /> Done
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -1512,7 +1578,7 @@ export const AssetsWorkspace: React.FC = () => {
           </div>
 
           {/* Asset Register Table */}
-          <div className="bg-surface rounded-2xl shadow-2xs border border-default overflow-hidden">
+          <div className="overflow-x-auto min-h-75 bg-surface rounded-2xl shadow-2xs border border-default">
             <table className="w-full text-left text-sm text-default">
               <thead className="bg-surface-sunken text-muted uppercase text-2xs font-bold border-b border-default">
                 <tr>
@@ -1523,7 +1589,7 @@ export const AssetsWorkspace: React.FC = () => {
                   <th className="px-6 py-3 text-right">Accum. Depr (BDT)</th>
                   <th className="px-6 py-3 text-right">Net Book Value (BDT)</th>
                   <th className="px-6 py-3 text-center">Status</th>
-                  <th className="px-6 py-3 text-right">Action</th>
+                  <th className="px-6 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-default">
@@ -1568,21 +1634,34 @@ export const AssetsWorkspace: React.FC = () => {
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
-                            onClick={() => handleServiceAsset(ast)}
-                            className="px-2.5 py-1 text-2xs font-semibold rounded-lg bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition cursor-pointer flex items-center gap-1"
-                            title="Schedule or report maintenance"
-                          >
-                            <Wrench className="size-3 text-amber-500" />
-                            <span>Service</span>
-                          </button>
-                          <button
-                            type="button"
                             onClick={() => handleViewAssetDetails(ast)}
-                            className="px-2.5 py-1 text-2xs font-semibold rounded-lg bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition cursor-pointer flex items-center gap-1"
+                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition cursor-pointer flex items-center gap-1"
                             title="View complete asset specifications"
                           >
                             <Eye className="size-3 text-primary" />
                             <span>Details</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (openActionMenuId === ast.id) {
+                                setOpenActionMenuId(null);
+                                setActionMenuAnchor(null);
+                              } else {
+                                setOpenActionMenuId(ast.id);
+                                setActionMenuAnchor(e.currentTarget);
+                              }
+                            }}
+                            className={cn(
+                              'inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg border transition-colors cursor-pointer',
+                              openActionMenuId === ast.id
+                                ? 'bg-primary text-primary-fg border-primary shadow-xs'
+                                : 'bg-surface hover:bg-surface-sunken border-default text-default'
+                            )}
+                          >
+                            <span>Actions</span>
+                            <ChevronDown className="size-3 text-muted" />
                           </button>
                         </div>
                       </td>
@@ -1591,6 +1670,66 @@ export const AssetsWorkspace: React.FC = () => {
                 )}
               </tbody>
             </table>
+
+            {/* Floating Action Menu via ActionMenuPortal */}
+            {openActionMenuId !== null && actionMenuAnchor !== null && (
+              <ActionMenuPortal
+                anchorEl={actionMenuAnchor}
+                open={true}
+                onClose={() => {
+                  setOpenActionMenuId(null);
+                  setActionMenuAnchor(null);
+                }}
+              >
+                {(() => {
+                  const activeItem = assets.find((a) => a.id === openActionMenuId);
+                  if (!activeItem) return null;
+                  return (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenActionMenuId(null);
+                          setActionMenuAnchor(null);
+                          handleViewAssetDetails(activeItem);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-default hover:bg-surface-sunken transition-colors cursor-pointer text-left"
+                      >
+                        <Eye className="size-3.5 text-primary" />
+                        <span>View Asset Specifications</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenActionMenuId(null);
+                          setActionMenuAnchor(null);
+                          handleServiceAsset(activeItem);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-amber-600 hover:bg-amber-500/10 transition-colors cursor-pointer text-left"
+                      >
+                        <Wrench className="size-3.5 text-amber-500" />
+                        <span>Schedule Service / Maintenance</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenActionMenuId(null);
+                          setActionMenuAnchor(null);
+                          navigator.clipboard?.writeText(activeItem.asset_code);
+                          alert(`Copied ${activeItem.asset_code} to clipboard!`);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-default hover:bg-surface-sunken transition-colors cursor-pointer text-left border-t border-default/40"
+                      >
+                        <Building2 className="size-3.5 text-muted" />
+                        <span>Copy Asset Code</span>
+                      </button>
+                    </>
+                  );
+                })()}
+              </ActionMenuPortal>
+            )}
           </div>
         </div>
       )}
@@ -1630,7 +1769,7 @@ export const AssetsWorkspace: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-surface rounded-2xl shadow-2xs border border-default overflow-hidden">
+          <div className="overflow-x-auto min-h-75 bg-surface rounded-2xl shadow-2xs border border-default">
             <table className="w-full text-left text-sm text-default">
               <thead className="bg-surface-sunken text-muted uppercase text-2xs font-bold border-b border-default">
                 <tr>

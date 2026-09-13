@@ -17,6 +17,7 @@ import {
   Warehouse,
   Printer,
   Layers,
+  ChevronDown,
 } from 'lucide-react';
 import type { StockTransfer } from '../../../types/api/inventory';
 import { api } from '../../../lib/api/client';
@@ -25,6 +26,8 @@ import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { StockTransferDocument } from '../../../components/print/documents/StockTransferDocument';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
+import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
+import { cn } from '../../../lib/utils';
 
 interface TransferFormItem {
   product_name: string;
@@ -139,6 +142,8 @@ export function StockTransfersSection() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [activeTransfer, setActiveTransfer] = useState<StockTransfer | null>(null);
   const [printTransfer, setPrintTransfer] = useState<StockTransfer | null>(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
   const { config: businessConfig } = useBusinessConfig();
 
   // Form State
@@ -484,7 +489,7 @@ export function StockTransfersSection() {
 
       {/* Transfers Table */}
       <div className="rounded-2xl border border-default bg-surface shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-75">
           <table className="w-full text-left text-xs text-default">
             <thead className="bg-surface-sunken text-[11px] font-semibold text-muted uppercase tracking-wider border-b border-default">
               <tr>
@@ -549,80 +554,34 @@ export function StockTransfersSection() {
                             setActiveTransfer(t);
                             setShowViewModal(true);
                           }}
-                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface-sunken hover:bg-surface border border-default text-default transition-colors cursor-pointer"
                           title="View Manifest"
                         >
-                          <Eye className="size-3.5" />
+                          <Eye className="size-3.5 text-muted" />
+                          <span>View</span>
                         </button>
 
                         <button
-                          onClick={() => {
-                            setActiveTransfer(t);
-                            setFormData({
-                              transfer_number: t.transfer_number,
-                              from_warehouse_name: t.from_warehouse_name || '',
-                              to_warehouse_name: t.to_warehouse_name || '',
-                              transfer_date: t.transfer_date,
-                              notes: t.notes || '',
-                              items: t.items?.map((it) => ({
-                                product_name: it.product_name || '',
-                                batch_code: it.batch_code || '',
-                                sent_quantity: it.sent_quantity,
-                                unit_code: it.unit_code || 'KG',
-                              })) || [],
-                            });
-                            setShowEditModal(true);
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (openActionMenuId === t.id) {
+                              setOpenActionMenuId(null);
+                              setActionMenuAnchor(null);
+                            } else {
+                              setOpenActionMenuId(t.id);
+                              setActionMenuAnchor(e.currentTarget);
+                            }
                           }}
-                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                          title="Edit Transfer"
+                          className={cn(
+                            'inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg border transition-colors cursor-pointer',
+                            openActionMenuId === t.id
+                              ? 'bg-primary text-primary-fg border-primary shadow-xs'
+                              : 'bg-surface hover:bg-surface-sunken border-default text-default'
+                          )}
                         >
-                          <Edit2 className="size-3.5" />
-                        </button>
-
-                        {t.status === 'draft' && (
-                          <button
-                            onClick={() => handleDispatch(t.id)}
-                            disabled={actionLoading === t.id}
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 transition-colors cursor-pointer"
-                            title="Dispatch Transfer"
-                          >
-                            <Truck className="size-3" />
-                            <span>{actionLoading === t.id ? '...' : 'Dispatch'}</span>
-                          </button>
-                        )}
-
-                        {t.status === 'in_transit' && (
-                          <button
-                            onClick={() => handleReceive(t.id)}
-                            disabled={actionLoading === t.id}
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors cursor-pointer"
-                            title="Confirm Receipt"
-                          >
-                            <CheckCircle2 className="size-3" />
-                            <span>{actionLoading === t.id ? '...' : 'Receive'}</span>
-                          </button>
-                        )}
-
-                        <button
-                          onClick={() => {
-                            setActiveTransfer(t);
-                            window.print();
-                          }}
-                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                          title="Print Waybill"
-                        >
-                          <Printer className="size-3.5" />
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            setActiveTransfer(t);
-                            setShowDeleteModal(true);
-                          }}
-                          className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                          title="Void / Delete Transfer"
-                        >
-                          <Trash2 className="size-3.5" />
+                          <span>Actions</span>
+                          <ChevronDown className="size-3 text-muted" />
                         </button>
                       </div>
                     </td>
@@ -631,6 +590,114 @@ export function StockTransfersSection() {
               )}
             </tbody>
           </table>
+
+          {openActionMenuId && (() => {
+            const t = filteredTransfers.find((item) => item.id === openActionMenuId);
+            if (!t) return null;
+            return (
+              <ActionMenuPortal
+                isOpen={Boolean(openActionMenuId && actionMenuAnchor)}
+                anchorEl={actionMenuAnchor}
+                onClose={() => {
+                  setOpenActionMenuId(null);
+                  setActionMenuAnchor(null);
+                }}
+                width="13rem"
+              >
+                <div className="px-3 py-2 border-b border-default text-2xs text-muted font-mono truncate">
+                  {t.transfer_number}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenActionMenuId(null);
+                    setActionMenuAnchor(null);
+                    setActiveTransfer(t);
+                    setFormData({
+                      transfer_number: t.transfer_number,
+                      from_warehouse_name: t.from_warehouse_name || '',
+                      to_warehouse_name: t.to_warehouse_name || '',
+                      transfer_date: t.transfer_date,
+                      notes: t.notes || '',
+                      items: t.items?.map((it) => ({
+                        product_name: it.product_name || '',
+                        batch_code: it.batch_code || '',
+                        sent_quantity: it.sent_quantity,
+                        unit_code: it.unit_code || 'KG',
+                      })) || [],
+                    });
+                    setShowEditModal(true);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                >
+                  <Edit2 className="size-3.5 text-muted" />
+                  <span>Edit Transfer</span>
+                </button>
+
+                {t.status === 'draft' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      handleDispatch(t.id);
+                    }}
+                    disabled={actionLoading === t.id}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-blue-600 hover:bg-blue-500/10 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <Truck className="size-3.5 text-blue-500" />
+                    <span>Dispatch Transfer</span>
+                  </button>
+                )}
+
+                {t.status === 'in_transit' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      handleReceive(t.id);
+                    }}
+                    disabled={actionLoading === t.id}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-emerald-600 hover:bg-emerald-500/10 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <CheckCircle2 className="size-3.5 text-emerald-500" />
+                    <span>Confirm Receipt</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenActionMenuId(null);
+                    setActionMenuAnchor(null);
+                    setActiveTransfer(t);
+                    window.print();
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                >
+                  <Printer className="size-3.5 text-muted" />
+                  <span>Print Waybill</span>
+                </button>
+
+                <div className="my-1 border-t border-default" />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenActionMenuId(null);
+                    setActionMenuAnchor(null);
+                    setActiveTransfer(t);
+                    setShowDeleteModal(true);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-600 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                >
+                  <Trash2 className="size-3.5 text-rose-500" />
+                  <span>Void / Delete</span>
+                </button>
+              </ActionMenuPortal>
+            );
+          })()}
         </div>
       </div>
 

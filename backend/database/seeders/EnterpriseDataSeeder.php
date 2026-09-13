@@ -593,10 +593,10 @@ final class EnterpriseDataSeeder extends Seeder
         $so1 = $soList->get(0);
         $so2 = $soList->get(1) ?? $so1;
 
-        if (DeliveryOrder::where('tenant_id', $tenantId)->count() === 0 && $suppliers->isNotEmpty() && $warehouse) {
+        if (DeliveryOrder::where('tenant_id', $tenantId)->count() === 0 && $suppliers->isNotEmpty() && $warehouse && $so1) {
             $do1 = DeliveryOrder::create([
                 'tenant_id' => $tenantId,
-                'sales_order_id' => $so1?->id ?? 1,
+                'sales_order_id' => $so1->id,
                 'delivery_number' => 'DO-2026-001',
                 'party_id' => $suppliers[0]->id,
                 'warehouse_id' => $warehouse->id,

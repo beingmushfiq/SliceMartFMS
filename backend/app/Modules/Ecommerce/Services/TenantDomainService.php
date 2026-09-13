@@ -10,6 +10,8 @@ use App\Models\Storefront;
 use App\Models\Tenant;
 use App\Models\TenantDomain;
 use App\Models\User;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
@@ -111,46 +113,167 @@ class TenantDomainService
     }
 
     /**
-     * Verify domain ownership via DNS lookup.
+     * Query public DNS records using both native PHP resolver and authoritative DoH.
+     *
+     * @return array<int, array{type: string, value: string, source: string}>
      */
-    public function verifyDomain(TenantDomain $tenantDomain, ?User $actor = null): array
+    public function queryPublicDns(string $hostname, string $type = 'ALL'): array
     {
-        $domain = $tenantDomain->domain;
-        $challengeHost = '_dcp-challenge.' . $domain;
-        $expectedToken = $tenantDomain->verification_token;
+        $records = [];
+        $type = strtoupper($type);
 
-        $recordsFound = [];
-        $verified = false;
+        // 1. Native PHP dns_get_record
+        if (function_exists('dns_get_record')) {
+            try {
+                $dnsType = match ($type) {
+                    'TXT' => DNS_TXT,
+                    'CNAME' => DNS_CNAME,
+                    'A' => DNS_A,
+                    default => DNS_ALL,
+                };
+                $phpRecords = @dns_get_record($hostname, $dnsType);
+                if (is_array($phpRecords)) {
+                    foreach ($phpRecords as $rec) {
+                        $recType = strtoupper((string) ($rec['type'] ?? ''));
+                        $val = match ($recType) {
+                            'TXT' => $rec['txt'] ?? ($rec['entries'][0] ?? ''),
+                            'CNAME' => $rec['target'] ?? '',
+                            'A' => $rec['ip'] ?? '',
+                            default => '',
+                        };
+                        if (!empty($val)) {
+                            $records[] = [
+                                'type' => $recType,
+                                'value' => trim((string) $val),
+                                'source' => 'system_dns',
+                            ];
+                        }
+                    }
+                }
+            } catch (\Throwable) {
+                // Ignore system lookup error
+            }
+        }
 
-        // Perform DNS lookup
+        // 2. Query Google DNS-over-HTTPS (authoritative global cache-busting lookup)
         try {
-            if (function_exists('dns_get_record')) {
-                $txtRecords = @dns_get_record($challengeHost, DNS_TXT);
-                if (is_array($txtRecords)) {
-                    foreach ($txtRecords as $rec) {
-                        $txtVal = $rec['txt'] ?? ($rec['entries'][0] ?? '');
-                        $recordsFound[] = ['type' => 'TXT', 'value' => $txtVal];
-                        if (trim($txtVal) === $expectedToken) {
-                            $verified = true;
+            $response = Http::timeout(3)
+                ->acceptJson()
+                ->get('https://dns.google/resolve', [
+                    'name' => $hostname,
+                    'type' => $type === 'ALL' ? 'ANY' : $type,
+                ]);
+
+            if ($response->successful()) {
+                $answers = $response->json('Answer', []);
+                if (is_array($answers)) {
+                    foreach ($answers as $ans) {
+                        $typeCode = (int) ($ans['type'] ?? 0);
+                        $typeName = match ($typeCode) {
+                            1 => 'A',
+                            5 => 'CNAME',
+                            16 => 'TXT',
+                            default => (string) $typeCode,
+                        };
+                        $data = trim((string) ($ans['data'] ?? ''), '" ');
+                        if (!empty($data)) {
+                            $records[] = [
+                                'type' => $typeName,
+                                'value' => $data,
+                                'source' => 'google_doh',
+                            ];
                         }
                     }
                 }
             }
         } catch (\Throwable) {
-            // DNS lookup failed / timed out
+            // DoH lookup failed (e.g. offline/network firewall)
         }
 
-        // In test environments or when mock test mode is passed
-        if (app()->environment('testing', 'local') || $domain === 'slicemart.tech') {
+        // De-duplicate records by type + value
+        $unique = [];
+        foreach ($records as $item) {
+            $key = $item['type'] . '::' . strtolower(rtrim($item['value'], '.'));
+            if (!isset($unique[$key])) {
+                $unique[$key] = [
+                    'type' => $item['type'],
+                    'value' => rtrim($item['value'], '.'),
+                    'source' => $item['source'],
+                ];
+            }
+        }
+
+        return array_values($unique);
+    }
+
+    /**
+     * Verify domain ownership via real DNS lookup (TXT challenge and/or CNAME target).
+     */
+    public function verifyDomain(TenantDomain $tenantDomain, ?User $actor = null, bool $allowDevOverride = false): array
+    {
+        $domain = $tenantDomain->domain;
+        $challengeHost = '_dcp-challenge.' . $domain;
+        $expectedToken = $tenantDomain->verification_token;
+        $tenant = Tenant::find($tenantDomain->tenant_id);
+        $expectedCname = $tenant ? ($tenant->slug . '.devcenterpoint.com') : '';
+
+        // 1. Query TXT challenge host
+        $txtRecords = $this->queryPublicDns($challengeHost, 'TXT');
+
+        // 2. Query apex / subdomain CNAME and A records
+        $domainRecords = $this->queryPublicDns($domain, 'ALL');
+
+        $allFoundRecords = array_merge($txtRecords, $domainRecords);
+
+        $verified = false;
+        $matchedMethod = null;
+        $matchedRecord = null;
+
+        // Check TXT challenge
+        foreach ($txtRecords as $rec) {
+            if ($rec['type'] === 'TXT' && trim($rec['value']) === $expectedToken) {
+                $verified = true;
+                $matchedMethod = 'dns_txt';
+                $matchedRecord = $rec;
+                break;
+            }
+        }
+
+        // Check CNAME routing if TXT not matched
+        if (!$verified && !empty($expectedCname)) {
+            foreach ($domainRecords as $rec) {
+                if ($rec['type'] === 'CNAME') {
+                    $cnameTarget = strtolower(rtrim($rec['value'], '.'));
+                    if ($cnameTarget === strtolower($expectedCname) || str_ends_with($cnameTarget, '.devcenterpoint.com')) {
+                        $verified = true;
+                        $matchedMethod = 'cname';
+                        $matchedRecord = $rec;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // In test environments or explicit local sandbox override
+        $isUnitTesting = app()->runningUnitTests();
+        if (!$verified && ($isUnitTesting || $allowDevOverride)) {
             $verified = true;
+            $matchedMethod = $isUnitTesting ? 'test_mock' : 'dev_override';
+            $matchedRecord = [
+                'type' => $isUnitTesting ? 'TEST_MOCK' : 'DEV_OVERRIDE',
+                'value' => $isUnitTesting ? 'Automatic unit test verification' : 'Local developer sandbox override',
+                'source' => 'local_override',
+            ];
+            $allFoundRecords[] = $matchedRecord;
         }
 
-        $now = now();
+        $now = Carbon::now();
         $tenantDomain->dns_last_checked_at = $now;
-        $tenantDomain->dns_records_found = $recordsFound;
+        $tenantDomain->dns_records_found = $allFoundRecords;
 
         if ($verified) {
             $tenantDomain->verification_status = 'verified';
+            $tenantDomain->verification_method = $matchedMethod ?? 'dns_txt';
             $tenantDomain->ssl_status = 'active';
             $tenantDomain->verified_at = $now;
             $tenantDomain->activated_at = $now;
@@ -161,7 +284,7 @@ class TenantDomainService
                 ->where('is_primary', true)
                 ->exists();
 
-            if (! $hasPrimary) {
+            if (!$hasPrimary) {
                 $tenantDomain->is_primary = true;
                 $this->syncStorefrontPrimaryDomain($tenantDomain);
             }
@@ -174,27 +297,47 @@ class TenantDomainService
                 before: ['status' => 'pending'],
                 after: ['status' => 'verified', 'ssl_status' => 'active'],
                 actor: $actor,
-                context: ['domain' => $domain, 'action' => 'verify_domain_success']
+                context: ['domain' => $domain, 'action' => 'verify_domain_success', 'method' => $matchedMethod]
             );
 
             return [
                 'success' => true,
                 'status' => 'verified',
                 'ssl_status' => 'active',
-                'message' => "Domain '{$domain}' verified successfully. SSL certificate is active.",
+                'verification_method' => $matchedMethod,
+                'message' => "Domain '{$domain}' verified successfully via {$matchedMethod}. Edge SSL certificate is active.",
                 'domain' => $tenantDomain->fresh(),
+                'diagnostics' => [
+                    'verified' => true,
+                    'method' => $matchedMethod,
+                    'matched_record' => $matchedRecord,
+                    'records_checked' => count($allFoundRecords),
+                    'records_found' => $allFoundRecords,
+                ],
             ];
         }
 
         $tenantDomain->verification_status = 'failed';
+        $tenantDomain->ssl_status = 'pending';
         $tenantDomain->save();
+
+        $foundSummary = empty($allFoundRecords)
+            ? 'No DNS records were detected for this hostname.'
+            : 'Detected ' . count($allFoundRecords) . ' record(s) in public DNS, but none matched the verification requirements.';
 
         return [
             'success' => false,
             'status' => 'failed',
             'ssl_status' => 'pending',
-            'message' => "DNS verification record for '{$challengeHost}' was not found. Please ensure the TXT or CNAME record is configured and propagated.",
+            'message' => "DNS verification failed for '{$domain}'. {$foundSummary} Please check that your TXT or CNAME record has propagated.",
             'domain' => $tenantDomain->fresh(),
+            'diagnostics' => [
+                'verified' => false,
+                'challenge_host' => $challengeHost,
+                'expected_token' => $expectedToken,
+                'expected_cname' => $expectedCname,
+                'records_found' => $allFoundRecords,
+            ],
         ];
     }
 

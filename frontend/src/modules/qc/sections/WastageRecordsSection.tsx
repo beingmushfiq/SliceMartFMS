@@ -8,6 +8,7 @@ import {
   Plus,
   Search,
   Trash2,
+  ChevronDown,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
@@ -15,6 +16,7 @@ import { Button } from '../../../components/ui/Button';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
 import { Badge } from '../../../components/ui/Badge';
 import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
+import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
 import { isApiError } from '../../../lib/api/errors';
 import type { WastageRecord } from '../../../types/api/qc';
 import type { ProductionBatch } from '../../../types/api/production';
@@ -69,6 +71,8 @@ export function WastageRecordsSection() {
     notes: '',
   });
   const [deletingRecord, setDeletingRecord] = useState<WastageRecord | null>(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [draft, setDraft] = useState<CreateWastageDraft>({
@@ -251,110 +255,167 @@ export function WastageRecordsSection() {
         isFetching={wastageQuery.isFetching}
       >
         <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
-          <table className="w-full text-left text-xs text-default">
-            <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
-              <tr>
-                <th className="py-3.5 pl-4 pr-3">Record Number</th>
-                <th className="py-3.5 px-3">Product / Batch</th>
-                <th className="py-3.5 px-3">Process Stage</th>
-                <th className="py-3.5 px-3">Reason Code</th>
-                <th className="py-3.5 px-3">Quantity</th>
-                <th className="py-3.5 px-3">Cost Impact</th>
-                <th className="py-3.5 px-3">Recovery Status</th>
-                <th className="py-3.5 pr-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-default">
-              {records.length === 0 ? (
+          <div className="overflow-x-auto min-h-75">
+            <table className="w-full text-left text-xs text-default">
+              <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-muted">
-                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-surface-sunken border border-default mb-2">
-                      <Trash2 className="h-5 w-5 text-muted" />
-                    </div>
-                    <div className="text-sm font-medium text-default">
-                      No wastage records found
-                    </div>
-                    <div className="text-xs text-muted mt-1">
-                      Track process scrap, damaged materials and manufacturing shrinkage.
-                    </div>
-                  </td>
+                  <th className="py-3.5 pl-4 pr-3">Record Number</th>
+                  <th className="py-3.5 px-3">Product / Batch</th>
+                  <th className="py-3.5 px-3">Process Stage</th>
+                  <th className="py-3.5 px-3">Reason Code</th>
+                  <th className="py-3.5 px-3">Quantity</th>
+                  <th className="py-3.5 px-3">Cost Impact</th>
+                  <th className="py-3.5 px-3">Recovery Status</th>
+                  <th className="py-3.5 pr-4 text-right">Actions</th>
                 </tr>
-              ) : (
-                records.map((rec) => (
-                  <tr key={rec.id} className="hover:bg-surface-sunken/60 transition-colors">
-                    <td className="py-3 pl-4 pr-3 font-mono font-medium text-emerald-600 dark:text-emerald-400">
-                      {rec.record_number ?? rec.wastage_number}
-                    </td>
-                    <td className="py-3 px-3">
-                      <div className="text-default font-medium">
-                        {rec.product_name ?? rec.product_id}
+              </thead>
+              <tbody className="divide-y divide-default">
+                {records.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-12 text-center text-muted">
+                      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-surface-sunken border border-default mb-2">
+                        <Trash2 className="h-5 w-5 text-muted" />
                       </div>
-                      {rec.batch_number && (
-                        <div className="text-[10px] font-mono text-muted">
-                          Batch: {rec.batch_number}
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-3 px-3 capitalize text-default">
-                      <span className="rounded-md bg-surface-sunken border border-default px-2 py-0.5 text-[10px] font-medium text-muted">
-                        {((rec as { stage?: string }).stage ?? 'in_process').replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3">
-                      <div className="text-default flex items-center gap-1">
-                        <AlertOctagon className="h-3.5 w-3.5 text-amber-500" />
-                        <span>
-                          {typeof rec.reason_code === 'object' && rec.reason_code !== null
-                            ? ((rec.reason_code as { name?: string; code?: string }).name ??
-                               (rec.reason_code as { name?: string; code?: string }).code ??
-                               'Defect')
-                            : (rec.reason_name ?? (typeof rec.reason_code === 'string' ? rec.reason_code : 'Defect'))}
-                        </span>
+                      <div className="text-sm font-medium text-default">
+                        No wastage records found
                       </div>
-                    </td>
-                    <td className="py-3 px-3 font-mono font-semibold text-rose-600 dark:text-rose-400">
-                      {rec.quantity}
-                    </td>
-                    <td className="py-3 px-3 font-mono text-default flex items-center gap-0.5">
-                      <DollarSign className="h-3.5 w-3.5 text-muted" />
-                      <span>{rec.total_cost ?? (rec as { estimated_cost?: string }).estimated_cost ?? '0.0000'}</span>
-                    </td>
-                    <td className="py-3 px-3">
-                      {(rec as { is_recoverable?: boolean }).is_recoverable ? (
-                        <Badge tone="success-subtle">
-                          Recoverable ({(rec as { recovered_quantity?: string }).recovered_quantity ?? '0.00'})
-                        </Badge>
-                      ) : (
-                        <Badge tone="surface-sunken">Scrapped</Badge>
-                      )}
-                    </td>
-                    <td className="py-3 pr-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditModal(rec)}
-                          className="text-xs text-muted hover:text-default"
-                          title="Edit wastage record"
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeletingRecord(rec)}
-                          className="text-xs text-muted hover:text-rose-600 dark:hover:text-rose-400"
-                          title="Delete wastage record"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                      <div className="text-xs text-muted mt-1">
+                        Track process scrap, damaged materials and manufacturing shrinkage.
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  records.map((rec) => (
+                    <tr key={rec.id} className="hover:bg-surface-sunken/60 transition-colors">
+                      <td className="py-3 pl-4 pr-3 font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                        {rec.record_number ?? rec.wastage_number}
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="text-default font-medium">
+                          {rec.product_name ?? rec.product_id}
+                        </div>
+                        {rec.batch_number && (
+                          <div className="text-[10px] font-mono text-muted">
+                            Batch: {rec.batch_number}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 capitalize text-default">
+                        <span className="rounded-md bg-surface-sunken border border-default px-2 py-0.5 text-[10px] font-medium text-muted">
+                          {((rec as { stage?: string }).stage ?? 'in_process').replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="text-default flex items-center gap-1">
+                          <AlertOctagon className="h-3.5 w-3.5 text-amber-500" />
+                          <span>
+                            {typeof rec.reason_code === 'object' && rec.reason_code !== null
+                              ? ((rec.reason_code as { name?: string; code?: string }).name ??
+                                 (rec.reason_code as { name?: string; code?: string }).code ??
+                                 'Defect')
+                              : (rec.reason_name ?? (typeof rec.reason_code === 'string' ? rec.reason_code : 'Defect'))}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 font-mono font-semibold text-rose-600 dark:text-rose-400">
+                        {rec.quantity}
+                      </td>
+                      <td className="py-3 px-3 font-mono text-default flex items-center gap-0.5">
+                        <DollarSign className="h-3.5 w-3.5 text-muted" />
+                        <span>{rec.total_cost ?? (rec as { estimated_cost?: string }).estimated_cost ?? '0.0000'}</span>
+                      </td>
+                      <td className="py-3 px-3">
+                        {(rec as { is_recoverable?: boolean }).is_recoverable ? (
+                          <Badge tone="success-subtle">
+                            Recoverable ({(rec as { recovered_quantity?: string }).recovered_quantity ?? '0.00'})
+                          </Badge>
+                        ) : (
+                          <Badge tone="surface-sunken">Scrapped</Badge>
+                        )}
+                      </td>
+                      <td className="py-3 pr-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(rec)}
+                            className="px-2.5 py-1 text-xs bg-surface border border-default hover:bg-surface-sunken text-default rounded-lg font-medium transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                            title="Edit wastage record"
+                          >
+                            <Edit2 className="size-3 text-primary shrink-0" />
+                            <span>Edit</span>
+                          </button>
+
+                          {/* Prominent Actions Dropdown Button */}
+                          <div className="relative inline-block text-left">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (openActionMenuId === rec.id) {
+                                  setOpenActionMenuId(null);
+                                  setActionMenuAnchor(null);
+                                } else {
+                                  setOpenActionMenuId(rec.id);
+                                  setActionMenuAnchor(e.currentTarget);
+                                }
+                              }}
+                              className={`px-2.5 py-1 text-xs rounded-lg border font-medium transition cursor-pointer flex items-center gap-1 shadow-2xs ${
+                                openActionMenuId === rec.id
+                                  ? 'border-primary bg-primary/10 text-primary'
+                                  : 'border-default bg-surface hover:bg-surface-sunken text-default'
+                              }`}
+                              title={`More options for ${rec.record_number ?? rec.wastage_number}`}
+                              aria-label={`More options for wastage record`}
+                            >
+                              <span>Actions</span>
+                              <ChevronDown className="size-3 text-muted" />
+                            </button>
+
+                            <ActionMenuPortal
+                              isOpen={openActionMenuId === rec.id}
+                              anchorEl={actionMenuAnchor}
+                              onClose={() => {
+                                setOpenActionMenuId(null);
+                                setActionMenuAnchor(null);
+                              }}
+                              width={192}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenActionMenuId(null);
+                                  setActionMenuAnchor(null);
+                                  openEditModal(rec);
+                                }}
+                                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                              >
+                                <Edit2 className="size-3.5 text-muted shrink-0" />
+                                <span>Edit Quantities & Reason</span>
+                              </button>
+
+                              <div className="my-1 border-t border-default/50" />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenActionMenuId(null);
+                                  setActionMenuAnchor(null);
+                                  setDeletingRecord(rec);
+                                }}
+                                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="size-3.5 text-rose-600 shrink-0" />
+                                <span>Delete Scrap Record</span>
+                              </button>
+                            </ActionMenuPortal>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </QueryBoundary>
 

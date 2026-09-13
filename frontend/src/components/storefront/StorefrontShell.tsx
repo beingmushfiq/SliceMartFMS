@@ -22,7 +22,19 @@ export const StorefrontShell: React.FC = () => {
   const { subdomain: paramSubdomain } = useParams<{ subdomain?: string }>();
   const location = useLocation();
   const tenantSubdomain = useAuthStore((state) => state.tenant?.subdomain);
-  const subdomain = paramSubdomain || tenantSubdomain || 'store';
+
+  const host = typeof window !== 'undefined' ? (window.location.hostname.toLowerCase().split(':')[0] ?? '') : '';
+  const isCustomDomain = Boolean(
+    host &&
+    !['localhost', '127.0.0.1'].includes(host) &&
+    !host.startsWith('admin.') &&
+    !host.startsWith('platform.') &&
+    !host.startsWith('app.') &&
+    !host.startsWith('erp.')
+  );
+
+  const [activeSubdomain, setActiveSubdomain] = useState<string>(paramSubdomain || tenantSubdomain || 'store');
+  const subdomain = activeSubdomain;
 
   const [config, setConfig] = useState<StorefrontConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,21 +44,30 @@ export const StorefrontShell: React.FC = () => {
 
   // 1. Initial config fetch + apply stored draft if present
   useEffect(() => {
-    setSubdomain(subdomain);
-
     const loadConfig = async () => {
       setLoading(true);
       setError(null);
       try {
+        const headers: Record<string, string> = {};
+        if (isCustomDomain) {
+          headers['X-Storefront-Domain'] = host;
+        } else if (paramSubdomain) {
+          headers['X-Storefront-Subdomain'] = paramSubdomain;
+        } else if (tenantSubdomain) {
+          headers['X-Storefront-Subdomain'] = tenantSubdomain;
+        }
+
         const response = await api.get<StorefrontConfig>('/storefront/config', {
-          headers: {
-            'X-Storefront-Subdomain': subdomain,
-          },
+          headers,
         });
 
         const initialConfig = response.data;
+        const resolvedSubdomain = initialConfig.subdomain || paramSubdomain || tenantSubdomain || 'store';
+        setActiveSubdomain(resolvedSubdomain);
+        setSubdomain(resolvedSubdomain);
+
         // Check if there is an active local draft from the customizer
-        const draft = getStoredThemeDraft(subdomain);
+        const draft = getStoredThemeDraft(resolvedSubdomain);
         const mergedTheme = {
           ...initialConfig.theme,
           ...draft,
@@ -76,7 +97,7 @@ export const StorefrontShell: React.FC = () => {
 
     loadConfig();
     fetchCart();
-  }, [subdomain, setSubdomain, fetchCart]);
+  }, [paramSubdomain, tenantSubdomain, host, isCustomDomain, setSubdomain, fetchCart]);
 
   // 2. Real-time Live Theme Subscription across tabs & windows
   useEffect(() => {

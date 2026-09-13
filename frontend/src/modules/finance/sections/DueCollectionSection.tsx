@@ -8,10 +8,15 @@ import {
   RefreshCw,
   Building2,
   Coins,
+  ChevronDown,
+  Phone,
+  Copy,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { KPICard } from '../../../components/ui/KPICard';
+import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
+import { cn } from '../../../lib/utils';
 
 const SAMPLE_OVERDUE_INVOICES = [
   {
@@ -106,6 +111,8 @@ export function DueCollectionSection({ onCollect, onQuickCollect }: DueCollectio
   const { formatCurrency } = useCurrency();
   const [search, setSearch] = useState('');
   const [agingFilter, setAgingFilter] = useState<'all' | '0-30' | '31-60' | '61-90' | '90+'>('all');
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
 
   // Fetch real invoices from backend
   const { data: invoices = SAMPLE_OVERDUE_INVOICES, isFetching, refetch } = useQuery<DueInvoiceItem[]>({
@@ -327,7 +334,7 @@ export function DueCollectionSection({ onCollect, onQuickCollect }: DueCollectio
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-75">
           <table className="w-full text-left text-xs text-default">
             <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
@@ -339,7 +346,7 @@ export function DueCollectionSection({ onCollect, onQuickCollect }: DueCollectio
                 <th className="px-4 py-3.5">Paid (৳)</th>
                 <th className="px-4 py-3.5">Outstanding Due (৳)</th>
                 <th className="px-4 py-3.5">Aging</th>
-                <th className="px-4 py-3.5 text-right">Action</th>
+                <th className="px-4 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-default">
@@ -384,20 +391,105 @@ export function DueCollectionSection({ onCollect, onQuickCollect }: DueCollectio
                   </td>
 
                   <td className="px-4 py-3.5 text-right whitespace-nowrap">
-                    <button
-                      type="button"
-                      onClick={() => onCollect?.(inv)}
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
-                      title={`Collect due payment from ${inv.customer_name}`}
-                    >
-                      <Coins className="size-3.5" />
-                      <span>Collect Due</span>
-                    </button>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => onCollect?.(inv)}
+                        className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition cursor-pointer"
+                        title={`Collect due payment from ${inv.customer_name}`}
+                      >
+                        Collect
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (openActionMenuId === inv.id) {
+                            setOpenActionMenuId(null);
+                            setActionMenuAnchor(null);
+                          } else {
+                            setOpenActionMenuId(inv.id);
+                            setActionMenuAnchor(e.currentTarget);
+                          }
+                        }}
+                        className={cn(
+                          'inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg border transition-colors cursor-pointer',
+                          openActionMenuId === inv.id
+                            ? 'bg-primary text-primary-fg border-primary shadow-xs'
+                            : 'bg-surface hover:bg-surface-sunken border-default text-default'
+                        )}
+                      >
+                        <span>Actions</span>
+                        <ChevronDown className="size-3 text-muted" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+
+          {/* Floating Action Menu via ActionMenuPortal */}
+          {openActionMenuId !== null && actionMenuAnchor !== null && (
+            <ActionMenuPortal
+              anchorEl={actionMenuAnchor}
+              open={true}
+              onClose={() => {
+                setOpenActionMenuId(null);
+                setActionMenuAnchor(null);
+              }}
+            >
+              {(() => {
+                const activeItem = invoices.find((i) => i.id === openActionMenuId);
+                if (!activeItem) return null;
+                return (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        setActionMenuAnchor(null);
+                        onCollect?.(activeItem);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-default hover:bg-surface-sunken transition-colors cursor-pointer text-left"
+                    >
+                      <Coins className="size-3.5 text-emerald-600" />
+                      <span>Collect Due Payment</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        setActionMenuAnchor(null);
+                        navigator.clipboard?.writeText(activeItem.invoice_number);
+                        alert(`Copied ${activeItem.invoice_number} to clipboard!`);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-default hover:bg-surface-sunken transition-colors cursor-pointer text-left"
+                    >
+                      <Copy className="size-3.5 text-primary" />
+                      <span>Copy Invoice #</span>
+                    </button>
+
+                    {activeItem.customer_phone && activeItem.customer_phone !== '-' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenActionMenuId(null);
+                          setActionMenuAnchor(null);
+                          window.open(`tel:${activeItem.customer_phone}`);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-default hover:bg-surface-sunken transition-colors cursor-pointer text-left"
+                      >
+                        <Phone className="size-3.5 text-cyan-600" />
+                        <span>Call {activeItem.customer_phone}</span>
+                      </button>
+                    )}
+                  </>
+                );
+              })()}
+            </ActionMenuPortal>
+          )}
         </div>
       </div>
     </div>

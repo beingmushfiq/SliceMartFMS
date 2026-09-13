@@ -105,6 +105,7 @@ const CATEGORIES: CategoryConfig[] = [
 
 interface FinanceTabConfig {
   id: FinanceTab;
+  step: number;
   label: string;
   shortLabel: string;
   category: FinanceCategory;
@@ -117,6 +118,7 @@ interface FinanceTabConfig {
 const FINANCE_TAB_CONFIGS: FinanceTabConfig[] = [
   {
     id: 'banking',
+    step: 1,
     label: 'Cash & Bank Accounts',
     shortLabel: 'Cash & Banks',
     category: 'operations',
@@ -126,6 +128,7 @@ const FINANCE_TAB_CONFIGS: FinanceTabConfig[] = [
   },
   {
     id: 'expenses',
+    step: 2,
     label: 'Operating Expenses & Bills',
     shortLabel: 'Expenses & Bills',
     category: 'operations',
@@ -135,6 +138,7 @@ const FINANCE_TAB_CONFIGS: FinanceTabConfig[] = [
   },
   {
     id: 'due-collection',
+    step: 3,
     label: 'Customer Dues & Aging',
     shortLabel: 'Customer Dues',
     category: 'operations',
@@ -144,6 +148,7 @@ const FINANCE_TAB_CONFIGS: FinanceTabConfig[] = [
   },
   {
     id: 'statements',
+    step: 4,
     label: 'Financial Statements (P&L)',
     shortLabel: 'Financial Statements',
     category: 'reports',
@@ -153,6 +158,7 @@ const FINANCE_TAB_CONFIGS: FinanceTabConfig[] = [
   },
   {
     id: 'journal',
+    step: 5,
     label: 'General Ledger & Audit Trail',
     shortLabel: 'General Ledger',
     category: 'reports',
@@ -162,6 +168,7 @@ const FINANCE_TAB_CONFIGS: FinanceTabConfig[] = [
   },
   {
     id: 'coa',
+    step: 6,
     label: 'Chart of Accounts (COA)',
     shortLabel: 'Chart of Accounts',
     category: 'reports',
@@ -171,6 +178,7 @@ const FINANCE_TAB_CONFIGS: FinanceTabConfig[] = [
   },
   {
     id: 'costing',
+    step: 7,
     label: 'Product Manufacturing Cost',
     shortLabel: 'Product Costing',
     category: 'costing',
@@ -257,7 +265,7 @@ export const FinanceWorkspace: React.FC = () => {
   const [selectedJournalIds, setSelectedJournalIds] = useState<Set<number>>(new Set());
   const journalHeaderRef = useRef<HTMLInputElement>(null);
 
-  // Global Keyboard Shortcuts (1: Daily Operations, 2: Reports & Books, 3: Costing)
+  // Global Keyboard Shortcuts (1..7 across all financial stages)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -268,15 +276,22 @@ export const FinanceWorkspace: React.FC = () => {
         return;
       }
 
-      if (e.key === '1') {
-        e.preventDefault();
-        setActiveTab('banking');
-      } else if (e.key === '2') {
-        e.preventDefault();
-        setActiveTab('statements');
-      } else if (e.key === '3') {
-        e.preventDefault();
-        setActiveTab('costing');
+      const num = parseInt(e.key, 10);
+      if (num >= 1 && num <= 7) {
+        const stageMap: Record<number, FinanceTab> = {
+          1: 'banking',
+          2: 'expenses',
+          3: 'due-collection',
+          4: 'statements',
+          5: 'journal',
+          6: 'coa',
+          7: 'costing',
+        };
+        const target = stageMap[num];
+        if (target) {
+          e.preventDefault();
+          setActiveTab(target);
+        }
       }
     };
 
@@ -1078,9 +1093,13 @@ export const FinanceWorkspace: React.FC = () => {
       {/* Module Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-default pb-5">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-primary bg-primary-subtle px-2.5 py-0.5 rounded-full border border-primary/20">
               Finance & Cash Management
+            </span>
+            <span className="text-muted text-xs">•</span>
+            <span className="text-xs font-semibold text-primary">
+              Stage {FINANCE_TAB_CONFIGS.find((t) => t.id === activeTab)?.step || 1} of 7: {FINANCE_TAB_CONFIGS.find((t) => t.id === activeTab)?.label}
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-default">
@@ -1297,7 +1316,6 @@ export const FinanceWorkspace: React.FC = () => {
                 {childTabs.map((subTab) => {
                   const isCurrent = activeTab === subTab.id;
                   const SubIcon = subTab.icon;
-                  const countMeta = financeTabsList.find((t) => t.id === subTab.id)?.count;
 
                   return (
                     <button
@@ -1317,16 +1335,14 @@ export const FinanceWorkspace: React.FC = () => {
                     >
                       <SubIcon className={cn('size-3', isCurrent ? 'text-primary-fg' : 'text-muted')} />
                       <span>{subTab.shortLabel}</span>
-                      {countMeta !== undefined && (
-                        <span
-                          className={cn(
-                            'text-[9px] font-mono px-1 rounded',
-                            isCurrent ? 'bg-white/20 text-white' : 'bg-surface text-muted border border-default/50'
-                          )}
-                        >
-                          {countMeta}
-                        </span>
-                      )}
+                      <span
+                        className={cn(
+                          'text-[9px] font-mono px-1 rounded font-bold',
+                          isCurrent ? 'bg-white/20 text-white' : 'bg-surface text-muted border border-default/50'
+                        )}
+                      >
+                        Stage {subTab.step}
+                      </span>
                       {isCurrent && <span className="size-1.5 rounded-full bg-white animate-pulse" />}
                     </button>
                   );
@@ -1342,219 +1358,160 @@ export const FinanceWorkspace: React.FC = () => {
         })}
       </div>
 
-      {/* Master Continuous Grouped Navigation Ribbon (All 7 Tabs Visible Simultaneously) */}
-      <div className="bg-surface-sunken rounded-2xl border border-default p-2 shadow-2xs">
-        <div className="flex items-center justify-between px-2 pb-1.5 mb-1 text-[11px] font-semibold text-muted border-b border-default/50">
-          <div className="flex items-center gap-2">
+      {/* 7-Stage Execution Ribbon (Grid with 1..7 shortcuts, non-colliding labels, zero scrollbar) */}
+      <div className="bg-surface rounded-2xl border border-default p-2.5 shadow-xs space-y-2">
+        <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-muted">
+          <div className="flex items-center gap-1.5">
             <Zap className="size-3.5 text-primary" />
-            <span>Master Financial Ribbon (1-Click Reachability)</span>
+            <span className="font-bold text-default">7-Stage Financial Execution Pipeline</span>
           </div>
-          <span className="text-[10px] font-mono text-muted/70">
-            Active: <strong className="text-default">{FINANCE_TAB_CONFIGS.find((t) => t.id === activeTab)?.label}</strong>
-          </span>
-        </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <nav
-            className="flex flex-wrap items-center gap-2"
-            role="tablist"
-            aria-label="All 7 Financial Views"
-          >
-            {/* Cluster 1: Daily Cash & Operations */}
-            <div className="flex items-center gap-1.5 bg-surface/60 p-1 rounded-xl border border-default/40">
-              <span className="text-[10px] font-mono uppercase font-bold text-muted px-2 py-0.5 select-none">
-                Operations:
-              </span>
-              {FINANCE_TAB_CONFIGS.filter((t) => t.category === 'operations').map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    role="tab"
-                    aria-selected={isActive}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    className={cn(
-                      'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
-                      isActive
-                        ? 'bg-primary text-primary-fg shadow-xs'
-                        : 'text-muted hover:text-default hover:bg-surface border border-transparent'
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-mono text-muted hidden sm:inline">
+              Press [1..7] to jump directly
+            </span>
+
+            {/* Quick Jump Dropdown Popover */}
+            <div className="relative shrink-0" ref={quickJumpRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setQuickJumpOpen(!quickJumpOpen);
+                  setSearchQuery('');
+                }}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border border-default bg-surface hover:bg-surface-sunken text-default transition-all shadow-2xs cursor-pointer',
+                  quickJumpOpen && 'border-primary/40 bg-surface-sunken'
+                )}
+                title="Jump directly to any of the 7 finance views"
+              >
+                <SlidersHorizontal className="size-3 text-primary" />
+                <span>All 7 Views</span>
+              </button>
+
+              {quickJumpOpen && (
+                <div className="absolute right-0 top-full mt-2 w-80 max-w-[90vw] bg-surface rounded-2xl border border-default shadow-lg p-2.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="relative mb-2">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search finance views..."
+                      autoFocus
+                      className="w-full pl-8 pr-7 py-1.5 text-xs bg-surface-sunken rounded-lg border border-default focus:border-primary focus:outline-none text-default"
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-default"
+                      >
+                        <X className="size-3" />
+                      </button>
                     )}
-                  >
-                    <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
-                    <span>{tab.shortLabel}</span>
-                  </button>
-                );
-              })}
-            </div>
+                  </div>
 
-            <div className="h-4 w-px bg-default/60 hidden sm:block" />
+                  <div className="max-h-72 overflow-y-auto space-y-1 pr-1">
+                    {CATEGORIES.map((cat) => {
+                      const catTabs = filteredFinanceTabs.filter((t) => t.category === cat.id);
+                      if (catTabs.length === 0) return null;
 
-            {/* Cluster 2: Reports & Books */}
-            <div className="flex items-center gap-1.5 bg-surface/60 p-1 rounded-xl border border-default/40">
-              <span className="text-[10px] font-mono uppercase font-bold text-muted px-2 py-0.5 select-none">
-                Reports:
-              </span>
-              {FINANCE_TAB_CONFIGS.filter((t) => t.category === 'reports').map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    role="tab"
-                    aria-selected={isActive}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    className={cn(
-                      'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
-                      isActive
-                        ? 'bg-primary text-primary-fg shadow-xs'
-                        : 'text-muted hover:text-default hover:bg-surface border border-transparent'
-                    )}
-                  >
-                    <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
-                    <span>{tab.shortLabel}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="h-4 w-px bg-default/60 hidden sm:block" />
-
-            {/* Cluster 3: Manufacturing Costing */}
-            <div className="flex items-center gap-1.5 bg-surface/60 p-1 rounded-xl border border-default/40">
-              <span className="text-[10px] font-mono uppercase font-bold text-muted px-2 py-0.5 select-none">
-                Costing:
-              </span>
-              {FINANCE_TAB_CONFIGS.filter((t) => t.category === 'costing').map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    role="tab"
-                    aria-selected={isActive}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    className={cn(
-                      'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
-                      isActive
-                        ? 'bg-primary text-primary-fg shadow-xs'
-                        : 'text-muted hover:text-default hover:bg-surface border border-transparent'
-                    )}
-                  >
-                    <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
-                    <span>{tab.shortLabel}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </nav>
-
-          {/* Quick Jump Dropdown Popover */}
-          <div className="relative shrink-0" ref={quickJumpRef}>
-            <button
-              type="button"
-              onClick={() => {
-                setQuickJumpOpen(!quickJumpOpen);
-                setSearchQuery('');
-              }}
-              className={cn(
-                'flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border border-default bg-surface hover:bg-surface-sunken text-default transition-all shadow-2xs cursor-pointer',
-                quickJumpOpen && 'border-primary/40 bg-surface-sunken'
-              )}
-              title="Jump directly to any of the 7 finance views"
-            >
-              <SlidersHorizontal className="size-3.5 text-primary" />
-              <span>All 7 Views</span>
-            </button>
-
-            {quickJumpOpen && (
-              <div className="absolute right-0 top-full mt-2 w-80 max-w-[90vw] bg-surface rounded-2xl border border-default shadow-lg p-2.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                <div className="relative mb-2">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search finance views..."
-                    autoFocus
-                    className="w-full pl-8 pr-7 py-1.5 text-xs bg-surface-sunken rounded-lg border border-default focus:border-primary focus:outline-none text-default"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-default"
-                    >
-                      <X className="size-3" />
-                    </button>
-                  )}
-                </div>
-
-                <div className="max-h-72 overflow-y-auto space-y-1 pr-1">
-                  {CATEGORIES.map((cat) => {
-                    const catTabs = filteredFinanceTabs.filter((t) => t.category === cat.id);
-                    if (catTabs.length === 0) return null;
-
-                    return (
-                      <div key={cat.id} className="pt-1.5 first:pt-0">
-                        <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted flex items-center justify-between">
-                          <span>{cat.label}</span>
-                          <span className="font-mono text-[9px]">{catTabs.length}</span>
-                        </div>
-                        <div className="space-y-0.5">
-                          {catTabs.map((tab) => {
-                            const TabIcon = tab.icon;
-                            const isTabActive = activeTab === tab.id;
-                            return (
-                              <button
-                                key={tab.id}
-                                type="button"
-                                onClick={() => {
-                                  setActiveTab(tab.id);
-                                  setQuickJumpOpen(false);
-                                }}
-                                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs text-left transition cursor-pointer ${
-                                  isTabActive
-                                    ? 'bg-primary text-primary-fg font-semibold'
-                                    : 'hover:bg-surface-sunken text-default'
-                                }`}
-                              >
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <TabIcon
-                                    className={`size-3.5 shrink-0 ${
-                                      isTabActive ? 'text-primary-fg' : 'text-muted'
-                                    }`}
-                                  />
-                                  <span className="truncate">{tab.label}</span>
-                                </div>
-                                <span
-                                  className={`text-[9px] px-1.5 py-0.5 rounded font-mono shrink-0 ${
+                      return (
+                        <div key={cat.id} className="pt-1.5 first:pt-0">
+                          <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted flex items-center justify-between">
+                            <span>{cat.label}</span>
+                            <span className="font-mono text-[9px]">{catTabs.length}</span>
+                          </div>
+                          <div className="space-y-0.5">
+                            {catTabs.map((tab) => {
+                              const TabIcon = tab.icon;
+                              const isTabActive = activeTab === tab.id;
+                              return (
+                                <button
+                                  key={tab.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveTab(tab.id);
+                                    setQuickJumpOpen(false);
+                                  }}
+                                  className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs text-left transition cursor-pointer ${
                                     isTabActive
-                                      ? 'bg-primary-fg/20 text-primary-fg'
-                                      : 'bg-surface-sunken text-muted'
+                                      ? 'bg-primary text-primary-fg font-semibold'
+                                      : 'hover:bg-surface-sunken text-default'
                                   }`}
                                 >
-                                  {tab.count}
-                                </span>
-                              </button>
-                            );
-                          })}
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <TabIcon
+                                      className={`size-3.5 shrink-0 ${
+                                        isTabActive ? 'text-primary-fg' : 'text-muted'
+                                      }`}
+                                    />
+                                    <span className="truncate">{tab.label}</span>
+                                  </div>
+                                  <span
+                                    className={`text-[9px] px-1.5 py-0.5 rounded font-mono shrink-0 ${
+                                      isTabActive
+                                        ? 'bg-primary-fg/20 text-primary-fg'
+                                        : 'bg-surface-sunken text-muted'
+                                    }`}
+                                  >
+                                    {tab.count}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
 
-                  {filteredFinanceTabs.length === 0 && (
-                    <div className="py-6 text-center text-xs text-muted">
-                      No finance views found matching &quot;{searchQuery}&quot;
-                    </div>
-                  )}
+                    {filteredFinanceTabs.length === 0 && (
+                      <div className="py-6 text-center text-xs text-muted">
+                        No finance views found matching &quot;{searchQuery}&quot;
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+          {FINANCE_TAB_CONFIGS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                role="tab"
+                aria-selected={isActive}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'flex items-center gap-2 p-2 rounded-xl border text-left transition-all cursor-pointer min-w-0',
+                  isActive
+                    ? 'bg-primary text-primary-fg border-primary shadow-sm'
+                    : 'bg-surface hover:bg-surface-sunken border-default/70 hover:border-default text-default'
+                )}
+              >
+                <div
+                  className={cn(
+                    'size-6 rounded-md flex items-center justify-center shrink-0 font-mono text-xs font-bold transition-colors',
+                    isActive ? 'bg-primary-fg/20 text-primary-fg' : 'bg-surface-sunken text-muted'
+                  )}
+                >
+                  {tab.step}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1">
+                    <Icon className={cn('size-3.5 shrink-0', isActive ? 'text-primary-fg' : 'text-primary')} />
+                    <span className="text-xs font-bold truncate">{tab.shortLabel}</span>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 

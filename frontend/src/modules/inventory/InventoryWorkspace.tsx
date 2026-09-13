@@ -61,6 +61,7 @@ const CATEGORIES: CategoryConfig[] = [
 
 interface TabConfig {
   id: InventoryTab;
+  step: number;
   label: string;
   shortLabel: string;
   category: InventoryCategory;
@@ -73,6 +74,7 @@ interface TabConfig {
 const tabs: TabConfig[] = [
   {
     id: 'ledger',
+    step: 1,
     label: 'Live Stock Balances',
     shortLabel: 'Current Stock',
     category: 'visibility',
@@ -84,6 +86,7 @@ const tabs: TabConfig[] = [
   },
   {
     id: 'thresholds',
+    step: 2,
     label: 'Low Stock Alerts & Reorders',
     shortLabel: 'Reorder Alerts',
     category: 'visibility',
@@ -95,6 +98,7 @@ const tabs: TabConfig[] = [
   },
   {
     id: 'transfers',
+    step: 3,
     label: 'Warehouse Transfers',
     shortLabel: 'Transfers',
     category: 'operations',
@@ -106,6 +110,7 @@ const tabs: TabConfig[] = [
   },
   {
     id: 'adjustments',
+    step: 4,
     label: 'Damaged & Lost Items',
     shortLabel: 'Damage / Loss',
     category: 'operations',
@@ -117,6 +122,7 @@ const tabs: TabConfig[] = [
   },
   {
     id: 'counts',
+    step: 5,
     label: 'Physical Stock Counts',
     shortLabel: 'Cycle Counts',
     category: 'operations',
@@ -158,7 +164,16 @@ export default function InventoryWorkspace() {
         setActiveTab('ledger');
       } else if (e.key === '2') {
         e.preventDefault();
+        setActiveTab('thresholds');
+      } else if (e.key === '3') {
+        e.preventDefault();
         setActiveTab('transfers');
+      } else if (e.key === '4') {
+        e.preventDefault();
+        setActiveTab('adjustments');
+      } else if (e.key === '5') {
+        e.preventDefault();
+        setActiveTab('counts');
       }
     };
 
@@ -197,7 +212,9 @@ export default function InventoryWorkspace() {
               Inventory & Warehouse Management
             </span>
             <span className="text-muted/50 text-xs">/</span>
-            <span className="text-[11px] font-semibold text-default">{currentTab.label}</span>
+            <span className="text-[11px] font-semibold text-default">
+              Stage {currentTab.step} of 5: {currentTab.label}
+            </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-default flex items-center gap-3">
             <span>{currentTab.label}</span>
@@ -451,7 +468,7 @@ export default function InventoryWorkspace() {
               </div>
 
               {/* In-Pillar Quick Navigation Pills (100% Zero Concealed Views) */}
-              <div className="mt-4 pt-3 border-t border-default/60 flex flex-wrap items-center gap-1.5">
+              <div className="mt-4 pt-3 border-t border-default/60 grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {childTabs.map((subTab) => {
                   const isCurrent = activeTab === subTab.id;
                   const SubIcon = subTab.icon;
@@ -464,21 +481,27 @@ export default function InventoryWorkspace() {
                         setActiveTab(subTab.id);
                       }}
                       className={cn(
-                        'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer',
+                        'flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer min-w-0',
                         isCurrent
                           ? 'bg-primary text-primary-fg font-semibold shadow-xs ring-1 ring-primary'
                           : 'bg-surface-sunken text-muted hover:text-default hover:bg-surface border border-default/70'
                       )}
                       title={`Open ${subTab.label}`}
                     >
-                      <SubIcon className={cn('size-3.5', isCurrent ? 'text-primary-fg' : 'text-muted')} />
-                      <span>{subTab.shortLabel}</span>
-                      {subTab.badge && !isCurrent && (
-                        <span className="text-[9px] font-mono text-muted/80 bg-surface px-1.5 py-0.2 rounded border border-default/60">
-                          {subTab.badge}
-                        </span>
-                      )}
-                      {isCurrent && <span className="size-1.5 rounded-full bg-white animate-pulse" />}
+                      <div className="flex items-center gap-2 min-w-0 truncate">
+                        <SubIcon className={cn('size-3.5 shrink-0', isCurrent ? 'text-primary-fg' : 'text-muted')} />
+                        <span className="truncate">{subTab.shortLabel}</span>
+                      </div>
+                      <span
+                        className={cn(
+                          'text-[9px] font-mono px-1.5 py-0.5 rounded font-bold shrink-0 ml-1.5',
+                          isCurrent
+                            ? 'bg-white/20 text-white'
+                            : 'bg-surface text-muted border border-default/60'
+                        )}
+                      >
+                        Stage {subTab.step}
+                      </span>
                     </button>
                   );
                 })}
@@ -493,102 +516,67 @@ export default function InventoryWorkspace() {
         })}
       </div>
 
-      {/* Master Grouped Navigation Ribbon (All 5 Tabs Visible Simultaneously) */}
-      <div className="bg-surface-sunken rounded-2xl border border-default p-2 shadow-2xs">
-        <div className="flex items-center justify-between px-2 pb-1.5 mb-1 text-[11px] font-semibold text-muted border-b border-default/50">
+      {/* Master 5-Stage Execution Ribbon */}
+      <div className="bg-surface-sunken rounded-2xl border border-default p-2.5 shadow-2xs">
+        <div className="flex items-center justify-between px-2 pb-2 mb-2 text-[11px] font-semibold text-muted border-b border-default/50">
           <div className="flex items-center gap-2">
             <Zap className="size-3.5 text-primary" />
-            <span>Master Inventory Ribbon (1-Click Reachability)</span>
+            <span className="uppercase tracking-wider font-bold">Inventory & Warehouse Stages Execution Ribbon</span>
           </div>
           <span className="text-[10px] font-mono text-muted/70">
-            Active: <strong className="text-default">{currentTab?.label}</strong>
+            5 Stages Available • Instant Access [1-5]
           </span>
         </div>
 
         <nav
-          className="flex flex-wrap items-center gap-2"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2"
           role="tablist"
-          aria-label="All 5 Inventory Views"
+          aria-label="All 5 Inventory Stages"
         >
-          {/* Cluster 1: Stock Visibility & Controls */}
-          <div className="flex items-center gap-1.5 bg-surface/60 p-1 rounded-xl border border-default/40">
-            <span className="text-[10px] font-mono uppercase font-bold text-muted px-2 py-0.5 select-none">
-              Controls:
-            </span>
-            {tabs.filter((t) => t.category === 'visibility').map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  role="tab"
-                  aria-selected={isActive}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
-                    isActive
-                      ? 'bg-primary text-primary-fg shadow-xs'
-                      : 'text-muted hover:text-default hover:bg-surface border border-transparent'
-                  )}
-                >
-                  <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
-                  <span>{tab.shortLabel}</span>
-                  {tab.badge && (
-                    <span
-                      className={cn(
-                        'text-[9px] px-1.5 py-0.2 rounded font-mono',
-                        isActive ? 'bg-primary-fg/20 text-primary-fg' : 'bg-surface-sunken text-muted'
-                      )}
-                    >
-                      {tab.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="h-4 w-px bg-default/60 hidden sm:block" />
-
-          {/* Cluster 2: Warehouse Movements & Audits */}
-          <div className="flex items-center gap-1.5 bg-surface/60 p-1 rounded-xl border border-default/40 flex-wrap">
-            <span className="text-[10px] font-mono uppercase font-bold text-muted px-2 py-0.5 select-none">
-              Movements:
-            </span>
-            {tabs.filter((t) => t.category === 'operations').map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  role="tab"
-                  aria-selected={isActive}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
-                    isActive
-                      ? 'bg-primary text-primary-fg shadow-xs'
-                      : 'text-muted hover:text-default hover:bg-surface border border-transparent'
-                  )}
-                >
-                  <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
-                  <span>{tab.shortLabel}</span>
-                  {tab.badge && (
-                    <span
-                      className={cn(
-                        'text-[9px] px-1.5 py-0.2 rounded font-mono',
-                        isActive ? 'bg-primary-fg/20 text-primary-fg' : 'bg-surface-sunken text-muted'
-                      )}
-                    >
-                      {tab.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                role="tab"
+                aria-selected={isActive}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer border text-left min-w-0',
+                  isActive
+                    ? 'bg-surface border-primary text-default shadow-xs ring-1 ring-primary/20'
+                    : 'bg-surface/60 hover:bg-surface border-default/70 text-muted hover:text-default'
+                )}
+              >
+                <div className="flex items-center gap-2 min-w-0 truncate">
+                  <span
+                    className={cn(
+                      'size-5 rounded-full flex items-center justify-center text-[10px] font-mono font-bold shrink-0',
+                      isActive ? 'bg-primary text-primary-fg' : 'bg-surface-sunken border border-default text-muted'
+                    )}
+                  >
+                    {tab.step}
+                  </span>
+                  <Icon className={cn('size-3.5 shrink-0', isActive ? 'text-primary' : 'text-muted')} />
+                  <span className="truncate">{tab.shortLabel}</span>
+                </div>
+                {tab.badge && (
+                  <span
+                    className={cn(
+                      'text-[9px] px-1.5 py-0.5 rounded font-mono shrink-0 font-medium',
+                      isActive
+                        ? 'bg-primary/10 text-primary'
+                        : 'bg-surface-sunken text-muted'
+                    )}
+                  >
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </nav>
       </div>
 

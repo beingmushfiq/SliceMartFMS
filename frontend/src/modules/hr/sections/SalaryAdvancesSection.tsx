@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { CreditCard, Search, Plus, CheckCircle2, RefreshCw, Trash2, CheckSquare, Square, AlertTriangle, Upload, Download } from 'lucide-react';
+import { CreditCard, Search, Plus, CheckCircle2, RefreshCw, Trash2, CheckSquare, Square, AlertTriangle, Upload, Download, ChevronDown } from 'lucide-react';
 import { Modal } from '../../../components/ui/Modal';
 import { notify } from '../../../components/ui/Toast';
 import { hrApi, type ApiPayrollAdvance } from '../services/hrApi';
 import { UniversalImportModal } from '../../../components/import/UniversalImportModal';
 import { salaryAdvanceImportSchema } from '../schemas/salaryAdvanceImportSchema';
+import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
 
 export interface AdvanceRecord {
   id: number;
@@ -86,6 +87,10 @@ export const SalaryAdvancesSection: React.FC = () => {
     ref?: string;
     isBulk?: boolean;
   }>({ open: false });
+
+  // Action Menu State
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
 
   // Form State
   const [empName, setEmpName] = useState('Abdul Karim (EMP-00101)');
@@ -514,7 +519,7 @@ export const SalaryAdvancesSection: React.FC = () => {
       </div>
 
       {/* Register Table */}
-      <div className="rounded-xl border border-default bg-surface overflow-hidden shadow-xs">
+      <div className="overflow-x-auto min-h-75 rounded-xl border border-default bg-surface shadow-xs">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-default bg-surface-sunken text-[11px] font-bold text-muted uppercase tracking-wider">
@@ -603,13 +608,13 @@ export const SalaryAdvancesSection: React.FC = () => {
                         {isRecovered ? 'Recovered' : 'Active Recovery'}
                       </span>
                     </td>
-                    <td className="p-3 text-right">
+                    <td className="p-3 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1.5">
                         {!isRecovered ? (
                           <button
                             type="button"
                             onClick={() => handleManualRecovery(adv.id)}
-                            className="px-2.5 py-1 rounded text-[11px] font-semibold border border-default hover:bg-surface-sunken text-default transition-colors"
+                            className="px-2.5 py-1 rounded text-2xs font-semibold border border-default hover:bg-surface-sunken text-default transition-colors shadow-2xs cursor-pointer"
                           >
                             Deduct Cycle
                           </button>
@@ -620,11 +625,25 @@ export const SalaryAdvancesSection: React.FC = () => {
                         )}
                         <button
                           type="button"
-                          onClick={() => setDeleteConfirm({ open: true, id: adv.id, ref: adv.advanceNumber })}
-                          className="p-1 rounded-md text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
-                          title="Delete Record"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (openActionMenuId === adv.id) {
+                              setOpenActionMenuId(null);
+                              setActionMenuAnchor(null);
+                            } else {
+                              setOpenActionMenuId(adv.id);
+                              setActionMenuAnchor(e.currentTarget);
+                            }
+                          }}
+                          className={`px-2.5 py-1 text-2xs rounded-lg border font-medium transition cursor-pointer flex items-center gap-1 shadow-2xs ${
+                            openActionMenuId === adv.id
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-default bg-surface hover:bg-surface-sunken text-default'
+                          }`}
+                          title={`Actions for ${adv.advanceNumber}`}
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Actions</span>
+                          <ChevronDown className="size-3 text-muted" />
                         </button>
                       </div>
                     </td>
@@ -634,6 +653,65 @@ export const SalaryAdvancesSection: React.FC = () => {
             )}
           </tbody>
         </table>
+
+        {actionMenuAnchor && openActionMenuId !== null && (() => {
+          const adv = filteredAdvances.find((a) => a.id === openActionMenuId);
+          if (!adv) return null;
+          const remaining = adv.amount - adv.recoveredAmount;
+          const isRecovered = adv.status === 'recovered' || remaining <= 0;
+          return (
+            <ActionMenuPortal
+              isOpen={true}
+              anchorEl={actionMenuAnchor}
+              onClose={() => {
+                setOpenActionMenuId(null);
+                setActionMenuAnchor(null);
+              }}
+              className="w-48"
+            >
+              {!isRecovered && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenActionMenuId(null);
+                    setActionMenuAnchor(null);
+                    handleManualRecovery(adv.id);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                >
+                  <CreditCard className="size-3.5 text-primary shrink-0" />
+                  <span>Deduct Next Installment</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setOpenActionMenuId(null);
+                  setActionMenuAnchor(null);
+                  void navigator.clipboard.writeText(adv.advanceNumber);
+                  notify.success(`Copied ${adv.advanceNumber} to clipboard`);
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+              >
+                <Search className="size-3.5 text-muted shrink-0" />
+                <span>Copy Advance Ref</span>
+              </button>
+              <div className="my-1 border-t border-default/50" />
+              <button
+                type="button"
+                onClick={() => {
+                  setOpenActionMenuId(null);
+                  setActionMenuAnchor(null);
+                  setDeleteConfirm({ open: true, id: adv.id, ref: adv.advanceNumber });
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+              >
+                <Trash2 className="size-3.5 text-rose-600 shrink-0" />
+                <span>Delete Advance</span>
+              </button>
+            </ActionMenuPortal>
+          );
+        })()}
       </div>
 
       {/* Grant Advance Modal */}

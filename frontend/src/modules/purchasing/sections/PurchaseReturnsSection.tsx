@@ -8,17 +8,19 @@ import {
   RefreshCw,
   Search,
   XCircle,
-  Eye,
   Edit2,
   Trash2,
   TrendingUp,
   RotateCcw,
   Printer,
+  ChevronDown,
 } from 'lucide-react';
 import type { PurchaseReturn } from '../../../types/api/purchasing';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
+import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
+import { cn } from '../../../lib/utils';
 
 interface ReturnFormItem {
   product_name: string;
@@ -103,7 +105,7 @@ export function PurchaseReturnsSection() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [, setActionLoading] = useState<number | null>(null);
 
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -111,6 +113,8 @@ export function PurchaseReturnsSection() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [activeReturn, setActiveReturn] = useState<PurchaseReturn | null>(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -423,7 +427,7 @@ export function PurchaseReturnsSection() {
 
       {/* Returns Table */}
       <div className="rounded-2xl border border-default bg-surface shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-75">
           <table className="w-full text-left text-xs text-default">
             <thead className="bg-surface-sunken text-[11px] font-semibold text-muted uppercase tracking-wider border-b border-default">
               <tr>
@@ -464,65 +468,38 @@ export function PurchaseReturnsSection() {
                     <td className="px-4 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
+                          type="button"
                           onClick={() => {
                             setActiveReturn(r);
                             setShowViewModal(true);
                           }}
-                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                          title="View Debit Note"
+                          className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface hover:bg-surface-sunken border border-default text-default transition-colors cursor-pointer"
                         >
-                          <Eye className="size-3.5" />
+                          View
                         </button>
 
-                        {r.status === 'draft' && (
-                          <>
-                            <button
-                              onClick={() => {
-                                setActiveReturn(r);
-                                setFormData({
-                                  return_number: r.return_number,
-                                  supplier_name: r.supplier_name || '',
-                                  warehouse_name: r.warehouse_name || '',
-                                  return_date: r.return_date,
-                                  reason: r.reason || '',
-                                  items: r.items?.map((it) => ({
-                                    product_name: it.product_name || '',
-                                    product_sku: it.product_sku || '',
-                                    quantity: it.quantity,
-                                    unit_code: it.unit_code || 'KG',
-                                    unit_price: it.unit_price,
-                                    notes: it.notes || '',
-                                  })) || [],
-                                });
-                                setShowEditModal(true);
-                              }}
-                              className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                              title="Edit Return"
-                            >
-                              <Edit2 className="size-3.5" />
-                            </button>
-
-                            <button
-                              onClick={() => handleCompleteReturn(r.id)}
-                              disabled={actionLoading === r.id}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors cursor-pointer"
-                            >
-                              <CheckCircle2 className="size-3" />
-                              {actionLoading === r.id ? 'Settling...' : 'Settle Debit'}
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                setActiveReturn(r);
-                                setShowDeleteModal(true);
-                              }}
-                              className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                              title="Void Return"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
-                          </>
-                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (openActionMenuId === r.id) {
+                              setOpenActionMenuId(null);
+                              setActionMenuAnchor(null);
+                            } else {
+                              setOpenActionMenuId(r.id);
+                              setActionMenuAnchor(e.currentTarget);
+                            }
+                          }}
+                          className={cn(
+                            'inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg border transition-colors cursor-pointer',
+                            openActionMenuId === r.id
+                              ? 'bg-primary text-primary-fg border-primary shadow-xs'
+                              : 'bg-surface hover:bg-surface-sunken border-default text-default'
+                          )}
+                        >
+                          <span>Actions</span>
+                          <ChevronDown className="size-3 text-muted" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -530,6 +507,103 @@ export function PurchaseReturnsSection() {
               )}
             </tbody>
           </table>
+
+          {openActionMenuId && (() => {
+            const ret = filteredReturns.find((x) => x.id === openActionMenuId);
+            if (!ret) return null;
+            return (
+              <ActionMenuPortal
+                isOpen={Boolean(openActionMenuId && actionMenuAnchor)}
+                anchorEl={actionMenuAnchor}
+                onClose={() => {
+                  setOpenActionMenuId(null);
+                  setActionMenuAnchor(null);
+                }}
+                width="13rem"
+              >
+                <div className="p-1 space-y-0.5 text-xs">
+                  {ret.status === 'draft' && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenActionMenuId(null);
+                          setActionMenuAnchor(null);
+                          setActiveReturn(ret);
+                          setFormData({
+                            return_number: ret.return_number,
+                            supplier_name: ret.supplier_name || '',
+                            warehouse_name: ret.warehouse_name || '',
+                            return_date: ret.return_date,
+                            reason: ret.reason || '',
+                            items: ret.items?.map((it) => ({
+                              product_name: it.product_name || '',
+                              product_sku: it.product_sku || '',
+                              quantity: it.quantity,
+                              unit_code: it.unit_code || 'KG',
+                              unit_price: it.unit_price,
+                              notes: it.notes || '',
+                            })) || [],
+                          });
+                          setShowEditModal(true);
+                        }}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                      >
+                        <Edit2 className="size-3.5 text-muted" />
+                        <span>Edit Return</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenActionMenuId(null);
+                          setActionMenuAnchor(null);
+                          handleCompleteReturn(ret.id);
+                        }}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer font-medium"
+                      >
+                        <CheckCircle2 className="size-3.5 text-emerald-500" />
+                        <span>Settle Debit Note</span>
+                      </button>
+                    </>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      setActiveReturn(ret);
+                      window.print();
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                  >
+                    <Printer className="size-3.5 text-muted" />
+                    <span>Print Debit Note</span>
+                  </button>
+
+                  {ret.status === 'draft' && (
+                    <>
+                      <div className="my-1 border-t border-default" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenActionMenuId(null);
+                          setActionMenuAnchor(null);
+                          setActiveReturn(ret);
+                          setShowDeleteModal(true);
+                        }}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="size-3.5 text-rose-500" />
+                        <span>Void Return</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </ActionMenuPortal>
+            );
+          })()}
         </div>
       </div>
 

@@ -9,6 +9,19 @@ export interface DnsRecordInstruction {
   purpose: string;
 }
 
+export interface DnsDiagnostics {
+  domain: string;
+  expected_txt?: { host: string; value: string } | undefined;
+  expected_cname?: { host: string; target: string } | undefined;
+  records_found?: Array<{ type: string; value: string }> | undefined;
+  verified?: boolean | undefined;
+  matched_record?: { type: string; value: string } | null | undefined;
+  method?: string | undefined;
+  checked_at?: string | undefined;
+  is_dev_override?: boolean | undefined;
+  message?: string | undefined;
+}
+
 export interface TenantDomainRecord {
   id: number;
   tenant_id: number;
@@ -26,6 +39,7 @@ export interface TenantDomainRecord {
     a_record?: DnsRecordInstruction;
   };
   dns_records_found?: Array<{ type: string; value: string }>;
+  diagnostics?: DnsDiagnostics;
   verified_at: string | null;
   activated_at: string | null;
   dns_last_checked_at: string | null;

@@ -9,18 +9,20 @@ import {
   RefreshCw,
   Search,
   XCircle,
-  Eye,
   Edit2,
   Trash2,
   ArrowRight,
   TrendingUp,
   Package,
   Layers,
+  ChevronDown,
 } from 'lucide-react';
 import type { PurchaseRequisition } from '../../../types/api/purchasing';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
+import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
+import { cn } from '../../../lib/utils';
 
 interface RequisitionFormItem {
   product_name: string;
@@ -117,7 +119,7 @@ export function PurchaseRequisitionsSection() {
   // Filter State
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [, setActionLoading] = useState<number | null>(null);
 
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -125,6 +127,8 @@ export function PurchaseRequisitionsSection() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [activeReq, setActiveReq] = useState<PurchaseRequisition | null>(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
 
   // Form State
   const [formData, setFormData] = useState(() => ({
@@ -479,7 +483,7 @@ export function PurchaseRequisitionsSection() {
 
       {/* Requisitions Table */}
       <div className="rounded-2xl border border-default bg-surface shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-75">
           <table className="w-full text-left text-xs text-default">
             <thead className="bg-surface-sunken text-[11px] font-semibold text-muted uppercase tracking-wider border-b border-default">
               <tr>
@@ -534,88 +538,38 @@ export function PurchaseRequisitionsSection() {
                       <td className="px-4 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
+                            type="button"
                             onClick={() => {
                               setActiveReq(r);
                               setShowViewModal(true);
                             }}
-                            className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                            title="View Requisition"
+                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface hover:bg-surface-sunken border border-default text-default transition-colors cursor-pointer"
                           >
-                            <Eye className="size-3.5" />
+                            View
                           </button>
 
-                          {r.status === 'draft' && (
-                            <>
-                              <button
-                                onClick={() => {
-                                  setActiveReq(r);
-                                  setFormData({
-                                    requisition_number: r.requisition_number,
-                                    warehouse_name: r.warehouse_name || '',
-                                    department: r.department || '',
-                                    requester_name: r.requester_name || '',
-                                    requisition_date: r.requisition_date,
-                                    required_by_date: r.required_by_date || '',
-                                    notes: r.notes || '',
-                                    items: r.items?.map((it) => ({
-                                      product_name: it.product_name || '',
-                                      product_sku: it.product_sku || '',
-                                      quantity: it.quantity,
-                                      unit_code: it.unit_code || 'KG',
-                                      estimated_unit_cost: it.estimated_unit_cost,
-                                      reason: it.reason || '',
-                                    })) || [],
-                                  });
-                                  setShowEditModal(true);
-                                }}
-                                className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                                title="Edit Requisition"
-                              >
-                                <Edit2 className="size-3.5" />
-                              </button>
-
-                              <button
-                                onClick={() => handleApprove(r.id)}
-                                disabled={actionLoading === r.id}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors cursor-pointer"
-                              >
-                                <CheckCircle2 className="size-3" />
-                                {actionLoading === r.id ? 'Approving...' : 'Approve'}
-                              </button>
-
-                              <button
-                                onClick={() => handleReject(r.id)}
-                                disabled={actionLoading === r.id}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 transition-colors cursor-pointer"
-                                title="Reject Requisition"
-                              >
-                                <XCircle className="size-3" />
-                                <span>Reject</span>
-                              </button>
-
-                              <button
-                                onClick={() => {
-                                  setActiveReq(r);
-                                  setShowDeleteModal(true);
-                                }}
-                                className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                                title="Delete / Cancel"
-                              >
-                                <Trash2 className="size-3.5" />
-                              </button>
-                            </>
-                          )}
-
-                          {r.status === 'approved' && (
-                            <button
-                              onClick={() => handleConvertToPo(r.id)}
-                              disabled={actionLoading === r.id}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 border border-purple-500/20 transition-colors cursor-pointer"
-                            >
-                              <span>Convert to PO</span>
-                              <ArrowRight className="size-3" />
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (openActionMenuId === r.id) {
+                                setOpenActionMenuId(null);
+                                setActionMenuAnchor(null);
+                              } else {
+                                setOpenActionMenuId(r.id);
+                                setActionMenuAnchor(e.currentTarget);
+                              }
+                            }}
+                            className={cn(
+                              'inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg border transition-colors cursor-pointer',
+                              openActionMenuId === r.id
+                                ? 'bg-primary text-primary-fg border-primary shadow-xs'
+                                : 'bg-surface hover:bg-surface-sunken border-default text-default'
+                            )}
+                          >
+                            <span>Actions</span>
+                            <ChevronDown className="size-3 text-muted" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -624,6 +578,119 @@ export function PurchaseRequisitionsSection() {
               )}
             </tbody>
           </table>
+
+          {openActionMenuId && (() => {
+            const req = filteredRequisitions.find((x) => x.id === openActionMenuId);
+            if (!req) return null;
+            return (
+              <ActionMenuPortal
+                isOpen={Boolean(openActionMenuId && actionMenuAnchor)}
+                anchorEl={actionMenuAnchor}
+                onClose={() => {
+                  setOpenActionMenuId(null);
+                  setActionMenuAnchor(null);
+                }}
+                width="13rem"
+              >
+                <div className="p-1 space-y-0.5 text-xs">
+                  {req.status === 'draft' && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenActionMenuId(null);
+                          setActionMenuAnchor(null);
+                          setActiveReq(req);
+                          setFormData({
+                            requisition_number: req.requisition_number,
+                            warehouse_name: req.warehouse_name || '',
+                            department: req.department || '',
+                            requester_name: req.requester_name || '',
+                            requisition_date: req.requisition_date,
+                            required_by_date: req.required_by_date || '',
+                            notes: req.notes || '',
+                            items: req.items?.map((it) => ({
+                              product_name: it.product_name || '',
+                              product_sku: it.product_sku || '',
+                              quantity: it.quantity,
+                              unit_code: it.unit_code || 'KG',
+                              estimated_unit_cost: it.estimated_unit_cost,
+                              reason: it.reason || '',
+                            })) || [],
+                          });
+                          setShowEditModal(true);
+                        }}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                      >
+                        <Edit2 className="size-3.5 text-muted" />
+                        <span>Edit Requisition</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenActionMenuId(null);
+                          setActionMenuAnchor(null);
+                          handleApprove(req.id);
+                        }}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer font-medium"
+                      >
+                        <CheckCircle2 className="size-3.5 text-emerald-500" />
+                        <span>Approve Requisition</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenActionMenuId(null);
+                          setActionMenuAnchor(null);
+                          handleReject(req.id);
+                        }}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                      >
+                        <XCircle className="size-3.5 text-amber-500" />
+                        <span>Reject Requisition</span>
+                      </button>
+                    </>
+                  )}
+
+                  {req.status === 'approved' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        setActionMenuAnchor(null);
+                        handleConvertToPo(req.id);
+                      }}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 transition-colors cursor-pointer font-medium"
+                    >
+                      <ArrowRight className="size-3.5 text-purple-500" />
+                      <span>Convert to PO</span>
+                    </button>
+                  )}
+
+                  {req.status === 'draft' && (
+                    <>
+                      <div className="my-1 border-t border-default" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenActionMenuId(null);
+                          setActionMenuAnchor(null);
+                          setActiveReq(req);
+                          setShowDeleteModal(true);
+                        }}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="size-3.5 text-rose-500" />
+                        <span>Delete / Cancel</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </ActionMenuPortal>
+            );
+          })()}
         </div>
       </div>
 

@@ -60,7 +60,9 @@ import { SalaryStructuresSection } from './sections/SalaryStructuresSection';
 import { SalaryAdvancesSection } from './sections/SalaryAdvancesSection';
 import { BadgePunchTerminalModal } from './components/BadgePunchTerminalModal';
 import { CreatePayslipModal } from './components/CreatePayslipModal';
-import { useDocumentPrint, EmployeeIdBadgeDocument } from '../../components/print';
+import { useDocumentPrint, EmployeeIdBadgeDocument, PayslipDocument } from '../../components/print';
+import { useBusinessConfig } from '../../lib/document/useBusinessConfig';
+import { ActionMenuPortal } from '../../components/ui/ActionMenuPortal';
 
 export type HrTab =
   | 'employees'
@@ -74,6 +76,91 @@ export type HrTab =
 
 export type HrCategory = 'people' | 'compensation';
 type EmploymentType = 'permanent' | 'contract' | 'daily_wage' | 'piece_rate';
+
+export interface HrStageConfig {
+  id: HrTab;
+  step: number;
+  label: string;
+  shortLabel: string;
+  icon: typeof Users;
+  category: HrCategory;
+  description: string;
+}
+
+const HR_STAGES: HrStageConfig[] = [
+  {
+    id: 'employees',
+    step: 1,
+    label: 'Employee Directory',
+    shortLabel: 'Staff',
+    icon: Users,
+    category: 'people',
+    description: 'Staff directory & ERP credentials',
+  },
+  {
+    id: 'departments',
+    step: 2,
+    label: 'Departments & Hierarchy',
+    shortLabel: 'Departments',
+    icon: Building2,
+    category: 'people',
+    description: 'Org units, job titles & shifts',
+  },
+  {
+    id: 'performance',
+    step: 3,
+    label: 'Worker Output & Wages',
+    shortLabel: 'Piece-Rates',
+    icon: Zap,
+    category: 'people',
+    description: 'Factory piece-rates & machine quotas',
+  },
+  {
+    id: 'attendance',
+    step: 4,
+    label: 'Daily Attendance & Shifts',
+    shortLabel: 'Attendance',
+    icon: Clock,
+    category: 'compensation',
+    description: 'Biometric punches & shift logs',
+  },
+  {
+    id: 'leaves',
+    step: 5,
+    label: 'Leave & Time Off',
+    shortLabel: 'Leaves',
+    icon: CalendarCheck,
+    category: 'compensation',
+    description: 'Leave approvals & quotas',
+  },
+  {
+    id: 'payroll',
+    step: 6,
+    label: 'Salary Payouts & Payslips',
+    shortLabel: 'Payroll',
+    icon: Wallet,
+    category: 'compensation',
+    description: 'Payroll runs & bank advice',
+  },
+  {
+    id: 'salary-structures',
+    step: 7,
+    label: 'Salary Structures & Tiers',
+    shortLabel: 'Structures',
+    icon: DollarSign,
+    category: 'compensation',
+    description: 'Grade rules & allowance matrices',
+  },
+  {
+    id: 'advances',
+    step: 8,
+    label: 'Salary Advances & Loans',
+    shortLabel: 'Advances',
+    icon: CreditCard,
+    category: 'compensation',
+    description: 'Emergency loans & recovery',
+  },
+];
 
 interface CategoryConfig {
   id: HrCategory;
@@ -114,7 +201,18 @@ function generateRandomPassword(): string {
 
 export const HrWorkspace: React.FC = () => {
   const { formatCurrency } = useCurrency();
+  const { config: businessConfig } = useBusinessConfig();
   const { printDocument, isPrinting: isPrintingBadge } = useDocumentPrint();
+
+  const handlePrintPayslip = (slip: Payslip) => {
+    printDocument(
+      <PayslipDocument payslip={slip} businessConfig={businessConfig} />,
+      {
+        pageClass: 'print-page-a4',
+        documentTitle: `Payslip_${slip.payslip_number || slip.id}`,
+      }
+    );
+  };
   const [activeTab, setActiveTab] = useWorkspaceTab<HrTab>(
     'payroll',
     [
@@ -139,6 +237,32 @@ export const HrWorkspace: React.FC = () => {
     people: 'employees',
     compensation: 'payroll',
   });
+
+  const currentStage = (HR_STAGES.find((s) => s.id === activeTab) ?? HR_STAGES[0])!;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+      if (
+        activeTag === 'input' ||
+        activeTag === 'textarea' ||
+        activeTag === 'select' ||
+        (document.activeElement as HTMLElement)?.isContentEditable
+      ) {
+        return;
+      }
+      const num = parseInt(e.key, 10);
+      if (num >= 1 && num <= 8) {
+        const stage = HR_STAGES.find((s) => s.step === num);
+        if (stage) {
+          e.preventDefault();
+          setActiveTab(stage.id);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setActiveTab]);
 
   useEffect(() => {
     const cat = CATEGORIES.find((c) => c.tabs.includes(activeTab))?.id;
@@ -566,7 +690,8 @@ export const HrWorkspace: React.FC = () => {
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
   const [lastSyncedTime, setLastSyncedTime] = useState<string | null>(null);
   const [isSyncingAll, setIsSyncingAll] = useState(false);
-  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | string | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     if (openActionMenuId === null) return;
@@ -1513,10 +1638,13 @@ export const HrWorkspace: React.FC = () => {
           ───────────────────────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-default pb-5">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-primary bg-primary-subtle px-2.5 py-0.5 rounded-full border border-primary/20 flex items-center gap-1">
               <Users className="size-3 text-primary" />
               Enterprise Human Capital & Payroll
+            </span>
+            <span className="text-xs font-semibold text-muted">
+              Stage {currentStage.step} of 8: {currentStage.label}
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-default">
@@ -1790,14 +1918,75 @@ export const HrWorkspace: React.FC = () => {
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────────────────
-          Intuitive Two-Tier HR Navigation
+          Responsive 8-Stage Numeric Execution Ribbon Grid
           ───────────────────────────────────────────────────────────────────────────── */}
       <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2 px-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted">
+              HR & Payroll Pipeline Stages
+            </span>
+            <span className="text-[10px] font-mono text-muted bg-surface-sunken px-2 py-0.5 rounded-full border border-default">
+              Shortcuts: 1-8
+            </span>
+          </div>
+          <span className="text-xs font-mono text-muted">
+            Stage {currentStage.step} of 8: {currentStage.label}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+          {HR_STAGES.map((st) => {
+            const Icon = st.icon;
+            const isActive = activeTab === st.id;
+            return (
+              <button
+                key={st.id}
+                type="button"
+                onClick={() => setActiveTab(st.id)}
+                className={`p-2.5 rounded-xl border text-left transition-all relative cursor-pointer min-w-0 flex flex-col justify-between ${
+                  isActive
+                    ? 'bg-primary text-primary-fg border-primary shadow-sm ring-2 ring-primary/20'
+                    : 'bg-surface hover:bg-surface-sunken border-default text-muted hover:text-default'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-1 mb-1.5 w-full">
+                  <div
+                    className={`size-6 rounded-md flex items-center justify-center shrink-0 ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-surface-sunken text-primary'
+                    }`}
+                  >
+                    <Icon className="size-3.5" />
+                  </div>
+                  <span
+                    className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full shrink-0 font-bold ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-surface-sunken text-muted'
+                    }`}
+                  >
+                    {st.step}
+                  </span>
+                </div>
+                <div className="min-w-0 w-full">
+                  <div className="text-xs font-bold truncate leading-snug">{st.shortLabel}</div>
+                  <div
+                    className={`text-[10px] truncate ${
+                      isActive ? 'text-primary-fg/80' : 'text-muted'
+                    }`}
+                  >
+                    {st.label}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
         {/* Tier 1: Category Pillars */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
           {CATEGORIES.map((cat) => {
             const Icon = cat.icon;
             const isCatActive = activeCategory === cat.id;
+            const stageRange = cat.id === 'people' ? 'Stages 1-3' : 'Stages 4-8';
             return (
               <button
                 key={cat.id}
@@ -1834,7 +2023,7 @@ export const HrWorkspace: React.FC = () => {
                           : 'bg-surface text-muted border-default'
                       }`}
                     >
-                      {cat.tabs.length} views
+                      {stageRange}
                     </span>
                   </div>
                   <p className="text-[11px] text-muted truncate mt-0.5">{cat.tagline}</p>
@@ -1851,39 +2040,46 @@ export const HrWorkspace: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-2 bg-surface rounded-2xl border border-default shadow-2xs">
           {/* Sub-Tabs for Active Category */}
           <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 px-1 scrollbar-none min-w-0">
-            {[
-              { id: 'payroll', label: 'Salary Payouts & Payslips', category: 'compensation', icon: Wallet, count: payslips.length },
-              { id: 'attendance', label: 'Daily Attendance & Shifts', category: 'compensation', icon: Clock, count: attendances.length },
-              { id: 'leaves', label: 'Leave & Time Off', category: 'compensation', icon: CalendarCheck, count: leaveRequests.length },
-              { id: 'salary-structures', label: 'Salary Structures & Tiers', category: 'compensation', icon: DollarSign, count: 3 },
-              { id: 'advances', label: 'Salary Advances & Loans', category: 'compensation', icon: CreditCard, count: 3 },
-              { id: 'employees', label: 'Staff Directory', category: 'people', icon: Users, count: employees.length },
-              { id: 'departments', label: 'Departments & Roles', category: 'people', icon: Building2, count: departments.length },
-              { id: 'performance', label: 'Factory Output & Wages', category: 'people', icon: Zap, count: 4 },
-            ]
-              .filter((tab) => tab.category === activeCategory)
-              .map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
+            {HR_STAGES
+              .filter((st) => st.category === activeCategory)
+              .map((st) => {
+                const Icon = st.icon;
+                const isActive = activeTab === st.id;
+                const count =
+                  st.id === 'payroll' ? payslips.length :
+                  st.id === 'attendance' ? attendances.length :
+                  st.id === 'leaves' ? leaveRequests.length :
+                  st.id === 'employees' ? employees.length :
+                  st.id === 'departments' ? departments.length :
+                  st.id === 'performance' ? 4 :
+                  3;
+
                 return (
                   <button
-                    key={tab.id}
+                    key={st.id}
                     type="button"
-                    onClick={() => setActiveTab(tab.id as HrTab)}
-                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer ${
+                    onClick={() => setActiveTab(st.id)}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer min-w-0 ${
                       isActive
                         ? 'bg-primary text-primary-fg font-semibold shadow-xs border border-primary'
                         : 'text-muted hover:text-default hover:bg-surface-sunken border border-transparent'
                     }`}
                   >
-                    <Icon className={`size-3.5 ${isActive ? 'text-primary-fg' : 'text-muted'}`} />
-                    <span>{tab.label}</span>
+                    <Icon className={`size-3.5 shrink-0 ${isActive ? 'text-primary-fg' : 'text-muted'}`} />
+                    <span className="truncate">{st.label}</span>
                     <span
-                      className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                      className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'
+                      }`}
+                    >
+                      Stage {st.step}
+                    </span>
+                    <span
+                      className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full shrink-0 ${
                         isActive ? 'bg-white/20 text-white font-bold' : 'bg-surface-sunken text-muted'
                       }`}
                     >
-                      {tab.count}
+                      {count}
                     </span>
                   </button>
                 );
@@ -2244,7 +2440,7 @@ export const HrWorkspace: React.FC = () => {
           )}
 
           {/* Payslip Items Table */}
-          <div className="bg-surface rounded-2xl shadow-2xs border border-default overflow-hidden">
+          <div className="bg-surface rounded-2xl shadow-2xs border border-default/70 overflow-hidden">
             <div className="p-4 border-b border-default flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
               <div>
                 <h3 className="font-bold text-default text-sm">
@@ -2283,178 +2479,252 @@ export const HrWorkspace: React.FC = () => {
               </div>
             </div>
 
-            <table className="w-full text-left text-sm text-default">
-              <thead className="bg-surface-sunken text-muted uppercase text-2xs font-bold border-b border-default">
-                <tr>
-                  <th className="px-4 py-3 w-10 text-center">
-                    <button
-                      type="button"
-                      onClick={toggleSelectAllPayslips}
-                      className="text-muted hover:text-primary transition-colors cursor-pointer"
-                      title="Select All"
-                    >
-                      {selectedPayslipIds.length === filteredPayslips.length && filteredPayslips.length > 0 ? (
-                        <CheckSquare className="w-4 h-4 text-primary" />
-                      ) : (
-                        <Square className="w-4 h-4 text-muted/60" />
-                      )}
-                    </button>
-                  </th>
-                  <th className="px-4 py-3">Payslip Number</th>
-                  <th className="px-4 py-3">Employee Name</th>
-                  <th className="px-4 py-3">Type</th>
-                  <th className="px-4 py-3 text-right">Output Qty (Pcs)</th>
-                  <th className="px-4 py-3 text-right">Gross Amount</th>
-                  <th className="px-4 py-3 text-right">Deductions</th>
-                  <th className="px-4 py-3 text-right">Net Payable</th>
-                  <th className="px-4 py-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-default">
-                {filteredPayslips.length === 0 ? (
+            <div className="overflow-x-auto min-h-75 scrollbar-thin scrollbar-thumb-default/30">
+              <table className="w-full text-left text-xs text-default border-collapse">
+                <thead className="bg-surface-sunken text-muted uppercase text-2xs font-bold border-b border-default">
                   <tr>
-                    <td colSpan={9} className="px-6 py-12 text-center">
-                      <div className="flex flex-col items-center justify-center max-w-sm mx-auto text-center space-y-3">
-                        <div className="size-12 rounded-2xl bg-surface-sunken border border-default flex items-center justify-center text-muted">
-                          <DollarSign className="size-6 text-primary" />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-sm text-default">
-                            No payslips generated for this period yet
-                          </h4>
-                          <p className="text-xs text-muted mt-1">
-                            Run automated payroll to roll up all piece-rate output and monthly salaries, or create an individual worker payslip.
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 pt-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const targetId =
-                                selectedPeriodId === 'all'
-                                  ? payrollPeriods[0]?.id
-                                  : selectedPeriodId;
-                              if (targetId) handleRunBatchPayroll(targetId);
-                            }}
-                            className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 cursor-pointer shadow-xs transition"
-                          >
-                            <Zap className="size-3.5" />
-                            <span>⚡ Run Payroll (Batch)</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setShowCreatePayslipModal(true)}
-                            className="px-4 py-2 text-xs font-semibold rounded-xl bg-surface hover:bg-surface-sunken text-default border border-default flex items-center gap-1.5 cursor-pointer shadow-2xs transition"
-                          >
-                            <Plus className="size-3.5" />
-                            <span>+ Create Payslip</span>
-                          </button>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredPayslips.map((ps) => {
-                    const isChecked = selectedPayslipIds.includes(ps.id);
-                    return (
-                      <tr
-                        key={ps.id}
-                        className={`transition ${isChecked ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-surface-sunken/50'}`}
+                    <th className="w-9 px-2 py-2.5 text-center">
+                      <button
+                        type="button"
+                        onClick={toggleSelectAllPayslips}
+                        className="text-muted hover:text-primary transition-colors cursor-pointer"
+                        title="Select All"
                       >
-                        <td className="px-4 py-4 text-center">
-                          <button
-                            type="button"
-                            onClick={() => toggleSelectPayslip(ps.id)}
-                            className="text-muted hover:text-primary transition-colors cursor-pointer"
-                          >
-                            {isChecked ? (
-                              <CheckSquare className="w-4 h-4 text-primary" />
-                            ) : (
-                              <Square className="w-4 h-4 text-muted/60" />
-                            )}
-                          </button>
-                        </td>
-                        <td className="px-4 py-4 font-mono font-bold text-primary">
-                          {ps.payslip_number}
-                        </td>
-                        <td className="px-4 py-4">
-                          <div className="font-semibold text-default">
-                            {ps.employee?.display_name}
+                        {selectedPayslipIds.length === filteredPayslips.length && filteredPayslips.length > 0 ? (
+                          <CheckSquare className="w-4 h-4 text-primary" />
+                        ) : (
+                          <Square className="w-4 h-4 text-muted/60" />
+                        )}
+                      </button>
+                    </th>
+                    <th className="w-28 px-2 py-2.5 font-bold">Payslip Number</th>
+                    <th className="px-2.5 py-2.5">Employee Name</th>
+                    <th className="px-2 py-2.5 text-center">Type</th>
+                    <th className="px-2.5 py-2.5 text-right font-mono">Output Qty</th>
+                    <th className="px-2.5 py-2.5 text-right font-mono">Gross Amount</th>
+                    <th className="px-2.5 py-2.5 text-right font-mono">Deductions</th>
+                    <th className="px-2.5 py-2.5 text-right font-mono">Net Payable</th>
+                    <th className="w-36 px-2 py-2.5 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-default/40">
+                  {filteredPayslips.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="px-6 py-12 text-center">
+                        <div className="flex flex-col items-center justify-center max-w-sm mx-auto text-center space-y-3">
+                          <div className="size-12 rounded-2xl bg-surface-sunken border border-default flex items-center justify-center text-muted">
+                            <DollarSign className="size-6 text-primary" />
                           </div>
-                          <div className="text-xs font-mono text-muted">
-                            {ps.employee?.employee_code}
+                          <div>
+                            <h4 className="font-bold text-sm text-default">
+                              No payslips generated for this period yet
+                            </h4>
+                            <p className="text-xs text-muted mt-1">
+                              Run automated payroll to roll up all piece-rate output and monthly salaries, or create an individual worker payslip.
+                            </p>
                           </div>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span
-                            className={`px-2 py-0.5 text-xs font-semibold rounded ${
-                              ps.employee?.employment_type === 'piece_rate'
-                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
-                                : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
-                            }`}
-                          >
-                            {ps.employee?.employment_type.replace('_', ' ').toUpperCase()}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-right font-mono font-semibold text-default">
-                          {ps.produced_quantity
-                            ? `${parseFloat(ps.produced_quantity).toFixed(0)} Pcs`
-                            : '—'}
-                        </td>
-                        <td className="px-4 py-4 text-right font-mono text-default">
-                          {formatCurrency(ps.gross_amount)}
-                        </td>
-                        <td className="px-4 py-4 text-right font-mono text-rose-600 dark:text-rose-400">
-                          {formatCurrency(ps.total_deductions)}
-                        </td>
-                        <td className="px-4 py-4 text-right font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
-                          {formatCurrency(ps.net_amount)}
-                        </td>
-                        <td className="px-4 py-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => setSelectedPayslip(ps)}
-                              className="px-2.5 py-1 text-2xs bg-surface border border-default hover:bg-surface-sunken text-default rounded-lg font-semibold transition cursor-pointer flex items-center gap-1 shadow-2xs"
-                            >
-                              <Eye className="size-3 text-primary" />
-                              <span>View Items</span>
-                            </button>
+                          <div className="flex items-center gap-2 pt-2">
                             <button
                               type="button"
                               onClick={() => {
-                                setSelectedPayslip(ps);
-                                setTimeout(() => window.print(), 200);
+                                const targetId =
+                                  selectedPeriodId === 'all'
+                                    ? payrollPeriods[0]?.id
+                                    : selectedPeriodId;
+                                if (targetId) handleRunBatchPayroll(targetId);
                               }}
-                              className="px-2.5 py-1 text-2xs bg-surface border border-default hover:bg-surface-sunken text-muted hover:text-default rounded-lg font-semibold transition cursor-pointer flex items-center gap-1 shadow-2xs"
-                              title="Print official payslip"
+                              className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 cursor-pointer shadow-xs transition"
                             >
-                              <Printer className="size-3 text-muted" />
-                              <span>Print</span>
+                              <Zap className="size-3.5" />
+                              <span>⚡ Run Payroll (Batch)</span>
                             </button>
                             <button
                               type="button"
-                              onClick={() =>
-                                setDeleteConfirm({
-                                  open: true,
-                                  type: 'payslip',
-                                  id: ps.id,
-                                  name: ps.payslip_number,
-                                })
-                              }
-                              className="p-1 rounded-lg border border-default hover:bg-rose-50 dark:hover:bg-rose-950/30 text-muted hover:text-rose-600 transition cursor-pointer"
-                              title="Delete Payslip"
+                              onClick={() => setShowCreatePayslipModal(true)}
+                              className="px-4 py-2 text-xs font-semibold rounded-xl bg-surface hover:bg-surface-sunken text-default border border-default flex items-center gap-1.5 cursor-pointer shadow-2xs transition"
                             >
-                              <Trash2 className="size-3.5" />
+                              <Plus className="size-3.5" />
+                              <span>+ Create Payslip</span>
                             </button>
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredPayslips.map((ps) => {
+                      const isChecked = selectedPayslipIds.includes(ps.id);
+                      return (
+                        <tr
+                          key={ps.id}
+                          className={`transition ${isChecked ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-surface-sunken/40'}`}
+                        >
+                          <td className="w-9 px-2 py-2.5 text-center">
+                            <button
+                              type="button"
+                              onClick={() => toggleSelectPayslip(ps.id)}
+                              className="text-muted hover:text-primary transition-colors cursor-pointer"
+                            >
+                              {isChecked ? (
+                                <CheckSquare className="w-4 h-4 text-primary" />
+                              ) : (
+                                <Square className="w-4 h-4 text-muted/60" />
+                              )}
+                            </button>
+                          </td>
+                          <td className="w-28 px-2 py-2.5 font-mono font-bold text-primary whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedPayslip(ps)}
+                              className="hover:underline cursor-pointer text-left font-mono"
+                              title="View itemized payslip breakdown"
+                            >
+                              {ps.payslip_number}
+                            </button>
+                          </td>
+                          <td className="px-2.5 py-2.5 whitespace-nowrap">
+                            <div className="font-semibold text-default">
+                              {ps.employee?.display_name}
+                            </div>
+                            <div className="text-3xs font-mono text-muted">
+                              {ps.employee?.employee_code}
+                            </div>
+                          </td>
+                          <td className="px-2 py-2.5 text-center whitespace-nowrap">
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 text-2xs font-semibold rounded ${
+                                ps.employee?.employment_type === 'piece_rate'
+                                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                                  : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
+                              }`}
+                            >
+                              {ps.employee?.employment_type.replace('_', ' ').toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="px-2.5 py-2.5 text-right font-mono font-semibold text-default whitespace-nowrap">
+                            {ps.produced_quantity
+                              ? `${parseFloat(ps.produced_quantity).toFixed(0)} Pcs`
+                              : '—'}
+                          </td>
+                          <td className="px-2.5 py-2.5 text-right font-mono text-default whitespace-nowrap">
+                            {formatCurrency(ps.gross_amount)}
+                          </td>
+                          <td className="px-2.5 py-2.5 text-right font-mono text-rose-600 dark:text-rose-400 whitespace-nowrap">
+                            {formatCurrency(ps.total_deductions)}
+                          </td>
+                          <td className="px-2.5 py-2.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                            {formatCurrency(ps.net_amount)}
+                          </td>
+                          <td className="w-36 px-2 py-2.5 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-1.5 relative">
+                              {/* 1. Primary Direct Action Button */}
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPayslip(ps)}
+                                className="px-2.5 py-1 text-xs bg-surface border border-default hover:bg-surface-sunken text-default rounded-lg font-medium transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                                title="View itemized payslip breakdown"
+                              >
+                                <Eye className="size-3 text-primary" />
+                                <span>Slip</span>
+                              </button>
+
+                              {/* 2. Prominent Actions Dropdown Button */}
+                              <div className="relative inline-block text-left">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (openActionMenuId === `ps_${ps.id}`) {
+                                      setOpenActionMenuId(null);
+                                      setActionMenuAnchor(null);
+                                    } else {
+                                      setOpenActionMenuId(`ps_${ps.id}`);
+                                      setActionMenuAnchor(e.currentTarget);
+                                    }
+                                  }}
+                                  className={`px-2.5 py-1 text-xs rounded-lg border font-medium transition cursor-pointer flex items-center gap-1 shadow-2xs ${
+                                    openActionMenuId === `ps_${ps.id}`
+                                      ? 'border-primary bg-primary/10 text-primary'
+                                      : 'border-default bg-surface hover:bg-surface-sunken text-default'
+                                  }`}
+                                  title={`More actions for ${ps.payslip_number}`}
+                                  aria-label={`More options for ${ps.payslip_number}`}
+                                >
+                                  <span>Actions</span>
+                                  <ChevronDown className="size-3 text-muted" />
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+
+              {actionMenuAnchor && typeof openActionMenuId === 'string' && openActionMenuId.startsWith('ps_') && (() => {
+                const psId = parseInt(openActionMenuId.replace('ps_', ''), 10);
+                const ps = filteredPayslips.find((p) => p.id === psId);
+                if (!ps) return null;
+                return (
+                  <ActionMenuPortal
+                    isOpen={true}
+                    anchorEl={actionMenuAnchor}
+                    onClose={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                    }}
+                    className="w-52"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        setActionMenuAnchor(null);
+                        handlePrintPayslip(ps);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                    >
+                      <Printer className="size-3.5 text-primary shrink-0" />
+                      <span>Print Payslip</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        setActionMenuAnchor(null);
+                        void handleBulkStatusPayslips('paid');
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                    >
+                      <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />
+                      <span>Mark Disbursed & Paid</span>
+                    </button>
+
+                    <div className="my-1 border-t border-default/50" />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        setActionMenuAnchor(null);
+                        setDeleteConfirm({
+                          open: true,
+                          type: 'payslip',
+                          id: ps.id,
+                          name: ps.payslip_number,
+                        });
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="size-3.5 text-rose-600 shrink-0" />
+                      <span>Delete Payslip</span>
+                    </button>
+                  </ActionMenuPortal>
+                );
+              })()}
+            </div>
           </div>
         </div>
       )}
@@ -2646,7 +2916,7 @@ export const HrWorkspace: React.FC = () => {
 
           {/* Employees Table */}
           <div className="bg-surface rounded-2xl shadow-2xs border border-default/70 overflow-hidden">
-            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-default/30">
+            <div className="overflow-x-auto min-h-75 scrollbar-thin scrollbar-thumb-default/30">
               <table className="w-full text-left text-xs text-default border-collapse">
                 <thead className="bg-surface-sunken text-muted uppercase text-2xs font-bold border-b border-default/60">
                   <tr>
@@ -2828,10 +3098,16 @@ export const HrWorkspace: React.FC = () => {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setOpenActionMenuId(openActionMenuId === emp.id ? null : emp.id);
+                                  if (openActionMenuId === `emp_${emp.id}`) {
+                                    setOpenActionMenuId(null);
+                                    setActionMenuAnchor(null);
+                                  } else {
+                                    setOpenActionMenuId(`emp_${emp.id}`);
+                                    setActionMenuAnchor(e.currentTarget);
+                                  }
                                 }}
                                 className={`px-2.5 py-1 text-xs rounded-lg border font-medium transition cursor-pointer flex items-center gap-1 shadow-2xs ${
-                                  openActionMenuId === emp.id
+                                  openActionMenuId === `emp_${emp.id}`
                                     ? 'border-primary bg-primary/10 text-primary'
                                     : 'border-default bg-surface hover:bg-surface-sunken text-default'
                                 }`}
@@ -2841,69 +3117,6 @@ export const HrWorkspace: React.FC = () => {
                                 <span>Actions</span>
                                 <ChevronDown className="size-3 text-muted" />
                               </button>
-
-                              {/* Floating Dropdown Menu */}
-                              {openActionMenuId === emp.id && (
-                                <div
-                                  data-action-menu
-                                  className="absolute right-0 z-50 mt-1.5 w-52 rounded-xl bg-surface border border-default p-1 shadow-xl animate-in fade-in zoom-in-95 duration-100 text-left"
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenActionMenuId(null);
-                                      setSelectedEmployeeForBadge(emp);
-                                    }}
-                                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
-                                  >
-                                    <Printer className="size-3.5 text-primary shrink-0" />
-                                    <span>Print ID Badge</span>
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenActionMenuId(null);
-                                      handleOpenAccessModal(emp);
-                                    }}
-                                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
-                                  >
-                                    <KeyRound className="size-3.5 text-amber-500 shrink-0" />
-                                    <span>ERP Access & Roles</span>
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenActionMenuId(null);
-                                      handleToggleEmployeeStatus(emp.id);
-                                    }}
-                                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
-                                  >
-                                    <ShieldCheck className="size-3.5 text-emerald-600 shrink-0" />
-                                    <span>{emp.is_active ? 'Deactivate Employee' : 'Activate Employee'}</span>
-                                  </button>
-
-                                  <div className="my-1 border-t border-default/50" />
-
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenActionMenuId(null);
-                                      setDeleteConfirm({
-                                        open: true,
-                                        type: 'employee',
-                                        id: emp.id,
-                                        name: emp.display_name,
-                                      });
-                                    }}
-                                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
-                                  >
-                                    <Trash2 className="size-3.5 text-rose-600 shrink-0" />
-                                    <span>Delete Employee</span>
-                                  </button>
-                                </div>
-                              )}
                             </div>
                           </div>
                         </td>
@@ -2912,6 +3125,82 @@ export const HrWorkspace: React.FC = () => {
                   })}
                 </tbody>
               </table>
+
+              {actionMenuAnchor && typeof openActionMenuId === 'string' && openActionMenuId.startsWith('emp_') && (() => {
+                const empId = parseInt(openActionMenuId.replace('emp_', ''), 10);
+                const emp = filteredEmployees.find((e) => e.id === empId);
+                if (!emp) return null;
+                return (
+                  <ActionMenuPortal
+                    isOpen={true}
+                    anchorEl={actionMenuAnchor}
+                    onClose={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                    }}
+                    className="w-52"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        setActionMenuAnchor(null);
+                        setSelectedEmployeeForBadge(emp);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                    >
+                      <Printer className="size-3.5 text-primary shrink-0" />
+                      <span>Print ID Badge</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        setActionMenuAnchor(null);
+                        handleOpenAccessModal(emp);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                    >
+                      <KeyRound className="size-3.5 text-amber-500 shrink-0" />
+                      <span>ERP Access & Roles</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        setActionMenuAnchor(null);
+                        handleToggleEmployeeStatus(emp.id);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                    >
+                      <ShieldCheck className="size-3.5 text-emerald-600 shrink-0" />
+                      <span>{emp.is_active ? 'Deactivate Employee' : 'Activate Employee'}</span>
+                    </button>
+
+                    <div className="my-1 border-t border-default/50" />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        setActionMenuAnchor(null);
+                        setDeleteConfirm({
+                          open: true,
+                          type: 'employee',
+                          id: emp.id,
+                          name: emp.display_name,
+                        });
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="size-3.5 text-rose-600 shrink-0" />
+                      <span>Delete Employee</span>
+                    </button>
+                  </ActionMenuPortal>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -3034,134 +3323,209 @@ export const HrWorkspace: React.FC = () => {
 
           {/* Attendance Table */}
           <div className="bg-surface rounded-2xl shadow-2xs border border-default overflow-hidden">
-            <table className="w-full text-left text-sm text-default">
-              <thead className="bg-surface-sunken text-muted uppercase text-2xs font-bold border-b border-default">
-                <tr>
-                  <th className="px-4 py-3 w-10 text-center">
+            <div className="overflow-x-auto min-h-75">
+              <table className="w-full text-left text-sm text-default">
+                <thead className="bg-surface-sunken text-muted uppercase text-2xs font-bold border-b border-default">
+                  <tr>
+                    <th className="px-4 py-3 w-10 text-center">
+                      <button
+                        type="button"
+                        onClick={toggleSelectAllAtt}
+                        className="text-muted hover:text-primary transition-colors cursor-pointer"
+                        title="Select All"
+                      >
+                        {selectedAttIds.length === filteredAttendances.length && filteredAttendances.length > 0 ? (
+                          <CheckSquare className="w-4 h-4 text-primary" />
+                        ) : (
+                          <Square className="w-4 h-4 text-muted/60" />
+                        )}
+                      </button>
+                    </th>
+                    <th className="px-6 py-3 whitespace-nowrap">Date</th>
+                    <th className="px-6 py-3 whitespace-nowrap">Employee</th>
+                    <th className="px-6 py-3 whitespace-nowrap">Check-In</th>
+                    <th className="px-6 py-3 whitespace-nowrap">Check-Out</th>
+                    <th className="px-6 py-3 text-right whitespace-nowrap">Worked (Mins)</th>
+                    <th className="px-6 py-3 text-right whitespace-nowrap">Late (Mins)</th>
+                    <th className="px-6 py-3 text-center whitespace-nowrap">Status</th>
+                    <th className="px-6 py-3 text-right whitespace-nowrap">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-default">
+                  {filteredAttendances.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="px-6 py-10 text-center text-xs text-muted">
+                        No attendance records found for this date.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredAttendances.map((att) => {
+                      const isChecked = selectedAttIds.includes(att.id);
+                      return (
+                        <tr
+                          key={att.id}
+                          className={`transition ${isChecked ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-surface-sunken/50'}`}
+                        >
+                          <td className="px-4 py-4 text-center">
+                            <button
+                              type="button"
+                              onClick={() => toggleSelectAtt(att.id)}
+                              className="text-muted hover:text-primary transition-colors cursor-pointer"
+                            >
+                              {isChecked ? (
+                                <CheckSquare className="w-4 h-4 text-primary" />
+                              ) : (
+                                <Square className="w-4 h-4 text-muted/60" />
+                              )}
+                            </button>
+                          </td>
+                          <td className="px-6 py-4 font-mono text-xs whitespace-nowrap">{att.attendance_date}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="font-semibold text-default">
+                              {att.employee?.display_name}
+                            </div>
+                            <div className="text-xs font-mono text-muted">
+                              {att.employee?.employee_code}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 font-mono text-xs whitespace-nowrap">{att.check_in_at}</td>
+                          <td className="px-6 py-4 font-mono text-xs whitespace-nowrap">{att.check_out_at}</td>
+                          <td className="px-6 py-4 text-right font-mono font-bold text-default whitespace-nowrap">
+                            {att.worked_minutes} mins ({(att.worked_minutes / 60).toFixed(1)} hrs)
+                          </td>
+                          <td className="px-6 py-4 text-right font-mono text-rose-600 dark:text-rose-400 whitespace-nowrap">
+                            {att.late_minutes} mins
+                          </td>
+                          <td className="px-6 py-4 text-center whitespace-nowrap">
+                            <span
+                              className={`px-2.5 py-1 text-xs font-semibold rounded-full uppercase ${
+                                att.status === 'present'
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+                                  : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                              }`}
+                            >
+                              {att.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-1.5 relative">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAttendances((prev) =>
+                                    prev.map((a) =>
+                                      a.id === att.id
+                                        ? {
+                                            ...a,
+                                            status: a.status === 'present' ? 'late' : 'present',
+                                            late_minutes: a.status === 'present' ? 15 : 0,
+                                          }
+                                        : a
+                                    )
+                                  );
+                                  notify.info('Attendance status adjusted');
+                                }}
+                                className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-default hover:bg-surface-sunken text-default transition cursor-pointer shadow-2xs"
+                              >
+                                Toggle State
+                              </button>
+
+                              {/* Prominent Actions Dropdown Button */}
+                              <div className="relative inline-block text-left">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (openActionMenuId === `att_${att.id}`) {
+                                      setOpenActionMenuId(null);
+                                      setActionMenuAnchor(null);
+                                    } else {
+                                      setOpenActionMenuId(`att_${att.id}`);
+                                      setActionMenuAnchor(e.currentTarget);
+                                    }
+                                  }}
+                                  className={`px-2.5 py-1 text-xs rounded-lg border font-medium transition cursor-pointer flex items-center gap-1 shadow-2xs ${
+                                    openActionMenuId === `att_${att.id}`
+                                      ? 'border-primary bg-primary/10 text-primary'
+                                      : 'border-default bg-surface hover:bg-surface-sunken text-default'
+                                  }`}
+                                  title="More options"
+                                  aria-label="More options"
+                                >
+                                  <span>Actions</span>
+                                  <ChevronDown className="size-3 text-muted" />
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+
+              {actionMenuAnchor && typeof openActionMenuId === 'string' && openActionMenuId.startsWith('att_') && (() => {
+                const attId = parseInt(openActionMenuId.replace('att_', ''), 10);
+                const att = filteredAttendances.find((a) => a.id === attId);
+                if (!att) return null;
+                return (
+                  <ActionMenuPortal
+                    isOpen={true}
+                    anchorEl={actionMenuAnchor}
+                    onClose={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                    }}
+                    className="w-52"
+                  >
                     <button
                       type="button"
-                      onClick={toggleSelectAllAtt}
-                      className="text-muted hover:text-primary transition-colors cursor-pointer"
-                      title="Select All"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        setActionMenuAnchor(null);
+                        setAttendances((prev) =>
+                          prev.map((a) =>
+                            a.id === att.id
+                              ? {
+                                  ...a,
+                                  status: a.status === 'present' ? 'late' : 'present',
+                                  late_minutes: a.status === 'present' ? 15 : 0,
+                                }
+                              : a
+                          )
+                        );
+                        notify.info('Attendance status adjusted');
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
                     >
-                      {selectedAttIds.length === filteredAttendances.length && filteredAttendances.length > 0 ? (
-                        <CheckSquare className="w-4 h-4 text-primary" />
-                      ) : (
-                        <Square className="w-4 h-4 text-muted/60" />
-                      )}
+                      <Clock className="size-3.5 text-primary shrink-0" />
+                      <span>Toggle Present / Late</span>
                     </button>
-                  </th>
-                  <th className="px-6 py-3">Date</th>
-                  <th className="px-6 py-3">Employee</th>
-                  <th className="px-6 py-3">Check-In</th>
-                  <th className="px-6 py-3">Check-Out</th>
-                  <th className="px-6 py-3 text-right">Worked (Mins)</th>
-                  <th className="px-6 py-3 text-right">Late (Mins)</th>
-                  <th className="px-6 py-3 text-center">Status</th>
-                  <th className="px-6 py-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-default">
-                {filteredAttendances.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="px-6 py-10 text-center text-xs text-muted">
-                      No attendance records found for this date.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredAttendances.map((att) => {
-                    const isChecked = selectedAttIds.includes(att.id);
-                    return (
-                      <tr
-                        key={att.id}
-                        className={`transition ${isChecked ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-surface-sunken/50'}`}
-                      >
-                        <td className="px-4 py-4 text-center">
-                          <button
-                            type="button"
-                            onClick={() => toggleSelectAtt(att.id)}
-                            className="text-muted hover:text-primary transition-colors cursor-pointer"
-                          >
-                            {isChecked ? (
-                              <CheckSquare className="w-4 h-4 text-primary" />
-                            ) : (
-                              <Square className="w-4 h-4 text-muted/60" />
-                            )}
-                          </button>
-                        </td>
-                        <td className="px-6 py-4 font-mono text-xs">{att.attendance_date}</td>
-                        <td className="px-6 py-4">
-                          <div className="font-semibold text-default">
-                            {att.employee?.display_name}
-                          </div>
-                          <div className="text-xs font-mono text-muted">
-                            {att.employee?.employee_code}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 font-mono text-xs">{att.check_in_at}</td>
-                        <td className="px-6 py-4 font-mono text-xs">{att.check_out_at}</td>
-                        <td className="px-6 py-4 text-right font-mono font-bold text-default">
-                          {att.worked_minutes} mins ({(att.worked_minutes / 60).toFixed(1)} hrs)
-                        </td>
-                        <td className="px-6 py-4 text-right font-mono text-rose-600 dark:text-rose-400">
-                          {att.late_minutes} mins
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span
-                            className={`px-2.5 py-1 text-xs font-semibold rounded-full uppercase ${
-                              att.status === 'present'
-                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
-                                : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
-                            }`}
-                          >
-                            {att.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setAttendances((prev) =>
-                                  prev.map((a) =>
-                                    a.id === att.id
-                                      ? {
-                                          ...a,
-                                          status: a.status === 'present' ? 'late' : 'present',
-                                          late_minutes: a.status === 'present' ? 15 : 0,
-                                        }
-                                      : a
-                                  )
-                                );
-                                notify.info('Attendance status adjusted');
-                              }}
-                              className="px-2 py-1 text-2xs font-semibold rounded-lg border border-default hover:bg-surface-sunken text-default transition cursor-pointer"
-                            >
-                              Toggle State
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setDeleteConfirm({
-                                  open: true,
-                                  type: 'attendance',
-                                  id: att.id,
-                                  name: `${att.attendance_date} - ${att.employee?.display_name || 'Worker'}`,
-                                })
-                              }
-                              className="p-1 rounded-lg border border-default hover:bg-rose-50 dark:hover:bg-rose-950/30 text-muted hover:text-rose-600 transition cursor-pointer"
-                              title="Delete Attendance Record"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+
+                    <div className="my-1 border-t border-default/50" />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        setActionMenuAnchor(null);
+                        setDeleteConfirm({
+                          open: true,
+                          type: 'attendance',
+                          id: att.id,
+                          name: `${att.attendance_date} - ${att.employee?.display_name || 'Worker'}`,
+                        });
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="size-3.5 text-rose-600 shrink-0" />
+                      <span>Delete Record</span>
+                    </button>
+                  </ActionMenuPortal>
+                );
+              })()}
+            </div>
           </div>
         </div>
       )}
@@ -3262,144 +3626,241 @@ export const HrWorkspace: React.FC = () => {
           )}
 
           <div className="bg-surface rounded-2xl shadow-2xs border border-default overflow-hidden">
-            <table className="w-full text-left text-sm text-default">
-              <thead className="bg-surface-sunken text-muted uppercase text-2xs font-bold border-b border-default">
-                <tr>
-                  <th className="px-4 py-3 w-10 text-center">
-                    <button
-                      type="button"
-                      onClick={toggleSelectAllLeave}
-                      className="text-muted hover:text-primary transition-colors cursor-pointer"
-                      title="Select All"
-                    >
-                      {selectedLeaveIds.length === filteredLeaves.length && filteredLeaves.length > 0 ? (
-                        <CheckSquare className="w-4 h-4 text-primary" />
-                      ) : (
-                        <Square className="w-4 h-4 text-muted/60" />
-                      )}
-                    </button>
-                  </th>
-                  <th className="px-6 py-3">Employee</th>
-                  <th className="px-6 py-3">Leave Type</th>
-                  <th className="px-6 py-3">Start Date</th>
-                  <th className="px-6 py-3">End Date</th>
-                  <th className="px-6 py-3 text-right">Days</th>
-                  <th className="px-6 py-3">Reason</th>
-                  <th className="px-6 py-3 text-center">Status</th>
-                  <th className="px-6 py-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-default">
-                {filteredLeaves.length === 0 ? (
+            <div className="overflow-x-auto min-h-75">
+              <table className="w-full text-left text-sm text-default">
+                <thead className="bg-surface-sunken text-muted uppercase text-2xs font-bold border-b border-default">
                   <tr>
-                    <td colSpan={9} className="px-6 py-10 text-center text-xs text-muted">
-                      No leave applications found.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredLeaves.map((lr) => {
-                    const isChecked = selectedLeaveIds.includes(lr.id);
-                    return (
-                      <tr
-                        key={lr.id}
-                        className={`transition ${isChecked ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-surface-sunken/50'}`}
+                    <th className="px-4 py-3 w-10 text-center">
+                      <button
+                        type="button"
+                        onClick={toggleSelectAllLeave}
+                        className="text-muted hover:text-primary transition-colors cursor-pointer"
+                        title="Select All"
                       >
-                        <td className="px-4 py-4 text-center">
-                          <button
-                            type="button"
-                            onClick={() => toggleSelectLeave(lr.id)}
-                            className="text-muted hover:text-primary transition-colors cursor-pointer"
-                          >
-                            {isChecked ? (
-                              <CheckSquare className="w-4 h-4 text-primary" />
-                            ) : (
-                              <Square className="w-4 h-4 text-muted/60" />
-                            )}
-                          </button>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="font-semibold text-default">
-                            {lr.employee?.display_name}
-                          </div>
-                          <div className="text-xs font-mono text-muted">
-                            {lr.employee?.employee_code}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 font-medium text-default">
-                          {lr.leave_type?.name}
-                        </td>
-                        <td className="px-6 py-4 text-xs font-mono">{lr.start_date}</td>
-                        <td className="px-6 py-4 text-xs font-mono">{lr.end_date}</td>
-                        <td className="px-6 py-4 text-right font-mono font-bold text-default">
-                          {parseFloat(String(lr.total_days))} Days
-                        </td>
-                        <td className="px-6 py-4 text-xs text-muted max-w-xs truncate">{lr.reason}</td>
-                        <td className="px-6 py-4 text-center">
-                          <span
-                            className={`px-2.5 py-1 text-xs font-semibold rounded-full uppercase ${
-                              lr.status === 'approved'
-                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
-                                : lr.status === 'pending'
-                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
-                                : 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300'
-                            }`}
-                          >
-                            {lr.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {lr.status === 'pending' ? (
-                              <>
+                        {selectedLeaveIds.length === filteredLeaves.length && filteredLeaves.length > 0 ? (
+                          <CheckSquare className="w-4 h-4 text-primary" />
+                        ) : (
+                          <Square className="w-4 h-4 text-muted/60" />
+                        )}
+                      </button>
+                    </th>
+                    <th className="px-6 py-3 whitespace-nowrap">Employee</th>
+                    <th className="px-6 py-3 whitespace-nowrap">Leave Type</th>
+                    <th className="px-6 py-3 whitespace-nowrap">Start Date</th>
+                    <th className="px-6 py-3 whitespace-nowrap">End Date</th>
+                    <th className="px-6 py-3 text-right whitespace-nowrap">Days</th>
+                    <th className="px-6 py-3 whitespace-nowrap">Reason</th>
+                    <th className="px-6 py-3 text-center whitespace-nowrap">Status</th>
+                    <th className="px-6 py-3 text-right whitespace-nowrap">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-default">
+                  {filteredLeaves.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="px-6 py-10 text-center text-xs text-muted">
+                        No leave applications found.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredLeaves.map((lr) => {
+                      const isChecked = selectedLeaveIds.includes(lr.id);
+                      return (
+                        <tr
+                          key={lr.id}
+                          className={`transition ${isChecked ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-surface-sunken/50'}`}
+                        >
+                          <td className="px-4 py-4 text-center">
+                            <button
+                              type="button"
+                              onClick={() => toggleSelectLeave(lr.id)}
+                              className="text-muted hover:text-primary transition-colors cursor-pointer"
+                            >
+                              {isChecked ? (
+                                <CheckSquare className="w-4 h-4 text-primary" />
+                              ) : (
+                                <Square className="w-4 h-4 text-muted/60" />
+                              )}
+                            </button>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="font-semibold text-default">
+                              {lr.employee?.display_name}
+                            </div>
+                            <div className="text-xs font-mono text-muted">
+                              {lr.employee?.employee_code}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 font-medium text-default whitespace-nowrap">
+                            {lr.leave_type?.name}
+                          </td>
+                          <td className="px-6 py-4 text-xs font-mono whitespace-nowrap">{lr.start_date}</td>
+                          <td className="px-6 py-4 text-xs font-mono whitespace-nowrap">{lr.end_date}</td>
+                          <td className="px-6 py-4 text-right font-mono font-bold text-default whitespace-nowrap">
+                            {parseFloat(String(lr.total_days))} Days
+                          </td>
+                          <td className="px-6 py-4 text-xs text-muted max-w-xs truncate">{lr.reason}</td>
+                          <td className="px-6 py-4 text-center whitespace-nowrap">
+                            <span
+                              className={`px-2.5 py-1 text-xs font-semibold rounded-full uppercase ${
+                                lr.status === 'approved'
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+                                  : lr.status === 'pending'
+                                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                                  : 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300'
+                              }`}
+                            >
+                              {lr.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-1.5 relative">
+                              {lr.status === 'pending' ? (
                                 <button
                                   type="button"
                                   onClick={() => handleApproveLeave(lr.id)}
-                                  className="px-2 py-1 text-2xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition cursor-pointer flex items-center gap-1"
+                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition cursor-pointer flex items-center gap-1 shadow-2xs"
                                 >
                                   <Check className="size-3" /> Approve
                                 </button>
+                              ) : lr.status === 'approved' ? (
                                 <button
                                   type="button"
                                   onClick={() => handleRejectLeave(lr.id)}
-                                  className="px-2 py-1 text-2xs font-semibold rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 transition cursor-pointer"
+                                  className="px-2.5 py-1 text-xs font-medium rounded-lg border border-default hover:bg-surface-sunken text-muted hover:text-default transition cursor-pointer"
                                 >
-                                  Reject
+                                  Revoke
                                 </button>
-                              </>
-                            ) : lr.status === 'approved' ? (
-                              <button
-                                type="button"
-                                onClick={() => handleRejectLeave(lr.id)}
-                                className="px-2 py-1 text-2xs font-medium rounded-lg border border-default hover:bg-surface-sunken text-muted hover:text-default transition cursor-pointer"
-                              >
-                                Revoke
-                              </button>
-                            ) : (
-                              <span className="text-2xs text-muted">Archived</span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setDeleteConfirm({
-                                  open: true,
-                                  type: 'leave',
-                                  id: lr.id,
-                                  name: `${lr.employee?.display_name || 'Employee'} (${lr.leave_type?.name || 'Leave'})`,
-                                })
-                              }
-                              className="p-1 rounded-lg border border-default hover:bg-rose-50 dark:hover:bg-rose-950/30 text-muted hover:text-rose-600 transition cursor-pointer"
-                              title="Delete Leave Request"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+                              ) : (
+                                <span className="text-2xs text-muted">Archived</span>
+                              )}
+
+                              {/* Prominent Actions Dropdown Button */}
+                              <div className="relative inline-block text-left">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (openActionMenuId === `leave_${lr.id}`) {
+                                      setOpenActionMenuId(null);
+                                      setActionMenuAnchor(null);
+                                    } else {
+                                      setOpenActionMenuId(`leave_${lr.id}`);
+                                      setActionMenuAnchor(e.currentTarget);
+                                    }
+                                  }}
+                                  className={`px-2.5 py-1 text-xs rounded-lg border font-medium transition cursor-pointer flex items-center gap-1 shadow-2xs ${
+                                    openActionMenuId === `leave_${lr.id}`
+                                      ? 'border-primary bg-primary/10 text-primary'
+                                      : 'border-default bg-surface hover:bg-surface-sunken text-default'
+                                  }`}
+                                  title="More options"
+                                  aria-label="More options"
+                                >
+                                  <span>Actions</span>
+                                  <ChevronDown className="size-3 text-muted" />
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+
+              {actionMenuAnchor && typeof openActionMenuId === 'string' && openActionMenuId.startsWith('leave_') && (() => {
+                const leaveId = parseInt(openActionMenuId.replace('leave_', ''), 10);
+                const lr = filteredLeaves.find((l) => l.id === leaveId);
+                if (!lr) return null;
+                return (
+                  <ActionMenuPortal
+                    isOpen={true}
+                    anchorEl={actionMenuAnchor}
+                    onClose={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                    }}
+                    className="w-52"
+                  >
+                    {lr.status === 'pending' ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenActionMenuId(null);
+                            setActionMenuAnchor(null);
+                            handleApproveLeave(lr.id);
+                          }}
+                          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer font-medium"
+                        >
+                          <Check className="size-3.5 text-emerald-600 shrink-0" />
+                          <span>Approve Application</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenActionMenuId(null);
+                            setActionMenuAnchor(null);
+                            handleRejectLeave(lr.id);
+                          }}
+                          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                        >
+                          <X className="size-3.5 text-rose-600 shrink-0" />
+                          <span>Reject Application</span>
+                        </button>
+                      </>
+                    ) : lr.status === 'approved' ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenActionMenuId(null);
+                          setActionMenuAnchor(null);
+                          handleRejectLeave(lr.id);
+                        }}
+                        className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors cursor-pointer"
+                      >
+                        <X className="size-3.5 text-amber-600 shrink-0" />
+                        <span>Revoke Approval</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenActionMenuId(null);
+                          setActionMenuAnchor(null);
+                          handleApproveLeave(lr.id);
+                        }}
+                        className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer font-medium"
+                      >
+                        <Check className="size-3.5 text-emerald-600 shrink-0" />
+                        <span>Re-Approve</span>
+                      </button>
+                    )}
+
+                    <div className="my-1 border-t border-default/50" />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        setActionMenuAnchor(null);
+                        setDeleteConfirm({
+                          open: true,
+                          type: 'leave',
+                          id: lr.id,
+                          name: `${lr.employee?.display_name || 'Employee'} (${lr.leave_type?.name || 'Leave'})`,
+                        });
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="size-3.5 text-rose-600 shrink-0" />
+                      <span>Delete Leave Request</span>
+                    </button>
+                  </ActionMenuPortal>
+                );
+              })()}
+            </div>
           </div>
         </div>
       )}
@@ -3481,11 +3942,11 @@ export const HrWorkspace: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => window.print()}
+                  onClick={() => handlePrintPayslip(selectedPayslip)}
                   className="px-3.5 py-2 text-xs border border-default rounded-xl bg-surface hover:bg-surface-sunken text-default font-semibold flex items-center gap-1.5 cursor-pointer"
                 >
                   <Printer className="size-3.5" />
-                  <span>Print Receipt</span>
+                  <span>Print Payslip</span>
                 </button>
                 <button
                   type="button"

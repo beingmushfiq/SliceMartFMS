@@ -19,6 +19,7 @@ import {
   CheckSquare,
   X,
   ShieldCheck,
+  ChevronDown,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { Modal } from '../../../components/ui/Modal';
@@ -26,6 +27,7 @@ import { Button } from '../../../components/ui/Button';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
 import { Badge, StatusBadge } from '../../../components/ui/Badge';
 import { QueryBoundary } from '../../../components/patterns/QueryBoundary';
+import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
 import { isApiError } from '../../../lib/api/errors';
 import { cn } from '../../../lib/utils';
 import type { ProductionBatch } from '../../../types/api/production';
@@ -251,7 +253,25 @@ export function ProductionBatchesSection() {
 
   // Multi-Record Batch Selection & Floating Toolbar State
   const [selectedBatchIds, setSelectedBatchIds] = useState<Set<string>>(new Set());
+  const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string; name: string }>({
+    open: false,
+    id: '',
+    name: '',
+  });
   const headerCheckboxRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-action-menu]')) {
+        setOpenActionMenuId(null);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => document.removeEventListener('click', handleOutsideClick);
+  }, []);
 
   const isAllSelected = batches.length > 0 && selectedBatchIds.size === batches.length;
   const isSomeSelected = selectedBatchIds.size > 0 && !isAllSelected;
@@ -457,292 +477,356 @@ export function ProductionBatchesSection() {
         data={batchesQuery.data}
         isFetching={batchesQuery.isFetching}
       >
-        <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-xs">
-          <table className="w-full text-left text-xs text-default">
-            <thead className="border-b border-default bg-surface-sunken/70 text-[11px] font-semibold uppercase tracking-wider text-muted">
-              <tr>
-                <th className="py-3.5 pl-4 pr-1 w-10">
-                  <input
-                    ref={headerCheckboxRef}
-                    type="checkbox"
-                    checked={isAllSelected}
-                    onChange={toggleSelectAll}
-                    aria-label="Select all batches"
-                    className="size-4 rounded border-default text-primary focus:ring-primary/20 cursor-pointer"
-                  />
-                </th>
-                <th className="py-3.5 pl-2 pr-3">Batch Number</th>
-                <th className="py-3.5 px-3">Product</th>
-                <th className="py-3.5 px-3">Actual / Target (Units)</th>
-                <th className="py-3.5 px-3">Yield Analytics</th>
-                <th className="py-3.5 px-3">Status</th>
-                <th className="py-3.5 px-3">Context</th>
-                <th className="py-3.5 pr-4 text-right">Floor Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-default">
-              {batches.length === 0 ? (
+        <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
+          <div className="overflow-x-auto min-h-75">
+            <table className="w-full text-left text-xs text-default border-collapse">
+              <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-muted">
-                    <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-surface-sunken mb-2 border border-default">
-                      <Factory className="size-5 text-muted" />
-                    </div>
-                    <div className="text-sm font-medium text-default">
-                      No production batches found
-                    </div>
-                    <div className="text-xs text-muted mt-1">
-                      Create your first batch to start tracking shop floor execution.
-                    </div>
-                  </td>
+                  <th className="w-10 px-4 py-3.5 text-center">
+                    <input
+                      ref={headerCheckboxRef}
+                      type="checkbox"
+                      checked={isAllSelected}
+                      onChange={toggleSelectAll}
+                      aria-label="Select all batches"
+                      className="size-4 rounded border-default text-primary focus:ring-primary/20 cursor-pointer"
+                    />
+                  </th>
+                  <th className="px-4 py-3.5 whitespace-nowrap">Batch No</th>
+                  <th className="px-4 py-3.5">Product / BOM</th>
+                  <th className="px-4 py-3.5 text-right whitespace-nowrap">Target / Actual</th>
+                  <th className="px-4 py-3.5 text-center whitespace-nowrap">Yield</th>
+                  <th className="px-4 py-3.5 text-center whitespace-nowrap">Status</th>
+                  <th className="px-4 py-3.5 text-center whitespace-nowrap">Context</th>
+                  <th className="px-4 py-3.5 text-right whitespace-nowrap">Actions</th>
                 </tr>
-              ) : (
-                batches.map((batch) => {
-                  const isSelected = selectedBatchIds.has(batch.id);
-                  return (
-                    <tr
-                      key={batch.id}
-                      className={cn(
-                        'hover:bg-surface-sunken/40 transition-colors',
-                        isSelected && 'bg-primary/5'
-                      )}
-                    >
-                      <td className="py-3.5 pl-4 pr-1 w-10">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleSelectBatch(batch.id)}
-                          aria-label={`Select batch ${batch.batch_number}`}
-                          className="size-4 rounded border-default text-primary focus:ring-primary/20 cursor-pointer"
-                        />
-                      </td>
-                      <td className="py-3.5 pl-2 pr-3">
-                      <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                        {batch.batch_number}
+              </thead>
+              <tbody className="divide-y divide-default">
+                {batches.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-12 text-center text-muted">
+                      <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-surface-sunken mb-2 border border-default">
+                        <Factory className="size-5 text-muted" />
                       </div>
-                      {batch.bom_name && (
-                        <div className="text-[10px] text-muted">BOM: {batch.bom_name}</div>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-3">
-                      <div className="font-semibold text-default">
-                        {batch.product_name ?? batch.product_id}
+                      <div className="text-sm font-medium text-default">
+                        No production batches found
                       </div>
-                      {batch.product_sku && (
-                        <div className="text-[10px] text-muted font-mono">{batch.product_sku}</div>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-3">
-                      <div className="font-mono text-default font-semibold flex items-baseline gap-1">
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">{batch.actual_quantity}</span>
-                        <span className="text-muted text-[11px]">/</span>
-                        <span className="text-muted font-normal">{batch.target_quantity}</span>
-                      </div>
-                      <div className="mt-1 w-24 h-1.5 rounded-full bg-surface-sunken overflow-hidden border border-default/50">
-                        <div
-                          className="h-full bg-emerald-500 rounded-full transition-all"
-                          style={{
-                            width: `${Math.min(100, Math.max(0, (Number(batch.actual_quantity || 0) / (Number(batch.target_quantity) || 1)) * 100))}%`,
-                          }}
-                        />
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-3">
-                      {batch.actual_yield_pct !== null ? (
-                        <div className="flex items-center gap-1.5 font-mono text-xs text-emerald-600 dark:text-emerald-400 font-bold">
-                          <TrendingUp className="size-3.5" />
-                          <span>{batch.actual_yield_pct}%</span>
-                          {batch.yield_variance_pct && (
-                            <span className="text-[10px] text-muted font-normal">
-                              ({batch.yield_variance_pct}%)
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => analyzeMutation.mutate(batch.id)}
-                          disabled={analyzeMutation.isPending}
-                          className="group flex items-center gap-1 text-[11px] text-muted hover:text-primary transition-colors cursor-pointer py-1 px-2 rounded-lg hover:bg-surface-sunken border border-dashed border-default"
-                          title="Click to calculate and analyze yield"
-                        >
-                          <Sparkles className="size-3 text-amber-500 group-hover:scale-110 transition-transform" />
-                          <span>Calculate Yield</span>
-                        </button>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-3">
-                      <StatusBadge status={batch.status} />
-                    </td>
-                    <td className="py-3.5 px-3">
-                      {getCompletenessBadge(batch.context_completeness)}
-                    </td>
-                    <td className="py-3 pr-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                        {/* Start action */}
-                        {(batch.status === 'draft' || batch.status === 'scheduled') && (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => startMutation.mutate(batch.id)}
-                            disabled={startMutation.isPending}
-                            className="text-xs font-bold flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 min-h-8"
-                            title="Start Production Run"
-                          >
-                            <Play className="h-3 w-3 fill-emerald-600 dark:fill-emerald-400" />
-                            <span>Start Batch</span>
-                          </Button>
-                        )}
-
-                        {/* Record Output action */}
-                        {batch.status === 'in_progress' && (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => {
-                              setErrorMsg(null);
-                              setOutputDraft({
-                                product_id: batch.product_id,
-                                warehouse_id: warehouses[0]?.id ?? '',
-                                output_type: 'finished_good',
-                                good_quantity: batch.target_quantity,
-                                rejected_quantity: '0.0000',
-                                unit_cost: '15.0000',
-                              });
-                              setActiveBatchModal({ batch, type: 'output' });
-                            }}
-                            className="text-xs font-bold flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 min-h-8"
-                            title="Record Finished Output"
-                          >
-                            <CheckCircle2 className="h-3 w-3" />
-                            <span>Record Output</span>
-                          </Button>
-                        )}
-
-                        {/* Issue Materials action */}
-                        {batch.status === 'in_progress' && (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => {
-                              setErrorMsg(null);
-                              setInputDraft({
-                                product_id: batch.product_id,
-                                warehouse_id: warehouses[0]?.id ?? '',
-                                planned_quantity: '50.0000',
-                                actual_quantity: '50.0000',
-                                unit_cost: '10.0000',
-                              });
-                              setActiveBatchModal({ batch, type: 'input' });
-                            }}
-                            className="text-xs font-medium flex items-center gap-1 text-blue-600 dark:text-blue-400 min-h-8"
-                            title="Issue Raw Materials to Batch"
-                          >
-                            <Box className="h-3 w-3" />
-                            <span>+ Materials</span>
-                          </Button>
-                        )}
-
-                        {/* Send to QC for Inspection when completed */}
-                        {batch.status === 'completed' && (
-                          <Link
-                            to={`/qc?tab=inspections`}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 transition-colors shadow-2xs"
-                            title="Route finished batch to Quality Control for inspection"
-                          >
-                            <ShieldCheck className="size-3.5" />
-                            <span>Send to QC</span>
-                          </Link>
-                        )}
-
-                        {/* Complete action */}
-                        {batch.status === 'in_progress' && (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => completeMutation.mutate(batch.id)}
-                            disabled={completeMutation.isPending}
-                            className="text-xs flex items-center gap-1 text-muted hover:text-default min-h-8"
-                            title="Mark Batch Complete"
-                          >
-                            <span>Mark Done</span>
-                          </Button>
-                        )}
-
-                        {/* Close action */}
-                        {batch.status === 'completed' && (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => closeMutation.mutate(batch.id)}
-                            disabled={closeMutation.isPending}
-                            className="text-xs flex items-center gap-1 text-purple-600 dark:text-purple-400 min-h-8"
-                            title="Close Batch"
-                          >
-                            <span>Close</span>
-                          </Button>
-                        )}
-
-                        {/* Status selector */}
-                        <select
-                          value={batch.status}
-                          onChange={(e) => updateStatusMutation.mutate({ batchId: batch.id, status: e.target.value })}
-                          className="h-8 rounded-lg border border-default bg-surface-sunken px-2 text-[11px] font-medium text-default focus:border-primary focus:outline-none cursor-pointer"
-                          title="Change Batch Status"
-                        >
-                          <option value="draft">Draft</option>
-                          <option value="scheduled">Scheduled</option>
-                          <option value="in_progress">In Progress</option>
-                          <option value="completed">Completed</option>
-                          <option value="closed">Closed</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
-
-                        {/* Yield Analytics action */}
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => analyzeMutation.mutate(batch.id)}
-                          disabled={analyzeMutation.isPending}
-                          className="text-xs text-purple-600 dark:text-purple-400 min-h-8"
-                          title="Analyze Yield"
-                        >
-                          <Sparkles className="h-3 w-3" />
-                        </Button>
-
-                        {/* Details Modal */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setActiveBatchModal({ batch, type: 'details' })}
-                          className="text-xs text-muted hover:text-default min-h-8"
-                          title="Batch Details"
-                        >
-                          <Layers className="h-3.5 w-3.5" />
-                        </Button>
-
-                        {/* Delete Batch */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (window.confirm(`Are you sure you want to delete batch ${batch.batch_number}?`)) {
-                              deleteMutation.mutate(batch.id);
-                            }
-                          }}
-                          disabled={deleteMutation.isPending}
-                          className="text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 min-h-8"
-                          title="Delete Batch"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                      <div className="text-xs text-muted mt-1">
+                        Create your first batch to start tracking shop floor execution.
                       </div>
                     </td>
                   </tr>
-                );
-              })
-            )}
-            </tbody>
-          </table>
+                ) : (
+                  batches.map((batch) => {
+                    const isSelected = selectedBatchIds.has(batch.id);
+                    return (
+                      <tr
+                        key={batch.id}
+                        className={cn(
+                          'hover:bg-surface-sunken/60 transition-colors',
+                          isSelected && 'bg-primary/5'
+                        )}
+                      >
+                        <td className="w-10 px-4 py-3.5 text-center">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectBatch(batch.id)}
+                            aria-label={`Select batch ${batch.batch_number}`}
+                            className="size-4 rounded border-default text-primary focus:ring-primary/20 cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-4 py-3.5 whitespace-nowrap">
+                          <div className="font-mono font-bold text-primary">
+                            {batch.batch_number}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <div className="font-semibold text-default">
+                            {batch.product_name ?? batch.product_id}
+                          </div>
+                          <div className="flex items-center gap-2 text-[10px] text-muted mt-0.5">
+                            {batch.product_sku && (
+                              <span className="font-mono">{batch.product_sku}</span>
+                            )}
+                            {batch.bom_name && (
+                              <span>• BOM: {batch.bom_name}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                          <div className="font-mono text-default font-semibold flex items-baseline justify-end gap-1">
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold">{batch.actual_quantity}</span>
+                            <span className="text-muted text-[11px]">/</span>
+                            <span className="text-muted font-normal">{batch.target_quantity}</span>
+                          </div>
+                          <div className="mt-1 w-24 ml-auto h-1.5 rounded-full bg-surface-sunken overflow-hidden border border-default/50">
+                            <div
+                              className="h-full bg-emerald-500 rounded-full transition-all"
+                              style={{
+                                width: `${Math.min(100, Math.max(0, (Number(batch.actual_quantity || 0) / (Number(batch.target_quantity) || 1)) * 100))}%`,
+                              }}
+                            />
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                          {batch.actual_yield_pct !== null ? (
+                            <div className="inline-flex items-center gap-1 font-mono text-xs text-emerald-600 dark:text-emerald-400 font-bold">
+                              <TrendingUp className="size-3.5" />
+                              <span>{batch.actual_yield_pct}%</span>
+                              {batch.yield_variance_pct && (
+                                <span className="text-[10px] text-muted font-normal">
+                                  ({batch.yield_variance_pct}%)
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => analyzeMutation.mutate(batch.id)}
+                              disabled={analyzeMutation.isPending}
+                              className="group inline-flex items-center gap-1 text-[11px] text-muted hover:text-primary transition-colors cursor-pointer py-0.5 px-2 rounded-lg hover:bg-surface-sunken border border-dashed border-default"
+                              title="Click to calculate and analyze yield"
+                            >
+                              <Sparkles className="size-3 text-amber-500 group-hover:scale-110 transition-transform" />
+                              <span>Yield</span>
+                            </button>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                          <StatusBadge status={batch.status} />
+                        </td>
+                        <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                          {getCompletenessBadge(batch.context_completeness)}
+                        </td>
+                        <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5 relative">
+                            {/* 1. Context-Sensitive Primary Action */}
+                            {(batch.status === 'draft' || batch.status === 'scheduled') && (
+                              <button
+                                type="button"
+                                onClick={() => startMutation.mutate(batch.id)}
+                                disabled={startMutation.isPending}
+                                className="px-2.5 py-1 text-xs bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 rounded-lg font-bold transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                                title="Start Production Run"
+                              >
+                                <Play className="size-3 fill-emerald-600 dark:fill-emerald-400 shrink-0" />
+                                <span>Start</span>
+                              </button>
+                            )}
+
+                            {batch.status === 'in_progress' && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setErrorMsg(null);
+                                  setOutputDraft({
+                                    product_id: batch.product_id,
+                                    warehouse_id: warehouses[0]?.id ?? '',
+                                    output_type: 'finished_good',
+                                    good_quantity: batch.target_quantity,
+                                    rejected_quantity: '0.0000',
+                                    unit_cost: '15.0000',
+                                  });
+                                  setActiveBatchModal({ batch, type: 'output' });
+                                }}
+                                className="px-2.5 py-1 text-xs bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 rounded-lg font-bold transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                                title="Record Finished Output"
+                              >
+                                <CheckCircle2 className="size-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                <span>Output</span>
+                              </button>
+                            )}
+
+                            {batch.status === 'completed' && (
+                              <Link
+                                to={`/qc?tab=inspections`}
+                                className="px-2.5 py-1 text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors shadow-2xs flex items-center gap-1"
+                                title="Route finished batch to Quality Control for inspection"
+                              >
+                                <ShieldCheck className="size-3 shrink-0" />
+                                <span>QC</span>
+                              </Link>
+                            )}
+
+                            {batch.status === 'closed' && (
+                              <button
+                                type="button"
+                                onClick={() => setActiveBatchModal({ batch, type: 'details' })}
+                                className="px-2.5 py-1 text-xs bg-surface border border-default hover:bg-surface-sunken text-default rounded-lg font-medium transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                                title="View batch details"
+                              >
+                                <Layers className="size-3 text-primary shrink-0" />
+                                <span>Details</span>
+                              </button>
+                            )}
+
+                            {/* 2. Prominent Actions Dropdown Button */}
+                            <div className="relative inline-block text-left">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (openActionMenuId === batch.id) {
+                                    setOpenActionMenuId(null);
+                                    setActionMenuAnchor(null);
+                                  } else {
+                                    setOpenActionMenuId(batch.id);
+                                    setActionMenuAnchor(e.currentTarget);
+                                  }
+                                }}
+                                className={`px-2.5 py-1 text-xs rounded-lg border font-medium transition cursor-pointer flex items-center gap-1 shadow-2xs ${
+                                  openActionMenuId === batch.id
+                                    ? 'border-primary bg-primary/10 text-primary'
+                                    : 'border-default bg-surface hover:bg-surface-sunken text-default'
+                                }`}
+                                title={`More actions for batch ${batch.batch_number}`}
+                                aria-label={`More options for batch ${batch.batch_number}`}
+                              >
+                                <span>Actions</span>
+                                <ChevronDown className="size-3 text-muted" />
+                              </button>
+
+                              {/* Dropdown Menu via Portal */}
+                              <ActionMenuPortal
+                                isOpen={openActionMenuId === batch.id}
+                                anchorEl={actionMenuAnchor}
+                                onClose={() => {
+                                  setOpenActionMenuId(null);
+                                  setActionMenuAnchor(null);
+                                }}
+                                width={208}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionMenuId(null);
+                                    setActionMenuAnchor(null);
+                                    setActiveBatchModal({ batch, type: 'details' });
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                                >
+                                  <Layers className="size-3.5 text-primary shrink-0" />
+                                  <span>Batch Details</span>
+                                </button>
+
+                                {batch.status === 'in_progress' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionMenuId(null);
+                                      setActionMenuAnchor(null);
+                                      setErrorMsg(null);
+                                      setInputDraft({
+                                        product_id: batch.product_id,
+                                        warehouse_id: warehouses[0]?.id ?? '',
+                                        planned_quantity: '50.0000',
+                                        actual_quantity: '50.0000',
+                                        unit_cost: '10.0000',
+                                      });
+                                      setActiveBatchModal({ batch, type: 'input' });
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-blue-600 dark:text-blue-400 hover:bg-surface-sunken transition-colors cursor-pointer"
+                                  >
+                                    <Box className="size-3.5 text-blue-500 shrink-0" />
+                                    <span>Issue Raw Materials</span>
+                                  </button>
+                                )}
+
+                                {batch.status === 'in_progress' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionMenuId(null);
+                                      setActionMenuAnchor(null);
+                                      completeMutation.mutate(batch.id);
+                                    }}
+                                    disabled={completeMutation.isPending}
+                                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer"
+                                  >
+                                    <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />
+                                    <span>Mark Complete</span>
+                                  </button>
+                                )}
+
+                                {batch.status === 'completed' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionMenuId(null);
+                                      setActionMenuAnchor(null);
+                                      closeMutation.mutate(batch.id);
+                                    }}
+                                    disabled={closeMutation.isPending}
+                                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-purple-600 dark:text-purple-400 hover:bg-surface-sunken transition-colors cursor-pointer"
+                                  >
+                                    <CheckSquare className="size-3.5 text-purple-500 shrink-0" />
+                                    <span>Close Batch</span>
+                                  </button>
+                                )}
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionMenuId(null);
+                                    setActionMenuAnchor(null);
+                                    analyzeMutation.mutate(batch.id);
+                                  }}
+                                  disabled={analyzeMutation.isPending}
+                                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-amber-600 dark:text-amber-400 hover:bg-surface-sunken transition-colors cursor-pointer"
+                                >
+                                  <Sparkles className="size-3.5 text-amber-500 shrink-0" />
+                                  <span>Analyze Yield</span>
+                                </button>
+
+                                <div className="px-2.5 py-1.5">
+                                  <span className="text-[10px] uppercase font-semibold text-muted block mb-1">Set Status</span>
+                                  <select
+                                    value={batch.status}
+                                    onChange={(e) => {
+                                      setOpenActionMenuId(null);
+                                      setActionMenuAnchor(null);
+                                      updateStatusMutation.mutate({ batchId: batch.id, status: e.target.value });
+                                    }}
+                                    className="w-full h-7 rounded-lg border border-default bg-surface-sunken px-2 text-[11px] font-medium text-default focus:border-primary focus:outline-none cursor-pointer"
+                                  >
+                                    <option value="draft">Draft</option>
+                                    <option value="scheduled">Scheduled</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="closed">Closed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                  </select>
+                                </div>
+
+                                <div className="my-1 border-t border-default/50" />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionMenuId(null);
+                                    setActionMenuAnchor(null);
+                                    setDeleteConfirm({
+                                      open: true,
+                                      id: batch.id,
+                                      name: batch.batch_number,
+                                    });
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                                >
+                                  <Trash2 className="size-3.5 text-rose-600 shrink-0" />
+                                  <span>Delete Batch</span>
+                                </button>
+                              </ActionMenuPortal>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </QueryBoundary>
 
@@ -1264,6 +1348,43 @@ export function ProductionBatchesSection() {
           </div>
         </Modal>
       )}
+
+      {/* Delete Batch Confirmation Modal */}
+      <Modal
+        open={deleteConfirm.open}
+        onClose={() => setDeleteConfirm({ open: false, id: '', name: '' })}
+        title="Confirm Batch Deletion"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-default">
+            Are you sure you want to delete production batch{' '}
+            <span className="font-mono font-bold text-rose-600 dark:text-rose-400">
+              {deleteConfirm.name}
+            </span>
+            ? This action cannot be undone.
+          </p>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-default">
+            <Button
+              variant="ghost"
+              onClick={() => setDeleteConfirm({ open: false, id: '', name: '' })}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                deleteMutation.mutate(deleteConfirm.id);
+                setDeleteConfirm({ open: false, id: '', name: '' });
+              }}
+              disabled={deleteMutation.isPending}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-medium"
+            >
+              {deleteMutation.isPending ? 'Deleting...' : 'Confirm Delete'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Floating Bottom Docked Action Toolbar */}
       {selectedBatchIds.size > 0 && (

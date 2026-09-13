@@ -141,8 +141,76 @@ const StorefrontPageBuilderWorkspace = lazy(() =>
   }))
 );
 
+const storefrontRouteChildren = [
+  {
+    index: true,
+    element: <StorefrontHomePage />,
+  },
+  {
+    path: 'products',
+    element: <StorefrontCatalogPage />,
+  },
+  {
+    path: 'collections/:categorySlug',
+    element: <StorefrontCatalogPage />,
+  },
+  {
+    path: 'products/:idOrSku',
+    element: <StorefrontProductDetailPage />,
+  },
+  {
+    path: 'checkout',
+    element: <StorefrontCheckoutPage />,
+  },
+  {
+    path: 'order-confirmed',
+    element: <StorefrontOrderConfirmationPage />,
+  },
+  {
+    path: 'track',
+    element: <StorefrontOrderTrackingPage />,
+  },
+  {
+    path: 'account',
+    element: <StorefrontAccountPage />,
+  },
+  {
+    path: 'pages/:slug',
+    element: <StorefrontDynamicPage />,
+  },
+];
+
+const isStorefrontCustomDomain = (() => {
+  if (typeof window === 'undefined' || !window.location) return false;
+  const rawHost = window.location.hostname;
+  if (!rawHost) return false;
+  const host = rawHost.toLowerCase().split(':')[0] ?? '';
+  if (!host || ['localhost', '127.0.0.1'].includes(host)) return false;
+  if (
+    host.startsWith('admin.') ||
+    host.startsWith('platform.') ||
+    host.startsWith('app.') ||
+    host.startsWith('erp.')
+  ) {
+    return false;
+  }
+  return true;
+})();
+
 export const router = createBrowserRouter([
-  // Public Headless Storefront Routes
+  // If accessing through a custom storefront domain (e.g. slicemart.tech), serve the storefront at root "/"
+  ...(isStorefrontCustomDomain
+    ? [
+        {
+          path: '/',
+          element: <StorefrontShell />,
+          errorElement: <RouteErrorBoundary />,
+          children: storefrontRouteChildren,
+        },
+      ]
+    : []),
+
+  // Public Headless Storefront Routes (subdomain-based)
   {
     path: '/store',
     element: <StorefrontRedirect />,
@@ -151,48 +219,7 @@ export const router = createBrowserRouter([
     path: '/store/:subdomain',
     element: <StorefrontShell />,
     errorElement: <RouteErrorBoundary />,
-    children: [
-      {
-        index: true,
-        element: <StorefrontHomePage />,
-      },
-      {
-        path: 'products',
-        element: <StorefrontCatalogPage />,
-      },
-      {
-        path: 'collections/:categorySlug',
-        element: <StorefrontCatalogPage />,
-      },
-      {
-        path: 'products/:idOrSku',
-        element: <StorefrontProductDetailPage />,
-      },
-      {
-        path: 'checkout',
-        element: <StorefrontCheckoutPage />,
-      },
-      {
-        path: 'order-confirmed',
-        element: <StorefrontOrderConfirmationPage />,
-      },
-      {
-        path: 'track',
-        element: <StorefrontOrderTrackingPage />,
-      },
-      {
-        path: 'account',
-        element: <StorefrontAccountPage />,
-      },
-      {
-        path: 'pages/:slug',
-        element: <StorefrontDynamicPage />,
-      },
-      {
-        path: '*',
-        element: <NotFoundPage />,
-      },
-    ],
+    children: storefrontRouteChildren,
   },
 
   // Master SaaS Admin Platform Routes

@@ -6,6 +6,9 @@ import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { RiderRunSheetChallanDocument } from '../../../components/print/documents/RiderRunSheetChallanDocument';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
+import { ChevronDown, Printer, CheckCircle2 } from 'lucide-react';
+import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
+import { cn } from '../../../lib/utils';
 
 interface RunSheetsSectionProps {
   runSheets: RunSheet[];
@@ -43,6 +46,8 @@ export const RunSheetsSection: React.FC<RunSheetsSectionProps> = ({
   );
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
 
   const toggleOrderSelection = (id: number) => {
     setSelectedOrderIds((prev) =>
@@ -153,14 +158,7 @@ export const RunSheetsSection: React.FC<RunSheetsSectionProps> = ({
       </div>
 
       {/* Run Sheets Table */}
-      <div
-        style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: 8,
-          border: '1px solid #E5E7EB',
-          overflow: 'hidden',
-        }}
-      >
+      <div className="overflow-x-auto min-h-75 bg-surface rounded-2xl border border-default shadow-2xs">
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr
@@ -215,44 +213,37 @@ export const RunSheetsSection: React.FC<RunSheetsSectionProps> = ({
                   </td>
                   <td style={{ padding: '12px 16px' }}>{getStatusBadge(rs.status)}</td>
                   <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                    <div className="flex items-center justify-end gap-1.5">
                       <button
+                        type="button"
                         onClick={() => setSelectedRunSheetForChallan(rs)}
+                        className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface hover:bg-surface-sunken border border-default text-default transition-colors cursor-pointer"
                         title="Preview & Print Official Delivery Challan"
-                        style={{
-                          padding: '4px 10px',
-                          borderRadius: 6,
-                          border: '1px solid #D1D5DB',
-                          backgroundColor: '#FFFFFF',
-                          color: '#1F2937',
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 4,
-                        }}
                       >
-                        <span>🖨️</span>
-                        <span>Print Challan</span>
+                        Challan
                       </button>
-                      {rs.status === 'dispatched' && (
-                        <button
-                          onClick={() => handleCompleteSheet(rs)}
-                          style={{
-                            padding: '4px 8px',
-                            borderRadius: 4,
-                            border: 'none',
-                            backgroundColor: '#10B981',
-                            color: '#FFFFFF',
-                            fontSize: '0.75rem',
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          ✓ Complete Sheet
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (openActionMenuId === rs.id) {
+                            setOpenActionMenuId(null);
+                            setActionMenuAnchor(null);
+                          } else {
+                            setOpenActionMenuId(rs.id);
+                            setActionMenuAnchor(e.currentTarget);
+                          }
+                        }}
+                        className={cn(
+                          'inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg border transition-colors cursor-pointer',
+                          openActionMenuId === rs.id
+                            ? 'bg-primary text-primary-fg border-primary shadow-xs'
+                            : 'bg-surface hover:bg-surface-sunken border-default text-default'
+                        )}
+                      >
+                        <span>Actions</span>
+                        <ChevronDown className="size-3 text-muted" />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -260,6 +251,54 @@ export const RunSheetsSection: React.FC<RunSheetsSectionProps> = ({
             )}
           </tbody>
         </table>
+
+        {/* Floating Action Menu via ActionMenuPortal */}
+        {openActionMenuId !== null && actionMenuAnchor !== null && (
+          <ActionMenuPortal
+            anchorEl={actionMenuAnchor}
+            open={true}
+            onClose={() => {
+              setOpenActionMenuId(null);
+              setActionMenuAnchor(null);
+            }}
+          >
+            {(() => {
+              const activeItem = runSheets.find((rs) => rs.id === openActionMenuId);
+              if (!activeItem) return null;
+              return (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      setSelectedRunSheetForChallan(activeItem);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-default hover:bg-surface-sunken transition-colors cursor-pointer text-left"
+                  >
+                    <Printer className="size-3.5 text-primary" />
+                    <span>Print Delivery Challan</span>
+                  </button>
+
+                  {activeItem.status === 'dispatched' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        setActionMenuAnchor(null);
+                        handleCompleteSheet(activeItem);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-emerald-600 hover:bg-emerald-500/10 transition-colors cursor-pointer text-left"
+                    >
+                      <CheckCircle2 className="size-3.5 text-emerald-600" />
+                      <span>Complete Run Sheet</span>
+                    </button>
+                  )}
+                </>
+              );
+            })()}
+          </ActionMenuPortal>
+        )}
       </div>
 
       {/* Create Run Sheet Modal */}

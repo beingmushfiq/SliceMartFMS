@@ -39,6 +39,8 @@ export interface Asset {
   status: AssetStatus;
   location?: string | undefined;
   serial_number?: string | undefined;
+  model?: string | undefined;
+  manufacturer?: string | undefined;
   warranty_expiry_date?: string | undefined;
   created_at?: string | undefined;
 }

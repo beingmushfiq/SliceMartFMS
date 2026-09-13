@@ -12,7 +12,6 @@ import {
   Compass,
   ArrowRight,
   Zap,
-  Sparkles,
 } from 'lucide-react';
 import { PurchaseOrdersSection } from './sections/PurchaseOrdersSection';
 import { GoodsReceiptsSection } from './sections/GoodsReceiptsSection';
@@ -127,6 +126,7 @@ const tabs: TabConfig[] = [
     category: 'returns',
     label: 'Damaged Returns to Supplier',
     shortLabel: 'Returns',
+    step: 5,
     badge: 'Debit Notes',
     icon: Undo2,
     description: 'Return damaged or non-conforming items to supplier with debit note generation',
@@ -174,11 +174,17 @@ export default function PurchasingWorkspace() {
 
       if (e.key === '1') {
         e.preventDefault();
-        setActiveTab('orders');
+        setActiveTab('requisitions');
       } else if (e.key === '2') {
         e.preventDefault();
-        setActiveTab('receipts');
+        setActiveTab('orders');
       } else if (e.key === '3') {
+        e.preventDefault();
+        setActiveTab('receipts');
+      } else if (e.key === '4') {
+        e.preventDefault();
+        setActiveTab('bills');
+      } else if (e.key === '5') {
         e.preventDefault();
         setActiveTab('returns');
       }
@@ -219,7 +225,9 @@ export default function PurchasingWorkspace() {
               Procurement & Vendor Operations
             </span>
             <span className="text-muted/50 text-xs">/</span>
-            <span className="text-[11px] font-semibold text-default">{currentTab.label}</span>
+            <span className="text-[11px] font-semibold text-default">
+              Stage {currentTab.step} of 5: {currentTab.label}
+            </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-default flex items-center gap-3">
             <span>{currentTab.label}</span>
@@ -392,69 +400,60 @@ export default function PurchasingWorkspace() {
         </button>
       </div>
 
-      {/* Non-Technical Workflow Guide: Recommended Procurement Order */}
-      <div className="bg-surface rounded-2xl border border-default p-3 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <div className="size-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-            <Sparkles className="size-4 text-primary" />
-          </div>
-          <div>
-            <div className="text-xs font-bold text-default flex items-center gap-1.5">
-              <span>Standard Purchasing Flow</span>
-              <span className="text-[10px] text-muted font-normal">(4-step cycle from internal request to vendor billing)</span>
+      {/* 5-Stage Procurement Pipeline Execution Ribbon */}
+      <div className="bg-surface rounded-2xl border border-default p-4 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2">
+            <div className="size-6 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary text-xs font-bold">
+              5
             </div>
-            <p className="text-[11px] text-muted">Click any step to jump straight to that operational screen:</p>
+            <div>
+              <span className="text-xs font-bold text-default">Procure-to-Pay Pipeline</span>
+              <span className="text-[11px] text-muted ml-2 hidden sm:inline">
+                Sequential operational cycle from internal requisition to vendor debit note
+              </span>
+            </div>
           </div>
+          <span className="text-[11px] font-mono font-medium text-muted">
+            Stage {currentTab.step} of 5 • Press 1-5 to switch
+          </span>
         </div>
 
-        <div className="flex items-center gap-1.5 flex-wrap w-full md:w-auto">
-          <button
-            type="button"
-            onClick={() => setActiveTab('requisitions')}
-            className={cn(
-              'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1',
-              activeTab === 'requisitions' ? 'bg-primary text-primary-fg' : 'bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default'
-            )}
-          >
-            <span className="size-4 rounded-full bg-black/20 flex items-center justify-center text-[10px]">1</span>
-            <span>Requests</span>
-          </button>
-          <ArrowRight className="size-3 text-muted/50 hidden sm:inline" />
-          <button
-            type="button"
-            onClick={() => setActiveTab('orders')}
-            className={cn(
-              'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1',
-              activeTab === 'orders' ? 'bg-primary text-primary-fg' : 'bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default'
-            )}
-          >
-            <span className="size-4 rounded-full bg-black/20 flex items-center justify-center text-[10px]">2</span>
-            <span>Purchase Orders</span>
-          </button>
-          <ArrowRight className="size-3 text-muted/50 hidden sm:inline" />
-          <button
-            type="button"
-            onClick={() => setActiveTab('receipts')}
-            className={cn(
-              'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1',
-              activeTab === 'receipts' ? 'bg-primary text-primary-fg' : 'bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default'
-            )}
-          >
-            <span className="size-4 rounded-full bg-black/20 flex items-center justify-center text-[10px]">3</span>
-            <span>Receive Goods</span>
-          </button>
-          <ArrowRight className="size-3 text-muted/50 hidden sm:inline" />
-          <button
-            type="button"
-            onClick={() => setActiveTab('bills')}
-            className={cn(
-              'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1',
-              activeTab === 'bills' ? 'bg-primary text-primary-fg' : 'bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default'
-            )}
-          >
-            <span className="size-4 rounded-full bg-black/20 flex items-center justify-center text-[10px]">4</span>
-            <span>Supplier Bills</span>
-          </button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+          {tabs.map((tab) => {
+            const isTabActive = activeTab === tab.id;
+            const TabIcon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'group relative flex items-center gap-2.5 p-2.5 rounded-xl border text-left transition-all cursor-pointer min-w-0',
+                  isTabActive
+                    ? 'bg-primary/10 border-primary text-primary shadow-xs ring-1 ring-primary/20'
+                    : 'bg-surface-sunken hover:bg-surface border-default text-muted hover:text-default'
+                )}
+              >
+                <div
+                  className={cn(
+                    'size-6 rounded-full flex items-center justify-center text-[10px] font-bold font-mono shrink-0 transition-colors',
+                    isTabActive
+                      ? 'bg-primary text-primary-fg'
+                      : 'bg-surface border border-default text-muted group-hover:text-default'
+                  )}
+                >
+                  {tab.step}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-semibold truncate flex items-center gap-1.5">
+                    <TabIcon className="size-3.5 shrink-0 opacity-70" />
+                    <span className="truncate">{tab.shortLabel}</span>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -559,7 +558,7 @@ export default function PurchasingWorkspace() {
                     >
                       {subTab.step && (
                         <span className={cn('text-[9px] font-mono font-bold', isCurrent ? 'text-primary-fg' : 'text-primary')}>
-                          #{subTab.step}
+                          Stage {subTab.step}
                         </span>
                       )}
                       <SubIcon className={cn('size-3', isCurrent ? 'text-primary-fg' : 'text-muted')} />

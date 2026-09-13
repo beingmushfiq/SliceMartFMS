@@ -19,12 +19,14 @@ import {
   CheckSquare,
   X,
   Upload,
+  ChevronDown,
 } from 'lucide-react';
 import type { StockMovement, StockBalance } from '../../../types/api/inventory';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
+import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
 import { cn } from '../../../lib/utils';
 import { UniversalImportModal } from '../../../components/import/UniversalImportModal';
 import { openingStockImportSchema } from '../schemas/openingStockImportSchema';
@@ -53,6 +55,9 @@ export function StockLedgerSection() {
     reason: 'CYCLE_COUNT_VARIANCE',
     notes: '',
   });
+
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
 
   const {
     data: balances = [],
@@ -440,7 +445,7 @@ export function StockLedgerSection() {
       {/* Modern Data Grid Container */}
       <div className="rounded-2xl border border-default bg-surface shadow-xs overflow-hidden">
         {viewMode === 'balances' ? (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto min-h-75">
             <table className="w-full text-left text-xs text-default">
               <thead className="bg-surface-sunken/70 text-[11px] font-semibold text-muted uppercase tracking-wider border-b border-default">
                 <tr>
@@ -461,7 +466,7 @@ export function StockLedgerSection() {
                   <th className="px-4 py-3.5 text-right">Available Qty</th>
                   <th className="px-4 py-3.5 text-right">Avg Unit Cost</th>
                   <th className="px-4 py-3.5 text-right">Total Value</th>
-                  <th className="px-4 py-3.5 text-right">Actionable Freedom</th>
+                  <th className="px-4 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-default">
@@ -525,43 +530,34 @@ export function StockLedgerSection() {
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => setViewingBalance(b)}
-                            className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface-sunken hover:bg-surface border border-default text-default transition-colors cursor-pointer"
                             title="Inspect Lot Details"
                           >
-                            <Eye className="size-3.5" />
+                            <Eye className="size-3.5 text-muted" />
+                            <span>Details</span>
                           </button>
 
                           <button
-                            onClick={() => {
-                              setQuickTransferItem(b);
-                              setQuickTransferData({
-                                targetWarehouse: 'Cooker Assembly Line 1 Floor Buffer',
-                                quantity: String(b.quantity),
-                                notes: '',
-                              });
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (openActionMenuId === b.id) {
+                                setOpenActionMenuId(null);
+                                setActionMenuAnchor(null);
+                              } else {
+                                setOpenActionMenuId(b.id);
+                                setActionMenuAnchor(e.currentTarget);
+                              }
                             }}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 transition-colors cursor-pointer"
-                            title="Quick Transfer"
+                            className={cn(
+                              'inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg border transition-colors cursor-pointer',
+                              openActionMenuId === b.id
+                                ? 'bg-primary text-primary-fg border-primary shadow-xs'
+                                : 'bg-surface hover:bg-surface-sunken border-default text-default'
+                            )}
                           >
-                            <ArrowRightLeft className="size-3" />
-                            <span>Transfer</span>
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setQuickAdjustItem(b);
-                              setQuickAdjustData({
-                                direction: 'out',
-                                quantity: '1',
-                                reason: 'CYCLE_COUNT_VARIANCE',
-                                notes: '',
-                              });
-                            }}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 border border-purple-500/20 transition-colors cursor-pointer"
-                            title="Quick Adjust"
-                          >
-                            <Scale className="size-3" />
-                            <span>Adjust</span>
+                            <span>Actions</span>
+                            <ChevronDown className="size-3 text-muted" />
                           </button>
                         </div>
                       </td>
@@ -570,9 +566,76 @@ export function StockLedgerSection() {
                 )}
               </tbody>
             </table>
+
+            {openActionMenuId && (() => {
+              const b = filteredBalances.find((item) => item.id === openActionMenuId);
+              if (!b) return null;
+              return (
+                <ActionMenuPortal
+                  isOpen={Boolean(openActionMenuId && actionMenuAnchor)}
+                  anchorEl={actionMenuAnchor}
+                  onClose={() => {
+                    setOpenActionMenuId(null);
+                    setActionMenuAnchor(null);
+                  }}
+                  width="13rem"
+                >
+                  <div className="px-3 py-2 border-b border-default text-2xs text-muted font-mono truncate">
+                    {b.product_name}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      setQuickTransferItem(b);
+                      setQuickTransferData({
+                        targetWarehouse: 'Cooker Assembly Line 1 Floor Buffer',
+                        quantity: String(b.quantity),
+                        notes: '',
+                      });
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                  >
+                    <ArrowRightLeft className="size-3.5 text-primary" />
+                    <span>Transfer Stock</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      setQuickAdjustItem(b);
+                      setQuickAdjustData({
+                        direction: 'out',
+                        quantity: '1',
+                        reason: 'CYCLE_COUNT_VARIANCE',
+                        notes: '',
+                      });
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                  >
+                    <Scale className="size-3.5 text-purple-500" />
+                    <span>Adjust Stock</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      setViewingBalance(b);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+                  >
+                    <Eye className="size-3.5 text-muted" />
+                    <span>Inspect Lot Details</span>
+                  </button>
+                </ActionMenuPortal>
+              );
+            })()}
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto min-h-75">
             <table className="w-full text-left text-xs text-default">
               <thead className="bg-surface-sunken/70 text-[11px] font-semibold text-muted uppercase tracking-wider border-b border-default">
                 <tr>

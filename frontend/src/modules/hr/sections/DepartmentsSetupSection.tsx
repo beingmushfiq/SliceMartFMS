@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   Upload,
   Download,
+  ChevronDown,
 } from 'lucide-react';
 import type { Department, Designation, Shift } from '../../../types/api/hr';
 import { Modal } from '../../../components/ui/Modal';
@@ -19,6 +20,7 @@ import { UniversalImportModal } from '../../../components/import/UniversalImport
 import { departmentImportSchema } from '../schemas/departmentImportSchema';
 import { designationImportSchema } from '../schemas/designationImportSchema';
 import { shiftImportSchema } from '../schemas/shiftImportSchema';
+import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
 
 interface Props {
   departments: Department[];
@@ -60,6 +62,10 @@ export function DepartmentsSetupSection({
     isBulk?: boolean;
     name: string;
   } | null>(null);
+
+  // Action Menu State
+  const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
 
   // Modals state
   const [showAddDeptModal, setShowAddDeptModal] = useState(false);
@@ -110,9 +116,9 @@ export function DepartmentsSetupSection({
   };
 
   const handleExportCsv = () => {
-    let headers: string[] = [];
-    let rows: (string | number)[][] = [];
-    let filename = '';
+    let headers: string[];
+    let rows: (string | number)[][];
+    let filename: string;
 
     if (activeSubTab === 'departments') {
       headers = ['Code', 'Name', 'Cost Center Code', 'Is Active'];
@@ -595,7 +601,7 @@ export function DepartmentsSetupSection({
 
       {/* Departments Table */}
       {activeSubTab === 'departments' && (
-        <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
+        <div className="overflow-x-auto min-h-75 rounded-2xl border border-default bg-surface shadow-2xs">
           <table className="w-full text-left text-xs text-default">
             <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
@@ -641,28 +647,36 @@ export function DepartmentsSetupSection({
                         {dep.is_active ? 'ACTIVE' : 'INACTIVE'}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 text-right">
+                    <td className="px-4 py-3.5 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           type="button"
                           onClick={() => handleToggleDeptStatus(dep.id)}
-                          className="px-2.5 py-1 text-2xs font-semibold rounded-lg border border-default hover:bg-surface-sunken text-muted hover:text-default transition cursor-pointer"
+                          className="px-2.5 py-1 text-2xs font-semibold rounded-lg border border-default hover:bg-surface-sunken text-muted hover:text-default transition cursor-pointer shadow-2xs"
                         >
                           {dep.is_active ? 'Deactivate' : 'Activate'}
                         </button>
                         <button
                           type="button"
-                          onClick={() =>
-                            setDeleteConfirm({
-                              type: 'departments',
-                              id: dep.id,
-                              name: dep.name,
-                            })
-                          }
-                          className="p-1 text-danger hover:bg-danger/10 rounded-lg transition cursor-pointer"
-                          title="Delete Department"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (openActionMenuId === `dept_${dep.id}`) {
+                              setOpenActionMenuId(null);
+                              setActionMenuAnchor(null);
+                            } else {
+                              setOpenActionMenuId(`dept_${dep.id}`);
+                              setActionMenuAnchor(e.currentTarget);
+                            }
+                          }}
+                          className={`px-2.5 py-1 text-2xs rounded-lg border font-medium transition cursor-pointer flex items-center gap-1 shadow-2xs ${
+                            openActionMenuId === `dept_${dep.id}`
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-default bg-surface hover:bg-surface-sunken text-default'
+                          }`}
+                          title={`Actions for ${dep.name}`}
                         >
-                          <Trash2 className="size-3.5" />
+                          <span>Actions</span>
+                          <ChevronDown className="size-3 text-muted" />
                         </button>
                       </div>
                     </td>
@@ -671,12 +685,59 @@ export function DepartmentsSetupSection({
               })}
             </tbody>
           </table>
+
+          {actionMenuAnchor && openActionMenuId?.startsWith('dept_') && (() => {
+            const depId = parseInt(openActionMenuId.replace('dept_', ''), 10);
+            const dep = deptList.find((d) => d.id === depId);
+            if (!dep) return null;
+            return (
+              <ActionMenuPortal
+                isOpen={true}
+                anchorEl={actionMenuAnchor}
+                onClose={() => {
+                  setOpenActionMenuId(null);
+                  setActionMenuAnchor(null);
+                }}
+                className="w-48"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenActionMenuId(null);
+                    setActionMenuAnchor(null);
+                    handleToggleDeptStatus(dep.id);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                >
+                  <Briefcase className="size-3.5 text-primary shrink-0" />
+                  <span>{dep.is_active ? 'Deactivate Department' : 'Activate Department'}</span>
+                </button>
+                <div className="my-1 border-t border-default/50" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenActionMenuId(null);
+                    setActionMenuAnchor(null);
+                    setDeleteConfirm({
+                      type: 'departments',
+                      id: dep.id,
+                      name: dep.name,
+                    });
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="size-3.5 text-rose-600 shrink-0" />
+                  <span>Delete Department</span>
+                </button>
+              </ActionMenuPortal>
+            );
+          })()}
         </div>
       )}
 
       {/* Designations Table */}
       {activeSubTab === 'designations' && (
-        <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
+        <div className="overflow-x-auto min-h-75 rounded-2xl border border-default bg-surface shadow-2xs">
           <table className="w-full text-left text-xs text-default">
             <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
@@ -722,28 +783,36 @@ export function DepartmentsSetupSection({
                         {des.is_active ? 'ACTIVE' : 'INACTIVE'}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 text-right">
+                    <td className="px-4 py-3.5 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           type="button"
                           onClick={() => handleToggleDesStatus(des.id)}
-                          className="px-2.5 py-1 text-2xs font-semibold rounded-lg border border-default hover:bg-surface-sunken text-muted hover:text-default transition cursor-pointer"
+                          className="px-2.5 py-1 text-2xs font-semibold rounded-lg border border-default hover:bg-surface-sunken text-muted hover:text-default transition cursor-pointer shadow-2xs"
                         >
                           {des.is_active ? 'Deactivate' : 'Activate'}
                         </button>
                         <button
                           type="button"
-                          onClick={() =>
-                            setDeleteConfirm({
-                              type: 'designations',
-                              id: des.id,
-                              name: des.name,
-                            })
-                          }
-                          className="p-1 text-danger hover:bg-danger/10 rounded-lg transition cursor-pointer"
-                          title="Delete Designation"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (openActionMenuId === `des_${des.id}`) {
+                              setOpenActionMenuId(null);
+                              setActionMenuAnchor(null);
+                            } else {
+                              setOpenActionMenuId(`des_${des.id}`);
+                              setActionMenuAnchor(e.currentTarget);
+                            }
+                          }}
+                          className={`px-2.5 py-1 text-2xs rounded-lg border font-medium transition cursor-pointer flex items-center gap-1 shadow-2xs ${
+                            openActionMenuId === `des_${des.id}`
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-default bg-surface hover:bg-surface-sunken text-default'
+                          }`}
+                          title={`Actions for ${des.name}`}
                         >
-                          <Trash2 className="size-3.5" />
+                          <span>Actions</span>
+                          <ChevronDown className="size-3 text-muted" />
                         </button>
                       </div>
                     </td>
@@ -752,12 +821,59 @@ export function DepartmentsSetupSection({
               })}
             </tbody>
           </table>
+
+          {actionMenuAnchor && openActionMenuId?.startsWith('des_') && (() => {
+            const desId = parseInt(openActionMenuId.replace('des_', ''), 10);
+            const des = desList.find((d) => d.id === desId);
+            if (!des) return null;
+            return (
+              <ActionMenuPortal
+                isOpen={true}
+                anchorEl={actionMenuAnchor}
+                onClose={() => {
+                  setOpenActionMenuId(null);
+                  setActionMenuAnchor(null);
+                }}
+                className="w-48"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenActionMenuId(null);
+                    setActionMenuAnchor(null);
+                    handleToggleDesStatus(des.id);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                >
+                  <Briefcase className="size-3.5 text-primary shrink-0" />
+                  <span>{des.is_active ? 'Deactivate Title' : 'Activate Title'}</span>
+                </button>
+                <div className="my-1 border-t border-default/50" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenActionMenuId(null);
+                    setActionMenuAnchor(null);
+                    setDeleteConfirm({
+                      type: 'designations',
+                      id: des.id,
+                      name: des.name,
+                    });
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="size-3.5 text-rose-600 shrink-0" />
+                  <span>Delete Designation</span>
+                </button>
+              </ActionMenuPortal>
+            );
+          })()}
         </div>
       )}
 
       {/* Shifts Table */}
       {activeSubTab === 'shifts' && (
-        <div className="overflow-hidden rounded-2xl border border-default bg-surface shadow-2xs">
+        <div className="overflow-x-auto min-h-75 rounded-2xl border border-default bg-surface shadow-2xs">
           <table className="w-full text-left text-xs text-default">
             <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
@@ -810,28 +926,36 @@ export function DepartmentsSetupSection({
                         {sh.is_active ? 'ACTIVE' : 'INACTIVE'}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 text-right">
+                    <td className="px-4 py-3.5 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           type="button"
                           onClick={() => handleToggleShiftStatus(sh.id)}
-                          className="px-2.5 py-1 text-2xs font-semibold rounded-lg border border-default hover:bg-surface-sunken text-muted hover:text-default transition cursor-pointer"
+                          className="px-2.5 py-1 text-2xs font-semibold rounded-lg border border-default hover:bg-surface-sunken text-muted hover:text-default transition cursor-pointer shadow-2xs"
                         >
                           {sh.is_active ? 'Deactivate' : 'Activate'}
                         </button>
                         <button
                           type="button"
-                          onClick={() =>
-                            setDeleteConfirm({
-                              type: 'shifts',
-                              id: sh.id,
-                              name: sh.name,
-                            })
-                          }
-                          className="p-1 text-danger hover:bg-danger/10 rounded-lg transition cursor-pointer"
-                          title="Delete Shift"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (openActionMenuId === `shift_${sh.id}`) {
+                              setOpenActionMenuId(null);
+                              setActionMenuAnchor(null);
+                            } else {
+                              setOpenActionMenuId(`shift_${sh.id}`);
+                              setActionMenuAnchor(e.currentTarget);
+                            }
+                          }}
+                          className={`px-2.5 py-1 text-2xs rounded-lg border font-medium transition cursor-pointer flex items-center gap-1 shadow-2xs ${
+                            openActionMenuId === `shift_${sh.id}`
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-default bg-surface hover:bg-surface-sunken text-default'
+                          }`}
+                          title={`Actions for ${sh.name}`}
                         >
-                          <Trash2 className="size-3.5" />
+                          <span>Actions</span>
+                          <ChevronDown className="size-3 text-muted" />
                         </button>
                       </div>
                     </td>
@@ -840,6 +964,53 @@ export function DepartmentsSetupSection({
               })}
             </tbody>
           </table>
+
+          {actionMenuAnchor && openActionMenuId?.startsWith('shift_') && (() => {
+            const shId = parseInt(openActionMenuId.replace('shift_', ''), 10);
+            const sh = shiftList.find((s) => s.id === shId);
+            if (!sh) return null;
+            return (
+              <ActionMenuPortal
+                isOpen={true}
+                anchorEl={actionMenuAnchor}
+                onClose={() => {
+                  setOpenActionMenuId(null);
+                  setActionMenuAnchor(null);
+                }}
+                className="w-48"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenActionMenuId(null);
+                    setActionMenuAnchor(null);
+                    handleToggleShiftStatus(sh.id);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                >
+                  <Clock className="size-3.5 text-primary shrink-0" />
+                  <span>{sh.is_active ? 'Deactivate Shift' : 'Activate Shift'}</span>
+                </button>
+                <div className="my-1 border-t border-default/50" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenActionMenuId(null);
+                    setActionMenuAnchor(null);
+                    setDeleteConfirm({
+                      type: 'shifts',
+                      id: sh.id,
+                      name: sh.name,
+                    });
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="size-3.5 text-rose-600 shrink-0" />
+                  <span>Delete Shift</span>
+                </button>
+              </ActionMenuPortal>
+            );
+          })()}
         </div>
       )}
 

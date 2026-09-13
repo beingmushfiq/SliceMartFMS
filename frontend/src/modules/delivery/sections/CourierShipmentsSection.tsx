@@ -3,6 +3,9 @@ import type { CourierShipment, CourierProvider } from '../../../types/api/delive
 import type { DeliveryOrder } from '../../../types/api/sales';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
+import { ChevronDown, RefreshCw, Printer, XCircle } from 'lucide-react';
+import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
+import { cn } from '../../../lib/utils';
 
 interface CourierShipmentsSectionProps {
   shipments: CourierShipment[];
@@ -32,6 +35,8 @@ export const CourierShipmentsSection: React.FC<CourierShipmentsSectionProps> = (
   const [selectedProviderId, setSelectedProviderId] = useState<number>(0);
   const [bookNotes, setBookNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
 
   const filteredShipments = shipments.filter((s) => {
     const matchesStatus = selectedStatus === 'all' || s.status === selectedStatus;
@@ -183,14 +188,7 @@ export const CourierShipmentsSection: React.FC<CourierShipmentsSectionProps> = (
       </div>
 
       {/* Shipments Table */}
-      <div
-        style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: 8,
-          border: '1px solid #E5E7EB',
-          overflow: 'hidden',
-        }}
-      >
+      <div className="overflow-x-auto min-h-75 bg-surface rounded-2xl border border-default shadow-2xs">
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr
@@ -253,57 +251,37 @@ export const CourierShipmentsSection: React.FC<CourierShipmentsSectionProps> = (
                       : 'Never'}
                   </td>
                   <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                    <div className="flex items-center justify-end gap-1.5">
                       <button
-                        onClick={() => onTrackShipment(s.id)}
-                        title="Sync live status from courier"
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: 4,
-                          border: '1px solid #D1D5DB',
-                          backgroundColor: '#FFFFFF',
-                          color: '#374151',
-                          fontSize: '0.75rem',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        🔄 Sync
-                      </button>
-                      <button
+                        type="button"
                         onClick={() => onOpenLabel(s)}
+                        className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface hover:bg-surface-sunken border border-default text-default transition-colors cursor-pointer"
                         title="Print Courier Shipping Label"
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: 4,
-                          border: '1px solid #D1D5DB',
-                          backgroundColor: '#FFFFFF',
-                          color: '#374151',
-                          fontSize: '0.75rem',
-                          cursor: 'pointer',
-                        }}
                       >
-                        🏷️ Label
+                        Label
                       </button>
-                      {s.status !== 'delivered' && s.status !== 'cancelled' && (
-                        <button
-                          onClick={() => {
-                            const reason = prompt('Cancellation reason:');
-                            if (reason) onCancelShipment(s.id, reason);
-                          }}
-                          title="Cancel shipment with courier"
-                          style={{
-                            padding: '4px 8px',
-                            borderRadius: 4,
-                            border: '1px solid #FCA5A5',
-                            backgroundColor: '#FEF2F2',
-                            color: '#DC2626',
-                            fontSize: '0.75rem',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          ✕ Cancel
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (openActionMenuId === s.id) {
+                            setOpenActionMenuId(null);
+                            setActionMenuAnchor(null);
+                          } else {
+                            setOpenActionMenuId(s.id);
+                            setActionMenuAnchor(e.currentTarget);
+                          }
+                        }}
+                        className={cn(
+                          'inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg border transition-colors cursor-pointer',
+                          openActionMenuId === s.id
+                            ? 'bg-primary text-primary-fg border-primary shadow-xs'
+                            : 'bg-surface hover:bg-surface-sunken border-default text-default'
+                        )}
+                      >
+                        <span>Actions</span>
+                        <ChevronDown className="size-3 text-muted" />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -311,6 +289,68 @@ export const CourierShipmentsSection: React.FC<CourierShipmentsSectionProps> = (
             )}
           </tbody>
         </table>
+
+        {/* Floating Action Menu via ActionMenuPortal */}
+        {openActionMenuId !== null && actionMenuAnchor !== null && (
+          <ActionMenuPortal
+            anchorEl={actionMenuAnchor}
+            open={true}
+            onClose={() => {
+              setOpenActionMenuId(null);
+              setActionMenuAnchor(null);
+            }}
+          >
+            {(() => {
+              const activeItem = shipments.find((s) => s.id === openActionMenuId);
+              if (!activeItem) return null;
+              return (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      onTrackShipment(activeItem.id);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-default hover:bg-surface-sunken transition-colors cursor-pointer text-left"
+                  >
+                    <RefreshCw className="size-3.5 text-primary" />
+                    <span>Sync Live Status</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      onOpenLabel(activeItem);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-default hover:bg-surface-sunken transition-colors cursor-pointer text-left"
+                  >
+                    <Printer className="size-3.5 text-emerald-600" />
+                    <span>Print Shipping Label</span>
+                  </button>
+
+                  {activeItem.status !== 'delivered' && activeItem.status !== 'cancelled' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        setActionMenuAnchor(null);
+                        const reason = prompt('Cancellation reason:');
+                        if (reason) onCancelShipment(activeItem.id, reason);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger-subtle transition-colors cursor-pointer text-left border-t border-default/40"
+                    >
+                      <XCircle className="size-3.5 text-danger" />
+                      <span>Cancel Shipment</span>
+                    </button>
+                  )}
+                </>
+              );
+            })()}
+          </ActionMenuPortal>
+        )}
       </div>
 
       {/* Book Shipment Modal */}

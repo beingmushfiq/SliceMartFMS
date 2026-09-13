@@ -13,7 +13,6 @@ import {
   Receipt,
   Truck,
   XCircle,
-  Eye,
   Edit2,
   Trash2,
   FileSpreadsheet,
@@ -28,6 +27,7 @@ import {
   MinusSquare,
   X,
   Download,
+  ChevronDown,
 } from 'lucide-react';
 import type { PurchaseOrder } from '../../../types/api/purchasing';
 import { api } from '../../../lib/api/client';
@@ -38,6 +38,7 @@ import { EmptyState, SkeletonLine } from '../../../components/ui/Feedback';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
 import { useCurrency } from '../../../hooks/useCurrency';
+import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
 import { cn } from '../../../lib/utils';
 
 interface PoFormItem {
@@ -198,7 +199,7 @@ export function PurchaseOrdersSection({ onReceivePo, onCreateBill }: PurchaseOrd
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [, setActionLoading] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Modals
@@ -208,6 +209,8 @@ export function PurchaseOrdersSection({ onReceivePo, onCreateBill }: PurchaseOrd
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [activeOrder, setActiveOrder] = useState<PurchaseOrder | null>(null);
   const [printOrder, setPrintOrder] = useState<PurchaseOrder | null>(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
   const { config: businessConfig } = useBusinessConfig();
 
   // Multi-Record Selection State
@@ -900,7 +903,7 @@ export function PurchaseOrdersSection({ onReceivePo, onCreateBill }: PurchaseOrd
 
       {/* Orders Table */}
       <div className="rounded-2xl border border-default bg-surface shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-75">
           <table className="w-full text-left text-xs text-default">
             <thead className="bg-surface-sunken text-[11px] font-semibold text-muted uppercase tracking-wider border-b border-default">
               <tr>
@@ -996,139 +999,38 @@ export function PurchaseOrdersSection({ onReceivePo, onCreateBill }: PurchaseOrd
                     <td className="px-4 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
+                          type="button"
                           onClick={() => {
                             setActiveOrder(o);
                             setShowViewModal(true);
                           }}
-                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                          title="View PO Details"
+                          className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface hover:bg-surface-sunken border border-default text-default transition-colors cursor-pointer"
                         >
-                          <Eye className="size-3.5" />
+                          View
                         </button>
 
                         <button
                           type="button"
-                          onClick={() => {
-                            setFormData({
-                              po_number: '',
-                              supplier_name: o.supplier_name || '',
-                              warehouse_name: o.warehouse_name || '',
-                              order_date: new Date().toISOString().slice(0, 10),
-                              expected_delivery_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
-                              currency_code: o.currency_code || currencyCode,
-                              terms_and_conditions: o.terms_and_conditions || 'Net 30 Days upon inspection pass.',
-                              notes: `Repeat of PO #${o.po_number}${o.notes ? ' - ' + o.notes : ''}`,
-                              order_discount_type: 'flat',
-                              order_discount_value: o.discount_amount || '0.00',
-                              items: o.items?.map((it) => ({
-                                product_name: it.product_name || '',
-                                product_sku: it.product_sku || '',
-                                quantity: it.quantity,
-                                unit_code: it.unit_code || 'PCS',
-                                unit_price: it.unit_price,
-                                discount_type: 'flat' as const,
-                                discount_amount: it.discount_amount || '0.00',
-                                tax_rate: it.tax_rate || '0.00',
-                              })) || [],
-                            });
-                            setShowCreateModal(true);
-                            toast.info(`Duplicating PO #${o.po_number}. Review line items and submit.`);
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (openActionMenuId === o.id) {
+                              setOpenActionMenuId(null);
+                              setActionMenuAnchor(null);
+                            } else {
+                              setOpenActionMenuId(o.id);
+                              setActionMenuAnchor(e.currentTarget);
+                            }
                           }}
-                          className="p-1.5 text-muted hover:text-amber-600 dark:hover:text-amber-400 hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                          title="Duplicate / Reorder PO"
+                          className={cn(
+                            'inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg border transition-colors cursor-pointer',
+                            openActionMenuId === o.id
+                              ? 'bg-primary text-primary-fg border-primary shadow-xs'
+                              : 'bg-surface hover:bg-surface-sunken border-default text-default'
+                          )}
                         >
-                          <Copy className="size-3.5" />
+                          <span>Actions</span>
+                          <ChevronDown className="size-3 text-muted" />
                         </button>
-
-                        {o.status === 'draft' && (
-                          <>
-                            <button
-                              onClick={() => {
-                                setActiveOrder(o);
-                                setFormData({
-                                  po_number: o.po_number,
-                                  supplier_name: o.supplier_name || '',
-                                  warehouse_name: o.warehouse_name || '',
-                                  order_date: o.order_date,
-                                  expected_delivery_date: o.expected_delivery_date || '',
-                                  currency_code: o.currency_code,
-                                  terms_and_conditions: o.terms_and_conditions || '',
-                                  notes: o.notes || '',
-                                  order_discount_type: 'flat',
-                                  order_discount_value: o.discount_amount || '0.00',
-                                  items: o.items?.map((it) => ({
-                                    product_name: it.product_name || '',
-                                    product_sku: it.product_sku || '',
-                                    quantity: it.quantity,
-                                    unit_code: it.unit_code || 'KG',
-                                    unit_price: it.unit_price,
-                                    discount_type: 'flat' as const,
-                                    discount_amount: it.discount_amount || '0.00',
-                                    tax_rate: it.tax_rate,
-                                  })) || [],
-                                });
-                                setShowEditModal(true);
-                              }}
-                              className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                              title="Edit PO"
-                            >
-                              <Edit2 className="size-3.5" />
-                            </button>
-
-                            <button
-                              onClick={() => handleApprove(o.id)}
-                              disabled={actionLoading === o.id}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors cursor-pointer"
-                            >
-                              <ShieldCheck className="size-3" />
-                              {actionLoading === o.id ? 'Approving...' : 'Approve'}
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                setActiveOrder(o);
-                                setShowDeleteModal(true);
-                              }}
-                              className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                              title="Cancel PO"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
-                          </>
-                        )}
-
-                        {(o.status === 'approved' || o.status === 'partially_received') && (
-                          <button
-                            type="button"
-                            onClick={() => onReceivePo?.(o)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs transition cursor-pointer"
-                            title="Receive Inward Goods at Warehouse Gate (Fast GRN)"
-                          >
-                            <PackageCheck className="size-3" />
-                            <span>Receive Goods</span>
-                          </button>
-                        )}
-
-                        {(o.status === 'received' || o.status === 'partially_received') && (
-                          <button
-                            type="button"
-                            onClick={() => onCreateBill?.(o)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xs transition cursor-pointer"
-                            title="Enter Supplier Bill in Accounts Payable"
-                          >
-                            <Receipt className="size-3" />
-                            <span>Create Bill</span>
-                          </button>
-                        )}
-
-                        <Link
-                          to={`/finance?tab=expenses&supplier=${encodeURIComponent(o.supplier_name || '')}&amount=${o.grand_total}`}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold bg-surface-sunken hover:bg-surface text-default border border-default transition cursor-pointer"
-                          title="Pay Supplier from Cash & Bank in Finance"
-                        >
-                          <DollarSign className="size-3 text-emerald-500" />
-                          <span>Pay</span>
-                        </Link>
                       </div>
                     </td>
                   </tr>
@@ -1136,6 +1038,187 @@ export function PurchaseOrdersSection({ onReceivePo, onCreateBill }: PurchaseOrd
               )}
             </tbody>
           </table>
+
+          {openActionMenuId && (() => {
+            const order = filteredOrders.find((x) => x.id === openActionMenuId);
+            if (!order) return null;
+            return (
+              <ActionMenuPortal
+                isOpen={Boolean(openActionMenuId && actionMenuAnchor)}
+                anchorEl={actionMenuAnchor}
+                onClose={() => {
+                  setOpenActionMenuId(null);
+                  setActionMenuAnchor(null);
+                }}
+                width="14rem"
+              >
+                <div className="p-1 space-y-0.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      setFormData({
+                        po_number: '',
+                        supplier_name: order.supplier_name || '',
+                        warehouse_name: order.warehouse_name || '',
+                        order_date: new Date().toISOString().slice(0, 10),
+                        expected_delivery_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+                        currency_code: order.currency_code || currencyCode,
+                        terms_and_conditions: order.terms_and_conditions || 'Net 30 Days upon inspection pass.',
+                        notes: `Repeat of PO #${order.po_number}${order.notes ? ' - ' + order.notes : ''}`,
+                        order_discount_type: 'flat',
+                        order_discount_value: order.discount_amount || '0.00',
+                        items: order.items?.map((it) => ({
+                          product_name: it.product_name || '',
+                          product_sku: it.product_sku || '',
+                          quantity: it.quantity,
+                          unit_code: it.unit_code || 'PCS',
+                          unit_price: it.unit_price,
+                          discount_type: 'flat' as const,
+                          discount_amount: it.discount_amount || '0.00',
+                          tax_rate: it.tax_rate || '0.00',
+                        })) || [],
+                      });
+                      setShowCreateModal(true);
+                      toast.info(`Duplicating PO #${order.po_number}. Review line items and submit.`);
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                  >
+                    <Copy className="size-3.5 text-muted" />
+                    <span>Duplicate / Reorder PO</span>
+                  </button>
+
+                  {order.status === 'draft' && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenActionMenuId(null);
+                          setActionMenuAnchor(null);
+                          setActiveOrder(order);
+                          setFormData({
+                            po_number: order.po_number,
+                            supplier_name: order.supplier_name || '',
+                            warehouse_name: order.warehouse_name || '',
+                            order_date: order.order_date,
+                            expected_delivery_date: order.expected_delivery_date || '',
+                            currency_code: order.currency_code,
+                            terms_and_conditions: order.terms_and_conditions || '',
+                            notes: order.notes || '',
+                            order_discount_type: 'flat',
+                            order_discount_value: order.discount_amount || '0.00',
+                            items: order.items?.map((it) => ({
+                              product_name: it.product_name || '',
+                              product_sku: it.product_sku || '',
+                              quantity: it.quantity,
+                              unit_code: it.unit_code || 'KG',
+                              unit_price: it.unit_price,
+                              discount_type: 'flat' as const,
+                              discount_amount: it.discount_amount || '0.00',
+                              tax_rate: it.tax_rate,
+                            })) || [],
+                          });
+                          setShowEditModal(true);
+                        }}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                      >
+                        <Edit2 className="size-3.5 text-muted" />
+                        <span>Edit PO Contract</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenActionMenuId(null);
+                          setActionMenuAnchor(null);
+                          handleApprove(order.id);
+                        }}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer font-medium"
+                      >
+                        <ShieldCheck className="size-3.5 text-emerald-500" />
+                        <span>Approve PO Contract</span>
+                      </button>
+                    </>
+                  )}
+
+                  {(order.status === 'approved' || order.status === 'partially_received') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        setActionMenuAnchor(null);
+                        onReceivePo?.(order);
+                      }}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer font-medium"
+                    >
+                      <PackageCheck className="size-3.5 text-emerald-500" />
+                      <span>Inward Receive Goods (GRN)</span>
+                    </button>
+                  )}
+
+                  {(order.status === 'received' || order.status === 'partially_received') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        setActionMenuAnchor(null);
+                        onCreateBill?.(order);
+                      }}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10 transition-colors cursor-pointer font-medium"
+                    >
+                      <Receipt className="size-3.5 text-indigo-500" />
+                      <span>Enter Supplier Bill</span>
+                    </button>
+                  )}
+
+                  <Link
+                    to={`/finance?tab=expenses&supplier=${encodeURIComponent(order.supplier_name || '')}&amount=${order.grand_total}`}
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                  >
+                    <DollarSign className="size-3.5 text-emerald-500" />
+                    <span>Settle Payment in Finance</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      setPrintOrder(order);
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                  >
+                    <Printer className="size-3.5 text-muted" />
+                    <span>Print Purchase Order</span>
+                  </button>
+
+                  {order.status === 'draft' && (
+                    <>
+                      <div className="my-1 border-t border-default" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenActionMenuId(null);
+                          setActionMenuAnchor(null);
+                          setActiveOrder(order);
+                          setShowDeleteModal(true);
+                        }}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="size-3.5 text-rose-500" />
+                        <span>Cancel / Void PO</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </ActionMenuPortal>
+            );
+          })()}
         </div>
       </div>
 

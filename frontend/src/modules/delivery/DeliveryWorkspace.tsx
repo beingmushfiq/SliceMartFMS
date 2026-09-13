@@ -11,7 +11,7 @@ import { RunSheetsSection } from './sections/RunSheetsSection';
 import { CourierProvidersSection } from './sections/CourierProvidersSection';
 import { CodReconciliationSection } from './sections/CodReconciliationSection';
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab';
-import { Truck, Bike, Building2, Banknote, RefreshCw, Zap } from 'lucide-react';
+import { Truck, Bike, Building2, Banknote, RefreshCw } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { api } from '../../lib/api/client';
 import { extractList } from '../../lib/api/apiData';
@@ -356,15 +356,89 @@ export const DeliveryWorkspace: React.FC = () => {
     setReconciliations((prev) => [newRec, ...prev]);
   };
 
+  // Keyboard shortcuts 1..4
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+      const num = parseInt(e.key, 10);
+      if (num >= 1 && num <= 4) {
+        const stageMap: Record<number, DeliveryTab> = {
+          1: 'shipments',
+          2: 'run_sheets',
+          3: 'providers',
+          4: 'cod_reconciliation',
+        };
+        const target = stageMap[num];
+        if (target) {
+          e.preventDefault();
+          setActiveTab(target);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setActiveTab]);
+
+  const stages = [
+    {
+      id: 'shipments' as const,
+      step: 1,
+      label: '3PL Shipments & Tracking',
+      shortLabel: 'Shipments',
+      icon: Truck,
+      count: shipments.length,
+      description: 'Book consignments, sync statuses & print labels',
+    },
+    {
+      id: 'run_sheets' as const,
+      step: 2,
+      label: 'Rider Run Sheets',
+      shortLabel: 'Run Sheets',
+      icon: Bike,
+      count: runSheets.length,
+      description: 'Fleet assignments, stops & challans',
+    },
+    {
+      id: 'providers' as const,
+      step: 3,
+      label: 'Courier Partners',
+      shortLabel: 'Couriers',
+      icon: Building2,
+      count: providers.length,
+      description: 'Configure Pathao, Steadfast, REDX APIs',
+    },
+    {
+      id: 'cod_reconciliation' as const,
+      step: 4,
+      label: 'COD Reconciliation',
+      shortLabel: 'COD Rec',
+      icon: Banknote,
+      count: reconciliations.length,
+      description: 'Audit cash collected vs expected amounts',
+    },
+  ];
+
+  const currentStage = (stages.find((s) => s.id === activeTab) || stages[0])!;
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto py-2">
-      {/* Page Header */}
+      {/* Page Header with Standardized Breadcrumb */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-default pb-5">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-primary bg-primary-subtle px-2.5 py-0.5 rounded-full border border-primary/20 flex items-center gap-1">
               <Truck className="size-3 text-primary" />
               Logistics & Fleet Dispatch
+            </span>
+            <span className="text-muted text-xs">•</span>
+            <span className="text-xs font-semibold text-primary">
+              Stage {currentStage.step} of 4: {currentStage.label}
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-default">
@@ -391,88 +465,54 @@ export const DeliveryWorkspace: React.FC = () => {
         </div>
       </div>
 
-      {/* Universal Delivery Quick-Action Ribbon */}
-      <div className="rounded-2xl border border-primary/20 bg-linear-to-r from-primary/5 via-surface to-surface-raised p-3.5 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-1.5 text-xs font-bold text-default">
-              <Zap className="size-3.5 text-amber-500 fill-amber-500" />
-              <span>Quick Actions • Courier Dispatch & Driver Logistics</span>
-            </div>
-            <p className="text-[11px] text-muted">
-              Book courier parcels, prepare rider delivery run sheets, or reconcile collected cash with 1 click.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={() => setActiveTab('shipments')}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer"
-            >
-              <Truck className="size-3.5" />
-              <span>Book Courier Parcel</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('run_sheets')}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
-            >
-              <Bike className="size-3.5 text-cyan-600" />
-              <span>Create Rider Run Sheet</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('cod_reconciliation')}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
-            >
-              <Banknote className="size-3.5 text-emerald-600" />
-              <span>Settle COD Cash</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('providers')}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition-all cursor-pointer"
-            >
-              <Building2 className="size-3.5 text-primary" />
-              <span>Manage Couriers</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Segmented Navigation Tabs Tray */}
-      <div className="flex overflow-x-auto p-1.5 bg-surface-sunken rounded-2xl border border-default shadow-2xs">
-        <div className="flex gap-1.5 min-w-full sm:min-w-0" aria-label="Delivery sections">
-          {[
-            { id: 'shipments', label: '3PL Shipments & Tracking', icon: Truck, count: shipments.length },
-            { id: 'run_sheets', label: 'Rider Run Sheets', icon: Bike, count: runSheets.length },
-            { id: 'providers', label: 'Courier Partners', icon: Building2, count: providers.length },
-            { id: 'cod_reconciliation', label: 'COD Reconciliation', icon: Banknote, count: reconciliations.length },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
+      {/* 4-Stage Execution Ribbon (Grid with 1..4 shortcuts, non-colliding labels, zero scrollbar) */}
+      <div className="bg-surface rounded-2xl border border-default p-2 shadow-xs">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {stages.map((stage) => {
+            const Icon = stage.icon;
+            const isActive = activeTab === stage.id;
             return (
               <button
-                key={tab.id}
+                key={stage.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                onClick={() => setActiveTab(stage.id)}
                 className={cn(
-                  'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer',
+                  'flex items-center gap-2.5 p-2.5 rounded-xl border text-left transition-all cursor-pointer min-w-0',
                   isActive
-                    ? 'bg-primary text-primary-fg font-semibold shadow-xs border border-primary'
-                    : 'text-muted hover:text-default hover:bg-surface/50 border border-transparent'
+                    ? 'bg-primary text-primary-fg border-primary shadow-sm'
+                    : 'bg-surface hover:bg-surface-sunken border-default/70 hover:border-default text-default'
                 )}
               >
-                <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
-                <span>{tab.label}</span>
-                <span
+                <div
                   className={cn(
-                    'text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold',
-                    isActive ? 'bg-white/20 text-white' : 'bg-surface text-muted border border-default'
+                    'size-7 rounded-lg flex items-center justify-center shrink-0 font-mono text-xs font-bold transition-colors',
+                    isActive ? 'bg-primary-fg/20 text-primary-fg' : 'bg-surface-sunken text-muted'
                   )}
                 >
-                  {tab.count}
-                </span>
+                  {stage.step}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <Icon className={cn('size-3.5 shrink-0', isActive ? 'text-primary-fg' : 'text-primary')} />
+                    <span className="text-xs font-bold truncate">{stage.shortLabel}</span>
+                    <span
+                      className={cn(
+                        'text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ml-auto shrink-0',
+                        isActive ? 'bg-white/20 text-white' : 'bg-surface-sunken text-muted border border-default/50'
+                      )}
+                    >
+                      {stage.count}
+                    </span>
+                  </div>
+                  <p
+                    className={cn(
+                      'text-[10px] truncate mt-0.5',
+                      isActive ? 'text-primary-fg/80' : 'text-muted'
+                    )}
+                  >
+                    {stage.description}
+                  </p>
+                </div>
               </button>
             );
           })}

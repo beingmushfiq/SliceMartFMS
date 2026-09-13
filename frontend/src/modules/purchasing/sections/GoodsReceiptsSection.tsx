@@ -8,13 +8,13 @@ import {
   RefreshCw,
   Search,
   XCircle,
-  Eye,
   Edit2,
   Trash2,
   TrendingUp,
   PackageCheck,
   Printer,
   Layers,
+  ChevronDown,
 } from 'lucide-react';
 import type { GoodsReceipt } from '../../../types/api/purchasing';
 import { api } from '../../../lib/api/client';
@@ -24,6 +24,8 @@ import { GoodsReceiptDocument } from '../../../components/print/documents/GoodsR
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
+import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
+import { cn } from '../../../lib/utils';
 
 interface GrnFormItem {
   product_name: string;
@@ -116,7 +118,7 @@ export function GoodsReceiptsSection() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [, setActionLoading] = useState<number | null>(null);
 
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -125,6 +127,8 @@ export function GoodsReceiptsSection() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [activeGrn, setActiveGrn] = useState<GoodsReceipt | null>(null);
   const [printGrn, setPrintGrn] = useState<GoodsReceipt | null>(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
   const { config: businessConfig } = useBusinessConfig();
 
   // Form State
@@ -449,7 +453,7 @@ export function GoodsReceiptsSection() {
 
       {/* Receipts Table */}
       <div className="rounded-2xl border border-default bg-surface shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-75">
           <table className="w-full text-left text-xs text-default">
             <thead className="bg-surface-sunken text-[11px] font-semibold text-muted uppercase tracking-wider border-b border-default">
               <tr>
@@ -500,69 +504,38 @@ export function GoodsReceiptsSection() {
                       <td className="px-4 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
+                            type="button"
                             onClick={() => {
                               setActiveGrn(r);
                               setShowViewModal(true);
                             }}
-                            className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                            title="View Inspection"
+                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface hover:bg-surface-sunken border border-default text-default transition-colors cursor-pointer"
                           >
-                            <Eye className="size-3.5" />
+                            View
                           </button>
 
-                          {r.status === 'draft' && (
-                            <>
-                              <button
-                                onClick={() => {
-                                  setActiveGrn(r);
-                                  setFormData({
-                                    grn_number: r.grn_number,
-                                    po_number: r.po_number || '',
-                                    supplier_name: r.supplier_name || '',
-                                    warehouse_name: r.warehouse_name || '',
-                                    receipt_date: r.receipt_date,
-                                    supplier_document_number: r.supplier_document_number || '',
-                                    notes: r.notes || '',
-                                    items: r.items?.map((it) => ({
-                                      product_name: it.product_name || '',
-                                      product_sku: it.product_sku || '',
-                                      batch_code: it.batch_code || '',
-                                      received_quantity: it.received_quantity,
-                                      rejected_quantity: it.rejected_quantity,
-                                      accepted_quantity: it.accepted_quantity,
-                                      unit_code: it.unit_code || 'KG',
-                                      unit_cost: it.unit_cost,
-                                    })) || [],
-                                  });
-                                  setShowEditModal(true);
-                                }}
-                                className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                                title="Edit GRN"
-                              >
-                                <Edit2 className="size-3.5" />
-                              </button>
-
-                              <button
-                                onClick={() => handleCompleteGrn(r.id)}
-                                disabled={actionLoading === r.id}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors cursor-pointer"
-                              >
-                                <CheckCircle2 className="size-3" />
-                                {actionLoading === r.id ? 'Ingesting...' : 'Ingest Stock'}
-                              </button>
-
-                              <button
-                                onClick={() => {
-                                  setActiveGrn(r);
-                                  setShowDeleteModal(true);
-                                }}
-                                className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                                title="Void GRN"
-                              >
-                                <Trash2 className="size-3.5" />
-                              </button>
-                            </>
-                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (openActionMenuId === r.id) {
+                                setOpenActionMenuId(null);
+                                setActionMenuAnchor(null);
+                              } else {
+                                setOpenActionMenuId(r.id);
+                                setActionMenuAnchor(e.currentTarget);
+                              }
+                            }}
+                            className={cn(
+                              'inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg border transition-colors cursor-pointer',
+                              openActionMenuId === r.id
+                                ? 'bg-primary text-primary-fg border-primary shadow-xs'
+                                : 'bg-surface hover:bg-surface-sunken border-default text-default'
+                            )}
+                          >
+                            <span>Actions</span>
+                            <ChevronDown className="size-3 text-muted" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -571,6 +544,106 @@ export function GoodsReceiptsSection() {
               )}
             </tbody>
           </table>
+
+          {openActionMenuId && (() => {
+            const receipt = filteredReceipts.find((x) => x.id === openActionMenuId);
+            if (!receipt) return null;
+            return (
+              <ActionMenuPortal
+                isOpen={Boolean(openActionMenuId && actionMenuAnchor)}
+                anchorEl={actionMenuAnchor}
+                onClose={() => {
+                  setOpenActionMenuId(null);
+                  setActionMenuAnchor(null);
+                }}
+                width="13rem"
+              >
+                <div className="p-1 space-y-0.5 text-xs">
+                  {receipt.status === 'draft' && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenActionMenuId(null);
+                          setActionMenuAnchor(null);
+                          setActiveGrn(receipt);
+                          setFormData({
+                            grn_number: receipt.grn_number,
+                            po_number: receipt.po_number || '',
+                            supplier_name: receipt.supplier_name || '',
+                            warehouse_name: receipt.warehouse_name || '',
+                            receipt_date: receipt.receipt_date,
+                            supplier_document_number: receipt.supplier_document_number || '',
+                            notes: receipt.notes || '',
+                            items: receipt.items?.map((it) => ({
+                              product_name: it.product_name || '',
+                              product_sku: it.product_sku || '',
+                              batch_code: it.batch_code || '',
+                              received_quantity: it.received_quantity,
+                              rejected_quantity: it.rejected_quantity,
+                              accepted_quantity: it.accepted_quantity,
+                              unit_code: it.unit_code || 'KG',
+                              unit_cost: it.unit_cost,
+                            })) || [],
+                          });
+                          setShowEditModal(true);
+                        }}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                      >
+                        <Edit2 className="size-3.5 text-muted" />
+                        <span>Edit GRN</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenActionMenuId(null);
+                          setActionMenuAnchor(null);
+                          handleCompleteGrn(receipt.id);
+                        }}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer font-medium"
+                      >
+                        <CheckCircle2 className="size-3.5 text-emerald-500" />
+                        <span>Ingest Stock into Ledger</span>
+                      </button>
+                    </>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      setPrintGrn(receipt);
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                  >
+                    <Printer className="size-3.5 text-muted" />
+                    <span>Print GRN Document</span>
+                  </button>
+
+                  {receipt.status === 'draft' && (
+                    <>
+                      <div className="my-1 border-t border-default" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenActionMenuId(null);
+                          setActionMenuAnchor(null);
+                          setActiveGrn(receipt);
+                          setShowDeleteModal(true);
+                        }}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="size-3.5 text-rose-500" />
+                        <span>Void / Delete GRN</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </ActionMenuPortal>
+            );
+          })()}
         </div>
       </div>
 

@@ -9,15 +9,17 @@ import {
   RefreshCw,
   Search,
   XCircle,
-  Eye,
   Edit2,
   Trash2,
   TrendingUp,
   Printer,
+  ChevronDown,
 } from 'lucide-react';
 import type { StockCount } from '../../../types/api/inventory';
 import { api } from '../../../lib/api/client';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
+import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
+import { cn } from '../../../lib/utils';
 
 interface CountFormItem {
   product_name: string;
@@ -106,7 +108,6 @@ export function StockCountsSection() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [actionLoading, setActionLoading] = useState<number | null>(null);
 
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -114,6 +115,8 @@ export function StockCountsSection() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [activeCount, setActiveCount] = useState<StockCount | null>(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -150,7 +153,6 @@ export function StockCountsSection() {
   });
 
   const handleReconcile = async (countId: number) => {
-    setActionLoading(countId);
     try {
       await api.post(`/inventory/counts/${countId}/reconcile`, {});
       toast.success('Stock count reconciled & inventory ledger updated.');
@@ -164,7 +166,6 @@ export function StockCountsSection() {
             : c
         )
       );
-      setActionLoading(null);
     }
   };
 
@@ -464,7 +465,7 @@ export function StockCountsSection() {
 
       {/* Counts Table */}
       <div className="rounded-2xl border border-default bg-surface shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-75">
           <table className="w-full text-left text-xs text-default">
             <thead className="bg-surface-sunken text-[11px] font-semibold text-muted uppercase tracking-wider border-b border-default">
               <tr>
@@ -524,73 +525,37 @@ export function StockCountsSection() {
                     <td className="px-4 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
+                          type="button"
                           onClick={() => {
                             setActiveCount(c);
                             setShowViewModal(true);
                           }}
-                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                          title="View Variance Sheet"
+                          className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface hover:bg-surface-sunken border border-default text-default transition-colors cursor-pointer"
                         >
-                          <Eye className="size-3.5" />
+                          View
                         </button>
 
                         <button
-                          onClick={() => {
-                            setActiveCount(c);
-                            setFormData({
-                              count_number: c.count_number,
-                              warehouse_name: c.warehouse_name || '',
-                              count_date: c.count_date,
-                              count_type: c.count_type,
-                              notes: c.notes || '',
-                              items: c.items?.map((it) => ({
-                                product_name: it.product_name || '',
-                                product_sku: it.product_sku || '',
-                                snapshot_quantity: it.snapshot_quantity,
-                                counted_quantity: it.counted_quantity || it.snapshot_quantity,
-                                unit_code: it.unit_code || 'KG',
-                              })) || [],
-                            });
-                            setShowEditModal(true);
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (openActionMenuId === c.id) {
+                              setOpenActionMenuId(null);
+                              setActionMenuAnchor(null);
+                            } else {
+                              setOpenActionMenuId(c.id);
+                              setActionMenuAnchor(e.currentTarget);
+                            }
                           }}
-                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                          title="Edit Count Figures"
+                          className={cn(
+                            'inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg border transition-colors cursor-pointer',
+                            openActionMenuId === c.id
+                              ? 'bg-primary text-primary-fg border-primary shadow-xs'
+                              : 'bg-surface hover:bg-surface-sunken border-default text-default'
+                          )}
                         >
-                          <Edit2 className="size-3.5" />
-                        </button>
-
-                        {c.status === 'counting' && (
-                          <button
-                            onClick={() => handleReconcile(c.id)}
-                            disabled={actionLoading === c.id}
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors cursor-pointer"
-                            title="Reconcile Variances"
-                          >
-                            <CheckCircle2 className="size-3" />
-                            <span>{actionLoading === c.id ? '...' : 'Reconcile'}</span>
-                          </button>
-                        )}
-
-                        <button
-                          onClick={() => {
-                            setActiveCount(c);
-                            window.print();
-                          }}
-                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                          title="Print Count Sheet"
-                        >
-                          <Printer className="size-3.5" />
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            setActiveCount(c);
-                            setShowDeleteModal(true);
-                          }}
-                          className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                          title="Cancel / Delete Audit"
-                        >
-                          <Trash2 className="size-3.5" />
+                          <span>Actions</span>
+                          <ChevronDown className="size-3 text-muted" />
                         </button>
                       </div>
                     </td>
@@ -599,6 +564,97 @@ export function StockCountsSection() {
               )}
             </tbody>
           </table>
+
+          {openActionMenuId && (() => {
+            const count = filteredCounts.find((x) => x.id === openActionMenuId);
+            if (!count) return null;
+            return (
+              <ActionMenuPortal
+                isOpen={Boolean(openActionMenuId && actionMenuAnchor)}
+                anchorEl={actionMenuAnchor}
+                onClose={() => {
+                  setOpenActionMenuId(null);
+                  setActionMenuAnchor(null);
+                }}
+                width="13rem"
+              >
+                <div className="p-1 space-y-0.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      setActiveCount(count);
+                      setFormData({
+                        count_number: count.count_number,
+                        warehouse_name: count.warehouse_name || '',
+                        count_date: count.count_date,
+                        count_type: count.count_type,
+                        notes: count.notes || '',
+                        items: count.items?.map((it) => ({
+                          product_name: it.product_name || '',
+                          product_sku: it.product_sku || '',
+                          snapshot_quantity: it.snapshot_quantity,
+                          counted_quantity: it.counted_quantity || it.snapshot_quantity,
+                          unit_code: it.unit_code || 'KG',
+                        })) || [],
+                      });
+                      setShowEditModal(true);
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                  >
+                    <Edit2 className="size-3.5 text-muted" />
+                    <span>Edit Count Figures</span>
+                  </button>
+
+                  {count.status === 'counting' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        setActionMenuAnchor(null);
+                        handleReconcile(count.id);
+                      }}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer"
+                    >
+                      <CheckCircle2 className="size-3.5 text-emerald-500" />
+                      <span>Reconcile Variances</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      setActiveCount(count);
+                      window.print();
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                  >
+                    <Printer className="size-3.5 text-muted" />
+                    <span>Print Count Sheet</span>
+                  </button>
+
+                  <div className="my-1 border-t border-default" />
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      setActiveCount(count);
+                      setShowDeleteModal(true);
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="size-3.5 text-rose-500" />
+                    <span>Cancel / Delete Audit</span>
+                  </button>
+                </div>
+              </ActionMenuPortal>
+            );
+          })()}
         </div>
       </div>
 

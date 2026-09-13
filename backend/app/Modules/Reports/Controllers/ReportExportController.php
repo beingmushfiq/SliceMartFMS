@@ -7,8 +7,10 @@ namespace App\Modules\Reports\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Reports\Actions\CreateReportExportAction;
 use App\Modules\Reports\Models\ReportExport;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -58,18 +60,26 @@ class ReportExportController extends Controller
     {
         $export = ReportExport::where('uuid', $uuid)->firstOrFail();
 
-        $user = auth()->user();
+        $user = Auth::user();
         if ($user && !empty($user->tenant_id) && (int) $export->tenant_id !== (int) $user->tenant_id) {
             abort(403, 'Unauthorized access to tenant export.');
         }
 
-        if (!Storage::disk('local')->exists($export->file_path)) {
+        /** @var FilesystemAdapter $disk */
+        $disk = Storage::disk('local');
+        if (!$disk->exists($export->file_path)) {
             abort(404, 'Export file not found or expired on disk.');
         }
 
         $fileName = basename($export->file_path);
-        return Storage::disk('local')->download($export->file_path, $fileName, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
+        $contentType = match (strtolower((string) $export->format)) {
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'pdf' => 'application/pdf',
+            default => 'text/csv; charset=UTF-8',
+        };
+
+        return $disk->download($export->file_path, $fileName, [
+            'Content-Type' => $contentType,
         ]);
     }
 }

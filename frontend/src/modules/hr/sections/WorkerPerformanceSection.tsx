@@ -14,6 +14,7 @@ import {
   CheckSquare,
   Square,
   ShieldCheck,
+  ChevronDown,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { useCurrency } from '../../../hooks/useCurrency';
@@ -21,6 +22,7 @@ import { KPICard } from '../../../components/ui/KPICard';
 import { Modal } from '../../../components/ui/Modal';
 import { notify } from '../../../components/ui/Toast';
 import { hrApi } from '../services/hrApi';
+import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
 
 interface WorkerPerformanceRow {
   id: number;
@@ -124,6 +126,8 @@ export function WorkerPerformanceSection() {
   // Modal states
   const [showLogModal, setShowLogModal] = useState(false);
   const [selectedWorkerDetails, setSelectedWorkerDetails] = useState<WorkerPerformanceRow | null>(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
 
   // Form states
   const [workerName, setWorkerName] = useState('');
@@ -455,7 +459,7 @@ export function WorkerPerformanceSection() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-75">
           <table className="w-full text-left text-xs text-default">
             <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
               <tr>
@@ -581,34 +585,38 @@ export function WorkerPerformanceSection() {
                       </span>
                     </td>
 
-                    <td className="px-4 py-3.5 text-right">
+                    <td className="px-4 py-3.5 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1.5">
-                        {!w.verified && (
-                          <button
-                            type="button"
-                            onClick={() => void handleVerifyEntry(w.id)}
-                            className="px-2 py-1 rounded-lg border border-emerald-500/30 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 font-semibold text-2xs transition flex items-center gap-1 cursor-pointer"
-                            title="Verify and Approve Output"
-                          >
-                            <ShieldCheck className="size-3" />
-                            <span>Verify</span>
-                          </button>
-                        )}
                         <button
                           type="button"
                           onClick={() => setSelectedWorkerDetails(w)}
-                          className="px-2 py-1 rounded-lg border border-default hover:bg-surface-sunken text-default font-semibold text-2xs transition flex items-center gap-1 cursor-pointer"
+                          className="px-2.5 py-1 rounded-lg border border-default hover:bg-surface-sunken text-default font-semibold text-2xs transition flex items-center gap-1 cursor-pointer shadow-2xs"
                         >
                           <Eye className="size-3 text-primary" />
                           <span>Details</span>
                         </button>
                         <button
                           type="button"
-                          onClick={() => setDeleteConfirm({ open: true, id: w.id, workerName: w.name })}
-                          className="p-1 rounded-lg border border-default hover:bg-rose-50 dark:hover:bg-rose-950/30 text-muted hover:text-rose-600 transition cursor-pointer"
-                          title="Delete Output Log"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (openActionMenuId === w.id) {
+                              setOpenActionMenuId(null);
+                              setActionMenuAnchor(null);
+                            } else {
+                              setOpenActionMenuId(w.id);
+                              setActionMenuAnchor(e.currentTarget);
+                            }
+                          }}
+                          className={`px-2.5 py-1 text-2xs rounded-lg border font-medium transition cursor-pointer flex items-center gap-1 shadow-2xs ${
+                            openActionMenuId === w.id
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-default bg-surface hover:bg-surface-sunken text-default'
+                          }`}
+                          title={`Actions for ${w.name}`}
+                          aria-label={`Actions for ${w.name}`}
                         >
-                          <Trash2 className="size-3" />
+                          <span>Actions</span>
+                          <ChevronDown className="size-3 text-muted" />
                         </button>
                       </div>
                     </td>
@@ -617,6 +625,62 @@ export function WorkerPerformanceSection() {
               })}
             </tbody>
           </table>
+
+          {actionMenuAnchor && openActionMenuId !== null && (() => {
+            const activeRow = filtered.find((r) => r.id === openActionMenuId);
+            if (!activeRow) return null;
+            return (
+              <ActionMenuPortal
+                isOpen={true}
+                anchorEl={actionMenuAnchor}
+                onClose={() => {
+                  setOpenActionMenuId(null);
+                  setActionMenuAnchor(null);
+                }}
+                className="w-52"
+              >
+                {!activeRow.verified && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      void handleVerifyEntry(activeRow.id);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer"
+                  >
+                    <ShieldCheck className="size-3.5 text-emerald-600 shrink-0" />
+                    <span>Verify & Approve Output</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenActionMenuId(null);
+                    setActionMenuAnchor(null);
+                    setSelectedWorkerDetails(activeRow);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                >
+                  <Eye className="size-3.5 text-primary shrink-0" />
+                  <span>View Details Breakdown</span>
+                </button>
+                <div className="my-1 border-t border-default/50" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenActionMenuId(null);
+                    setActionMenuAnchor(null);
+                    setDeleteConfirm({ open: true, id: activeRow.id, workerName: activeRow.name });
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="size-3.5 text-rose-600 shrink-0" />
+                  <span>Delete Output Log</span>
+                </button>
+              </ActionMenuPortal>
+            );
+          })()}
         </div>
       </div>
 

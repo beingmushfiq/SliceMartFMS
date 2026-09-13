@@ -10,19 +10,21 @@ import {
   RefreshCw,
   Search,
   XCircle,
-  Eye,
   Edit2,
   Trash2,
   TrendingUp,
   Receipt,
   Printer,
   CreditCard,
+  ChevronDown,
 } from 'lucide-react';
 import type { PurchaseBill } from '../../../types/api/purchasing';
 import { api } from '../../../lib/api/client';
 import { extractList } from '../../../lib/api/apiData';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
+import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
+import { cn } from '../../../lib/utils';
 
 interface BillFormItem {
   product_name: string;
@@ -129,7 +131,7 @@ export function PurchaseBillsSection() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [, setActionLoading] = useState<number | null>(null);
 
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -138,6 +140,8 @@ export function PurchaseBillsSection() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showPayModal, setShowPayModal] = useState(false);
   const [activeBill, setActiveBill] = useState<PurchaseBill | null>(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
 
   // Form State
   const [formData, setFormData] = useState<{
@@ -648,7 +652,7 @@ export function PurchaseBillsSection() {
 
       {/* Bills Table */}
       <div className="rounded-2xl border border-default bg-surface shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-75">
           <table className="w-full text-left text-xs text-default">
             <thead className="bg-surface-sunken text-[11px] font-semibold text-muted uppercase tracking-wider border-b border-default">
               <tr>
@@ -693,83 +697,37 @@ export function PurchaseBillsSection() {
                     <td className="px-4 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
+                          type="button"
                           onClick={() => {
                             setActiveBill(b);
                             setShowViewModal(true);
                           }}
-                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                          title="View Bill Voucher"
+                          className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface hover:bg-surface-sunken border border-default text-default transition-colors cursor-pointer"
                         >
-                          <Eye className="size-3.5" />
-                        </button>
-
-                        {b.status === 'pending' && (
-                          <button
-                            onClick={() => handleApprove(b.id)}
-                            disabled={actionLoading === b.id}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors cursor-pointer"
-                          >
-                            <CheckCircle2 className="size-3" />
-                            {actionLoading === b.id ? 'Approving...' : 'Approve'}
-                          </button>
-                        )}
-
-                        {b.payment_status !== 'paid' && (
-                          <button
-                            onClick={() => {
-                              setActiveBill(b);
-                              setShowPayModal(true);
-                            }}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 transition-colors cursor-pointer"
-                            title="Record Payment"
-                          >
-                            <CreditCard className="size-3" />
-                            <span>Pay</span>
-                          </button>
-                        )}
-
-                        <button
-                          onClick={() => {
-                            setActiveBill(b);
-                            setFormData({
-                              bill_number: b.bill_number,
-                              po_number: b.po_number || '',
-                              supplier_name: b.supplier_name || '',
-                              supplier_invoice_number: b.supplier_invoice_number,
-                              bill_date: b.bill_date,
-                              due_date: b.due_date,
-                              currency_code: b.currency_code,
-                              notes: b.notes || '',
-                              order_discount_type: 'flat',
-                              order_discount_value: '',
-                              items: b.items?.map((it) => ({
-                                product_name: it.product_name || '',
-                                product_sku: it.product_sku || '',
-                                quantity: it.quantity,
-                                unit_code: it.unit_code || 'KG',
-                                unit_price: it.unit_price,
-                                discount_type: 'flat',
-                                discount_amount: it.discount_amount || '0.00',
-                                tax_rate: it.tax_rate,
-                              })) || [],
-                            });
-                            setShowEditModal(true);
-                          }}
-                          className="p-1.5 text-muted hover:text-default hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
-                          title="Edit Bill"
-                        >
-                          <Edit2 className="size-3.5" />
+                          View
                         </button>
 
                         <button
-                          onClick={() => {
-                            setActiveBill(b);
-                            setShowDeleteModal(true);
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (openActionMenuId === b.id) {
+                              setOpenActionMenuId(null);
+                              setActionMenuAnchor(null);
+                            } else {
+                              setOpenActionMenuId(b.id);
+                              setActionMenuAnchor(e.currentTarget);
+                            }
                           }}
-                          className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                          title="Void Bill"
+                          className={cn(
+                            'inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg border transition-colors cursor-pointer',
+                            openActionMenuId === b.id
+                              ? 'bg-primary text-primary-fg border-primary shadow-xs'
+                              : 'bg-surface hover:bg-surface-sunken border-default text-default'
+                          )}
                         >
-                          <Trash2 className="size-3.5" />
+                          <span>Actions</span>
+                          <ChevronDown className="size-3 text-muted" />
                         </button>
                       </div>
                     </td>
@@ -778,6 +736,121 @@ export function PurchaseBillsSection() {
               )}
             </tbody>
           </table>
+
+          {openActionMenuId && (() => {
+            const bill = filteredBills.find((x) => x.id === openActionMenuId);
+            if (!bill) return null;
+            return (
+              <ActionMenuPortal
+                isOpen={Boolean(openActionMenuId && actionMenuAnchor)}
+                anchorEl={actionMenuAnchor}
+                onClose={() => {
+                  setOpenActionMenuId(null);
+                  setActionMenuAnchor(null);
+                }}
+                width="13rem"
+              >
+                <div className="p-1 space-y-0.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      setActiveBill(bill);
+                      setFormData({
+                        bill_number: bill.bill_number,
+                        po_number: bill.po_number || '',
+                        supplier_name: bill.supplier_name || '',
+                        supplier_invoice_number: bill.supplier_invoice_number,
+                        bill_date: bill.bill_date,
+                        due_date: bill.due_date,
+                        currency_code: bill.currency_code,
+                        notes: bill.notes || '',
+                        order_discount_type: 'flat',
+                        order_discount_value: '',
+                        items: bill.items?.map((it) => ({
+                          product_name: it.product_name || '',
+                          product_sku: it.product_sku || '',
+                          quantity: it.quantity,
+                          unit_code: it.unit_code || 'KG',
+                          unit_price: it.unit_price,
+                          discount_type: 'flat',
+                          discount_amount: it.discount_amount || '0.00',
+                          tax_rate: it.tax_rate,
+                        })) || [],
+                      });
+                      setShowEditModal(true);
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                  >
+                    <Edit2 className="size-3.5 text-muted" />
+                    <span>Edit Bill</span>
+                  </button>
+
+                  {bill.status === 'pending' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        setActionMenuAnchor(null);
+                        handleApprove(bill.id);
+                      }}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer font-medium"
+                    >
+                      <CheckCircle2 className="size-3.5 text-emerald-500" />
+                      <span>Approve Bill</span>
+                    </button>
+                  )}
+
+                  {bill.payment_status !== 'paid' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        setActionMenuAnchor(null);
+                        setActiveBill(bill);
+                        setShowPayModal(true);
+                      }}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-primary hover:bg-primary/10 transition-colors cursor-pointer font-medium"
+                    >
+                      <CreditCard className="size-3.5 text-primary" />
+                      <span>Record Payment</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      setActiveBill(bill);
+                      window.print();
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                  >
+                    <Printer className="size-3.5 text-muted" />
+                    <span>Print Bill Voucher</span>
+                  </button>
+
+                  <div className="my-1 border-t border-default" />
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      setActionMenuAnchor(null);
+                      setActiveBill(bill);
+                      setShowDeleteModal(true);
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="size-3.5 text-rose-500" />
+                    <span>Void Bill</span>
+                  </button>
+                </div>
+              </ActionMenuPortal>
+            );
+          })()}
         </div>
       </div>
 

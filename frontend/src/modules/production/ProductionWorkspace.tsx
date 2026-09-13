@@ -4,7 +4,6 @@ import {
   ClipboardList,
   Factory,
   Users,
-  ArrowRight,
   Monitor,
   Compass,
   Zap,
@@ -75,7 +74,7 @@ const tabs: TabConfig[] = [
     badge: 'Flagship ABC',
     icon: TrendingUp,
     description: 'Standard vs. Actual ABC cost decomposition (material, labor, machine) with live waterfall variance',
-    pillar: 1,
+    pillar: 2,
   },
 ];
 
@@ -88,16 +87,20 @@ export default function ProductionWorkspace() {
   const [isLaunchModalOpen, setIsLaunchModalOpen] = useState(false);
   const [isOutputModalOpen, setIsOutputModalOpen] = useState(false);
 
-  // Global hotkeys (1, 2) to quickly jump between primary manufacturing pillars
+  // Global hotkeys (1, 2, 3, 4) to quickly jump between primary manufacturing stages
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) {
         return;
       }
       if (e.key === '1') {
-        setActiveTab('batches');
+        setActiveTab('plans');
       } else if (e.key === '2') {
+        setActiveTab('batches');
+      } else if (e.key === '3') {
         setActiveTab('worker-entries');
+      } else if (e.key === '4') {
+        setActiveTab('variance-radar');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -122,7 +125,7 @@ export default function ProductionWorkspace() {
                 Manufacturing Operations Lifecycle
               </span>
               <span className="text-[10px] font-mono font-bold text-muted bg-surface-sunken px-2 py-0.5 rounded-md border border-default">
-                Stage {currentTab.step} of 3
+                Stage {currentTab.step} of 4
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-default">
@@ -184,17 +187,17 @@ export default function ProductionWorkspace() {
           {/* Pillar 1: Production Scheduling & Execution */}
           <div
             className={cn(
-              'rounded-2xl p-3 border transition-all duration-200 bg-surface',
+              'rounded-2xl p-3.5 border transition-all duration-200 bg-surface',
               currentTab.pillar === 1
                 ? 'border-primary/40 shadow-xs ring-1 ring-primary/20'
                 : 'border-default/70 hover:border-default shadow-2xs'
             )}
           >
-            <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-default/50">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-default/50">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <div
                   className={cn(
-                    'flex size-7 items-center justify-center rounded-lg border',
+                    'flex size-8 items-center justify-center rounded-xl border shrink-0',
                     currentTab.pillar === 1
                       ? 'bg-primary-subtle text-primary border-primary/30'
                       : 'bg-surface-sunken text-muted border-default'
@@ -202,16 +205,16 @@ export default function ProductionWorkspace() {
                 >
                   <Workflow className="size-4" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-default">
+                    <span className="text-xs font-bold text-default truncate">
                       Scheduling & Batch Execution
                     </span>
-                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-surface-sunken text-muted border border-default">
-                      [1]
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-surface-sunken text-muted border border-default shrink-0">
+                      Pillar 1
                     </span>
                   </div>
-                  <span className="text-[10px] text-muted">
+                  <span className="text-[11px] text-muted truncate block">
                     Recipe schedules, material requests & shopfloor batches
                   </span>
                 </div>
@@ -219,24 +222,24 @@ export default function ProductionWorkspace() {
             </div>
 
             {/* Direct Embedded Child Pills */}
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => setActiveTab('plans')}
                 className={cn(
-                  'flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer text-left',
+                  'flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs transition-all cursor-pointer text-left min-w-0',
                   activeTab === 'plans'
-                    ? 'bg-primary text-primary-fg font-semibold shadow-2xs'
-                    : 'bg-surface-sunken text-muted hover:text-default hover:bg-surface border border-default/50'
+                    ? 'bg-primary text-primary-fg font-semibold shadow-xs'
+                    : 'bg-surface-sunken text-default hover:text-default hover:bg-surface border border-default/60 hover:border-primary/40'
                 )}
               >
-                <div className="flex items-center gap-1.5 truncate">
-                  <ClipboardList className="size-3.5 shrink-0" />
+                <div className="flex items-center gap-2 min-w-0 truncate">
+                  <ClipboardList className="size-4 shrink-0" />
                   <span className="truncate">Production Plans</span>
                 </div>
                 <span className={cn(
-                  'text-[9px] font-mono px-1 py-0.2 rounded shrink-0',
-                  activeTab === 'plans' ? 'bg-white/20 text-white' : 'bg-surface text-muted'
+                  'text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0',
+                  activeTab === 'plans' ? 'bg-white/20 text-white' : 'bg-surface text-muted border border-default/50'
                 )}>
                   Step 1
                 </span>
@@ -246,19 +249,19 @@ export default function ProductionWorkspace() {
                 type="button"
                 onClick={() => setActiveTab('batches')}
                 className={cn(
-                  'flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer text-left',
+                  'flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs transition-all cursor-pointer text-left min-w-0',
                   activeTab === 'batches'
-                    ? 'bg-primary text-primary-fg font-semibold shadow-2xs'
-                    : 'bg-surface-sunken text-muted hover:text-default hover:bg-surface border border-default/50'
+                    ? 'bg-primary text-primary-fg font-semibold shadow-xs'
+                    : 'bg-surface-sunken text-default hover:text-default hover:bg-surface border border-default/60 hover:border-primary/40'
                 )}
               >
-                <div className="flex items-center gap-1.5 truncate">
-                  <Factory className="size-3.5 shrink-0" />
-                  <span className="truncate">Shopfloor Batches</span>
+                <div className="flex items-center gap-2 min-w-0 truncate">
+                  <Factory className="size-4 shrink-0" />
+                  <span className="truncate">Production Batches</span>
                 </div>
                 <span className={cn(
-                  'text-[9px] font-mono px-1 py-0.2 rounded shrink-0',
-                  activeTab === 'batches' ? 'bg-white/20 text-white' : 'bg-surface text-muted'
+                  'text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0',
+                  activeTab === 'batches' ? 'bg-white/20 text-white' : 'bg-surface text-muted border border-default/50'
                 )}>
                   Step 2
                 </span>
@@ -269,17 +272,17 @@ export default function ProductionWorkspace() {
           {/* Pillar 2: Floor Operations & Labor Wages */}
           <div
             className={cn(
-              'rounded-2xl p-3 border transition-all duration-200 bg-surface',
+              'rounded-2xl p-3.5 border transition-all duration-200 bg-surface',
               currentTab.pillar === 2
                 ? 'border-primary/40 shadow-xs ring-1 ring-primary/20'
                 : 'border-default/70 hover:border-default shadow-2xs'
             )}
           >
-            <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-default/50">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-default/50">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <div
                   className={cn(
-                    'flex size-7 items-center justify-center rounded-lg border',
+                    'flex size-8 items-center justify-center rounded-xl border shrink-0',
                     currentTab.pillar === 2
                       ? 'bg-primary-subtle text-primary border-primary/30'
                       : 'bg-surface-sunken text-muted border-default'
@@ -287,47 +290,66 @@ export default function ProductionWorkspace() {
                 >
                   <Users className="size-4" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-default">
-                      Labor Tracking & Piece Wages
+                    <span className="text-xs font-bold text-default truncate">
+                      Floor Labor & Cost Analytics
                     </span>
-                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-surface-sunken text-muted border border-default">
-                      [2]
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-surface-sunken text-muted border border-default shrink-0">
+                      Pillar 2
                     </span>
                   </div>
-                  <span className="text-[10px] text-muted">
-                    Touch entry for worker output, approvals & wage calculation
+                  <span className="text-[11px] text-muted truncate block">
+                    Touch entry for worker output, daily wages & ABC variance
                   </span>
                 </div>
               </div>
             </div>
 
             {/* Direct Embedded Child Pills */}
-            <div className="grid grid-cols-1 gap-1.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => setActiveTab('worker-entries')}
                 className={cn(
-                  'flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer text-left',
+                  'flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs transition-all cursor-pointer text-left min-w-0',
                   activeTab === 'worker-entries'
-                    ? 'bg-primary text-primary-fg font-semibold shadow-2xs'
-                    : 'bg-surface-sunken text-muted hover:text-default hover:bg-surface border border-default/50'
+                    ? 'bg-primary text-primary-fg font-semibold shadow-xs'
+                    : 'bg-surface-sunken text-default hover:text-default hover:bg-surface border border-default/60 hover:border-primary/40'
                 )}
               >
-                <div className="flex items-center gap-1.5 truncate">
-                  <Users className="size-3.5 shrink-0" />
-                  <span className="truncate">Worker Output & Daily Wages</span>
+                <div className="flex items-center gap-2 min-w-0 truncate">
+                  <Users className="size-4 shrink-0" />
+                  <span className="truncate">Worker Output & Wages</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-muted hidden sm:inline">Touch Terminal</span>
-                  <span className={cn(
-                    'text-[9px] font-mono px-1 py-0.2 rounded shrink-0',
-                    activeTab === 'worker-entries' ? 'bg-white/20 text-white' : 'bg-surface text-muted'
-                  )}>
-                    Step 3
-                  </span>
+                <span className={cn(
+                  'text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0',
+                  activeTab === 'worker-entries' ? 'bg-white/20 text-white' : 'bg-surface text-muted border border-default/50'
+                )}>
+                  Step 3
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('variance-radar')}
+                className={cn(
+                  'flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs transition-all cursor-pointer text-left min-w-0',
+                  activeTab === 'variance-radar'
+                    ? 'bg-primary text-primary-fg font-semibold shadow-xs'
+                    : 'bg-surface-sunken text-default hover:text-default hover:bg-surface border border-default/60 hover:border-primary/40'
+                )}
+              >
+                <div className="flex items-center gap-2 min-w-0 truncate">
+                  <TrendingUp className="size-4 shrink-0" />
+                  <span className="truncate">Cost Variance Radar</span>
                 </div>
+                <span className={cn(
+                  'text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0',
+                  activeTab === 'variance-radar' ? 'bg-white/20 text-white' : 'bg-surface text-muted border border-default/50'
+                )}>
+                  Step 4
+                </span>
               </button>
             </div>
           </div>
@@ -390,9 +412,9 @@ export default function ProductionWorkspace() {
           </div>
         </div>
 
-        {/* Master Grouped Navigation Ribbon: All 3 Stages Fully Visible */}
-        <div className="rounded-xl border border-default/80 bg-surface-sunken/60 p-2 shadow-2xs">
-          <div className="flex items-center justify-between gap-2 px-1 mb-1.5">
+        {/* Master Grouped Navigation Ribbon: All 4 Stages Fully Visible */}
+        <div className="rounded-xl border border-default/80 bg-surface-sunken/60 p-2.5 shadow-2xs">
+          <div className="flex items-center justify-between gap-2 px-1 mb-2">
             <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted uppercase tracking-wider">
               <SlidersHorizontal className="size-3 text-primary" />
               <span>Manufacturing Stages Execution Ribbon</span>
@@ -402,8 +424,8 @@ export default function ProductionWorkspace() {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5">
-            {tabs.map((tab, idx) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
+            {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
@@ -412,13 +434,13 @@ export default function ProductionWorkspace() {
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    'flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs transition-all cursor-pointer',
+                    'flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs transition-all cursor-pointer min-w-0 text-left',
                     isActive
                       ? 'bg-surface text-default font-semibold shadow-xs border border-primary/50 ring-1 ring-primary/20'
-                      : 'bg-surface/60 text-muted hover:text-default hover:bg-surface border border-default/40'
+                      : 'bg-surface/70 text-muted hover:text-default hover:bg-surface border border-default/50'
                   )}
                 >
-                  <div className="flex items-center gap-2 truncate">
+                  <div className="flex items-center gap-2 min-w-0 truncate">
                     <span
                       className={cn(
                         'inline-flex items-center justify-center size-5 rounded-full text-[10px] font-mono font-bold shrink-0',
@@ -432,8 +454,13 @@ export default function ProductionWorkspace() {
                     <Icon className={cn('size-3.5 shrink-0', isActive ? 'text-primary' : 'text-muted')} />
                     <span className="truncate">{tab.label}</span>
                   </div>
-                  {idx < tabs.length - 1 && (
-                    <ArrowRight className="size-3 text-muted/40 shrink-0 hidden sm:inline-block" />
+                  {tab.badge && (
+                    <span className={cn(
+                      'text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0 hidden sm:inline-block',
+                      isActive ? 'bg-primary/10 text-primary font-bold' : 'bg-surface-sunken text-muted'
+                    )}>
+                      {tab.badge}
+                    </span>
                   )}
                 </button>
               );

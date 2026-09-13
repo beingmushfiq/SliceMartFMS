@@ -41,7 +41,8 @@ import {
   ALL_REPORT_DEFINITIONS,
   getReportFallbackData,
 } from './reportCatalogue';
-import { api } from '../../lib/api/client';
+import { api, getAccessToken } from '../../lib/api/client';
+import * as XLSX from 'xlsx';
 import { notify } from '../../components/ui/Toast';
 
 const MODULE_ICONS: Record<string, React.FC<{ className?: string }>> = {
@@ -336,13 +337,75 @@ export const ReportsWorkspace: React.FC = () => {
     }
   };
 
-  // Real backend server export with client-side instant fallback
+  // Export handler supporting XLSX, CSV, and PDF
   const handleExport = async () => {
     if (!reportResult || !activeDef) return;
 
-    setExportStatus('Generating authenticated export package...');
+    if (exportFormat === 'pdf') {
+      setExportModalOpen(false);
+      setExportStatus(null);
+      setIsPrintModalOpen(true);
+      notify.success('Opening official PDF print preview...');
+      return;
+    }
+
+    setExportStatus(`Generating ${exportFormat.toUpperCase()} export file...`);
+
+    const filenameBase = `SliceMart_${activeDef.code || 'report'}_${new Date().toISOString().split('T')[0]}`;
+
+    // Direct spreadsheet generation helper via SheetJS (for instant and fallback downloads)
+    const exportClientSpreadsheet = (fmt: 'xlsx' | 'csv' | 'json') => {
+      if (fmt === 'json') {
+        const jsonBlob = new Blob([JSON.stringify(reportResult.data, null, 2)], {
+          type: 'application/json;charset=utf-8;',
+        });
+        const url = URL.createObjectURL(jsonBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${filenameBase}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        setExportStatus(`Export completed! ${reportResult.data.length} rows downloaded as JSON.`);
+        notify.success('Report exported to JSON successfully.');
+        return;
+      }
+
+      const colEntries = Object.entries(reportResult.columns);
+      const rows = reportResult.data.map((row) => {
+        const rowObj: Record<string, unknown> = {};
+        colEntries.forEach(([key, colDef]) => {
+          rowObj[colDef.label || key] = row[key] ?? '';
+        });
+        return rowObj;
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, (activeDef.name || 'Report').slice(0, 31));
+
+      if (fmt === 'csv') {
+        const csvOutput = XLSX.utils.sheet_to_csv(worksheet);
+        const blob = new Blob(['\uFEFF' + csvOutput], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${filenameBase}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } else {
+        XLSX.writeFile(workbook, `${filenameBase}.xlsx`);
+      }
+
+      setExportStatus(`Export completed! ${reportResult.data.length} rows downloaded as ${fmt.toUpperCase()}.`);
+      notify.success(`Report exported to ${fmt.toUpperCase()} successfully.`);
+    };
 
     try {
+      // 1. Request server-side comprehensive batch query
       const resp = await api.post<{
         uuid: string;
         download_url: string;
@@ -357,43 +420,48 @@ export const ReportsWorkspace: React.FC = () => {
       });
 
       if (resp.data?.download_url) {
-        // Trigger authenticated download link
-        const downloadUrl = `/api/v1${resp.data.download_url}`;
-        window.open(downloadUrl, '_blank');
-        setExportStatus(
-          `Export completed! ${resp.data.row_count} rows (${Math.round(resp.data.file_size_bytes / 1024)} KB) downloaded.`
-        );
-        notify.success(`Export ready: ${resp.data.row_count} rows streamed.`);
-        return;
+        const token = getAccessToken();
+        const downloadUrl = `/api/v1${resp.data.download_url}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+
+        try {
+          const res = await fetch(downloadUrl, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          if (!res.ok) throw new Error(`Download HTTP error ${res.status}`);
+          const blobData = await res.blob();
+
+          if (exportFormat === 'xlsx') {
+            const csvText = await blobData.text();
+            const wb = XLSX.read(csvText, { type: 'string' });
+            XLSX.writeFile(wb, `${filenameBase}.xlsx`);
+          } else {
+            const url = URL.createObjectURL(blobData);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${filenameBase}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          }
+
+          setExportStatus(
+            `Export completed! ${resp.data.row_count} rows (${Math.max(1, Math.round(resp.data.file_size_bytes / 1024))} KB) downloaded as ${exportFormat.toUpperCase()}.`
+          );
+          notify.success(`Export ready: ${resp.data.row_count} rows downloaded.`);
+          return;
+        } catch {
+          // If server file stream had an issue, smoothly fallback to client spreadsheet generator
+          exportClientSpreadsheet(exportFormat);
+          return;
+        }
       }
     } catch {
-      // Graceful local fallback if network interrupted
+      // Graceful local fallback if network or endpoint fails
     }
 
     try {
-      // Local CSV build fallback
-      const headers = Object.values(reportResult.columns).map((c) => `"${c.label}"`);
-      const colKeys = Object.keys(reportResult.columns);
-      const rows = reportResult.data.map((row) => {
-        return colKeys.map((k) => `"${String(row[k] ?? '').replace(/"/g, '""')}"`).join(',');
-      });
-      const csvContent = [headers.join(','), ...rows].join('\n');
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute(
-        'download',
-        `SliceMart_${activeDef?.code || 'report'}_${new Date().toISOString().split('T')[0]}.csv`
-      );
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      setExportStatus('Export successful! Local download complete.');
-      notify.success('Report exported to CSV successfully.');
+      exportClientSpreadsheet(exportFormat);
     } catch {
       setExportStatus('Export failed. Please try again.');
       notify.error('Failed to export report.');
@@ -831,7 +899,7 @@ export const ReportsWorkspace: React.FC = () => {
             </div>
 
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Exporting <strong>{activeDef?.name}</strong>. Real-time exports generate immediately, while comprehensive batch queries queue through our background processing worker.
+              Exporting <strong>{activeDef?.name}</strong>. Choose your preferred format to immediately download spreadsheets or open the PDF print document.
             </p>
 
             <div className="space-y-3">
@@ -840,10 +908,13 @@ export const ReportsWorkspace: React.FC = () => {
                 {(['xlsx', 'csv', 'pdf'] as ExportFormat[]).map((fmt) => (
                   <button
                     key={fmt}
-                    onClick={() => setExportFormat(fmt)}
+                    onClick={() => {
+                      setExportFormat(fmt);
+                      setExportStatus(null);
+                    }}
                     className={`py-2 text-xs font-semibold uppercase rounded-lg border text-center transition-all cursor-pointer ${
                       exportFormat === fmt
-                        ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300'
+                        ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-bold shadow-sm'
                         : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                     }`}
                   >
@@ -872,9 +943,12 @@ export const ReportsWorkspace: React.FC = () => {
               </button>
               <button
                 onClick={handleExport}
-                className="px-4 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors cursor-pointer shadow-sm"
+                className="px-4 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors cursor-pointer shadow-sm flex items-center gap-1.5"
               >
-                Download & Queue (202)
+                <Download className="w-3.5 h-3.5" />
+                {exportFormat === 'pdf'
+                  ? 'Open PDF Preview'
+                  : `Download ${exportFormat.toUpperCase()}`}
               </button>
             </div>
           </div>

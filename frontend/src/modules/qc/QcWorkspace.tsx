@@ -59,6 +59,7 @@ const CATEGORIES: CategoryConfig[] = [
 
 interface TabConfig {
   id: QcTab;
+  step: number;
   label: string;
   shortLabel: string;
   category: QcCategory;
@@ -71,6 +72,7 @@ interface TabConfig {
 const tabs: TabConfig[] = [
   {
     id: 'inspections',
+    step: 1,
     label: 'QC Inspections & QA',
     shortLabel: 'Inspections',
     category: 'verification',
@@ -82,6 +84,7 @@ const tabs: TabConfig[] = [
   },
   {
     id: 'parameters',
+    step: 2,
     label: 'Standard Specifications',
     shortLabel: 'Standard Specs',
     category: 'verification',
@@ -93,6 +96,7 @@ const tabs: TabConfig[] = [
   },
   {
     id: 'rework',
+    step: 3,
     label: 'Rework & Salvage',
     shortLabel: 'Rework & Salvage',
     category: 'disposition',
@@ -104,6 +108,7 @@ const tabs: TabConfig[] = [
   },
   {
     id: 'wastage',
+    step: 4,
     label: 'Wastage & Scrap Ledger',
     shortLabel: 'Scrap Ledger',
     category: 'disposition',
@@ -125,7 +130,7 @@ export default function QcWorkspace() {
   const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[0]!;
   const activeCategory = currentTab.category;
 
-  // Global Keyboard Shortcuts (1, 2 to switch domain pillars)
+  // Global Keyboard Shortcuts (1..4 to directly switch stages)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -141,7 +146,13 @@ export default function QcWorkspace() {
         setActiveTab('inspections');
       } else if (e.key === '2') {
         e.preventDefault();
+        setActiveTab('parameters');
+      } else if (e.key === '3') {
+        e.preventDefault();
         setActiveTab('rework');
+      } else if (e.key === '4') {
+        e.preventDefault();
+        setActiveTab('wastage');
       }
     };
 
@@ -180,7 +191,7 @@ export default function QcWorkspace() {
               Quality Assurance & Scrap Governance
             </span>
             <span className="text-muted/50 text-xs">/</span>
-            <span className="text-[11px] font-semibold text-default">{currentTab.label}</span>
+            <span className="text-[11px] font-semibold text-default">Stage {currentTab.step} of 4: {currentTab.label}</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-default flex items-center gap-3">
             <span>{currentTab.label}</span>
@@ -441,8 +452,8 @@ export default function QcWorkspace() {
                 </div>
               </div>
 
-              {/* In-Pillar Quick Navigation Pills (100% Zero Concealed Views) */}
-              <div className="mt-4 pt-3 border-t border-default/60 flex flex-wrap items-center gap-1.5">
+              {/* In-Pillar Quick Navigation Grid (Zero Collisions & Balanced Layout) */}
+              <div className="mt-4 pt-3 border-t border-default/60 grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {childTabs.map((subTab) => {
                   const isCurrent = activeTab === subTab.id;
                   const SubIcon = subTab.icon;
@@ -455,21 +466,27 @@ export default function QcWorkspace() {
                         setActiveTab(subTab.id);
                       }}
                       className={cn(
-                        'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer',
+                        'flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs transition-all cursor-pointer text-left min-w-0',
                         isCurrent
-                          ? 'bg-primary text-primary-fg font-semibold shadow-xs ring-1 ring-primary'
-                          : 'bg-surface-sunken text-muted hover:text-default hover:bg-surface border border-default/70'
+                          ? 'bg-primary text-primary-fg font-semibold shadow-xs'
+                          : 'bg-surface-sunken text-default hover:text-default hover:bg-surface border border-default/60 hover:border-primary/40'
                       )}
                       title={`Open ${subTab.label}`}
                     >
-                      <SubIcon className={cn('size-3.5', isCurrent ? 'text-primary-fg' : 'text-muted')} />
-                      <span>{subTab.shortLabel}</span>
-                      {subTab.badge && !isCurrent && (
-                        <span className="text-[9px] font-mono text-muted/80 bg-surface px-1.5 py-0.2 rounded border border-default/60">
-                          {subTab.badge}
-                        </span>
-                      )}
-                      {isCurrent && <span className="size-1.5 rounded-full bg-white animate-pulse" />}
+                      <div className="flex items-center gap-2 min-w-0 truncate">
+                        <SubIcon className={cn('size-4 shrink-0', isCurrent ? 'text-primary-fg' : 'text-primary')} />
+                        <span className="truncate">{subTab.label}</span>
+                      </div>
+                      <span
+                        className={cn(
+                          'text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0',
+                          isCurrent
+                            ? 'bg-white/20 text-white font-bold'
+                            : 'bg-surface text-muted border border-default/50'
+                        )}
+                      >
+                        Stage {subTab.step}
+                      </span>
                     </button>
                   );
                 })}
@@ -484,103 +501,62 @@ export default function QcWorkspace() {
         })}
       </div>
 
-      {/* Master Grouped Navigation Ribbon (All 4 Tabs Visible Simultaneously) */}
-      <div className="bg-surface-sunken rounded-2xl border border-default p-2 shadow-2xs">
-        <div className="flex items-center justify-between px-2 pb-1.5 mb-1 text-[11px] font-semibold text-muted border-b border-default/50">
-          <div className="flex items-center gap-2">
-            <Zap className="size-3.5 text-primary" />
-            <span>Master Quality Control Ribbon (1-Click Reachability)</span>
+      {/* Master Grouped Navigation Ribbon: All 4 Stages Fully Visible */}
+      <div className="rounded-xl border border-default/80 bg-surface-sunken/60 p-2.5 shadow-2xs">
+        <div className="flex items-center justify-between gap-2 px-1 mb-2">
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted uppercase tracking-wider">
+            <SlidersHorizontal className="size-3 text-primary" />
+            <span>Quality & Scrap Stages Execution Ribbon</span>
           </div>
-          <span className="text-[10px] font-mono text-muted/70">
-            Active: <strong className="text-default">{currentTab?.label}</strong>
+          <span className="text-[10px] text-muted font-mono">
+            4 Stages & Governance Available • Instant Access
           </span>
         </div>
 
-        <nav
-          className="flex flex-wrap items-center gap-2"
-          role="tablist"
-          aria-label="All 4 Quality Views"
-        >
-          {/* Cluster 1: Verification & Standards */}
-          <div className="flex items-center gap-1.5 bg-surface/60 p-1 rounded-xl border border-default/40">
-            <span className="text-[10px] font-mono uppercase font-bold text-muted px-2 py-0.5 select-none">
-              Verification:
-            </span>
-            {tabs.filter((t) => t.category === 'verification').map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  role="tab"
-                  aria-selected={isActive}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
-                    isActive
-                      ? 'bg-primary text-primary-fg shadow-xs'
-                      : 'text-muted hover:text-default hover:bg-surface border border-transparent'
-                  )}
-                >
-                  <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
-                  <span>{tab.shortLabel}</span>
-                  {tab.badge && (
-                    <span
-                      className={cn(
-                        'text-[9px] px-1.5 py-0.2 rounded font-mono',
-                        isActive ? 'bg-primary-fg/20 text-primary-fg' : 'bg-surface-sunken text-muted'
-                      )}
-                    >
-                      {tab.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="h-4 w-px bg-default/60 hidden sm:block" />
-
-          {/* Cluster 2: Disposition & Scrap */}
-          <div className="flex items-center gap-1.5 bg-surface/60 p-1 rounded-xl border border-default/40">
-            <span className="text-[10px] font-mono uppercase font-bold text-muted px-2 py-0.5 select-none">
-              Disposition:
-            </span>
-            {tabs.filter((t) => t.category === 'disposition').map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  role="tab"
-                  aria-selected={isActive}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
-                    isActive
-                      ? 'bg-primary text-primary-fg shadow-xs'
-                      : 'text-muted hover:text-default hover:bg-surface border border-transparent'
-                  )}
-                >
-                  <Icon className={cn('size-3.5', isActive ? 'text-primary-fg' : 'text-muted')} />
-                  <span>{tab.shortLabel}</span>
-                  {tab.badge && (
-                    <span
-                      className={cn(
-                        'text-[9px] px-1.5 py-0.2 rounded font-mono',
-                        isActive ? 'bg-primary-fg/20 text-primary-fg' : 'bg-surface-sunken text-muted'
-                      )}
-                    >
-                      {tab.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </nav>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs transition-all cursor-pointer min-w-0 text-left',
+                  isActive
+                    ? 'bg-surface text-default font-semibold shadow-xs border border-primary/50 ring-1 ring-primary/20'
+                    : 'bg-surface/70 text-muted hover:text-default hover:bg-surface border border-default/50'
+                )}
+              >
+                <div className="flex items-center gap-2 min-w-0 truncate">
+                  <span
+                    className={cn(
+                      'inline-flex items-center justify-center size-5 rounded-full text-[10px] font-mono font-bold shrink-0',
+                      isActive
+                        ? 'bg-primary text-primary-fg'
+                        : 'bg-surface-sunken text-muted border border-default'
+                    )}
+                  >
+                    {tab.step}
+                  </span>
+                  <Icon className={cn('size-3.5 shrink-0', isActive ? 'text-primary' : 'text-muted')} />
+                  <span className="truncate">{tab.label}</span>
+                </div>
+                {tab.badge && (
+                  <span
+                    className={cn(
+                      'text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0 hidden sm:inline-block',
+                      isActive ? 'bg-primary/10 text-primary font-bold' : 'bg-surface-sunken text-muted'
+                    )}
+                  >
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Active Section Content */}

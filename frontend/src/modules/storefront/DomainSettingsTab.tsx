@@ -13,10 +13,13 @@ import {
   Check,
   Sparkles,
   Server,
-  Lock
+  Lock,
+  Activity,
+  Info,
+  Bug,
 } from 'lucide-react';
 import { api } from '../../lib/api/client';
-import type { TenantDomainRecord } from '../../types/api/domains';
+import type { TenantDomainRecord, DnsDiagnostics } from '../../types/api/domains';
 
 export const DomainSettingsTab: React.FC = () => {
   const [domains, setDomains] = useState<TenantDomainRecord[]>([]);
@@ -36,6 +39,11 @@ export const DomainSettingsTab: React.FC = () => {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [selectedInstructionDomain, setSelectedInstructionDomain] = useState<TenantDomainRecord | null>(null);
+
+  // Live DNS Diagnostics Modal
+  const [showDiagnosticsModal, setShowDiagnosticsModal] = useState(false);
+  const [activeDiagnostics, setActiveDiagnostics] = useState<DnsDiagnostics | null>(null);
+  const [diagnosticsDomain, setDiagnosticsDomain] = useState<TenantDomainRecord | null>(null);
 
   const fetchDomains = useCallback(async () => {
     try {
@@ -102,24 +110,63 @@ export const DomainSettingsTab: React.FC = () => {
     }
   };
 
-  const handleVerifyDomain = async (id: number) => {
+  const handleVerifyDomain = async (id: number, devOverride = false) => {
+    const targetDomain = domains.find((d) => d.id === id);
+    if (targetDomain) {
+      setDiagnosticsDomain(targetDomain);
+    }
+
     try {
       setVerifyingId(id);
       setError(null);
-      const res = await api.post<TenantDomainRecord>(
-        `/storefront/domains/${id}/verify`
-      );
+      const res = await api.post<{
+        success: boolean;
+        message: string;
+        data: TenantDomainRecord;
+        diagnostics?: DnsDiagnostics;
+      }>(`/storefront/domains/${id}/verify`, {
+        dev_override: devOverride,
+      });
 
-      if (res.data) {
-        setSuccessMsg('Domain verified successfully!');
-        await fetchDomains();
+      if (res.data?.diagnostics) {
+        setActiveDiagnostics(res.data.diagnostics);
       }
+
+      if (res.data?.success) {
+        setSuccessMsg(res.data.message || 'Domain verified successfully!');
+      } else {
+        setError(res.data?.message || 'DNS verification failed. No matching TXT or CNAME record detected.');
+        if (res.data?.diagnostics) {
+          setShowDiagnosticsModal(true);
+        }
+      }
+      await fetchDomains();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'DNS verification failed. Check DNS records.');
       await fetchDomains();
     } finally {
       setVerifyingId(null);
     }
+  };
+
+  const openDiagnostics = (dom: TenantDomainRecord) => {
+    setDiagnosticsDomain(dom);
+    setActiveDiagnostics({
+      domain: dom.domain,
+      expected_txt: dom.dns_records_expected?.txt_record ? {
+        host: dom.dns_records_expected.txt_record.host,
+        value: dom.dns_records_expected.txt_record.value,
+      } : undefined,
+      expected_cname: dom.dns_records_expected?.cname_record ? {
+        host: dom.dns_records_expected.cname_record.host,
+        target: dom.dns_records_expected.cname_record.value,
+      } : undefined,
+      records_found: dom.dns_records_found || [],
+      verified: dom.verification_status === 'verified',
+      checked_at: dom.dns_last_checked_at || undefined,
+      message: dom.verification_status === 'verified' ? 'Domain is verified.' : 'Awaiting DNS propagation.',
+    });
+    setShowDiagnosticsModal(true);
   };
 
   const handleSetPrimary = async (id: number) => {
@@ -324,7 +371,7 @@ export const DomainSettingsTab: React.FC = () => {
                       {dom.verification_status === 'verified' ? (
                         <span className="text-emerald-700 font-semibold flex items-center gap-1">
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                          Verified
+                          Verified {dom.verification_token === 'dev_override' ? '(Dev Sandbox)' : '(Live DNS)'}
                         </span>
                       ) : dom.verification_status === 'pending' ? (
                         <span className="text-amber-700 font-semibold flex items-center gap-1">
@@ -354,6 +401,15 @@ export const DomainSettingsTab: React.FC = () => {
                       )}
                     </span>
 
+                    {dom.dns_last_checked_at && (
+                      <>
+                        <span>•</span>
+                        <span className="text-slate-400">
+                          DNS Checked: {new Date(dom.dns_last_checked_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </>
+                    )}
+
                     {dom.verified_at && (
                       <>
                         <span>•</span>
@@ -366,24 +422,49 @@ export const DomainSettingsTab: React.FC = () => {
                 {/* Actions */}
                 <div className="flex items-center gap-2 flex-wrap">
                   {dom.type !== 'platform_subdomain' && (
-                    <button
-                      onClick={() => setSelectedInstructionDomain(dom)}
-                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5"
-                    >
-                      <Server className="w-3.5 h-3.5" />
-                      DNS Instructions
-                    </button>
+                    <>
+                      <button
+                        onClick={() => setSelectedInstructionDomain(dom)}
+                        className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5"
+                        title="View DNS Records configuration"
+                      >
+                        <Server className="w-3.5 h-3.5" />
+                        DNS Records
+                      </button>
+
+                      <button
+                        onClick={() => openDiagnostics(dom)}
+                        className="px-2.5 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5"
+                        title="Inspect live DNS lookup results"
+                      >
+                        <Activity className="w-3.5 h-3.5 text-sky-600" />
+                        Diagnostics
+                      </button>
+                    </>
                   )}
 
                   {dom.verification_status !== 'verified' && (
-                    <button
-                      onClick={() => handleVerifyDomain(dom.id)}
-                      disabled={verifyingId === dom.id}
-                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${verifyingId === dom.id ? 'animate-spin' : ''}`} />
-                      {verifyingId === dom.id ? 'Verifying...' : 'Verify DNS'}
-                    </button>
+                    <>
+                      <button
+                        onClick={() => handleVerifyDomain(dom.id, false)}
+                        disabled={verifyingId === dom.id}
+                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+                        title="Query public DNS for TXT/CNAME records"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${verifyingId === dom.id ? 'animate-spin' : ''}`} />
+                        {verifyingId === dom.id ? 'Verifying...' : 'Verify DNS'}
+                      </button>
+
+                      <button
+                        onClick={() => handleVerifyDomain(dom.id, true)}
+                        disabled={verifyingId === dom.id}
+                        className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300/80 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5"
+                        title="Offline testing: verify domain immediately without live DNS check"
+                      >
+                        <Bug className="w-3.5 h-3.5 text-amber-600" />
+                        Dev Sandbox
+                      </button>
+                    </>
                   )}
 
                   {dom.verification_status === 'verified' && !dom.is_primary && (
@@ -655,6 +736,196 @@ export const DomainSettingsTab: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Live DNS Diagnostics Modal */}
+      {showDiagnosticsModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-sky-100 text-sky-700 rounded-xl">
+                  <Activity className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Live DNS Diagnostics</h3>
+                  <p className="text-xs text-slate-500 font-mono mt-0.5">
+                    {diagnosticsDomain?.domain || activeDiagnostics?.domain} • Google DoH & Public DNS
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDiagnosticsModal(false)}
+                className="text-slate-400 hover:text-slate-600 text-xl font-bold leading-none p-1"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5 text-sm max-h-[75vh] overflow-y-auto">
+              {/* Verification Status Banner */}
+              <div
+                className={`p-4 rounded-xl border flex items-center justify-between gap-4 ${
+                  activeDiagnostics?.verified
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                    : 'bg-amber-50 border-amber-200 text-amber-900'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  {activeDiagnostics?.verified ? (
+                    <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
+                  ) : (
+                    <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0" />
+                  )}
+                  <div>
+                    <div className="font-bold text-sm">
+                      {activeDiagnostics?.verified
+                        ? activeDiagnostics?.is_dev_override
+                          ? 'Verified via Sandbox Dev Override'
+                          : `Domain Verified (${activeDiagnostics?.method === 'txt' ? 'TXT Record Matched' : 'CNAME Target Matched'})`
+                        : 'DNS Verification Incomplete'}
+                    </div>
+                    <div className="text-xs opacity-90 mt-0.5">
+                      {activeDiagnostics?.message ||
+                        (activeDiagnostics?.verified
+                          ? 'The domain is correctly configured in public DNS and ready for live storefront routing.'
+                          : 'Neither the expected TXT token nor the CNAME target was found in public DNS lookup.')}
+                    </div>
+                  </div>
+                </div>
+
+                {activeDiagnostics?.checked_at && (
+                  <span className="text-[11px] font-mono px-2.5 py-1 bg-white/60 rounded-md shrink-0">
+                    Checked {new Date(activeDiagnostics.checked_at).toLocaleTimeString()}
+                  </span>
+                )}
+              </div>
+
+              {/* Expected vs Actual Records */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Configured Expectations vs Public DNS
+                </h4>
+
+                {/* Expected TXT Record */}
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between font-semibold text-slate-700">
+                    <span className="flex items-center gap-1.5">
+                      <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-800 rounded font-mono text-[10px]">TXT</span>
+                      Expected Challenge Host:
+                    </span>
+                    <span className="font-mono text-slate-900 font-bold">
+                      {activeDiagnostics?.expected_txt?.host || `_dcp-challenge.${diagnosticsDomain?.domain}`}
+                    </span>
+                  </div>
+                  <div className="text-slate-500 font-mono text-[11px] truncate bg-white p-2 rounded border border-slate-200">
+                    Value: {activeDiagnostics?.expected_txt?.value || diagnosticsDomain?.verification_token}
+                  </div>
+                </div>
+
+                {/* Expected CNAME Record */}
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between font-semibold text-slate-700">
+                    <span className="flex items-center gap-1.5">
+                      <span className="px-1.5 py-0.5 bg-sky-100 text-sky-800 rounded font-mono text-[10px]">CNAME</span>
+                      Expected Routing Host:
+                    </span>
+                    <span className="font-mono text-slate-900 font-bold">
+                      {activeDiagnostics?.expected_cname?.host || diagnosticsDomain?.domain}
+                    </span>
+                  </div>
+                  <div className="text-slate-500 font-mono text-[11px] truncate bg-white p-2 rounded border border-slate-200">
+                    Points To: {activeDiagnostics?.expected_cname?.target || diagnosticsDomain?.dns_records_expected?.cname_record?.value || 'slicemart.tech'}
+                  </div>
+                </div>
+
+                {/* Actual Detected Records in Public DNS */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Records Detected via Google DNS (DoH)
+                    </span>
+                    <span className="text-[11px] text-slate-500">
+                      {activeDiagnostics?.records_found?.length || 0} record(s) returned
+                    </span>
+                  </div>
+
+                  {activeDiagnostics?.records_found && activeDiagnostics.records_found.length > 0 ? (
+                    <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100 text-xs font-mono">
+                      {activeDiagnostics.records_found.map((rec, idx) => (
+                        <div key={idx} className="p-2.5 bg-slate-50/70 flex items-center justify-between gap-2">
+                          <span className="px-2 py-0.5 bg-slate-200 text-slate-800 rounded text-[10px] font-bold">
+                            {rec.type}
+                          </span>
+                          <span className="text-slate-700 truncate text-[11px] flex-1 text-right">
+                            {rec.value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 border border-dashed border-slate-300 rounded-xl text-center text-slate-500 text-xs bg-slate-50/50">
+                      No public TXT or CNAME records found yet for this domain.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Troubleshooting Notice */}
+              <div className="p-3.5 bg-slate-100/70 rounded-xl text-slate-600 text-xs space-y-1.5 border border-slate-200">
+                <div className="font-semibold text-slate-800 flex items-center gap-1.5">
+                  <Info className="w-3.5 h-3.5 text-indigo-600" />
+                  DNS Troubleshooting Tips
+                </div>
+                <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-600 pl-1">
+                  <li>Changes in Cloudflare, GoDaddy, or Namecheap can take up to 15 minutes to reach global recursive resolvers.</li>
+                  <li>If using Cloudflare DNS, turn <strong>Proxy Status OFF</strong> (DNS Only / Grey Cloud) during initial verification.</li>
+                  <li>In local development or staging without a public domain, use the <strong>Dev Sandbox Override</strong> below.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setShowDiagnosticsModal(false)}
+                className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200"
+              >
+                Close
+              </button>
+
+              <div className="flex items-center gap-2">
+                {diagnosticsDomain && diagnosticsDomain.verification_status !== 'verified' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleVerifyDomain(diagnosticsDomain.id, true);
+                    }}
+                    className="px-3.5 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-semibold rounded-xl border border-amber-300 flex items-center gap-1.5"
+                    title="Bypass live DNS lookup for local/offline testing"
+                  >
+                    <Bug className="w-3.5 h-3.5 text-amber-700" />
+                    Sandbox Dev Bypass
+                  </button>
+                )}
+
+                {diagnosticsDomain && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleVerifyDomain(diagnosticsDomain.id, false);
+                    }}
+                    disabled={verifyingId === diagnosticsDomain.id}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow-sm flex items-center gap-2"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${verifyingId === diagnosticsDomain.id ? 'animate-spin' : ''}`} />
+                    {verifyingId === diagnosticsDomain.id ? 'Querying DNS...' : 'Re-query Public DNS'}
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -14,6 +14,7 @@ export type DocumentType =
   | 'pos_receipt_80mm'
   | 'pos_receipt_58mm'
   | 'barcode_label'
+  | 'payslip'
   | 'report';
 
 export type PaperUnit = 'mm' | 'inch';

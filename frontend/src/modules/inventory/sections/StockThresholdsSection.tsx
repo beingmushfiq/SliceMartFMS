@@ -11,11 +11,17 @@ import {
   TrendingDown,
   Warehouse as WarehouseIcon,
   ShoppingCart,
+  ChevronDown,
+  SlidersHorizontal,
+  History,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { api } from '../../../lib/api/client';
 import { KPICard } from '../../../components/ui/KPICard';
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
+import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
+import { cn } from '../../../lib/utils';
 
 interface StockThresholdItem {
   product_id: number;
@@ -52,6 +58,8 @@ export const StockThresholdsSection: React.FC = () => {
   const [editMinAlert, setEditMinAlert] = useState<string>('10');
   const [editReorderQty, setEditReorderQty] = useState<string>('50');
   const [editMaxLevel, setEditMaxLevel] = useState<string>('500');
+  const [openActionMenuKey, setOpenActionMenuKey] = useState<string | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
 
   const { data, isLoading, refetch, isFetching } = useQuery<ThresholdResponse>({
     queryKey: ['inventory', 'thresholds'],
@@ -241,7 +249,7 @@ export const StockThresholdsSection: React.FC = () => {
 
       {/* Thresholds Table */}
       <div className="rounded-2xl border border-default bg-surface shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-75">
           <table className="w-full text-left text-xs text-default">
             <thead className="border-b border-default bg-surface-sunken/70 uppercase text-[11px] font-semibold tracking-wider text-muted">
               <tr>
@@ -269,79 +277,164 @@ export const StockThresholdsSection: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                filteredItems.map((item) => (
-                  <tr
-                    key={`${item.product_id}_${item.warehouse_id}`}
-                    className={`hover:bg-surface-sunken/40 transition-colors ${
-                      item.is_low_stock ? 'bg-rose-500/5' : ''
-                    }`}
-                  >
-                    <td className="px-5 py-3.5 font-medium">
-                      <div className="text-default font-semibold">{item.product_name}</div>
-                      <div className="text-[10px] font-mono text-muted">{item.sku}</div>
-                    </td>
-                    <td className="px-5 py-3.5 text-muted">{item.category_name}</td>
-                    <td className="px-5 py-3.5">
-                      <span className="rounded-full bg-surface-sunken px-2.5 py-0.5 text-[10px] font-semibold text-muted border border-default">
-                        {item.warehouse_name}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-right font-mono font-bold">
-                      <span
-                        className={
-                          item.is_low_stock
-                            ? 'text-rose-600 font-extrabold'
-                            : 'text-default'
-                        }
-                      >
-                        {item.current_stock.toFixed(2)} {item.unit_code}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-right font-mono text-muted">
-                      {item.min_stock_alert.toFixed(2)} {item.unit_code}
-                    </td>
-                    <td className="px-5 py-3.5 text-right font-mono font-bold text-primary">
-                      {item.reorder_quantity.toFixed(2)} {item.unit_code}
-                    </td>
-                    <td className="px-5 py-3.5 text-center">
-                      {item.is_low_stock ? (
-                        <Badge tone="danger-subtle">
-                          Low Stock (-{item.deficit.toFixed(1)})
-                        </Badge>
-                      ) : (
-                        <Badge tone="success-subtle">
-                          Healthy
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        {item.is_low_stock && (
-                          <Link
-                            to={`/purchasing?tab=orders&product=${encodeURIComponent(item.product_name)}&sku=${encodeURIComponent(item.sku)}&qty=${item.reorder_quantity}`}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-primary text-primary-fg hover:opacity-90 transition shadow-2xs cursor-pointer"
-                            title="Quick Reorder from Supplier in Purchasing"
-                          >
-                            <ShoppingCart className="size-3" />
-                            <span>Reorder</span>
-                          </Link>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleOpenEdit(item)}
-                          className="text-xs h-7 gap-1"
+                filteredItems.map((item) => {
+                  const itemKey = `${item.product_id}_${item.warehouse_id}`;
+                  return (
+                    <tr
+                      key={itemKey}
+                      className={`hover:bg-surface-sunken/40 transition-colors ${
+                        item.is_low_stock ? 'bg-rose-500/5' : ''
+                      }`}
+                    >
+                      <td className="px-5 py-3.5 font-medium">
+                        <div className="text-default font-semibold">{item.product_name}</div>
+                        <div className="text-[10px] font-mono text-muted">{item.sku}</div>
+                      </td>
+                      <td className="px-5 py-3.5 text-muted">{item.category_name}</td>
+                      <td className="px-5 py-3.5">
+                        <span className="rounded-full bg-surface-sunken px-2.5 py-0.5 text-[10px] font-semibold text-muted border border-default">
+                          {item.warehouse_name}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-right font-mono font-bold">
+                        <span
+                          className={
+                            item.is_low_stock
+                              ? 'text-rose-600 font-extrabold'
+                              : 'text-default'
+                          }
                         >
-                          <Sliders className="h-3.5 w-3.5" />
-                          Configure
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          {item.current_stock.toFixed(2)} {item.unit_code}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-right font-mono text-muted">
+                        {item.min_stock_alert.toFixed(2)} {item.unit_code}
+                      </td>
+                      <td className="px-5 py-3.5 text-right font-mono font-bold text-primary">
+                        {item.reorder_quantity.toFixed(2)} {item.unit_code}
+                      </td>
+                      <td className="px-5 py-3.5 text-center">
+                        {item.is_low_stock ? (
+                          <Badge tone="danger-subtle">
+                            Low Stock (-{item.deficit.toFixed(1)})
+                          </Badge>
+                        ) : (
+                          <Badge tone="success-subtle">
+                            Healthy
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleOpenEdit(item)}
+                            className="text-xs h-7 gap-1"
+                          >
+                            <Sliders className="h-3.5 w-3.5" />
+                            Configure
+                          </Button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (openActionMenuKey === itemKey) {
+                                setOpenActionMenuKey(null);
+                                setActionMenuAnchor(null);
+                              } else {
+                                setOpenActionMenuKey(itemKey);
+                                setActionMenuAnchor(e.currentTarget);
+                              }
+                            }}
+                            className={cn(
+                              'inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg border transition-colors cursor-pointer',
+                              openActionMenuKey === itemKey
+                                ? 'bg-primary text-primary-fg border-primary shadow-xs'
+                                : 'bg-surface hover:bg-surface-sunken border-default text-default'
+                            )}
+                          >
+                            <span>Actions</span>
+                            <ChevronDown className="size-3 text-muted" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
+
+          {openActionMenuKey && (() => {
+            const item = filteredItems.find(
+              (x) => `${x.product_id}_${x.warehouse_id}` === openActionMenuKey
+            );
+            if (!item) return null;
+            return (
+              <ActionMenuPortal
+                isOpen={Boolean(openActionMenuKey && actionMenuAnchor)}
+                anchorEl={actionMenuAnchor}
+                onClose={() => {
+                  setOpenActionMenuKey(null);
+                  setActionMenuAnchor(null);
+                }}
+                width="13rem"
+              >
+                <div className="p-1 space-y-0.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuKey(null);
+                      setActionMenuAnchor(null);
+                      handleOpenEdit(item);
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                  >
+                    <SlidersHorizontal className="size-3.5 text-muted" />
+                    <span>Configure Alert Levels</span>
+                  </button>
+
+                  <Link
+                    to={`/purchasing?tab=orders&product=${encodeURIComponent(item.product_name)}&sku=${encodeURIComponent(item.sku)}&qty=${item.reorder_quantity}`}
+                    onClick={() => {
+                      setOpenActionMenuKey(null);
+                      setActionMenuAnchor(null);
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-primary hover:bg-primary/10 transition-colors cursor-pointer font-medium"
+                  >
+                    <ShoppingCart className="size-3.5 text-primary" />
+                    <span>Reorder in Purchasing</span>
+                  </Link>
+
+                  <Link
+                    to="/inventory?tab=transfers"
+                    onClick={() => {
+                      setOpenActionMenuKey(null);
+                      setActionMenuAnchor(null);
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                  >
+                    <ArrowRightLeft className="size-3.5 text-muted" />
+                    <span>Transfer from Other Hub</span>
+                  </Link>
+
+                  <Link
+                    to="/inventory?tab=ledger"
+                    onClick={() => {
+                      setOpenActionMenuKey(null);
+                      setActionMenuAnchor(null);
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+                  >
+                    <History className="size-3.5 text-muted" />
+                    <span>View Stock Ledger</span>
+                  </Link>
+                </div>
+              </ActionMenuPortal>
+            );
+          })()}
         </div>
       </div>
 

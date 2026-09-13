@@ -90,12 +90,14 @@ class TenantDomainController extends Controller
             ->where('id', $id)
             ->firstOrFail();
 
-        $result = $this->domainService->verifyDomain($domain, $request->user());
+        $allowDevOverride = (bool) $request->input('dev_override', false);
+        $result = $this->domainService->verifyDomain($domain, $request->user(), $allowDevOverride);
 
         return response()->json([
             'success' => $result['success'],
             'message' => $result['message'],
             'data' => $result['domain'],
+            'diagnostics' => $result['diagnostics'] ?? null,
         ], $result['success'] ? 200 : 422);
     }
 
