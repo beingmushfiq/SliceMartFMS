@@ -72,6 +72,11 @@ const WorkflowAutomationWorkspace = lazy(() =>
 const OnboardingWizard = lazy(() =>
   import('../modules/platform/OnboardingWizard').then((m) => ({ default: m.OnboardingWizard }))
 );
+const InteractiveTutorialWorkspace = lazy(() =>
+  import('../modules/tutorial/InteractiveTutorialWorkspace').then((m) => ({
+    default: m.InteractiveTutorialWorkspace,
+  }))
+);
 
 // Master SaaS Platform Admin imports
 import { PlatformProtectedRoute } from '../components/platform/PlatformProtectedRoute';
@@ -300,6 +305,14 @@ export const router = createBrowserRouter([
           {
             path: 'dashboard',
             element: <TenantRoleDashboard />,
+          },
+          {
+            path: 'tutorial',
+            element: <InteractiveTutorialWorkspace />,
+          },
+          {
+            path: 'guide',
+            element: <Navigate to="/tutorial" replace />,
           },
           {
             path: 'overview',

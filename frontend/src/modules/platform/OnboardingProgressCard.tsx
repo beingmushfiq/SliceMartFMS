@@ -8,7 +8,9 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
+  Compass,
 } from 'lucide-react';
+import { useTutorialStore } from '../tutorial/tutorialStore';
 
 const MILESTONE_TITLES: Record<string, string> = {
   legal_identity: 'Legal & Tax',
@@ -27,6 +29,7 @@ export const OnboardingProgressCard: React.FC = () => {
     resumeOnboarding,
   } = useOnboardingProgress();
 
+  const openTutorial = useTutorialStore((s) => s.openTutorial);
   const [isExpanded, setIsExpanded] = useState(false);
 
   if (!shouldShowProgressCard) {
@@ -64,7 +67,18 @@ export const OnboardingProgressCard: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+        <div className="flex items-center gap-2 self-end sm:self-center shrink-0 flex-wrap">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => openTutorial(1)}
+            className="flex items-center gap-1.5 min-h-9 text-xs"
+            title="Open Interactive System Guide & Tour"
+          >
+            <Compass className="size-3.5 text-primary" />
+            <span>Interactive Guide</span>
+          </Button>
+
           <Button
             variant="ghost"
             size="sm"

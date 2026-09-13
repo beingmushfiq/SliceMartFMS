@@ -33,9 +33,11 @@ import {
   PanelLeftOpen,
   Trash2,
   Brain,
+  Compass,
 } from 'lucide-react';
 import { SliceMartBrainModal } from './SliceMartBrainModal';
 import { useAuthStore } from '../../lib/auth/authStore';
+import { useTutorialStore } from '../../modules/tutorial/tutorialStore';
 import { useTenantCapabilityStore } from '../../lib/capabilities/tenantCapabilityStore';
 import { PLATFORM_NAV_DEFINITIONS } from '../../lib/capabilities/navRegistry';
 import { cn } from '../../lib/utils';
@@ -75,6 +77,7 @@ export function AppHeader({
   const [isNotifMenuOpen, setIsNotifMenuOpen] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isBrainOpen, setIsBrainOpen] = useState(false);
+  const openTutorial = useTutorialStore((s) => s.openTutorial);
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -401,6 +404,17 @@ export function AppHeader({
 
       {/* Right side: POS Button + Branch + Quick Add + Notifications + Theme toggle + User profile */}
       <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+        {/* ── Interactive Tutorial & System Tour Direct Action Button ──── */}
+        <button
+          type="button"
+          onClick={() => openTutorial()}
+          className="flex items-center gap-1.5 rounded-xl border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 px-2.5 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 shadow-xs transition-colors cursor-pointer shrink-0"
+          title="Interactive Beginner Tutorial & System Tour"
+        >
+          <Compass className="size-3.5" />
+          <span className="hidden sm:inline">System Tour</span>
+        </button>
+
         {/* ── POS (Point of Sale) Register Direct Action Button ──── */}
         <Link
           to="/pos"

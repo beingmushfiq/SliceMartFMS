@@ -9,6 +9,7 @@ import { SeoHead } from '../seo/SeoHead';
 import { cn } from '../../lib/utils';
 import { useTenantBranding } from '../../lib/theme/useTenantBranding';
 import { useAuthStore } from '../../lib/auth/authStore';
+import { InteractiveTutorialModal } from '../../modules/tutorial/InteractiveTutorialModal';
 
 export function AppShell() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -46,6 +47,7 @@ export function AppShell() {
       />
       <OfflineBanner />
       <ImpersonationBanner />
+      <InteractiveTutorialModal />
       <div className="flex flex-1 min-h-0">
         {/* Navigation Sidebar */}
         <Sidebar
