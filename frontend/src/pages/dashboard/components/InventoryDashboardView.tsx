@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -8,8 +8,9 @@ import {
   ShoppingCart,
   Eye,
   ArrowRight,
-  Truck,
   ArrowRightLeft,
+  ClipboardList,
+  SlidersHorizontal,
 } from 'lucide-react';
 import type { OrderPOItem } from './DashboardModals';
 import { api } from '../../../lib/api/client';
@@ -22,12 +23,45 @@ interface InventoryDashboardViewProps {
   onOpenReviewStock: (item: OrderPOItem) => void;
 }
 
+interface StockMovementItem {
+  id: number | string;
+  type: string;
+  reference_type?: string;
+  reference_number?: string;
+  quantity: number;
+  product?: { name: string; sku?: string };
+  warehouse?: { name: string };
+  created_at: string;
+}
+
+interface StockCountSummary {
+  id: number | string;
+  count_number: string;
+  warehouse?: { name: string };
+  type: string;
+  status: string;
+  created_at: string;
+}
+
+interface StockAdjustmentSummary {
+  id: number | string;
+  adjustment_number: string;
+  warehouse?: { name: string };
+  type: string;
+  status: string;
+  total_value_impact?: number;
+  created_at: string;
+}
+
 export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
   attentionItems,
   onOpenOrderPO,
   onOpenReviewStock,
 }) => {
   const { formatCurrency } = useCurrency();
+  const [activeTab, setActiveTab] = useState<'replenish' | 'movements' | 'counts' | 'adjustments'>(
+    'replenish'
+  );
 
   const { data: metrics } = useQuery<DashboardMetricsData | null>({
     queryKey: ['tenant', 'dashboard', 'metrics'],
@@ -55,15 +89,53 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
     },
   });
 
-  const stockMovements: Array<{
-    id: string;
-    type: string;
-    item: string;
-    qty: string;
-    warehouse: string;
-    time: string;
-    status: string;
-  }> = [];
+  // Fetch live stock movements
+  const { data: stockMovements = [] } = useQuery<StockMovementItem[]>({
+    queryKey: ['inventory', 'movements', 'dashboard'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<any>('/inventory/movements', {
+          params: { per_page: 8 },
+        });
+        return Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+      } catch {
+        return [];
+      }
+    },
+  });
+
+  // Fetch live stock counts / audits
+  const { data: stockCounts = [] } = useQuery<StockCountSummary[]>({
+    queryKey: ['inventory', 'counts', 'dashboard'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<any>('/inventory/counts', {
+          params: { per_page: 5 },
+        });
+        return Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+      } catch {
+        return [];
+      }
+    },
+  });
+
+  // Fetch live stock adjustments
+  const { data: stockAdjustments = [] } = useQuery<StockAdjustmentSummary[]>({
+    queryKey: ['inventory', 'adjustments', 'dashboard'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<any>('/inventory/adjustments', {
+          params: { per_page: 5 },
+        });
+        return Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+      } catch {
+        return [];
+      }
+    },
+  });
+
+  const pendingCountsCount = metrics?.inventory?.pending_counts ?? stockCounts.length;
+  const pendingAdjustmentsCount = metrics?.inventory?.pending_adjustments ?? stockAdjustments.length;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -72,177 +144,250 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
       ───────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-default pb-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-default font-sans">
               Warehouse & Stock Inventory
             </h2>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 border border-amber-500/20">
               <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-              Stock Audits Current
+              Real-time Ledger Connected
             </span>
           </div>
           <p className="text-xs text-muted mt-0.5">
-            Raw materials intake, warehouse storage, replenishment orders & goods receipt
+            Raw materials intake, warehouse storage, replenishment orders & cycle counts
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Link
-            to="/inventory"
+            to="/inventory?action=transfer"
             className="flex items-center gap-1.5 rounded-xl border border-default bg-surface px-3 py-2 text-xs font-semibold text-default hover:bg-surface-sunken transition-all shadow-2xs"
           >
             <ArrowRightLeft className="size-3.5 text-muted" />
             <span>Stock Transfer</span>
           </Link>
           <Link
-            to="/purchasing"
+            to="/purchasing?action=new"
             className="flex items-center gap-1.5 rounded-xl bg-linear-to-r from-amber-600 to-orange-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:from-amber-500 hover:to-orange-500 transition-all"
           >
-            <Truck className="size-3.5" />
-            <span>Receive Inbound GRN</span>
+            <ShoppingCart className="size-3.5" />
+            <span>Create PO</span>
           </Link>
         </div>
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          2. 6-KPI INVENTORY STRIP
+          2. CORE INVENTORY KPI CARDS (RESPONSIVE GRID 2/3/6)
       ───────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
         {/* KPI 1: Total SKUs */}
-        <div className="rounded-2xl border border-default bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all">
+        <div className="rounded-2xl border border-default bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all min-w-0">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-muted uppercase tracking-wider truncate">
               TOTAL SKUS
             </span>
-            <div className="flex size-7 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
               <Boxes className="size-3.5" />
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
+            <div className="text-xl sm:text-2xl font-extrabold font-mono text-default truncate">
               {metrics?.inventory?.total_valuation ? 'Live Catalog' : '0 SKUs'}
             </div>
-            <span className="text-[10px] font-semibold text-muted">Active Facility</span>
+            <span className="text-[10px] font-semibold text-muted block truncate">
+              Active Facility
+            </span>
           </div>
         </div>
 
-        {/* KPI 2: Inventory Value */}
-        <div className="rounded-2xl border border-default bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all">
+        {/* KPI 2: Stock Valuation */}
+        <div className="rounded-2xl border border-default bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all min-w-0">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-muted uppercase tracking-wider truncate">
               STOCK VALUATION
             </span>
-            <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
               <Warehouse className="size-3.5" />
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
+            <div className="text-xl sm:text-2xl font-extrabold font-mono text-default truncate">
               {formatCurrency(metrics?.inventory?.total_valuation ?? 0)}
             </div>
-            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-              Raw & Finished Goods
+            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 block truncate">
+              Live Stock Asset Value
             </span>
           </div>
         </div>
 
-        {/* KPI 3: Critical Out of Stock */}
-        <div className="rounded-2xl border border-default bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all">
+        {/* KPI 2: Out of Stock */}
+        <div className="rounded-2xl border border-default bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all min-w-0">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-muted uppercase tracking-wider truncate">
               OUT OF STOCK
             </span>
-            <div className="flex size-7 items-center justify-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-400">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 shrink-0">
               <AlertTriangle className="size-3.5" />
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-extrabold font-mono text-red-500">
+            <div className="text-xl sm:text-2xl font-extrabold font-mono text-red-500 truncate">
               {metrics?.inventory?.low_stock_count ?? 0} Items
             </div>
-            <span className="text-[10px] font-semibold text-red-500">Immediate Reorder</span>
+            <span className="text-[10px] font-semibold text-red-500 block truncate">
+              Zero Stock Items
+            </span>
           </div>
         </div>
 
-        {/* KPI 4: Low Stock Warnings */}
-        <div className="rounded-2xl border border-default bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all">
+        {/* KPI 3: Reorder Alerts */}
+        <div className="rounded-2xl border border-default bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all min-w-0">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
-              LOW STOCK
+            <span className="text-[10px] font-bold text-muted uppercase tracking-wider truncate">
+              REORDER ALERTS
             </span>
-            <div className="flex size-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
-              <AlertTriangle className="size-3.5" />
+            <div className="flex size-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+              <Boxes className="size-3.5" />
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-extrabold font-mono text-amber-500">
-              {attentionItems.length} Items
+            <div className="text-xl sm:text-2xl font-extrabold font-mono text-amber-500 truncate">
+              {attentionItems.length} SKUs
             </div>
-            <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-              Below Safety Threshold
+            <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 block truncate">
+              Below Safety Limit
             </span>
           </div>
         </div>
 
-        {/* KPI 5: Pending Inbound GRNs */}
-        <div className="rounded-2xl border border-default bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all">
+        {/* KPI 4: Pending Cycle Counts */}
+        <div className="rounded-2xl border border-default bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all min-w-0">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
-              PENDING GRN
+            <span className="text-[10px] font-bold text-muted uppercase tracking-wider truncate">
+              CYCLE COUNTS
             </span>
-            <div className="flex size-7 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-              <Truck className="size-3.5" />
+            <div className="flex size-7 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 shrink-0">
+              <ClipboardList className="size-3.5" />
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              0 Shipments
+            <div className="text-xl sm:text-2xl font-extrabold font-mono text-default truncate">
+              {pendingCountsCount} Audits
             </div>
-            <span className="text-[10px] font-semibold text-muted">Inbound Receiving</span>
+            <span className="text-[10px] font-semibold text-muted block truncate">
+              Warehouse Verification
+            </span>
           </div>
         </div>
 
-        {/* KPI 6: Transfers in Transit */}
-        <div className="rounded-2xl border border-default bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all">
+        {/* KPI 5: Pending Adjustments */}
+        <div className="rounded-2xl border border-default bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all min-w-0">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
-              TRANSIT ORDERS
+            <span className="text-[10px] font-bold text-muted uppercase tracking-wider truncate">
+              ADJUSTMENTS
             </span>
-            <div className="flex size-7 items-center justify-center rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0">
+              <SlidersHorizontal className="size-3.5" />
+            </div>
+          </div>
+          <div className="mt-2">
+            <div className="text-xl sm:text-2xl font-extrabold font-mono text-default truncate">
+              {pendingAdjustmentsCount} Pending
+            </div>
+            <span className="text-[10px] font-semibold text-muted block truncate">
+              Variance Approvals
+            </span>
+          </div>
+        </div>
+
+        {/* KPI 6: Inbound Transfers */}
+        <div className="rounded-2xl border border-default bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all min-w-0">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-muted uppercase tracking-wider truncate">
+              TRANSFERS
+            </span>
+            <div className="flex size-7 items-center justify-center rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 shrink-0">
               <ArrowRightLeft className="size-3.5" />
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              0 Transfers
+            <div className="text-xl sm:text-2xl font-extrabold font-mono text-default truncate">
+              Active Hubs
             </div>
-            <span className="text-[10px] font-semibold text-muted">Inter-facility Log</span>
+            <span className="text-[10px] font-semibold text-muted block truncate">
+              Multi-facility Sync
+            </span>
           </div>
         </div>
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          3. REORDER QUEUE & WAREHOUSE CAPACITY
+          3. WORKSTATION TABS: REPLENISHMENT / MOVEMENTS / AUDITS
       ───────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Reorder Queue */}
-        <div className="lg:col-span-2 rounded-2xl border border-default bg-surface p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-bold text-default">Immediate Replenishment Queue</h3>
-              <p className="text-[11px] text-muted">
-                Material items requiring urgent purchase orders
-              </p>
-            </div>
-            <span className="rounded-full bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 text-[10px] font-bold">
-              {attentionItems.length} Alerts
-            </span>
+      <div className="rounded-2xl border border-default bg-surface p-4 sm:p-5 shadow-xs min-w-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <h3 className="text-sm font-bold text-default">Inventory Management Operations</h3>
+            <p className="text-[11px] text-muted">
+              Live replenishment triggers, material movement ledger, and warehouse count sessions
+            </p>
           </div>
 
+          {/* Responsive Tab Bar */}
+          <div className="flex items-center gap-1 rounded-xl bg-surface-sunken p-1 border border-default self-start sm:self-auto overflow-x-auto max-w-full">
+            <button
+              type="button"
+              onClick={() => setActiveTab('replenish')}
+              className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all whitespace-nowrap ${
+                activeTab === 'replenish'
+                  ? 'bg-surface text-default shadow-xs'
+                  : 'text-muted hover:text-default'
+              }`}
+            >
+              Reorder Queue ({attentionItems.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('movements')}
+              className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all whitespace-nowrap ${
+                activeTab === 'movements'
+                  ? 'bg-surface text-default shadow-xs'
+                  : 'text-muted hover:text-default'
+              }`}
+            >
+              Movement Ledger ({stockMovements.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('counts')}
+              className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all whitespace-nowrap ${
+                activeTab === 'counts'
+                  ? 'bg-surface text-default shadow-xs'
+                  : 'text-muted hover:text-default'
+              }`}
+            >
+              Cycle Counts ({stockCounts.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('adjustments')}
+              className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all whitespace-nowrap ${
+                activeTab === 'adjustments'
+                  ? 'bg-surface text-default shadow-xs'
+                  : 'text-muted hover:text-default'
+              }`}
+            >
+              Adjustments ({stockAdjustments.length})
+            </button>
+          </div>
+        </div>
+
+        {/* Tab 1: Replenishment Queue */}
+        {activeTab === 'replenish' && (
           <div className="divide-y divide-default">
             {attentionItems.length === 0 ? (
               <div className="text-center py-8 text-xs text-muted">
-                All inventory stock levels are within optimal thresholds
+                All inventory stock levels are within optimal thresholds. No immediate reorders needed.
               </div>
             ) : (
               attentionItems.map((item) => {
@@ -250,14 +395,14 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
                 return (
                   <div
                     key={item.id}
-                    className="py-3 flex items-center justify-between gap-3 hover:bg-surface-sunken/40 px-2 rounded-xl transition-colors"
+                    className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-surface-sunken/40 px-2 rounded-xl transition-colors"
                   >
                     <div className="space-y-0.5 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-bold text-default">{item.name}</span>
                         <span className="text-[10px] text-muted font-mono">({item.sku})</span>
                       </div>
-                      <div className="flex items-center gap-2 text-[11px] text-muted">
+                      <div className="flex items-center gap-2 text-[11px] text-muted flex-wrap">
                         <span>
                           Warehouse: <strong className="text-default">{item.warehouse}</strong>
                         </span>
@@ -269,11 +414,11 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
                           </strong>
                         </span>
                         <span>•</span>
-                        <span>Min: {item.minThreshold}</span>
+                        <span>Min Threshold: {item.minThreshold}</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
                       <button
                         type="button"
                         onClick={() => onOpenReviewStock(item)}
@@ -296,97 +441,149 @@ export const InventoryDashboardView: React.FC<InventoryDashboardViewProps> = ({
               })
             )}
           </div>
+        )}
 
-          <Link
-            to="/inventory"
-            className="mt-4 flex items-center justify-between text-xs font-semibold text-primary hover:underline pt-3 border-t border-default"
-          >
-            <span>Open Complete Inventory Ledger</span>
-            <ArrowRight className="size-3" />
-          </Link>
-        </div>
-
-        {/* Warehouse Capacity & Recent Movements */}
-        <div className="rounded-2xl border border-default bg-surface p-5 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3 border-b border-default pb-2">
-              <h3 className="text-sm font-bold text-default">Warehouse Capacity</h3>
-              <span className="text-[10px] text-muted uppercase font-semibold">Active Hubs</span>
-            </div>
-
-            <div className="space-y-4">
-              {/* Primary Facility */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-default">Main Warehouse</span>
-                  <span className="font-mono text-muted">Optimal</span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-surface-sunken overflow-hidden">
-                  <div className="h-full rounded-full bg-blue-500" style={{ width: '45%' }} />
-                </div>
-                <div className="flex items-center justify-between text-[10px] text-muted">
-                  <span>General Stock</span>
-                  <span>Operational Status</span>
-                </div>
+        {/* Tab 2: Stock Movements Ledger */}
+        {activeTab === 'movements' && (
+          <div className="divide-y divide-default">
+            {stockMovements.length === 0 ? (
+              <div className="text-center py-8 text-xs text-muted">
+                No recent stock movements or material transfers recorded.
               </div>
-            </div>
-          </div>
+            ) : (
+              stockMovements.map((move) => (
+                <div
+                  key={move.id}
+                  className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-surface-sunken/40 px-2 rounded-xl transition-colors"
+                >
+                  <div className="space-y-0.5 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="rounded-md bg-surface px-1.5 py-0.5 text-[9px] font-mono font-bold text-primary border border-default uppercase">
+                        {move.type}
+                      </span>
+                      <span className="text-xs font-bold text-default">
+                        {move.product?.name ?? 'Inventory Item'}
+                      </span>
+                      {move.product?.sku && (
+                        <span className="text-[10px] text-muted font-mono">({move.product.sku})</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-muted font-mono flex-wrap">
+                      <span>Warehouse: {move.warehouse?.name ?? 'Facility'}</span>
+                      {move.reference_number && (
+                        <>
+                          <span>•</span>
+                          <span>Ref: {move.reference_number}</span>
+                        </>
+                      )}
+                      <span>•</span>
+                      <span>{new Date(move.created_at).toLocaleString()}</span>
+                    </div>
+                  </div>
 
-          <Link
-            to="/inventory"
-            className="mt-4 flex items-center justify-between text-xs font-semibold text-primary hover:underline pt-2 border-t border-default"
-          >
-            <span>Manage Warehouses & Bins</span>
-            <ArrowRight className="size-3" />
-          </Link>
-        </div>
-      </div>
-
-      {/* ─────────────────────────────────────────────────────────────
-          4. RECENT INBOUND RECEIPTS & INTERNAL MOVEMENTS
-      ───────────────────────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-default bg-surface p-5 shadow-xs">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-sm font-bold text-default">Recent Stock Activity</h3>
-            <p className="text-[11px] text-muted">
-              Real-time ledger of inbound shipments and warehouse transfers
-            </p>
-          </div>
-          <Link
-            to="/inventory"
-            className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
-          >
-            <span>Movement History</span>
-            <ArrowRight className="size-3" />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          {stockMovements.length === 0 ? (
-            <div className="col-span-full text-center py-6 text-xs text-muted font-sans">
-              No recent stock movements or receipts recorded
-            </div>
-          ) : (
-            stockMovements.map((move) => (
-              <div
-                key={move.id}
-                className="p-3 rounded-xl border border-default bg-surface-sunken/40 space-y-1.5"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="rounded-md bg-surface px-1.5 py-0.5 text-[9px] font-mono font-bold text-primary border border-default">
-                    {move.type}
-                  </span>
-                  <span className="text-[10px] text-muted font-mono">{move.time}</span>
+                  <div className="shrink-0 self-start sm:self-auto font-mono text-xs font-bold">
+                    <span className={move.quantity < 0 ? 'text-red-500' : 'text-emerald-500'}>
+                      {move.quantity > 0 ? `+${move.quantity}` : move.quantity} pcs
+                    </span>
+                  </div>
                 </div>
-                <div className="text-xs font-bold text-default truncate">{move.item}</div>
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-muted">{move.warehouse}</span>
-                  <strong className="font-mono text-emerald-500">{move.qty}</strong>
-                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Tab 3: Cycle Counts */}
+        {activeTab === 'counts' && (
+          <div className="divide-y divide-default">
+            {stockCounts.length === 0 ? (
+              <div className="text-center py-8 text-xs text-muted">
+                No active cycle counts or stock audit sessions.
               </div>
-            ))
-          )}
+            ) : (
+              stockCounts.map((count) => (
+                <div
+                  key={count.id}
+                  className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-surface-sunken/40 px-2 rounded-xl transition-colors"
+                >
+                  <div className="space-y-0.5 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-default">{count.count_number}</span>
+                      <span className="text-xs text-muted truncate">
+                        {count.warehouse?.name ?? 'Assigned Warehouse'}
+                      </span>
+                      <span className="rounded-md bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase">
+                        {count.status}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-muted font-mono">
+                      Type: <strong>{count.type}</strong> • Date: {new Date(count.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <Link
+                    to="/inventory?tab=counts"
+                    className="shrink-0 self-start sm:self-auto rounded-lg border border-default bg-surface px-2.5 py-1 text-xs font-semibold text-default hover:bg-surface-sunken transition-all"
+                  >
+                    Manage Audit
+                  </Link>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Tab 4: Adjustments */}
+        {activeTab === 'adjustments' && (
+          <div className="divide-y divide-default">
+            {stockAdjustments.length === 0 ? (
+              <div className="text-center py-8 text-xs text-muted">
+                No stock adjustments or discrepancy reviews pending.
+              </div>
+            ) : (
+              stockAdjustments.map((adj) => (
+                <div
+                  key={adj.id}
+                  className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-surface-sunken/40 px-2 rounded-xl transition-colors"
+                >
+                  <div className="space-y-0.5 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-default">{adj.adjustment_number}</span>
+                      <span className="text-xs text-muted truncate">
+                        {adj.warehouse?.name ?? 'Facility'}
+                      </span>
+                      <span className="rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase">
+                        {adj.status}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-muted font-mono">
+                      Type: <strong>{adj.type}</strong> • Date: {new Date(adj.created_at).toLocaleDateString()}
+                      {adj.total_value_impact !== undefined && (
+                        <span className="ml-2 text-primary font-bold">
+                          Impact: {formatCurrency(adj.total_value_impact)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Link
+                    to="/inventory?tab=adjustments"
+                    className="shrink-0 self-start sm:self-auto rounded-lg border border-default bg-surface px-2.5 py-1 text-xs font-semibold text-default hover:bg-surface-sunken transition-all"
+                  >
+                    Review
+                  </Link>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        <div className="mt-4 pt-3 border-t border-default flex items-center justify-between flex-wrap gap-2">
+          <span className="text-xs text-muted">Centralized Multi-Warehouse Ledger</span>
+          <Link
+            to="/inventory"
+            className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+          >
+            <span>Open Complete Inventory Workspace</span>
+            <ArrowRight className="size-3" />
+          </Link>
         </div>
       </div>
     </div>

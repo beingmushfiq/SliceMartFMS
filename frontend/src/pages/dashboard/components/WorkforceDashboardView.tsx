@@ -4,7 +4,6 @@ import {
   Users,
   Clock,
   Receipt,
-  Award,
   ArrowRight,
   UserCheck,
   Calendar,
@@ -135,7 +134,7 @@ export const WorkforceDashboardView: React.FC<WorkforceDashboardViewProps> = ({
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">0 Staff</div>
+            <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">{metrics?.workforce?.total_headcount ?? 0} Staff</div>
             <span className="text-[10px] font-semibold text-muted">Active Roster</span>
           </div>
         </div>
@@ -152,7 +151,7 @@ export const WorkforceDashboardView: React.FC<WorkforceDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
-              0 Clocked-In
+              {metrics?.workforce?.present_today ?? 0} Clocked-In
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
               Shift Active
@@ -171,7 +170,7 @@ export const WorkforceDashboardView: React.FC<WorkforceDashboardViewProps> = ({
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">0 Staff</div>
+            <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">{0} Staff</div>
             <span className="text-[10px] font-semibold text-muted">Approved Requests</span>
           </div>
         </div>
@@ -194,19 +193,23 @@ export const WorkforceDashboardView: React.FC<WorkforceDashboardViewProps> = ({
           </div>
         </div>
 
-        {/* KPI 5: Top Rate Output */}
+        {/* KPI 5: Pending Salary Advances */}
         <div className="rounded-2xl border border-default bg-surface p-4 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
-              TOP PIECE RATE
+              SALARY ADVANCES
             </span>
-            <div className="flex size-7 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-500">
-              <Award className="size-3.5" />
+            <div className="flex size-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
+              <Receipt className="size-3.5" />
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">0 pcs</div>
-            <span className="text-[10px] font-semibold text-muted">Daily Shift Benchmarks</span>
+            <div className="text-xl sm:text-2xl font-extrabold font-mono text-default">
+              {metrics?.workforce?.pending_advances_count ?? 0} Requests
+            </div>
+            <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+              {formatCurrency(metrics?.workforce?.pending_advances_amount ?? 0)} Awaiting Approval
+            </span>
           </div>
         </div>
 

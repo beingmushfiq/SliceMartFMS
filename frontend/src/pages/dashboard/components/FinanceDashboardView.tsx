@@ -414,7 +414,7 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-default pb-3">
           <div>
             <h3 className="text-sm font-bold text-default">High Priority Customer Receivables</h3>
-            <p className="text-[11px] text-muted">Aged commercial credit requiring follow-up</p>
+            <p className="text-[11px] text-muted">Aged commercial credit and invoice delinquency tracking</p>
           </div>
           <Link
             to="/finance?tab=due-collection"
@@ -423,6 +423,57 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
             <span>Open Due Ledger</span>
             <ArrowRight className="size-3" />
           </Link>
+        </div>
+
+        {/* Overdue Aging Risk Buckets */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="rounded-xl border border-default border-l-4 border-l-emerald-500 bg-surface-sunken/40 p-3 shadow-2xs">
+            <span className="text-[10px] font-bold text-muted uppercase tracking-wider block">
+              Current (0-30 Days)
+            </span>
+            <div className="mt-1 text-base sm:text-lg font-bold font-mono text-default">
+              {formatCurrency(metrics?.commercial?.aging_breakdown?.current ?? 0)}
+            </div>
+            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+              Low Delinquency Risk
+            </span>
+          </div>
+
+          <div className="rounded-xl border border-default border-l-4 border-l-blue-500 bg-surface-sunken/40 p-3 shadow-2xs">
+            <span className="text-[10px] font-bold text-muted uppercase tracking-wider block">
+              31-60 Days
+            </span>
+            <div className="mt-1 text-base sm:text-lg font-bold font-mono text-default">
+              {formatCurrency(metrics?.commercial?.aging_breakdown?.overdue_60 ?? 0)}
+            </div>
+            <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">
+              Follow-Up Advisory
+            </span>
+          </div>
+
+          <div className="rounded-xl border border-default border-l-4 border-l-amber-500 bg-surface-sunken/40 p-3 shadow-2xs">
+            <span className="text-[10px] font-bold text-muted uppercase tracking-wider block">
+              61-90 Days
+            </span>
+            <div className="mt-1 text-base sm:text-lg font-bold font-mono text-default">
+              {formatCurrency(metrics?.commercial?.aging_breakdown?.overdue_90 ?? 0)}
+            </div>
+            <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+              Credit Notice Sent
+            </span>
+          </div>
+
+          <div className="rounded-xl border border-default border-l-4 border-l-red-500 bg-surface-sunken/40 p-3 shadow-2xs">
+            <span className="text-[10px] font-bold text-muted uppercase tracking-wider block">
+              90+ Days (Critical)
+            </span>
+            <div className="mt-1 text-base sm:text-lg font-bold font-mono text-default">
+              {formatCurrency(metrics?.commercial?.aging_breakdown?.overdue_90 ?? 0)}
+            </div>
+            <span className="text-[10px] font-semibold text-red-600 dark:text-red-400">
+              High Risk / Restrict
+            </span>
+          </div>
         </div>
 
         <div className="overflow-x-auto rounded-xl border border-default">
@@ -471,10 +522,10 @@ export const FinanceDashboardView: React.FC<FinanceDashboardViewProps> = ({
                       <span
                         className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
                           due.oldestInvoiceDays > 20
-                            ? 'bg-red-500/15 text-red-600'
+                            ? 'bg-red-500/15 text-red-600 dark:text-red-400'
                             : due.oldestInvoiceDays > 10
-                              ? 'bg-amber-500/15 text-amber-600'
-                              : 'bg-blue-500/15 text-blue-600'
+                              ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                              : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
                         }`}
                       >
                         {due.oldestInvoiceDays} days overdue

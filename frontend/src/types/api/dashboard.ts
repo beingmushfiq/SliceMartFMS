@@ -16,6 +16,12 @@ export interface DashboardMetricsData {
     active_orders: number;
     today_orders_count?: number;
     total_receivable_due: number;
+    aging_breakdown?: {
+      current: number;
+      overdue_30: number;
+      overdue_60: number;
+      overdue_90: number;
+    };
   };
   production: {
     today_output: number;
@@ -27,11 +33,21 @@ export interface DashboardMetricsData {
   inventory: {
     total_valuation: number;
     low_stock_count: number;
+    pending_counts?: number;
+    pending_adjustments?: number;
   };
   quality: {
     qc_pass_rate: number;
     pending_inspections: number;
     total_inspections?: number;
+    rework_pending_count?: number;
+    scrap_cost_month?: number;
+  };
+  workforce?: {
+    total_headcount: number;
+    present_today: number;
+    pending_advances_count: number;
+    pending_advances_amount: number;
   };
   trends?: {
     weekly: DashboardTrendItem[];

@@ -1634,6 +1634,15 @@ export const AssetsWorkspace: React.FC = () => {
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
+                            onClick={() => handleServiceAsset(ast)}
+                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition cursor-pointer flex items-center gap-1"
+                            title="Schedule service / maintenance"
+                          >
+                            <Wrench className="size-3 text-amber-500" />
+                            <span>Service</span>
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => handleViewAssetDetails(ast)}
                             className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface hover:bg-surface-sunken text-default border border-default shadow-2xs transition cursor-pointer flex items-center gap-1"
                             title="View complete asset specifications"

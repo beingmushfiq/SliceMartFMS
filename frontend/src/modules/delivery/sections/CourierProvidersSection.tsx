@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { CourierProvider } from '../../../types/api/delivery';
 import { useCurrency } from '../../../hooks/useCurrency';
+import { CheckCircle2, XCircle, Settings, ShieldCheck, Truck, X } from 'lucide-react';
 
 interface CourierProvidersSectionProps {
   providers: CourierProvider[];
@@ -54,111 +55,93 @@ export const CourierProvidersSection: React.FC<CourierProvidersSectionProps> = (
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="space-y-5 animate-in fade-in duration-200">
       {/* Top Banner */}
-      <div>
-        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#111827' }}>
-          Courier Partners & Capability Matrix
-        </h2>
-        <p style={{ margin: '4px 0 0', fontSize: '0.875rem', color: '#6B7280' }}>
-          Configure 3PL logistics provider credentials, default charges, and inspect supported
-          features.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-default pb-4">
+        <div>
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-default font-sans flex items-center gap-2">
+            <Truck className="size-5 text-primary" />
+            <span>Courier Partners & Capability Matrix</span>
+          </h2>
+          <p className="text-xs text-muted mt-0.5">
+            Configure 3PL logistics provider credentials, default charges, and inspect supported features.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 border border-blue-500/20">
+            <ShieldCheck className="size-3.5" />
+            {providers.filter((p) => p.is_active).length} Active Carriers
+          </span>
+        </div>
       </div>
 
       {/* Providers Grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: 16,
-        }}
-      >
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {providers.map((p) => (
           <div
             key={p.id}
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: 8,
-              border: '1px solid #E5E7EB',
-              padding: 20,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-            }}
+            className="rounded-2xl border border-default bg-surface p-5 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-token-colors space-y-4"
           >
-            <div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  marginBottom: 12,
-                }}
-              >
+            <div className="space-y-3.5">
+              <div className="flex items-start justify-between gap-2">
                 <div>
-                  <h3
-                    style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600, color: '#111827' }}
-                  >
+                  <h3 className="text-base font-bold text-default">
                     {p.name}
                   </h3>
-                  <span style={{ fontSize: '0.75rem', color: '#6B7280', fontWeight: 500 }}>
-                    CODE: {p.code}
+                  <span className="font-mono text-[10px] font-semibold text-muted tracking-wider uppercase">
+                    CARRIER CODE: {p.code}
                   </span>
                 </div>
                 <span
-                  style={{
-                    backgroundColor: p.is_active ? '#D1FAE5' : '#F3F4F6',
-                    color: p.is_active ? '#065F46' : '#6B7280',
-                    padding: '2px 8px',
-                    borderRadius: 9999,
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                  }}
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                    p.is_active
+                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                      : 'bg-surface-sunken text-muted border border-default'
+                  }`}
                 >
+                  <span className={`size-1.5 rounded-full ${p.is_active ? 'bg-emerald-500' : 'bg-muted'}`} />
                   {p.is_active ? 'ACTIVE' : 'INACTIVE'}
                 </span>
               </div>
 
-              <div style={{ fontSize: '0.875rem', color: '#4B5563', marginBottom: 16 }}>
-                <div>
-                  <strong>Default Charge:</strong> {formatCurrency(p.default_charge)}
+              <div className="rounded-xl border border-default bg-surface-sunken/40 p-3 space-y-1 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted">Standard Rate:</span>
+                  <span className="font-mono font-bold text-default">
+                    {formatCurrency(p.default_charge)}
+                  </span>
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#9CA3AF', marginTop: 2 }}>
-                  Adapter: {p.adapter_class.split('\\').pop()}
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-muted">Adapter Driver:</span>
+                  <span className="font-mono text-muted truncate max-w-[180px]">
+                    {p.adapter_class.split('\\').pop()}
+                  </span>
                 </div>
               </div>
 
               {/* Capability Matrix Badges */}
-              <div style={{ marginBottom: 16 }}>
-                <div
-                  style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    color: '#6B7280',
-                    marginBottom: 6,
-                  }}
-                >
+              <div>
+                <div className="text-[10px] font-bold text-muted uppercase tracking-wider mb-2">
                   SUPPORTED CAPABILITIES
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                <div className="flex flex-wrap gap-1.5">
                   {capabilitiesList.map((cap) => {
                     const isSupported = p.capabilities?.[cap.key] ?? true;
                     return (
                       <span
                         key={cap.key}
-                        style={{
-                          backgroundColor: isSupported ? '#EFF6FF' : '#F3F4F6',
-                          color: isSupported ? '#1E40AF' : '#9CA3AF',
-                          padding: '2px 6px',
-                          borderRadius: 4,
-                          fontSize: '0.7rem',
-                          fontWeight: 500,
-                          textDecoration: isSupported ? 'none' : 'line-through',
-                        }}
+                        className={`inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                          isSupported
+                            ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
+                            : 'bg-surface-sunken text-muted/50 border border-default/40 line-through'
+                        }`}
                       >
-                        {isSupported ? '✓' : '✕'} {cap.label}
+                        {isSupported ? (
+                          <CheckCircle2 className="size-3 text-emerald-500 shrink-0" />
+                        ) : (
+                          <XCircle className="size-3 text-muted/50 shrink-0" />
+                        )}
+                        <span>{cap.label}</span>
                       </span>
                     );
                   })}
@@ -166,44 +149,21 @@ export const CourierProvidersSection: React.FC<CourierProvidersSectionProps> = (
               </div>
             </div>
 
-            <div
-              style={{
-                display: 'flex',
-                gap: 8,
-                borderTop: '1px solid #F3F4F6',
-                paddingTop: 12,
-                justifyContent: 'flex-end',
-              }}
-            >
+            <div className="flex items-center justify-end gap-2 border-t border-default pt-3">
               <button
+                type="button"
                 onClick={() => onToggleActive(p)}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 6,
-                  border: '1px solid #D1D5DB',
-                  backgroundColor: '#FFFFFF',
-                  color: '#374151',
-                  fontSize: '0.8125rem',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                }}
+                className="rounded-xl border border-default bg-surface px-3 py-1.5 text-xs font-semibold text-default hover:bg-surface-sunken transition-all cursor-pointer shadow-2xs"
               >
                 {p.is_active ? 'Disable' : 'Enable'}
               </button>
               <button
+                type="button"
                 onClick={() => handleOpenEdit(p)}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 6,
-                  border: 'none',
-                  backgroundColor: '#2563EB',
-                  color: '#FFFFFF',
-                  fontSize: '0.8125rem',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                }}
+                className="flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-fg hover:bg-primary/90 transition-all cursor-pointer shadow-xs"
               >
-                Configure
+                <Settings className="size-3.5" />
+                <span>Configure</span>
               </button>
             </div>
           </div>
@@ -212,43 +172,24 @@ export const CourierProvidersSection: React.FC<CourierProvidersSectionProps> = (
 
       {/* Edit Provider Modal */}
       {isEditModalOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 50,
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: 8,
-              padding: 24,
-              width: '100%',
-              maxWidth: 480,
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-            }}
-          >
-            <h3 style={{ margin: '0 0 16px', fontSize: '1.125rem', fontWeight: 600 }}>
-              Configure {selectedProvider?.name}
-            </h3>
-            <form
-              onSubmit={handleSubmit}
-              style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
-            >
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-md rounded-2xl border border-default bg-surface-raised p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-default pb-3">
+              <h3 className="text-base font-bold text-default">
+                Configure {selectedProvider?.name}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                className="rounded-lg p-1 text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-3.5">
               <div>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    marginBottom: 4,
-                  }}
-                >
+                <label className="block text-xs font-bold text-default mb-1.5">
                   Display Name
                 </label>
                 <input
@@ -256,26 +197,13 @@ export const CourierProvidersSection: React.FC<CourierProvidersSectionProps> = (
                   value={formData.name || ''}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 6,
-                    border: '1px solid #D1D5DB',
-                    fontSize: '0.875rem',
-                  }}
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-xs font-medium text-default placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                 />
               </div>
 
               <div>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    marginBottom: 4,
-                  }}
-                >
-                  Default Delivery Charge (BDT)
+                <label className="block text-xs font-bold text-default mb-1.5">
+                  Default Delivery Charge
                 </label>
                 <input
                   type="number"
@@ -283,45 +211,22 @@ export const CourierProvidersSection: React.FC<CourierProvidersSectionProps> = (
                   value={formData.default_charge || ''}
                   onChange={(e) => setFormData({ ...formData, default_charge: e.target.value })}
                   required
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 6,
-                    border: '1px solid #D1D5DB',
-                    fontSize: '0.875rem',
-                  }}
+                  className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-xs font-medium text-default placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-default">
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: 6,
-                    border: '1px solid #D1D5DB',
-                    backgroundColor: '#FFFFFF',
-                    color: '#374151',
-                    fontSize: '0.875rem',
-                    cursor: 'pointer',
-                  }}
+                  className="rounded-xl border border-default bg-surface px-3.5 py-2 text-xs font-semibold text-default hover:bg-surface-sunken transition-all cursor-pointer shadow-2xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: 6,
-                    border: 'none',
-                    backgroundColor: '#2563EB',
-                    color: '#FFFFFF',
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                  }}
+                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-fg hover:bg-primary/90 transition-all cursor-pointer shadow-xs disabled:opacity-50"
                 >
                   {isSubmitting ? 'Saving...' : 'Save Configuration'}
                 </button>

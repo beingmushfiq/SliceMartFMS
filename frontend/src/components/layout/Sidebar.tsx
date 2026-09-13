@@ -5,6 +5,7 @@ import {
   Layers,
   ChevronDown,
   ChevronRight,
+  X,
 } from 'lucide-react';
 import { useAuthStore } from '../../lib/auth/authStore';
 import { useTenantCapabilityStore } from '../../lib/capabilities/tenantCapabilityStore';
@@ -171,7 +172,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed = false, onToggleCollapse
       {/* Adaptive Luxury Sidebar container */}
       <aside
         className={cn(
-          'fixed top-0 bottom-0 left-0 z-50 flex flex-col border-r border-(--nav-border) bg-(--nav-bg) text-default transition-all duration-300 ease-in-out lg:translate-x-0 select-none shadow-xl dark:shadow-black/80',
+          'fixed top-0 bottom-0 left-0 z-(--z-modal) lg:z-30 flex flex-col border-r border-(--nav-border) bg-(--nav-bg) text-default transition-all duration-300 ease-in-out lg:translate-x-0 select-none shadow-xl dark:shadow-black/80',
           isOpen ? 'translate-x-0' : '-translate-x-full',
           isCollapsed ? 'lg:w-20 w-64' : 'w-64'
         )}
@@ -219,6 +220,16 @@ export function Sidebar({ isOpen, onClose, isCollapsed = false, onToggleCollapse
               </div>
             </div>
           </div>
+
+          {/* Mobile close button (< lg) */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="lg:hidden p-1.5 rounded-lg text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer shrink-0"
+            aria-label="Close navigation"
+          >
+            <X className="size-5" />
+          </button>
         </div>
 
         {/* Quick Command & Workspace Search */}

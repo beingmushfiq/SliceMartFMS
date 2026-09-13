@@ -6,7 +6,7 @@ import { PrintPreviewModal } from '../../../components/print/PrintPreviewModal';
 import { RiderRunSheetChallanDocument } from '../../../components/print/documents/RiderRunSheetChallanDocument';
 import { useBusinessConfig } from '../../../lib/document/useBusinessConfig';
 import { SelectDropdown } from '../../../components/ui/Dropdown';
-import { ChevronDown, Printer, CheckCircle2 } from 'lucide-react';
+import { ChevronDown, Printer, CheckCircle2, Plus, Bike, X } from 'lucide-react';
 import { ActionMenuPortal } from '../../../components/ui/ActionMenuPortal';
 import { cn } from '../../../lib/utils';
 
@@ -91,134 +91,101 @@ export const RunSheetsSection: React.FC<RunSheetsSectionProps> = ({
   };
 
   const getStatusBadge = (status: string) => {
-    const map: Record<string, { bg: string; text: string }> = {
-      draft: { bg: '#F3F4F6', text: '#4B5563' },
-      dispatched: { bg: '#DBEAFE', text: '#1E40AF' },
-      in_progress: { bg: '#FEF3C7', text: '#92400E' },
-      completed: { bg: '#D1FAE5', text: '#065F46' },
-      reconciled: { bg: '#EDE9FE', text: '#5B21B6' },
+    const map: Record<string, string> = {
+      draft: 'bg-surface-sunken text-muted border-default',
+      dispatched: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/20',
+      in_progress: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20',
+      completed: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+      reconciled: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/20',
     };
-    const s = map[status] || { bg: '#F3F4F6', text: '#4B5563' };
+    const badgeClass = map[status] || 'bg-surface-sunken text-muted border-default';
     return (
       <span
-        style={{
-          backgroundColor: s.bg,
-          color: s.text,
-          padding: '2px 8px',
-          borderRadius: 9999,
-          fontSize: '0.75rem',
-          fontWeight: 600,
-          textTransform: 'uppercase',
-        }}
+        className={cn(
+          'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border',
+          badgeClass
+        )}
       >
+        <span className="size-1 rounded-full bg-current" />
         {status.replace(/_/g, ' ')}
       </span>
     );
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="space-y-5 animate-in fade-in duration-200">
       {/* Top Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-        }}
-      >
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-default pb-4">
         <div>
-          <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#111827' }}>
-            Rider Delivery Run Sheets
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-default font-sans flex items-center gap-2">
+            <Bike className="size-5 text-primary" />
+            <span>Rider Delivery Run Sheets</span>
           </h2>
-          <p style={{ margin: '4px 0 0', fontSize: '0.875rem', color: '#6B7280' }}>
-            Dispatch multi-stop delivery challans to in-house delivery fleet and reconcile rider
-            COD.
+          <p className="text-xs text-muted mt-0.5">
+            Dispatch multi-stop delivery challans to in-house delivery fleet and reconcile rider COD.
           </p>
         </div>
         <button
+          type="button"
           onClick={() => setIsCreateModalOpen(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            backgroundColor: '#2563EB',
-            color: '#FFFFFF',
-            padding: '8px 16px',
-            borderRadius: 6,
-            border: 'none',
-            fontWeight: 500,
-            fontSize: '0.875rem',
-            cursor: 'pointer',
-          }}
+          className="flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-fg hover:bg-primary/90 transition-all cursor-pointer shadow-xs self-start sm:self-auto"
         >
-          <span>+</span> Create Run Sheet
+          <Plus className="size-3.5" />
+          <span>Create Run Sheet</span>
         </button>
       </div>
 
       {/* Run Sheets Table */}
       <div className="overflow-x-auto min-h-75 bg-surface rounded-2xl border border-default shadow-2xs">
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-          <thead>
-            <tr
-              style={{
-                backgroundColor: '#F9FAFB',
-                borderBottom: '1px solid #E5E7EB',
-                fontSize: '0.75rem',
-                color: '#6B7280',
-                textTransform: 'uppercase',
-              }}
-            >
-              <th style={{ padding: '12px 16px' }}>Run Sheet #</th>
-              <th style={{ padding: '12px 16px' }}>Branch</th>
-              <th style={{ padding: '12px 16px' }}>Assigned Rider</th>
-              <th style={{ padding: '12px 16px' }}>Date</th>
-              <th style={{ padding: '12px 16px' }}>Stops (Done/Total)</th>
-              <th style={{ padding: '12px 16px' }}>COD Expected</th>
-              <th style={{ padding: '12px 16px' }}>COD Collected</th>
-              <th style={{ padding: '12px 16px' }}>Status</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
+        <table className="w-full text-left text-xs min-w-[700px]">
+          <thead className="bg-surface-sunken text-[10px] uppercase font-bold text-muted border-b border-default">
+            <tr>
+              <th className="px-4 py-3">RUN SHEET #</th>
+              <th className="px-4 py-3">BRANCH</th>
+              <th className="px-4 py-3">ASSIGNED RIDER</th>
+              <th className="px-4 py-3">DATE</th>
+              <th className="px-4 py-3">STOPS (DONE/TOTAL)</th>
+              <th className="px-4 py-3">COD EXPECTED</th>
+              <th className="px-4 py-3">COD COLLECTED</th>
+              <th className="px-4 py-3">STATUS</th>
+              <th className="px-4 py-3 text-right">ACTIONS</th>
             </tr>
           </thead>
-          <tbody style={{ fontSize: '0.875rem', color: '#111827' }}>
+          <tbody className="divide-y divide-default text-default">
             {runSheets.length === 0 ? (
               <tr>
-                <td
-                  colSpan={9}
-                  style={{ padding: '32px 16px', textAlign: 'center', color: '#6B7280' }}
-                >
+                <td colSpan={9} className="px-4 py-8 text-center text-muted text-xs font-sans">
                   No rider run sheets created yet.
                 </td>
               </tr>
             ) : (
               runSheets.map((rs) => (
-                <tr key={rs.id} style={{ borderBottom: '1px solid #F3F4F6' }}>
-                  <td style={{ padding: '12px 16px', fontWeight: 600, color: '#2563EB' }}>
+                <tr key={rs.id} className="hover:bg-surface-sunken/40 transition-colors">
+                  <td className="px-4 py-3 font-mono font-bold text-primary">
                     {rs.run_sheet_number}
                   </td>
-                  <td style={{ padding: '12px 16px' }}>{rs.branch_name || 'Main Branch'}</td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <span style={{ fontWeight: 500 }}>{rs.rider_name || 'Unassigned'}</span>
+                  <td className="px-4 py-3">{rs.branch_name || 'Main Branch'}</td>
+                  <td className="px-4 py-3">
+                    <span className="font-medium text-default">{rs.rider_name || 'Unassigned'}</span>
                   </td>
-                  <td style={{ padding: '12px 16px' }}>{rs.run_date}</td>
-                  <td style={{ padding: '12px 16px' }}>
+                  <td className="px-4 py-3 text-muted text-[11px]">{rs.run_date}</td>
+                  <td className="px-4 py-3 font-mono">
                     {rs.completed_stops} / {rs.total_stops}
                   </td>
-                  <td style={{ padding: '12px 16px', fontWeight: 600 }}>
+                  <td className="px-4 py-3 font-mono font-bold">
                     {formatCurrency(rs.total_cod_expected)}
                   </td>
-                  <td style={{ padding: '12px 16px', color: '#059669', fontWeight: 600 }}>
+                  <td className="px-4 py-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">
                     {formatCurrency(rs.total_cod_collected)}
                   </td>
-                  <td style={{ padding: '12px 16px' }}>{getStatusBadge(rs.status)}</td>
-                  <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                  <td className="px-4 py-3">{getStatusBadge(rs.status)}</td>
+                  <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1.5">
                       <button
                         type="button"
                         onClick={() => setSelectedRunSheetForChallan(rs)}
-                        className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface hover:bg-surface-sunken border border-default text-default transition-colors cursor-pointer"
-                        title="Preview & Print Official Delivery Challan"
+                        className="px-2.5 py-1 text-xs font-semibold rounded-xl bg-surface hover:bg-surface-sunken border border-default text-default transition-colors cursor-pointer shadow-2xs"
+                        title="Print Delivery Challan"
                       >
                         Challan
                       </button>
@@ -234,15 +201,10 @@ export const RunSheetsSection: React.FC<RunSheetsSectionProps> = ({
                             setActionMenuAnchor(e.currentTarget);
                           }
                         }}
-                        className={cn(
-                          'inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg border transition-colors cursor-pointer',
-                          openActionMenuId === rs.id
-                            ? 'bg-primary text-primary-fg border-primary shadow-xs'
-                            : 'bg-surface hover:bg-surface-sunken border-default text-default'
-                        )}
+                        className="p-1.5 rounded-xl border border-default bg-surface hover:bg-surface-sunken text-default transition-colors cursor-pointer shadow-2xs"
+                        aria-label="More actions"
                       >
-                        <span>Actions</span>
-                        <ChevronDown className="size-3 text-muted" />
+                        <ChevronDown className="size-3.5" />
                       </button>
                     </div>
                   </td>
@@ -252,8 +214,8 @@ export const RunSheetsSection: React.FC<RunSheetsSectionProps> = ({
           </tbody>
         </table>
 
-        {/* Floating Action Menu via ActionMenuPortal */}
-        {openActionMenuId !== null && actionMenuAnchor !== null && (
+        {/* Action Menu Portal */}
+        {openActionMenuId !== null && actionMenuAnchor && (
           <ActionMenuPortal
             anchorEl={actionMenuAnchor}
             open={true}
@@ -263,38 +225,37 @@ export const RunSheetsSection: React.FC<RunSheetsSectionProps> = ({
             }}
           >
             {(() => {
-              const activeItem = runSheets.find((rs) => rs.id === openActionMenuId);
-              if (!activeItem) return null;
+              const item = runSheets.find((rs) => rs.id === openActionMenuId);
+              if (!item) return null;
               return (
-                <>
+                <div className="min-w-44 py-1">
                   <button
                     type="button"
                     onClick={() => {
+                      setSelectedRunSheetForChallan(item);
                       setOpenActionMenuId(null);
                       setActionMenuAnchor(null);
-                      setSelectedRunSheetForChallan(activeItem);
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-default hover:bg-surface-sunken transition-colors cursor-pointer text-left"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-default hover:bg-surface-sunken transition-colors cursor-pointer"
                   >
-                    <Printer className="size-3.5 text-primary" />
-                    <span>Print Delivery Challan</span>
+                    <Printer className="size-3.5 text-muted" />
+                    <span>Print Challan</span>
                   </button>
-
-                  {activeItem.status === 'dispatched' && (
+                  {item.status !== 'completed' && item.status !== 'reconciled' && (
                     <button
                       type="button"
                       onClick={() => {
+                        handleCompleteSheet(item);
                         setOpenActionMenuId(null);
                         setActionMenuAnchor(null);
-                        handleCompleteSheet(activeItem);
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-emerald-600 hover:bg-emerald-500/10 transition-colors cursor-pointer text-left"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer"
                     >
-                      <CheckCircle2 className="size-3.5 text-emerald-600" />
-                      <span>Complete Run Sheet</span>
+                      <CheckCircle2 className="size-3.5" />
+                      <span>Complete & Reconcile</span>
                     </button>
                   )}
-                </>
+                </div>
               );
             })()}
           </ActionMenuPortal>
@@ -303,46 +264,25 @@ export const RunSheetsSection: React.FC<RunSheetsSectionProps> = ({
 
       {/* Create Run Sheet Modal */}
       {isCreateModalOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 50,
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: 8,
-              padding: 24,
-              width: '100%',
-              maxWidth: 600,
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-            }}
-          >
-            <h3 style={{ margin: '0 0 16px', fontSize: '1.125rem', fontWeight: 600 }}>
-              Create Fleet Dispatch Run Sheet
-            </h3>
-            <form
-              onSubmit={handleCreateSheet}
-              style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
-            >
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-xl rounded-2xl border border-default bg-surface-raised p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-default pb-3">
+              <h3 className="text-base font-bold text-default">
+                Create Fleet Dispatch Run Sheet
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsCreateModalOpen(false)}
+                className="rounded-lg p-1 text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateSheet} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label
-                    style={{
-                      display: 'block',
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                      marginBottom: 4,
-                    }}
-                  >
+                  <label className="block text-xs font-bold text-default mb-1.5">
                     Dispatch Branch
                   </label>
                   <SelectDropdown
@@ -355,14 +295,7 @@ export const RunSheetsSection: React.FC<RunSheetsSectionProps> = ({
                   />
                 </div>
                 <div>
-                  <label
-                    style={{
-                      display: 'block',
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                      marginBottom: 4,
-                    }}
-                  >
+                  <label className="block text-xs font-bold text-default mb-1.5">
                     Dispatch Date
                   </label>
                   <input
@@ -370,24 +303,11 @@ export const RunSheetsSection: React.FC<RunSheetsSectionProps> = ({
                     value={runDate}
                     onChange={(e) => setRunDate(e.target.value)}
                     required
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 6,
-                      border: '1px solid #D1D5DB',
-                      fontSize: '0.875rem',
-                    }}
+                    className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-xs font-medium text-default focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                   />
                 </div>
                 <div>
-                  <label
-                    style={{
-                      display: 'block',
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                      marginBottom: 4,
-                    }}
-                  >
+                  <label className="block text-xs font-bold text-default mb-1.5">
                     Assign Rider
                   </label>
                   <SelectDropdown
@@ -405,105 +325,63 @@ export const RunSheetsSection: React.FC<RunSheetsSectionProps> = ({
               </div>
 
               <div>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    marginBottom: 6,
-                  }}
-                >
+                <label className="block text-xs font-bold text-default mb-1.5">
                   Select Delivery Orders to Batch ({selectedOrderIds.length} selected)
                 </label>
-                <div
-                  style={{
-                    maxHeight: 220,
-                    overflowY: 'auto',
-                    border: '1px solid #E5E7EB',
-                    borderRadius: 6,
-                    padding: 8,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 6,
-                  }}
-                >
+                <div className="max-h-56 overflow-y-auto border border-default rounded-xl p-2 flex flex-col gap-1.5 bg-surface-sunken/30">
                   {pendingDeliveries.length === 0 ? (
-                    <div
-                      style={{
-                        padding: 12,
-                        textAlign: 'center',
-                        color: '#6B7280',
-                        fontSize: '0.875rem',
-                      }}
-                    >
+                    <div className="p-4 text-center text-muted text-xs font-sans">
                       No pending delivery orders available.
                     </div>
                   ) : (
-                    pendingDeliveries.map((d) => (
-                      <label
-                        key={d.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 10,
-                          padding: 8,
-                          borderRadius: 4,
-                          backgroundColor: selectedOrderIds.includes(d.id) ? '#EFF6FF' : '#F9FAFB',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem',
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedOrderIds.includes(d.id)}
-                          onChange={() => toggleOrderSelection(d.id)}
-                        />
-                        <div style={{ flex: 1 }}>
-                          <span style={{ fontWeight: 600 }}>{d.delivery_number}</span> —{' '}
-                          {d.recipient_name}
-                          <span style={{ fontSize: '0.75rem', color: '#6B7280', display: 'block' }}>
-                            {d.recipient_phone}
+                    pendingDeliveries.map((d) => {
+                      const isChecked = selectedOrderIds.includes(d.id);
+                      return (
+                        <label
+                          key={d.id}
+                          className={cn(
+                            'flex items-center gap-3 p-2.5 rounded-xl border transition-all cursor-pointer text-xs',
+                            isChecked
+                              ? 'bg-primary/10 border-primary/30 text-default'
+                              : 'bg-surface border-default/70 hover:border-default text-default'
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleOrderSelection(d.id)}
+                            className="size-4 rounded border-default text-primary focus:ring-primary/20"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-default truncate">
+                              {d.delivery_number} — {d.recipient_name}
+                            </div>
+                            <div className="text-[11px] text-muted font-mono">
+                              {d.recipient_phone}
+                            </div>
+                          </div>
+                          <span className="font-mono font-bold text-primary shrink-0">
+                            {formatCurrency(d.cod_amount)}
                           </span>
-                        </div>
-                        <span style={{ fontWeight: 600, color: '#1E40AF' }}>
-                          {formatCurrency(d.cod_amount)}
-                        </span>
-                      </label>
-                    ))
+                        </label>
+                      );
+                    })
                   )}
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-default">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: 6,
-                    border: '1px solid #D1D5DB',
-                    backgroundColor: '#FFFFFF',
-                    color: '#374151',
-                    fontSize: '0.875rem',
-                    cursor: 'pointer',
-                  }}
+                  className="rounded-xl border border-default bg-surface px-3.5 py-2 text-xs font-semibold text-default hover:bg-surface-sunken transition-all cursor-pointer shadow-2xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting || selectedOrderIds.length === 0}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: 6,
-                    border: 'none',
-                    backgroundColor: '#2563EB',
-                    color: '#FFFFFF',
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    opacity: isSubmitting || selectedOrderIds.length === 0 ? 0.6 : 1,
-                  }}
+                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-fg hover:bg-primary/90 transition-all cursor-pointer shadow-xs disabled:opacity-50"
                 >
                   {isSubmitting
                     ? 'Creating...'
@@ -523,7 +401,6 @@ export const RunSheetsSection: React.FC<RunSheetsSectionProps> = ({
           title={`Delivery Challan - ${selectedRunSheetForChallan.run_sheet_number}`}
           documentNumber={selectedRunSheetForChallan.run_sheet_number}
           documentType="Rider Delivery Run Sheet Challan"
-          pageClass="print-page-a4"
         >
           <RiderRunSheetChallanDocument
             runSheet={selectedRunSheetForChallan}

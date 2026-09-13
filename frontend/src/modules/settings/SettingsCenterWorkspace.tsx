@@ -699,10 +699,72 @@ export const SettingsCenterWorkspace: React.FC = () => {
         </div>
       </div>
 
+      {/* Mobile / Tablet Compact Domain Picker (< lg screens) */}
+      <div className="lg:hidden bg-surface border border-default rounded-(--card-radius) p-3 shadow-xs mb-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0">
+            {React.createElement(GROUP_ICONS[activeGroup] || Settings, {
+              className: 'size-4 text-primary shrink-0',
+            })}
+            <span className="text-xs font-bold text-default truncate">
+              {GROUP_LABELS[activeGroup] || activeGroup}
+            </span>
+            {hasChanges && (
+              <span className="size-2 rounded-full bg-accent animate-pulse shrink-0" title="Unsaved changes" />
+            )}
+          </div>
+          {activeGroup !== 'overview' && (
+            <button
+              type="button"
+              onClick={() => {
+                if (hasChanges) {
+                  notify.info('You have unsaved changes. Please save or discard before switching.');
+                  return;
+                }
+                setActiveGroup('overview');
+              }}
+              className="px-2 py-1 text-2xs font-semibold rounded-lg bg-surface-sunken hover:bg-surface-raised border border-default text-muted hover:text-default transition-colors shrink-0"
+            >
+              Overview Hub
+            </button>
+          )}
+        </div>
+
+        <div className="relative">
+          <select
+            value={activeGroup}
+            onChange={(e) => {
+              const next = e.target.value;
+              if (hasChanges) {
+                notify.info('You have unsaved changes. Please save or discard before switching.');
+                return;
+              }
+              setActiveGroup(next);
+            }}
+            className="w-full appearance-none rounded-xl border border-default bg-surface-sunken/60 py-2 pl-3 pr-8 text-xs font-semibold text-default focus:border-primary focus:outline-none transition-colors"
+          >
+            {CATEGORIES.map((cat) => (
+              <optgroup key={cat.name} label={cat.name}>
+                {cat.groups.map((groupKey) => (
+                  <option key={groupKey} value={groupKey}>
+                    {GROUP_LABELS[groupKey] || groupKey}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-muted">
+            <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
       {/* Main Layout: High-Polish Sidebar Navigation + Right Content Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-        {/* Left Navigation Rail */}
-        <div className="lg:col-span-1 space-y-5 bg-surface border border-default rounded-(--card-radius) p-3.5 shadow-xs sticky top-20">
+        {/* Left Navigation Rail (Desktop) */}
+        <div className="hidden lg:block lg:col-span-1 space-y-5 bg-surface border border-default rounded-(--card-radius) p-3.5 shadow-xs sticky top-20">
           {CATEGORIES.map((cat) => (
             <div key={cat.name} className="space-y-1">
               <div className="px-2.5 py-1 text-3xs font-bold uppercase tracking-wider text-muted flex items-center justify-between">
@@ -763,7 +825,7 @@ export const SettingsCenterWorkspace: React.FC = () => {
         </div>
 
         {/* Right Content Panel */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 min-w-0">
           <AnimatePresence mode="wait">
             <m.div
               key={activeGroup}

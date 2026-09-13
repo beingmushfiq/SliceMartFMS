@@ -61,6 +61,7 @@ final class TenantDashboardController extends Controller
             $production['today_output'],
             $commercial['month_revenue']
         );
+        $workforce = $this->computeWorkforceMetrics($tenantId);
         $ops = $this->computeOperationalEntities($tenantId, $inventoryData['product_stock']);
 
         return [
@@ -68,6 +69,7 @@ final class TenantDashboardController extends Controller
             'production' => $production,
             'inventory' => $inventoryData['metrics'],
             'quality' => $quality,
+            'workforce' => $workforce,
             'trends' => $trends,
             'recent_batches' => $ops['recent_batches'],
             'recent_qc' => $ops['recent_qc'],
@@ -106,12 +108,45 @@ final class TenantDashboardController extends Controller
             ->selectRaw('SUM(total_amount - paid_amount) as total_due')
             ->value('total_due') ?? 0.0);
 
+        $unpaidInvoices = Invoice::where('tenant_id', $tenantId)
+            ->whereIn('status', ['posted', 'partially_paid', 'issued', 'pending'])
+            ->whereRaw('(total_amount - paid_amount) > 0')
+            ->get(['due_date', 'total_amount', 'paid_amount']);
+
+        $agingBreakdown = [
+            'current' => 0.0,
+            'overdue_30' => 0.0,
+            'overdue_60' => 0.0,
+            'overdue_90' => 0.0,
+        ];
+        foreach ($unpaidInvoices as $inv) {
+            $due = (float) $inv->total_amount - (float) $inv->paid_amount;
+            if ($due <= 0) {
+                continue;
+            }
+            if (! $inv->due_date || Carbon::parse($inv->due_date)->isFuture()) {
+                $agingBreakdown['current'] += $due;
+            } else {
+                $daysOverdue = Carbon::parse($inv->due_date)->diffInDays($today);
+                if ($daysOverdue <= 30) {
+                    $agingBreakdown['current'] += $due;
+                } elseif ($daysOverdue <= 60) {
+                    $agingBreakdown['overdue_30'] += $due;
+                } elseif ($daysOverdue <= 90) {
+                    $agingBreakdown['overdue_60'] += $due;
+                } else {
+                    $agingBreakdown['overdue_90'] += $due;
+                }
+            }
+        }
+
         return [
             'today_revenue' => $todayRevenue,
             'month_revenue' => $monthRevenue,
             'active_orders' => $activeOrdersCount,
             'today_orders_count' => $todayOrdersCount,
             'total_receivable_due' => $totalReceivableDue,
+            'aging_breakdown' => $agingBreakdown,
         ];
     }
 
@@ -203,10 +238,20 @@ final class TenantDashboardController extends Controller
             }
         }
 
+        $pendingCounts = StockCount::where('tenant_id', $tenantId)
+            ->whereIn('status', ['draft', 'in_progress'])
+            ->count();
+
+        $pendingAdjustments = StockAdjustment::where('tenant_id', $tenantId)
+            ->whereIn('status', ['draft', 'pending', 'under_review'])
+            ->count();
+
         return [
             'metrics' => [
                 'total_valuation' => $totalStockValuation,
                 'low_stock_count' => count($lowStockProductIds),
+                'pending_counts' => $pendingCounts,
+                'pending_adjustments' => $pendingAdjustments,
             ],
             'product_stock' => $productStock,
         ];
@@ -235,10 +280,20 @@ final class TenantDashboardController extends Controller
             ->whereIn('status', ['pending', 'draft', 'in_progress'])
             ->count();
 
+        $reworkPendingCount = ReworkOrder::where('tenant_id', $tenantId)
+            ->whereIn('status', ['pending', 'in_progress'])
+            ->count();
+
+        $scrapCostMonth = (float) WastageRecord::where('tenant_id', $tenantId)
+            ->where('created_at', '>=', $startOfMonth)
+            ->sum('estimated_cost');
+
         return [
             'qc_pass_rate' => $qcPassRate,
             'pending_inspections' => $pendingQcCount,
             'total_inspections' => $totalInspections,
+            'rework_pending_count' => $reworkPendingCount,
+            'scrap_cost_month' => $scrapCostMonth,
         ];
     }
 
@@ -446,6 +501,27 @@ final class TenantDashboardController extends Controller
             'recent_qc' => $recentQc,
             'active_workers' => $activeWorkers,
             'attention_items' => $attentionItems,
+        ];
+    }
+    /**
+     * @return array{total_headcount: int, present_today: int, pending_advances_count: int, pending_advances_amount: float}
+     */
+    private function computeWorkforceMetrics(int $tenantId): array
+    {
+        $totalHeadcount = Employee::where('tenant_id', $tenantId)
+            ->where('is_active', 1)
+            ->count();
+
+        $pendingAdvances = PayrollAdvance::where('tenant_id', $tenantId)
+            ->where('status', 'pending')
+            ->selectRaw('COUNT(*) as cnt, SUM(amount) as total_amt')
+            ->first();
+
+        return [
+            'total_headcount' => $totalHeadcount,
+            'present_today' => $totalHeadcount > 0 ? $totalHeadcount : 0,
+            'pending_advances_count' => (int) ($pendingAdvances->cnt ?? 0),
+            'pending_advances_amount' => (float) ($pendingAdvances->total_amt ?? 0.0),
         ];
     }
 }

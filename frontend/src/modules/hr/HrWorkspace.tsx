@@ -2622,6 +2622,7 @@ export const HrWorkspace: React.FC = () => {
                                 onClick={() => setSelectedPayslip(ps)}
                                 className="px-2.5 py-1 text-xs bg-surface border border-default hover:bg-surface-sunken text-default rounded-lg font-medium transition cursor-pointer flex items-center gap-1 shadow-2xs"
                                 title="View itemized payslip breakdown"
+                                aria-label="View Items"
                               >
                                 <Eye className="size-3 text-primary" />
                                 <span>Slip</span>
