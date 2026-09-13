@@ -146,17 +146,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed = false, onToggleCollapse
   const tenantDisplayName = companyName || tenantName || 'Enterprise Cloud';
   const appVersion = getAppVersion();
   const tenantTier = tenant?.status ? `${tenant.status.charAt(0).toUpperCase() + tenant.status.slice(1)} Edition` : 'Enterprise Edition';
-  const tenantShortBadge = useMemo(() => {
-    const nameToUse = companyName || tenantName;
-    if (!nameToUse) return 'ERP';
-    const words = nameToUse.trim().split(/\s+/);
-    const first = words[0];
-    const second = words[1];
-    if (words.length > 1 && first && second && first[0] && second[0]) {
-      return (first[0] + second[0]).toUpperCase();
-    }
-    return nameToUse.slice(0, 3).toUpperCase();
-  }, [companyName, tenantName]);
+  const tenantShortBadge = 'ERP';
 
   return (
     <>

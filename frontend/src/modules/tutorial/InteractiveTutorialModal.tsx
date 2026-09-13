@@ -61,7 +61,7 @@ export const InteractiveTutorialModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-(--z-modal) flex items-center justify-center bg-black/70 p-2 sm:p-4 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="flex flex-col h-[90vh] max-h-[850px] w-full max-w-5xl rounded-3xl border border-default bg-surface shadow-2xl overflow-hidden">
+      <div className="flex flex-col h-[90vh] max-h-212.5 w-full max-w-5xl rounded-3xl border border-default bg-surface shadow-2xl overflow-hidden">
         {/* Modal Top Header */}
         <div className="flex items-center justify-between border-b border-default px-5 py-3.5 bg-surface-raised shrink-0">
           <div className="flex items-center gap-3">
