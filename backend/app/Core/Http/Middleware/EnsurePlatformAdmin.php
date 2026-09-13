@@ -37,8 +37,8 @@ class EnsurePlatformAdmin
             );
         }
 
-        // Must be a platform user with no tenant assignment
-        if ($user->tenant_id !== null) {
+        // Must be a verified platform administrator with no tenant assignment
+        if (! $user->is_platform_user || $user->tenant_id !== null) {
             return ErrorResponse::make(
                 request: $request,
                 code: 'PLATFORM_ONLY',

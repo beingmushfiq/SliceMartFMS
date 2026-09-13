@@ -10,33 +10,17 @@ final class DatabaseSeeder extends Seeder
 {
     /**
      * Seed the application's database in dependency order.
+     * Delegates to ProductionSeeder when in production mode,
+     * or DevelopmentSeeder in local/testing mode.
      */
     public function run(): void
     {
-        \App\Modules\Platform\Services\PlatformRbacService::seedDefaultRoles();
-
-        $this->call([
-            BusinessTypeSeeder::class,
-            IndustryProfileSeeder::class,
-            PlansAndTenantsSeeder::class,
-            RolesAndPermissionsSeeder::class,
-            UnitsTableSeeder::class,
-            CategoriesTableSeeder::class,
-            BrandsTableSeeder::class,
-            TaxProfilesTableSeeder::class,
-            ReasonCodesTableSeeder::class,
-            WarehousesTableSeeder::class,
-            ProductsTableSeeder::class,
-            BOMTableSeeder::class,
-            PartiesTableSeeder::class,
-            PricingTableSeeder::class,
-            StorefrontTableSeeder::class,
-            EmployeesTableSeeder::class,
-            PosTableSeeder::class,
-            StockTableSeeder::class,
-            ReportDefinitionsTableSeeder::class,
-            CrmLeadsTableSeeder::class,
-            EnterpriseDataSeeder::class,
-        ]);
+        if (app()->environment('production')) {
+            $this->command?->info('Running ProductionSeeder (structural only, no demo data)...');
+            $this->call(ProductionSeeder::class);
+        } else {
+            $this->command?->info('Running DevelopmentSeeder (includes demo tenant & mock data)...');
+            $this->call(DevelopmentSeeder::class);
+        }
     }
 }

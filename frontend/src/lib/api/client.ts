@@ -62,20 +62,22 @@ export function setAccessToken(token: string | null): void {
 }
 
 export function getAccessToken(path?: string): string | null {
-  if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-    const isPlatform =
-      (path && (path.startsWith('/platform') || path.startsWith('platform'))) ||
-      window.location.pathname.startsWith('/platform');
-    if (isPlatform) {
-      const platformToken = localStorage.getItem('platform_access_token');
-      if (platformToken) return platformToken;
-    }
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return accessToken;
   }
+
+  const isPlatform =
+    (Boolean(path) && (path!.startsWith('/platform') || path!.startsWith('platform') || path!.includes('/platform/'))) ||
+    window.location.pathname.startsWith('/platform');
+
+  if (isPlatform) {
+    const platformToken = localStorage.getItem('platform_access_token');
+    return platformToken || null;
+  }
+
+  // Tenant / standard context: strictly isolate from platform token
   if (accessToken) return accessToken;
-  if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-    return localStorage.getItem('access_token') || localStorage.getItem('platform_access_token');
-  }
-  return null;
+  return localStorage.getItem('access_token') || null;
 }
 
 /* ───────────────────────────────────────────────────────────────────────────

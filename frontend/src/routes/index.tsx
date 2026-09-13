@@ -191,25 +191,58 @@ const storefrontRouteChildren = [
   },
 ];
 
+const isMasterPlatformDomain = (() => {
+  if (typeof window === 'undefined' || !window.location) return false;
+  const rawHost = window.location.hostname;
+  if (!rawHost) return false;
+  const host = rawHost.toLowerCase().split(':')[0] ?? '';
+  const masterDomain = (import.meta.env['VITE_MASTER_DOMAIN'] || 'proerp.devcenterpoint.com').toLowerCase();
+  return host === masterDomain || host.startsWith('proerp.') || host.startsWith('platform.') || host.startsWith('admin.');
+})();
+
 const isStorefrontCustomDomain = (() => {
   if (typeof window === 'undefined' || !window.location) return false;
   const rawHost = window.location.hostname;
   if (!rawHost) return false;
   const host = rawHost.toLowerCase().split(':')[0] ?? '';
   if (!host || ['localhost', '127.0.0.1'].includes(host)) return false;
+
+  const masterDomain = (import.meta.env['VITE_MASTER_DOMAIN'] || 'proerp.devcenterpoint.com').toLowerCase();
+  const tenantBaseDomain = (import.meta.env['VITE_TENANT_BASE_DOMAIN'] || 'devcenterpoint.com').toLowerCase();
+
+  // If host is the master domain or an admin/erp subdomain, it is not a public custom storefront
   if (
-    host.startsWith('admin.') ||
+    host === masterDomain ||
+    host.startsWith('proerp.') ||
     host.startsWith('platform.') ||
+    host.startsWith('admin.') ||
     host.startsWith('app.') ||
     host.startsWith('erp.')
   ) {
     return false;
   }
+
+  // Tenant subdomains on devcenterpoint.com (e.g. {slug}.devcenterpoint.com) are tenant ERPs
+  if (host.endsWith('.' + tenantBaseDomain)) {
+    return false;
+  }
+
+  // Any other external domain (e.g. custombrand.com) is treated as a verified custom storefront
   return true;
 })();
 
 export const router = createBrowserRouter([
-  // If accessing through a custom storefront domain (e.g. slicemart.tech), serve the storefront at root "/"
+  // If accessing through master platform domain at root "/", redirect to /platform
+  ...(isMasterPlatformDomain
+    ? [
+        {
+          path: '/',
+          element: <Navigate to="/platform" replace />,
+        },
+      ]
+    : []),
+
+  // If accessing through a verified custom storefront domain, serve the storefront at root "/"
   ...(isStorefrontCustomDomain
     ? [
         {

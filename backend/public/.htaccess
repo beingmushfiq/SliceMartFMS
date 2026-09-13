@@ -5,21 +5,39 @@
 
     RewriteEngine On
 
-    # Handle Authorization Header
+    # 1. Block sensitive hidden files and directories (.env, .git, etc.)
+    RewriteRule (^|/)\.(?!well-known/) - [F]
+
+    # 2. Handle Authorization Header for FastCGI / PHP-FPM
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-    # Handle X-XSRF-Token Header
+    # 3. Handle X-XSRF-Token Header
     RewriteCond %{HTTP:x-xsrf-token} .
     RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
 
-    # Redirect Trailing Slashes If Not A Folder...
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_URI} (.+)/$
-    RewriteRule ^ %1 [L,R=301]
-
-    # Send Requests To Front Controller...
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_FILENAME} !-f
+    # 4. Route API requests and Health check directly to Laravel index.php
+    RewriteCond %{REQUEST_URI} ^/api [NC,OR]
+    RewriteCond %{REQUEST_URI} ^/up$ [NC]
     RewriteRule ^ index.php [L]
+
+    # 5. Serve existing static files and directories directly
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # 6. SPA fallback: If index.html exists, route all browser routes to SPA
+    RewriteCond %{DOCUMENT_ROOT}/index.html -f
+    RewriteRule ^ index.html [L]
+
+    # 7. Backend fallback: If no SPA index.html is deployed, fallback to Laravel
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# Security Headers
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>

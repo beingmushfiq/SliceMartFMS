@@ -50,9 +50,14 @@ class TenantProvisioningService
     {
         $name = trim((string) ($input['name'] ?? ''));
         $rawSlug = trim(strtolower((string) ($input['slug'] ?? '')));
-        $slug = preg_replace('/[^a-z0-9\-]/', '', $rawSlug) ?? '';
+        $slug = $rawSlug;
 
-        if ($slug === '' || in_array($slug, $this->reservedSubdomains(), true)) {
+        if (
+            $slug === ''
+            || ! \App\Core\Tenancy\TenantResolver::isValidSubdomain($slug)
+            || \App\Core\Tenancy\TenantResolver::isReservedSubdomain($slug)
+            || in_array($slug, $this->reservedSubdomains(), true)
+        ) {
             throw ValidationException::withMessages([
                 'slug' => ["The subdomain slug '{$rawSlug}' is invalid or reserved by the platform."],
             ]);
@@ -417,7 +422,8 @@ class TenantProvisioningService
      */
     public function reservedSubdomains(): array
     {
-        return [
+        $fromConfig = (array) config('platform.reserved_subdomains', []);
+        $defaults = [
             'app',
             'admin',
             'api',
@@ -437,5 +443,7 @@ class TenantProvisioningService
             'localhost',
             'master',
         ];
+
+        return array_values(array_unique(array_merge($defaults, $fromConfig)));
     }
 }

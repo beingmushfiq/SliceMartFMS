@@ -1235,6 +1235,21 @@ Storefronts.
 
 ---
 
+### ADR-035 — Production Infrastructure Reconciliation: Websuru cPanel, Shared MySQL, Apache SPA Routing, Subdomain Tenancy, and Seeder Separation
+**Status:** Accepted · **Amends:** ADR-001, ADR-004, ADR-028
+
+**Context.** The target production infrastructure is Websuru cPanel shared/reseller hosting with MySQL 8+, Apache web server, and PHP 8.2+. The repository previously contained contradictory deployment configurations (Docker Compose with PostgreSQL 16 on `app.slicemart.com` vs. local SQLite vs. cPanel shared hosting). Additionally, background workers cannot run as continuous supervisor daemons on cPanel shared hosting, and development seeders contained hardcoded tenant data.
+
+**Decision.**
+1. **Target Architecture:** Canonical production environment is Apache + PHP-FPM + MySQL on Websuru cPanel. Docker/PostgreSQL configurations are legacy artifacts.
+2. **Domain Model:** Canonical master domain is `proerp.devcenterpoint.com` (Control Plane / Platform Admin). Tenant instances use `{slug}.devcenterpoint.com` with support for verified custom domains via `tenant_domains`.
+3. **Database Engine:** Single shared MySQL schema (`utf8mb4_unicode_ci`, InnoDB) with row-level multitenancy strictly enforced via `tenant_id` foreign keys and Eloquent `TenantScope`.
+4. **Queue & Scheduler on cPanel:** `QUEUE_CONNECTION=database` and `CACHE_STORE=database`. Background tasks run via cPanel cron jobs: `artisan schedule:run` every minute, and `artisan queue:work --stop-when-empty --max-time=50 --memory=128` every minute.
+5. **Seeder Separation:** Structural seeders (`ProductionSeeder.php` seeding plans, currencies, system roles) are separated from demo/fake tenant seeders (`DevelopmentSeeder.php`). `ProductionSeeder` never seeds demo tenants.
+6. **Frontend Routing & Security:** Single compiled Vite React 19 SPA served via Apache `.htaccess` rewriting `/api/*` and `/up` to Laravel `index.php` and all SPA views to `index.html`.
+
+---
+
 ## 6. Scope resolutions (contradiction ledger)
 
 Every contradiction found in the legacy documentation, and where it is resolved:
@@ -1311,3 +1326,5 @@ the question is escalated.
 | 2026-08-22 | Consistency pass (no decision changed): §1 now reads "ADR-001 through ADR-031"; the C4 resolution now names the actual outcome — **41 modules** in `MODULE_MAP.md`, not "35 domains". |
 | 2026-08-24 | **ADR-032 and ADR-033 accepted.** ADR-032 makes ADR-030's per-model **Policy** and **event/listener** artefacts *conditional* for standard CRUD modules: validation via Form Requests, serialisation via API Resources, mutations via Actions that write the audit row **inside** the transaction (ADR-027/028), and authorisation via the existing `permission:` middleware (ADR-008) — a Policy is added only for a row-level rule a permission string cannot express. ADR-033 resolves the generated-types bootstrap: install `spatie/laravel-typescript-transformer` emitting into `frontend/src/types/api/`, while the canonical `types/api/catalog.ts` is hand-authored to the contract until the generator is green, then replaced by generated output — one path, never a duplicate (ADR-029 upheld). §1 updated to "ADR-001 through ADR-033". No prior decision reversed. |
 | 2026-08-28 | **ADR-034 accepted** — Three-Layer Experience Separation (Master Admin `/platform/*`, Tenant App `/*`, Headless Storefront `/store/:subdomain` & `{subdomain}.devcenterpoint.com`), Super Admin Tenant Impersonation with immutable audit logging, Storefront CMS Settings with live theme preview, Drag-and-Drop section builder, Sandboxed Custom HTML/CSS Blocks, and Courier Integration Hub (Steadfast, Pathao, REDX) with webhook synchronization. |
+| 2026-09-13 | **ADR-035 accepted** — Production Infrastructure Reconciliation: Websuru cPanel deployment, shared MySQL with row-level multitenancy (`tenant_id`), Apache SPA routing via `.htaccess`, queue worker & scheduler via cPanel cron jobs, and structural `ProductionSeeder` separated from `DevelopmentSeeder`. |
+

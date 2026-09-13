@@ -13,47 +13,11 @@ final class PlansAndTenantsSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Seed Plans
-        $starterPlanId = DB::table('plans')->insertGetId([
-            'uuid' => (string) Str::uuid(),
-            'code' => 'STARTER',
-            'name' => 'Starter Plan',
-            'price' => '2500.0000',
-            'billing_period' => 'monthly',
-            'limits' => json_encode(['max_users' => 5, 'max_branches' => 1, 'max_warehouses' => 2]),
-            'features' => json_encode(['production' => true, 'pos' => false, 'ecommerce' => false]),
-            'is_active' => true,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        // 1. Seed Plans via canonical PlansSeeder
+        $this->call(PlansSeeder::class);
+        $enterprisePlanId = DB::table('plans')->where('code', 'ENTERPRISE')->value('id');
 
-        $proPlanId = DB::table('plans')->insertGetId([
-            'uuid' => (string) Str::uuid(),
-            'code' => 'PROFESSIONAL',
-            'name' => 'Professional Plan',
-            'price' => '7500.0000',
-            'billing_period' => 'monthly',
-            'limits' => json_encode(['max_users' => 25, 'max_branches' => 5, 'max_warehouses' => 10]),
-            'features' => json_encode(['production' => true, 'pos' => true, 'ecommerce' => true]),
-            'is_active' => true,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        $enterprisePlanId = DB::table('plans')->insertGetId([
-            'uuid' => (string) Str::uuid(),
-            'code' => 'ENTERPRISE',
-            'name' => 'Enterprise Unlimited',
-            'price' => '20000.0000',
-            'billing_period' => 'monthly',
-            'limits' => json_encode(['max_users' => 100, 'max_branches' => 25, 'max_warehouses' => 50]),
-            'features' => json_encode(['production' => true, 'pos' => true, 'ecommerce' => true, 'multi_factory' => true]),
-            'is_active' => true,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        // 2. Seed Default Demo Tenant
+        // 2. Seed Default Demo Tenant (SliceMart - Dev Only)
         $tenant = Tenant::create([
             'id' => 1,
             'uuid' => (string) Str::uuid(),
@@ -74,7 +38,7 @@ final class PlansAndTenantsSeeder extends Seeder
             'tenant_id' => $tenant->id,
             'plan_id' => $enterprisePlanId,
             'status' => 'active',
-            'amount' => '20000.0000',
+            'amount' => '500.0000',
             'starts_at' => now()->startOfYear(),
             'ends_at' => now()->addYear(),
             'created_at' => now(),

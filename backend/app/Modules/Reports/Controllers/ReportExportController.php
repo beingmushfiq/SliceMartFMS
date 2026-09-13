@@ -61,7 +61,7 @@ class ReportExportController extends Controller
         $export = ReportExport::where('uuid', $uuid)->firstOrFail();
 
         $user = Auth::user();
-        if ($user && !empty($user->tenant_id) && (int) $export->tenant_id !== (int) $user->tenant_id) {
+        if (! $user || (int) $export->tenant_id !== (int) $user->tenant_id) {
             abort(403, 'Unauthorized access to tenant export.');
         }
 
