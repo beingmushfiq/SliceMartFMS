@@ -598,18 +598,6 @@ export const FinanceWorkspace: React.FC = () => {
     }
   }, []);
 
-  const fetchBanksFromApi = useCallback(async () => {
-    try {
-      const res = await api.get('/finance/bank-accounts');
-      const list = extractList<BankAccount>(res.data);
-      if (list.length > 0) {
-        setBankAccounts(list);
-      }
-    } catch {
-      // Retain state on error
-    }
-  }, []);
-
   // Bank Accounts State
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([
     {
@@ -643,6 +631,18 @@ export const FinanceWorkspace: React.FC = () => {
       is_active: true,
     },
   ]);
+
+  const fetchBanksFromApi = useCallback(async () => {
+    try {
+      const res = await api.get('/finance/bank-accounts');
+      const list = extractList<BankAccount>(res.data);
+      if (list.length > 0) {
+        setBankAccounts(list);
+      }
+    } catch {
+      // Retain state on error
+    }
+  }, []);
 
   // Expenses State
   const [expenses, setExpenses] = useState<Expense[]>([

@@ -36,6 +36,7 @@ import { useCurrency } from '../../../lib/format/currency';
 import type { OrderPOItem } from './DashboardModals';
 import type { DashboardMetricsData, DashboardInvoiceItem } from '../../../types/api/dashboard';
 import type { DashboardInvoice } from './SalesDashboardView';
+import type { QcItem } from './QcDashboardView';
 
 export interface ProductionOrderDashboardItem {
   id: string;
@@ -61,7 +62,7 @@ interface ProductionDashboardViewProps {
   onOpenOrderPO?: (item: OrderPOItem) => void;
   onOpenReviewStock?: (item: OrderPOItem) => void;
   onOpenInvoice?: (invoice: DashboardInvoice) => void;
-  onOpenQC?: (item: any) => void;
+  onOpenQC?: (item: QcItem) => void;
   onOpenWorker?: (worker: WorkerLeaderboardItem) => void;
   onOpenOrder?: (order: ProductionOrderDashboardItem) => void;
   onOpenCustomDate?: () => void;
@@ -112,6 +113,13 @@ export const ProductionDashboardView: React.FC<ProductionDashboardViewProps> = (
     staleTime: 4000,
   });
 
+  // Stable metric sub-references (avoids React Compiler warnings from optional chaining in deps)
+  const recentBatches = metrics?.recent_batches;
+  const activeWorkersData = metrics?.active_workers;
+  const attentionFromMetrics = metrics?.attention_items;
+  const recentQc = metrics?.recent_qc;
+  const trends = metrics?.trends;
+
   // Recent invoices for commercial overview
   const { data: rawInvoices = [] } = useQuery<DashboardInvoiceItem[]>({
     queryKey: ['sales', 'production-view-invoices'],
@@ -143,8 +151,8 @@ export const ProductionDashboardView: React.FC<ProductionDashboardViewProps> = (
 
   // Production Orders / Batches
   const activeOrders: ProductionOrderDashboardItem[] = useMemo(() => {
-    if (metrics?.recent_batches && metrics.recent_batches.length > 0) {
-      return metrics.recent_batches.map((b) => ({
+    if (recentBatches && recentBatches.length > 0) {
+      return recentBatches.map((b) => ({
         id: b.id,
         product: b.product,
         code: b.code,
@@ -183,7 +191,7 @@ export const ProductionDashboardView: React.FC<ProductionDashboardViewProps> = (
         status: 'READY',
       },
     ];
-  }, [metrics?.recent_batches]);
+  }, [recentBatches]);
 
   const filteredOrders = useMemo(() => {
     if (orderFilter === 'all') return activeOrders;
@@ -192,8 +200,8 @@ export const ProductionDashboardView: React.FC<ProductionDashboardViewProps> = (
 
   // Worker Leaderboard
   const workers: WorkerLeaderboardItem[] = useMemo(() => {
-    if (metrics?.active_workers && metrics.active_workers.length > 0) {
-      return metrics.active_workers;
+    if (activeWorkersData && activeWorkersData.length > 0) {
+      return activeWorkersData;
     }
     return [
       {
@@ -229,13 +237,13 @@ export const ProductionDashboardView: React.FC<ProductionDashboardViewProps> = (
         color: 'bg-amber-500',
       },
     ];
-  }, [metrics?.active_workers]);
+  }, [activeWorkersData]);
 
   // Attention Items
   const attentionItems: OrderPOItem[] = useMemo(() => {
     if (propAttentionItems && propAttentionItems.length > 0) return propAttentionItems;
-    if (metrics?.attention_items && metrics.attention_items.length > 0) {
-      return metrics.attention_items;
+    if (attentionFromMetrics && attentionFromMetrics.length > 0) {
+      return attentionFromMetrics;
     }
     return [
       {
@@ -269,7 +277,7 @@ export const ProductionDashboardView: React.FC<ProductionDashboardViewProps> = (
         suggestedQty: 120,
       },
     ];
-  }, [propAttentionItems, metrics?.attention_items]);
+  }, [propAttentionItems, attentionFromMetrics]);
 
   // KPIs
   const currentKPIs = useMemo(() => {
@@ -292,14 +300,14 @@ export const ProductionDashboardView: React.FC<ProductionDashboardViewProps> = (
 
   // Trend Data
   const chartData = useMemo(() => {
-    if (timeframe === 'today' && metrics?.trends?.today) {
-      return metrics.trends.today;
+    if (timeframe === 'today' && trends?.today) {
+      return trends.today;
     }
-    if (timeframe === '30days' && metrics?.trends?.monthly) {
-      return metrics.trends.monthly;
+    if (timeframe === '30days' && trends?.monthly) {
+      return trends.monthly;
     }
-    if (metrics?.trends?.weekly && metrics.trends.weekly.length > 0) {
-      return metrics.trends.weekly;
+    if (trends?.weekly && trends.weekly.length > 0) {
+      return trends.weekly;
     }
     return [
       { time: 'Mon', produced: 42, qcPassed: 40, target: 50, revenue: 12000 },
@@ -310,12 +318,12 @@ export const ProductionDashboardView: React.FC<ProductionDashboardViewProps> = (
       { time: 'Sat', produced: 60, qcPassed: 58, target: 50, revenue: 16800 },
       { time: 'Sun', produced: 35, qcPassed: 34, target: 50, revenue: 9500 },
     ];
-  }, [timeframe, metrics?.trends]);
+  }, [timeframe, trends]);
 
   // QC Queue
   const qcList = useMemo(() => {
-    if (metrics?.recent_qc && metrics.recent_qc.length > 0) {
-      return metrics.recent_qc;
+    if (recentQc && recentQc.length > 0) {
+      return recentQc;
     }
     return [
       {
@@ -337,7 +345,7 @@ export const ProductionDashboardView: React.FC<ProductionDashboardViewProps> = (
         rework: 0,
       },
     ];
-  }, [metrics?.recent_qc]);
+  }, [recentQc]);
 
   return (
     <div className="space-y-5 animate-in fade-in duration-200">
@@ -946,7 +954,7 @@ export const ProductionDashboardView: React.FC<ProductionDashboardViewProps> = (
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-default w-full">
-            <table className="w-full text-left text-xs min-w-[500px]">
+            <table className="w-full text-left text-xs min-w-125">
               <thead className="bg-surface-sunken text-[10px] uppercase font-bold text-muted border-b border-default">
                 <tr>
                   <th className="px-3.5 py-2.5">BATCH CODE</th>

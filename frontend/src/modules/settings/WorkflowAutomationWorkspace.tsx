@@ -102,9 +102,11 @@ export const WorkflowAutomationWorkspace: React.FC = () => {
   const [testLoading, setTestLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'workflows' | 'logs'>('workflows');
 
-  const fetchWorkflows = useCallback(async () => {
+  const fetchWorkflows = useCallback(async (showLoading = false) => {
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       const res = await api.get<{
         workflows: WorkflowItem[];
         logs: WorkflowLog[];
@@ -213,7 +215,7 @@ export const WorkflowAutomationWorkspace: React.FC = () => {
             <Button
               variant="secondary"
               size="sm"
-              onClick={fetchWorkflows}
+              onClick={() => void fetchWorkflows(true)}
               disabled={loading}
               className="gap-1.5 cursor-pointer"
             >

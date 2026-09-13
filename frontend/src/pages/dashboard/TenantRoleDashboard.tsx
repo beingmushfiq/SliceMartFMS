@@ -45,7 +45,7 @@ import { OnboardingProgressCard } from '../../modules/platform/OnboardingProgres
 import { ExecutiveDashboardView } from './components/ExecutiveDashboardView';
 import { SalesDashboardView } from './components/SalesDashboardView';
 import { InventoryDashboardView } from './components/InventoryDashboardView';
-import { QcDashboardView } from './components/QcDashboardView';
+import { QcDashboardView, type QcItem } from './components/QcDashboardView';
 import { FinanceDashboardView } from './components/FinanceDashboardView';
 import { WorkforceDashboardView } from './components/WorkforceDashboardView';
 import { ProductionDashboardView } from './components/ProductionDashboardView';
@@ -424,15 +424,7 @@ export const TenantRoleDashboard: React.FC = () => {
   // Modals state
   const [orderPoItem, setOrderPoItem] = useState<OrderPOItem | null>(null);
   const [reviewStockItem, setReviewStockItem] = useState<OrderPOItem | null>(null);
-  const [selectedQCItem, setSelectedQCItem] = useState<{
-    id: string;
-    orderNo: string;
-    product: string;
-    qty: number;
-    status: string;
-    rework?: number;
-    failed?: number;
-  } | null>(null);
+  const [selectedQCItem, setSelectedQCItem] = useState<QcItem | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<{
     id: string;
     customer: string;
@@ -775,7 +767,7 @@ export const TenantRoleDashboard: React.FC = () => {
       {activeView === 'qc' && (
         <QcDashboardView
           qcList={qcList}
-          onOpenQC={(item) => setSelectedQCItem(item as any)}
+          onOpenQC={setSelectedQCItem}
         />
       )}
 
@@ -803,7 +795,7 @@ export const TenantRoleDashboard: React.FC = () => {
           onOpenOrderPO={setOrderPoItem}
           onOpenReviewStock={setReviewStockItem}
           onOpenInvoice={setSelectedInvoice}
-          onOpenQC={(item) => setSelectedQCItem(item as any)}
+          onOpenQC={setSelectedQCItem}
           onOpenWorker={setSelectedWorker}
           onOpenOrder={setSelectedOrder}
           onOpenCustomDate={() => setIsCustomDateOpen(true)}
