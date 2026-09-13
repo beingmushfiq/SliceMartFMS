@@ -82,11 +82,21 @@ class ManageSubscriptionAction extends Action
 
             $newEndsAt = Carbon::parse((string) $endsAtInput);
             $subscription = TenantSubscription::where('tenant_id', $tenant->id)->latest('id')->first();
+            $graceDays = (int) ($input['grace_period_days'] ?? $subscription?->grace_period_days ?? 7);
+            $graceEndsAt = (clone $newEndsAt)->addDays($graceDays);
+
+            // Accurately determine status based on expiry and grace period
+            $computedStatus = 'active';
+            if ($newEndsAt->isPast()) {
+                $computedStatus = $graceEndsAt->isFuture() ? 'past_due' : 'suspended';
+            }
 
             $notes = isset($input['notes']) ? (string) $input['notes'] : null;
             $updates = [
                 'ends_at' => $newEndsAt,
-                'status' => 'active',
+                'grace_period_days' => $graceDays,
+                'grace_period_ends_at' => $graceEndsAt,
+                'status' => $computedStatus,
                 'renewed_by' => Auth::id(),
                 'updated_by' => Auth::id(),
             ];
@@ -108,7 +118,13 @@ class ManageSubscriptionAction extends Action
                 ]));
             }
 
-            $tenant->update(['status' => 'active', 'suspended_at' => null]);
+            $tenantUpdates = ['status' => $computedStatus];
+            if ($computedStatus === 'suspended') {
+                $tenantUpdates['suspended_at'] = Carbon::now();
+            } else {
+                $tenantUpdates['suspended_at'] = null;
+            }
+            $tenant->update($tenantUpdates);
 
             AuditLog::withoutTenantScope()->create([
                 'uuid' => (string) Str::uuid(),
@@ -122,14 +138,19 @@ class ManageSubscriptionAction extends Action
                 'after' => [
                     'action' => 'set_expiry',
                     'ends_at' => $newEndsAt->toIso8601String(),
+                    'grace_period_days' => $graceDays,
+                    'grace_period_ends_at' => $graceEndsAt->toIso8601String(),
+                    'status' => $computedStatus,
                     'notes' => $notes,
                 ],
             ]);
 
             return [
                 'tenant_id' => $tenant->id,
-                'status' => 'active',
+                'status' => $computedStatus,
                 'ends_at' => $newEndsAt->toIso8601String(),
+                'grace_period_days' => $graceDays,
+                'grace_period_ends_at' => $graceEndsAt->toIso8601String(),
                 'notes' => $notes,
             ];
         }
@@ -143,11 +164,15 @@ class ManageSubscriptionAction extends Action
                 : Carbon::now();
 
             $newEndsAt = Carbon::parse($baseDate)->addDays($days);
+            $graceDays = (int) ($input['grace_period_days'] ?? $subscription?->grace_period_days ?? 7);
+            $graceEndsAt = (clone $newEndsAt)->addDays($graceDays);
             $notes = isset($input['notes']) ? (string) $input['notes'] : null;
 
             if ($subscription !== null) {
                 $subUpdates = [
                     'ends_at' => $newEndsAt,
+                    'grace_period_days' => $graceDays,
+                    'grace_period_ends_at' => $graceEndsAt,
                     'status' => 'active',
                     'renewed_by' => Auth::id(),
                     'updated_by' => Auth::id(),
@@ -169,13 +194,21 @@ class ManageSubscriptionAction extends Action
                 'ip' => request()->ip() ?? '127.0.0.1',
                 'user_agent' => request()->userAgent() ?? 'Master SaaS Admin',
                 'created_at' => Carbon::now(),
-                'after' => ['extended_days' => $days, 'ends_at' => $newEndsAt->toIso8601String(), 'notes' => $notes],
+                'after' => [
+                    'extended_days' => $days,
+                    'ends_at' => $newEndsAt->toIso8601String(),
+                    'grace_period_days' => $graceDays,
+                    'grace_period_ends_at' => $graceEndsAt->toIso8601String(),
+                    'notes' => $notes,
+                ],
             ]);
 
             return [
                 'tenant_id' => $tenant->id,
                 'status' => 'active',
                 'ends_at' => $newEndsAt->toIso8601String(),
+                'grace_period_days' => $graceDays,
+                'grace_period_ends_at' => $graceEndsAt->toIso8601String(),
             ];
         }
 
@@ -191,6 +224,14 @@ class ManageSubscriptionAction extends Action
                     'grace_period_ends_at' => $graceEndsAt,
                     'updated_by' => Auth::id(),
                 ]);
+
+                if ($subscription->ends_at !== null && $subscription->ends_at->isPast()) {
+                    if ($graceEndsAt->isFuture()) {
+                        $tenant->update(['status' => 'past_due', 'suspended_at' => null]);
+                    } else {
+                        $tenant->update(['status' => 'suspended', 'suspended_at' => Carbon::now()]);
+                    }
+                }
             }
 
             AuditLog::withoutTenantScope()->create([
@@ -221,6 +262,8 @@ class ManageSubscriptionAction extends Action
                 ? $currentSub->ends_at
                 : Carbon::now();
             $endsAt = Carbon::parse($startsAt)->addMonths($months);
+            $graceDays = (int) ($input['grace_period_days'] ?? $currentSub?->grace_period_days ?? 7);
+            $graceEndsAt = (clone $endsAt)->addDays($graceDays);
 
             $amount = isset($input['amount']) ? (float) $input['amount'] : (float) $plan->price;
             $discountType = (string) ($input['discount_type'] ?? 'none');
@@ -233,6 +276,8 @@ class ManageSubscriptionAction extends Action
                 'plan_id' => $plan->id,
                 'starts_at' => $startsAt,
                 'ends_at' => $endsAt,
+                'grace_period_days' => $graceDays,
+                'grace_period_ends_at' => $graceEndsAt,
                 'status' => 'active',
                 'amount' => $amount,
                 'currency_code' => $input['currency_code'] ?? 'BDT',
@@ -259,6 +304,8 @@ class ManageSubscriptionAction extends Action
                     'renewed_sub_id' => $newSub->id,
                     'starts_at' => $startsAt->toIso8601String(),
                     'ends_at' => $endsAt->toIso8601String(),
+                    'grace_period_days' => $graceDays,
+                    'grace_period_ends_at' => $graceEndsAt->toIso8601String(),
                     'amount' => $amount,
                 ],
             ]);
@@ -269,6 +316,8 @@ class ManageSubscriptionAction extends Action
                 'status' => 'active',
                 'starts_at' => $startsAt->toIso8601String(),
                 'ends_at' => $endsAt->toIso8601String(),
+                'grace_period_days' => $graceDays,
+                'grace_period_ends_at' => $graceEndsAt->toIso8601String(),
                 'amount' => $amount,
             ];
         }

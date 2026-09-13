@@ -173,8 +173,8 @@ export const PlatformFeatureFlagsWorkspace: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Feature Flags & Module Registry</h1>
-          <p className="text-xs text-slate-400 mt-1 font-mono">
+          <h1 className="text-2xl font-bold text-default tracking-tight">Feature Flags & Module Registry</h1>
+          <p className="text-xs text-muted mt-1 font-mono">
             Granular feature gating, staged rollouts, and enterprise application module catalog.
           </p>
         </div>
@@ -185,7 +185,7 @@ export const PlatformFeatureFlagsWorkspace: React.FC = () => {
             size="sm"
             onClick={() => refetchFlags()}
             disabled={flagsFetching}
-            className="flex items-center gap-1.5 font-mono text-xs cursor-pointer border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800"
+            className="flex items-center gap-1.5 font-mono text-xs cursor-pointer border-default bg-surface text-default hover:bg-surface-sunken"
           >
             <RotateCcw className={`size-3.5 ${flagsFetching ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
@@ -205,14 +205,14 @@ export const PlatformFeatureFlagsWorkspace: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 max-w-sm">
+      <div className="flex bg-surface-sunken p-1 rounded-xl border border-default max-w-sm">
         <button
           type="button"
           onClick={() => setActiveTab('flags')}
           className={`flex-1 py-1.5 text-xs font-semibold rounded-lg flex items-center justify-center gap-2 cursor-pointer transition-all ${
             activeTab === 'flags'
-              ? 'bg-amber-500 text-slate-950 shadow-xs'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
+              : 'text-muted hover:text-default'
           }`}
         >
           <Flag className="size-3.5" />
@@ -223,8 +223,8 @@ export const PlatformFeatureFlagsWorkspace: React.FC = () => {
           onClick={() => setActiveTab('registry')}
           className={`flex-1 py-1.5 text-xs font-semibold rounded-lg flex items-center justify-center gap-2 cursor-pointer transition-all ${
             activeTab === 'registry'
-              ? 'bg-amber-500 text-slate-950 shadow-xs'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
+              : 'text-muted hover:text-default'
           }`}
         >
           <Package className="size-3.5" />
@@ -235,15 +235,15 @@ export const PlatformFeatureFlagsWorkspace: React.FC = () => {
       {activeTab === 'flags' && (
         <div className="space-y-4">
           {/* Filters Bar */}
-          <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-wrap items-center gap-3">
+          <div className="p-4 rounded-2xl bg-surface border border-default flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-50">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-slate-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search flags by key or description..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-hidden focus:border-amber-500 font-mono"
+                className="w-full bg-surface-sunken border border-default rounded-xl pl-9 pr-3 py-1.5 text-xs text-default placeholder:text-muted focus:outline-hidden focus:border-amber-500 font-mono"
               />
             </div>
 
@@ -260,15 +260,15 @@ export const PlatformFeatureFlagsWorkspace: React.FC = () => {
           </div>
 
           {/* Feature Flags Table */}
-          <div className="rounded-2xl bg-slate-900 border border-slate-800 shadow-xl overflow-hidden">
+          <div className="rounded-2xl bg-surface border border-default shadow-xl overflow-hidden">
             {flagsLoading ? (
-              <div className="p-12 text-center text-slate-400 font-mono text-xs">
+              <div className="p-12 text-center text-muted font-mono text-xs">
                 Loading feature flags...
               </div>
             ) : flags.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs font-mono">
-                  <thead className="bg-slate-950/60 border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                <table className="w-full min-w-187.5 text-left text-xs font-mono">
+                  <thead className="bg-surface-sunken border-b border-default text-muted uppercase text-[10px]">
                     <tr>
                       <th className="px-5 py-3">Flag Key</th>
                       <th className="px-5 py-3">Scope</th>
@@ -278,40 +278,40 @@ export const PlatformFeatureFlagsWorkspace: React.FC = () => {
                       <th className="px-5 py-3 text-right">Toggle Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/50">
+                  <tbody className="divide-y divide-default">
                     {flags.map((flag) => (
-                      <tr key={flag.id} className="hover:bg-slate-800/30 transition-colors">
+                      <tr key={flag.id} className="hover:bg-surface-sunken/60 transition-colors">
                         <td className="px-5 py-3">
-                          <span className="font-bold text-slate-100 block">{flag.key}</span>
+                          <span className="font-bold text-default block">{flag.key}</span>
                         </td>
                         <td className="px-5 py-3">
                           {!flag.tenant_id ? (
-                            <span className="px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-[10px] font-bold uppercase">
+                            <span className="px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 text-[10px] font-bold uppercase">
                               Global
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold flex items-center gap-1 w-fit">
+                            <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[10px] font-bold flex items-center gap-1 w-fit">
                               <Building2 className="size-2.5" />
                               <span>{flag.tenant?.name ?? `Tenant #${flag.tenant_id}`}</span>
                             </span>
                           )}
                         </td>
-                        <td className="px-5 py-3 font-bold text-slate-200">
+                        <td className="px-5 py-3 font-bold text-default">
                           {flag.rollout_percentage != null ? `${flag.rollout_percentage}%` : '100%'}
                         </td>
                         <td className="px-5 py-3">
                           <span
                             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                               flag.enabled
-                                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                                : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                                : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
                             }`}
                           >
                             {flag.enabled ? <CheckCircle2 className="size-2.5" /> : <XCircle className="size-2.5" />}
                             <span>{flag.enabled ? 'Enabled' : 'Disabled'}</span>
                           </span>
                         </td>
-                        <td className="px-5 py-3 text-slate-400 text-[11px] max-w-xs truncate">
+                        <td className="px-5 py-3 text-muted text-[11px] max-w-xs truncate">
                           {flag.description || '—'}
                         </td>
                         <td className="px-5 py-3 text-right">
@@ -326,8 +326,8 @@ export const PlatformFeatureFlagsWorkspace: React.FC = () => {
                             disabled={toggleMutation.isPending}
                             className={`px-3 py-1 rounded-lg font-bold text-[11px] cursor-pointer transition-colors ${
                               flag.enabled
-                                ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                                : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                                : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                             }`}
                           >
                             {flag.enabled ? 'Deactivate' : 'Activate'}
@@ -339,7 +339,7 @@ export const PlatformFeatureFlagsWorkspace: React.FC = () => {
                 </table>
               </div>
             ) : (
-              <div className="p-12 text-center text-slate-400 font-mono text-xs">
+              <div className="p-12 text-center text-muted font-mono text-xs">
                 No feature flags defined.
               </div>
             )}
@@ -348,51 +348,51 @@ export const PlatformFeatureFlagsWorkspace: React.FC = () => {
       )}
 
       {activeTab === 'registry' && (
-        <div className="rounded-2xl bg-slate-900 border border-slate-800 shadow-xl overflow-hidden">
-          <div className="p-4 border-b border-slate-800 bg-slate-950/40">
-            <h2 className="text-sm font-bold text-slate-200 uppercase tracking-wider font-mono">
+        <div className="rounded-2xl bg-surface border border-default shadow-xl overflow-hidden">
+          <div className="p-4 border-b border-default bg-surface-sunken">
+            <h2 className="text-sm font-bold text-default uppercase tracking-wider font-mono">
               Core Platform Enterprise Modules
             </h2>
-            <p className="text-slate-400 text-xs mt-0.5">
+            <p className="text-muted text-xs mt-0.5">
               Self-contained domain engines registered with the DevCenterPoint platform core.
             </p>
           </div>
 
           {registryLoading ? (
-            <div className="p-12 text-center text-slate-400 font-mono text-xs">
+            <div className="p-12 text-center text-muted font-mono text-xs">
               Loading module catalog...
             </div>
           ) : moduleRegistry.length > 0 ? (
-            <div className="divide-y divide-slate-800/60 font-mono text-xs">
+            <div className="divide-y divide-default font-mono text-xs">
               {moduleRegistry.map((mod) => (
-                <div key={mod.key} className="p-5 flex items-start justify-between gap-4 hover:bg-slate-800/20">
+                <div key={mod.key} className="p-5 flex items-start justify-between gap-4 hover:bg-surface-sunken/60">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2.5">
-                      <span className="font-bold text-slate-100 font-sans text-sm">{mod.name}</span>
-                      <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 text-[10px]">
+                      <span className="font-bold text-default font-sans text-sm">{mod.name}</span>
+                      <span className="px-2 py-0.5 rounded-md bg-surface-sunken border border-default text-muted text-[10px]">
                         {mod.key}
                       </span>
                       {mod.is_core ? (
-                        <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[10px] font-bold">
+                        <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[10px] font-bold">
                           CORE SYSTEM
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 text-[10px] font-bold">
+                        <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 text-[10px] font-bold">
                           COMMERCIAL ADDON
                         </span>
                       )}
                     </div>
-                    <p className="text-slate-400 text-xs font-sans">{mod.description}</p>
-                    <div className="flex items-center gap-4 text-[11px] text-slate-500 pt-1">
-                      <span>Category: <strong className="text-slate-300 uppercase">{mod.category}</strong></span>
-                      <span>Version: <strong className="text-slate-300">{mod.version}</strong></span>
-                      <span>Permissions: <strong className="text-slate-300">{mod.permissions?.length ?? 0} defined</strong></span>
+                    <p className="text-muted text-xs font-sans">{mod.description}</p>
+                    <div className="flex items-center gap-4 text-[11px] text-muted pt-1">
+                      <span>Category: <strong className="text-default uppercase">{mod.category}</strong></span>
+                      <span>Version: <strong className="text-default">{mod.version}</strong></span>
+                      <span>Permissions: <strong className="text-default">{mod.permissions?.length ?? 0} defined</strong></span>
                     </div>
                   </div>
 
                   <div className="shrink-0 flex items-center gap-2">
-                    <span className="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 text-[10px] font-bold flex items-center gap-1">
-                      <Layers className="size-3 text-amber-400" />
+                    <span className="px-2.5 py-1 rounded-full bg-surface-sunken border border-default text-muted text-[10px] font-bold flex items-center gap-1">
+                      <Layers className="size-3 text-amber-500" />
                       <span>Ready</span>
                     </span>
                   </div>
@@ -400,7 +400,7 @@ export const PlatformFeatureFlagsWorkspace: React.FC = () => {
               ))}
             </div>
           ) : (
-            <div className="p-12 text-center text-slate-400 font-mono text-xs">
+            <div className="p-12 text-center text-muted font-mono text-xs">
               No platform modules discovered in registry.
             </div>
           )}
@@ -409,44 +409,44 @@ export const PlatformFeatureFlagsWorkspace: React.FC = () => {
 
       {/* Create Flag Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs">
-            <h2 className="text-lg font-bold text-slate-100 font-sans">New Feature Flag</h2>
-            <p className="text-slate-400 mt-1">
+        <div className="fixed inset-0 bg-overlay/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-raised border border-default rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs">
+            <h2 className="text-lg font-bold text-default font-sans">New Feature Flag</h2>
+            <p className="text-muted mt-1">
               Configure flag identifier, target scope, and phased percentage rollout.
             </p>
 
             <form onSubmit={handleCreateFlag} className="mt-4 space-y-3">
               <div>
-                <label className="block text-slate-300 mb-1">Flag Key * (e.g. beta_ai_forecast)</label>
+                <label className="block text-default mb-1">Flag Key * (e.g. beta_ai_forecast)</label>
                 <input
                   type="text"
                   required
                   value={key}
                   onChange={(e) => setKey(e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, ''))}
                   placeholder="module_key_or_feature"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1">Description</label>
+                <label className="block text-default mb-1">Description</label>
                 <input
                   type="text"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Explain feature purpose..."
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-300 mb-1">Scope</label>
+                  <label className="block text-default mb-1">Scope</label>
                   <select
                     value={scope}
                     onChange={(e) => setScope(e.target.value as 'global' | 'tenant')}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                    className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                   >
                     <option value="global">Global (Platform)</option>
                     <option value="tenant">Tenant Specific</option>
@@ -454,7 +454,7 @@ export const PlatformFeatureFlagsWorkspace: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 mb-1">Rollout % (0-100)</label>
+                  <label className="block text-default mb-1">Rollout % (0-100)</label>
                   <input
                     type="number"
                     min="0"
@@ -462,19 +462,19 @@ export const PlatformFeatureFlagsWorkspace: React.FC = () => {
                     required
                     value={rolloutPercentage}
                     onChange={(e) => setRolloutPercentage(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                    className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                   />
                 </div>
               </div>
 
               {scope === 'tenant' && (
                 <div>
-                  <label className="block text-slate-300 mb-1">Target Tenant *</label>
+                  <label className="block text-default mb-1">Target Tenant *</label>
                   <select
                     value={targetTenantId}
                     onChange={(e) => setTargetTenantId(e.target.value ? Number(e.target.value) : '')}
                     required
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                    className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                   >
                     <option value="">Select a tenant...</option>
                     {tenants.map((t) => (
@@ -492,9 +492,9 @@ export const PlatformFeatureFlagsWorkspace: React.FC = () => {
                   id="isEnabledCheckbox"
                   checked={isEnabled}
                   onChange={(e) => setIsEnabled(e.target.checked)}
-                  className="rounded-sm border-slate-700 bg-slate-950 text-amber-500 focus:ring-amber-500"
+                  className="rounded-sm border-default bg-surface-sunken text-amber-500 focus:ring-amber-500"
                 />
-                <label htmlFor="isEnabledCheckbox" className="text-slate-300 cursor-pointer">
+                <label htmlFor="isEnabledCheckbox" className="text-default cursor-pointer">
                   Activate flag immediately upon creation
                 </label>
               </div>
@@ -503,7 +503,7 @@ export const PlatformFeatureFlagsWorkspace: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default cursor-pointer"
                 >
                   Cancel
                 </button>

@@ -76,7 +76,7 @@ export const OnboardingStartupModal: React.FC = () => {
             <span className="font-semibold text-default">Profile Completion</span>
             <span className="font-mono font-bold text-primary">{completionPercentage}%</span>
           </div>
-          <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+          <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-raised border border-default/40">
             <div
               className="h-full bg-linear-to-r from-indigo-500 to-emerald-500 transition-all duration-500"
               style={{ width: `${Math.max(5, completionPercentage)}%` }}
@@ -112,7 +112,7 @@ export const OnboardingStartupModal: React.FC = () => {
                   {isDone ? (
                     <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
                   ) : (
-                    <Circle className="size-3.5 text-slate-400 shrink-0" />
+                    <Circle className="size-3.5 text-muted shrink-0" />
                   )}
                   <Icon className="size-3.5 opacity-70 shrink-0" />
                   <span className="truncate">{meta.label}</span>

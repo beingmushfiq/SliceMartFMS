@@ -104,7 +104,7 @@ export const OnboardingProgressCard: React.FC = () => {
 
       {/* Progress Rail */}
       <div className="mt-3">
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-raised border border-default/40">
           <div
             className="h-full bg-linear-to-r from-indigo-500 to-emerald-500 transition-all duration-500"
             style={{ width: `${Math.max(5, completionPercentage)}%` }}
@@ -131,7 +131,7 @@ export const OnboardingProgressCard: React.FC = () => {
                 {isDone ? (
                   <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
                 ) : (
-                  <Circle className="size-3.5 text-slate-400 shrink-0" />
+                  <Circle className="size-3.5 text-muted shrink-0" />
                 )}
                 <span className="truncate text-[11px] font-medium">{label}</span>
               </div>

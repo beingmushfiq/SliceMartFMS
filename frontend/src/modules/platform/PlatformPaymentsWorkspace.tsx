@@ -157,8 +157,8 @@ export const PlatformPaymentsWorkspace: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 tracking-tight">SaaS Subscription Payments</h1>
-          <p className="text-xs text-slate-400 mt-1 font-mono">
+          <h1 className="text-2xl font-bold text-default tracking-tight">SaaS Subscription Payments</h1>
+          <p className="text-xs text-muted mt-1 font-mono">
             Cross-tenant SaaS billing ledger, revenue receipts, and subscription payment audit trail.
           </p>
         </div>
@@ -169,7 +169,7 @@ export const PlatformPaymentsWorkspace: React.FC = () => {
             size="sm"
             onClick={() => refetch()}
             disabled={isFetching}
-            className="flex items-center gap-1.5 font-mono text-xs cursor-pointer border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800"
+            className="flex items-center gap-1.5 font-mono text-xs cursor-pointer border-default bg-surface text-default hover:bg-surface-sunken"
           >
             <RotateCcw className={`size-3.5 ${isFetching ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
@@ -187,10 +187,10 @@ export const PlatformPaymentsWorkspace: React.FC = () => {
       </div>
 
       {/* Filters Bar */}
-      <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-wrap items-center gap-3">
+      <div className="p-4 rounded-2xl bg-surface border border-default flex flex-wrap items-center gap-3">
         {/* Search */}
         <div className="relative flex-1 min-w-50">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted" />
           <input
             type="text"
             value={search}
@@ -199,7 +199,7 @@ export const PlatformPaymentsWorkspace: React.FC = () => {
               setPage(1);
             }}
             placeholder="Search invoice ref, txn id, notes..."
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-hidden focus:border-amber-500 font-mono"
+            className="w-full bg-surface-sunken border border-default rounded-xl pl-9 pr-3 py-1.5 text-xs text-default placeholder:text-muted focus:outline-hidden focus:border-amber-500 font-mono"
           />
         </div>
 
@@ -238,15 +238,15 @@ export const PlatformPaymentsWorkspace: React.FC = () => {
       </div>
 
       {/* Payments Table */}
-      <div className="rounded-2xl bg-slate-900 border border-slate-800 shadow-xl overflow-hidden">
+      <div className="rounded-2xl bg-surface border border-default shadow-xl overflow-hidden">
         {isLoading ? (
-          <div className="p-12 text-center text-slate-400 font-mono text-xs">
+          <div className="p-12 text-center text-muted font-mono text-xs">
             Loading subscription payments ledger...
           </div>
         ) : payments.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-slate-950/60 border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+            <table className="w-full min-w-212.5 text-left text-xs font-mono">
+              <thead className="bg-surface-sunken border-b border-default text-muted uppercase text-[10px]">
                 <tr>
                   <th className="px-5 py-3">Invoice Ref</th>
                   <th className="px-5 py-3">Tenant</th>
@@ -258,39 +258,39 @@ export const PlatformPaymentsWorkspace: React.FC = () => {
                   <th className="px-5 py-3">Recorded By</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/50">
+              <tbody className="divide-y divide-default">
                 {payments.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="px-5 py-3 font-bold text-slate-100">{p.invoice_reference}</td>
+                  <tr key={p.id} className="hover:bg-surface-sunken/60 transition-colors">
+                    <td className="px-5 py-3 font-bold text-default">{p.invoice_reference}</td>
                     <td className="px-5 py-3">
-                      <div className="flex items-center gap-1.5 text-slate-200">
-                        <Building2 className="size-3 text-slate-500" />
-                        <span>{p.tenant?.name ?? `Tenant #${p.tenant_id}`}</span>
+                      <div className="flex items-center gap-1.5 text-default">
+                        <Building2 className="size-3 text-muted" />
+                        <span className="font-semibold">{p.tenant?.name ?? `Tenant #${p.tenant_id}`}</span>
                       </div>
                     </td>
-                    <td className="px-5 py-3 font-bold text-amber-400">
+                    <td className="px-5 py-3 font-bold text-amber-500">
                       {p.currency_code === 'BDT' ? '৳' : p.currency_code + ' '}
                       {Number(p.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="px-5 py-3 text-slate-300 capitalize">
+                    <td className="px-5 py-3 text-default capitalize">
                       {p.payment_method.replace('_', ' ')}
                     </td>
-                    <td className="px-5 py-3 text-slate-400 text-[11px]">
+                    <td className="px-5 py-3 text-muted text-[11px]">
                       {p.transaction_reference || '—'}
                     </td>
-                    <td className="px-5 py-3 text-slate-400">
+                    <td className="px-5 py-3 text-muted">
                       {new Date(p.payment_date).toLocaleDateString()}
                     </td>
                     <td className="px-5 py-3">
                       <span
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                           p.status === 'paid'
-                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                             : p.status === 'pending'
-                            ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                            ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
                             : p.status === 'refunded'
-                            ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30'
-                            : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                            ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30'
+                            : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
                         }`}
                       >
                         {p.status === 'paid' && <CheckCircle2 className="size-2.5" />}
@@ -300,7 +300,7 @@ export const PlatformPaymentsWorkspace: React.FC = () => {
                         <span>{p.status}</span>
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-slate-400 text-[11px]">
+                    <td className="px-5 py-3 text-muted text-[11px]">
                       {p.creator?.name ?? 'System'}
                     </td>
                   </tr>
@@ -309,14 +309,14 @@ export const PlatformPaymentsWorkspace: React.FC = () => {
             </table>
           </div>
         ) : (
-          <div className="p-12 text-center text-slate-400 font-mono text-xs">
+          <div className="p-12 text-center text-muted font-mono text-xs">
             No payment transactions match the active filters.
           </div>
         )}
 
         {/* Pagination Footer */}
         {pagination && pagination.total_pages > 1 && (
-          <div className="p-4 border-t border-slate-800 bg-slate-950/40 flex items-center justify-between text-xs font-mono text-slate-400">
+          <div className="p-4 border-t border-default bg-surface-sunken flex items-center justify-between text-xs font-mono text-muted">
             <div>
               Showing {((pagination.page - 1) * pagination.per_page) + 1} to{' '}
               {Math.min(pagination.page * pagination.per_page, pagination.total)} of{' '}
@@ -328,11 +328,11 @@ export const PlatformPaymentsWorkspace: React.FC = () => {
                 size="sm"
                 disabled={pagination.page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="size-8 p-0 cursor-pointer border-slate-800 text-slate-300"
+                className="size-8 p-0 cursor-pointer border-default bg-surface text-default hover:bg-surface-sunken"
               >
                 <ChevronLeft className="size-4" />
               </Button>
-              <span className="text-slate-200">
+              <span className="text-default font-bold">
                 {pagination.page} / {pagination.total_pages}
               </span>
               <Button
@@ -340,7 +340,7 @@ export const PlatformPaymentsWorkspace: React.FC = () => {
                 size="sm"
                 disabled={pagination.page >= pagination.total_pages}
                 onClick={() => setPage((p) => Math.min(pagination.total_pages, p + 1))}
-                className="size-8 p-0 cursor-pointer border-slate-800 text-slate-300"
+                className="size-8 p-0 cursor-pointer border-default bg-surface text-default hover:bg-surface-sunken"
               >
                 <ChevronRight className="size-4" />
               </Button>
@@ -351,21 +351,21 @@ export const PlatformPaymentsWorkspace: React.FC = () => {
 
       {/* Record Payment Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs">
-            <h2 className="text-lg font-bold text-slate-100 font-sans">Record SaaS Payment</h2>
-            <p className="text-slate-400 mt-1">
+        <div className="fixed inset-0 bg-overlay/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-raised border border-default rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs">
+            <h2 className="text-lg font-bold text-default font-sans">Record SaaS Payment</h2>
+            <p className="text-muted mt-1">
               Add subscription transaction record and generate an invoice receipt.
             </p>
 
             <form onSubmit={handleSubmitPayment} className="mt-4 space-y-3">
               <div>
-                <label className="block text-slate-300 mb-1">Target Tenant *</label>
+                <label className="block text-default mb-1">Target Tenant *</label>
                 <select
                   value={selectedTenantId}
                   onChange={(e) => setSelectedTenantId(e.target.value ? Number(e.target.value) : '')}
                   required
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                 >
                   <option value="">Select a tenant...</option>
                   {tenants.map((t) => (
@@ -378,7 +378,7 @@ export const PlatformPaymentsWorkspace: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-300 mb-1">Amount *</label>
+                  <label className="block text-default mb-1">Amount *</label>
                   <input
                     type="number"
                     step="0.01"
@@ -386,15 +386,15 @@ export const PlatformPaymentsWorkspace: React.FC = () => {
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     placeholder="0.00"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                    className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-300 mb-1">Currency</label>
+                  <label className="block text-default mb-1">Currency</label>
                   <select
                     value={currencyCode}
                     onChange={(e) => setCurrencyCode(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                    className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                   >
                     <option value="BDT">BDT (৳)</option>
                     <option value="USD">USD ($)</option>
@@ -406,11 +406,11 @@ export const PlatformPaymentsWorkspace: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-300 mb-1">Method</label>
+                  <label className="block text-default mb-1">Method</label>
                   <select
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                    className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                   >
                     <option value="bank_transfer">Bank Transfer (EFT)</option>
                     <option value="bkash">bKash Merchant</option>
@@ -420,36 +420,36 @@ export const PlatformPaymentsWorkspace: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-slate-300 mb-1">Date</label>
+                  <label className="block text-default mb-1">Date</label>
                   <input
                     type="date"
                     required
                     value={paymentDate}
                     onChange={(e) => setPaymentDate(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                    className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1">Txn / Bank Ref ID</label>
+                <label className="block text-default mb-1">Txn / Bank Ref ID</label>
                 <input
                   type="text"
                   value={transactionRef}
                   onChange={(e) => setTransactionRef(e.target.value)}
                   placeholder="e.g. TRX-8823901"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1">Notes / Memo</label>
+                <label className="block text-default mb-1">Notes / Memo</label>
                 <input
                   type="text"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Billing memo..."
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                 />
               </div>
 
@@ -457,7 +457,7 @@ export const PlatformPaymentsWorkspace: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default cursor-pointer"
                 >
                   Cancel
                 </button>

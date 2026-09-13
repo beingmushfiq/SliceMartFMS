@@ -165,8 +165,8 @@ export const PlatformAdminWorkspace: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Platform Administrators</h1>
-          <p className="text-xs text-slate-400 mt-1 font-mono">
+          <h1 className="text-2xl font-bold text-default tracking-tight">Platform Administrators</h1>
+          <p className="text-xs text-muted mt-1 font-mono">
             DevCenterPoint platform control plane staff, RBAC assignments, and credential management.
           </p>
         </div>
@@ -177,7 +177,7 @@ export const PlatformAdminWorkspace: React.FC = () => {
             size="sm"
             onClick={() => refetch()}
             disabled={isFetching}
-            className="flex items-center gap-1.5 font-mono text-xs cursor-pointer border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800"
+            className="flex items-center gap-1.5 font-mono text-xs cursor-pointer border-default bg-surface text-default hover:bg-surface-sunken"
           >
             <RotateCcw className={`size-3.5 ${isFetching ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
@@ -195,9 +195,9 @@ export const PlatformAdminWorkspace: React.FC = () => {
       </div>
 
       {/* Search Bar */}
-      <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center gap-3">
+      <div className="p-4 rounded-2xl bg-surface border border-default flex items-center gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted" />
           <input
             type="text"
             value={search}
@@ -206,21 +206,21 @@ export const PlatformAdminWorkspace: React.FC = () => {
               setPage(1);
             }}
             placeholder="Search platform admins by name or email..."
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-hidden focus:border-amber-500 font-mono"
+            className="w-full bg-surface-sunken border border-default rounded-xl pl-9 pr-3 py-1.5 text-xs text-default placeholder:text-muted focus:outline-hidden focus:border-amber-500 font-mono"
           />
         </div>
       </div>
 
       {/* Admins Table */}
-      <div className="rounded-2xl bg-slate-900 border border-slate-800 shadow-xl overflow-hidden">
+      <div className="rounded-2xl bg-surface border border-default shadow-xl overflow-hidden">
         {isLoading ? (
-          <div className="p-12 text-center text-slate-400 font-mono text-xs">
+          <div className="p-12 text-center text-muted font-mono text-xs">
             Loading platform administrators...
           </div>
         ) : admins.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-slate-950/60 border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+            <table className="w-full min-w-187.5 text-left text-xs font-mono">
+              <thead className="bg-surface-sunken border-b border-default text-muted uppercase text-[10px]">
                 <tr>
                   <th className="px-5 py-3">Administrator</th>
                   <th className="px-5 py-3">Assigned Platform Roles</th>
@@ -230,14 +230,14 @@ export const PlatformAdminWorkspace: React.FC = () => {
                   <th className="px-5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/50">
+              <tbody className="divide-y divide-default">
                 {admins.map((admin) => (
-                  <tr key={admin.id} className="hover:bg-slate-800/30 transition-colors">
+                  <tr key={admin.id} className="hover:bg-surface-sunken/60 transition-colors">
                     <td className="px-5 py-3">
                       <div>
-                        <span className="font-bold text-slate-100 block">{admin.name}</span>
-                        <span className="text-slate-400 text-[11px] flex items-center gap-1 mt-0.5">
-                          <Mail className="size-3 text-slate-500" />
+                        <span className="font-bold text-default block">{admin.name}</span>
+                        <span className="text-muted text-[11px] flex items-center gap-1 mt-0.5">
+                          <Mail className="size-3 text-muted" />
                           {admin.email}
                         </span>
                       </div>
@@ -248,13 +248,13 @@ export const PlatformAdminWorkspace: React.FC = () => {
                           admin.roles.map((r) => (
                             <span
                               key={r.id}
-                              className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold"
+                              className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[10px] font-bold"
                             >
                               {r.name}
                             </span>
                           ))
                         ) : (
-                          <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 text-[10px]">
+                          <span className="px-2 py-0.5 rounded-md bg-surface-sunken border border-default text-muted text-[10px]">
                             Default Platform Admin
                           </span>
                         )}
@@ -264,8 +264,8 @@ export const PlatformAdminWorkspace: React.FC = () => {
                       <span
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                           admin.status === 'active'
-                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                            : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                            : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
                         }`}
                       >
                         {admin.status === 'active' ? (
@@ -276,14 +276,14 @@ export const PlatformAdminWorkspace: React.FC = () => {
                         <span>{admin.status}</span>
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-slate-400">
+                    <td className="px-5 py-3 text-muted">
                       {admin.last_login_at ? (
                         new Date(admin.last_login_at).toLocaleString()
                       ) : (
-                        <span className="text-slate-600">Never</span>
+                        <span className="text-muted/60">Never</span>
                       )}
                     </td>
-                    <td className="px-5 py-3 text-slate-400">
+                    <td className="px-5 py-3 text-muted">
                       {new Date(admin.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-5 py-3 text-right">
@@ -295,7 +295,7 @@ export const PlatformAdminWorkspace: React.FC = () => {
                             setShowResetModal(true);
                           }}
                           title="Reset Password"
-                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 cursor-pointer transition-colors"
+                          className="p-1.5 rounded-lg bg-surface-sunken hover:bg-surface border border-default text-amber-600 dark:text-amber-400 cursor-pointer transition-colors"
                         >
                           <Key className="size-3.5" />
                         </button>
@@ -310,8 +310,8 @@ export const PlatformAdminWorkspace: React.FC = () => {
                           title={admin.status === 'active' ? 'Suspend Admin' : 'Activate Admin'}
                           className={`p-1.5 rounded-lg cursor-pointer transition-colors ${
                             admin.status === 'active'
-                              ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400'
-                              : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400'
+                              ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                              : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                           }`}
                         >
                           <Lock className="size-3.5" />
@@ -324,7 +324,7 @@ export const PlatformAdminWorkspace: React.FC = () => {
             </table>
           </div>
         ) : (
-          <div className="p-12 text-center text-slate-400 font-mono text-xs">
+          <div className="p-12 text-center text-muted font-mono text-xs">
             No platform administrators found.
           </div>
         )}
@@ -332,40 +332,40 @@ export const PlatformAdminWorkspace: React.FC = () => {
 
       {/* Create Admin Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs">
-            <h2 className="text-lg font-bold text-slate-100 font-sans">New Platform Administrator</h2>
-            <p className="text-slate-400 mt-1">
+        <div className="fixed inset-0 bg-overlay/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-raised border border-default rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs">
+            <h2 className="text-lg font-bold text-default font-sans">New Platform Administrator</h2>
+            <p className="text-muted mt-1">
               Grant root or role-delegated access to the DevCenterPoint control plane.
             </p>
 
             <form onSubmit={handleCreate} className="mt-4 space-y-3">
               <div>
-                <label className="block text-slate-300 mb-1">Full Name *</label>
+                <label className="block text-default mb-1">Full Name *</label>
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. John Doe"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1">Email Address *</label>
+                <label className="block text-default mb-1">Email Address *</label>
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="admin@devcenterpoint.com"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1">Initial Password * (8+ chars)</label>
+                <label className="block text-default mb-1">Initial Password * (8+ chars)</label>
                 <input
                   type="password"
                   required
@@ -373,16 +373,16 @@ export const PlatformAdminWorkspace: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1">Initial Platform Role</label>
+                <label className="block text-default mb-1">Initial Platform Role</label>
                 <select
                   value={selectedRoleId}
                   onChange={(e) => setSelectedRoleId(e.target.value ? Number(e.target.value) : '')}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                 >
                   <option value="">Default Platform Admin</option>
                   {roles.map((r) => (
@@ -397,7 +397,7 @@ export const PlatformAdminWorkspace: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-surface-sunken hover:bg-surface border border-default text-muted hover:text-default cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -416,16 +416,16 @@ export const PlatformAdminWorkspace: React.FC = () => {
 
       {/* Reset Password Modal */}
       {showResetModal && selectedAdmin && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs">
-            <h2 className="text-lg font-bold text-slate-100 font-sans">Reset Admin Password</h2>
-            <p className="text-slate-400 mt-1">
-              Set a new password for <strong className="text-slate-200">{selectedAdmin.name}</strong> ({selectedAdmin.email}).
+        <div className="fixed inset-0 bg-overlay/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-raised border border-default rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs">
+            <h2 className="text-lg font-bold text-default font-sans">Reset Admin Password</h2>
+            <p className="text-muted mt-1">
+              Set a new password for <strong className="text-default">{selectedAdmin.name}</strong> ({selectedAdmin.email}).
             </p>
 
             <form onSubmit={handleResetPassword} className="mt-4 space-y-3">
               <div>
-                <label className="block text-slate-300 mb-1">New Password (8+ chars) *</label>
+                <label className="block text-default mb-1">New Password (8+ chars) *</label>
                 <input
                   type="password"
                   required
@@ -433,7 +433,7 @@ export const PlatformAdminWorkspace: React.FC = () => {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Enter new password"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                 />
               </div>
 
@@ -445,7 +445,7 @@ export const PlatformAdminWorkspace: React.FC = () => {
                     setSelectedAdmin(null);
                     setNewPassword('');
                   }}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-surface-sunken hover:bg-surface border border-default text-muted hover:text-default cursor-pointer"
                 >
                   Cancel
                 </button>

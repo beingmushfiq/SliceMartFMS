@@ -10,8 +10,6 @@ import {
   RotateCcw,
   Plus,
   Building2,
-  AlertTriangle,
-  Flame,
   MessageSquare,
   Send,
   X,
@@ -199,8 +197,8 @@ export const PlatformSupportWorkspace: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Enterprise Support Desk</h1>
-          <p className="text-xs text-slate-400 mt-1 font-mono">
+          <h1 className="text-2xl font-bold text-default tracking-tight">Enterprise Support Desk</h1>
+          <p className="text-xs text-muted mt-1 font-mono">
             Platform-to-tenant incident triage, resolution workflows, and client inquiry notes.
           </p>
         </div>
@@ -211,7 +209,7 @@ export const PlatformSupportWorkspace: React.FC = () => {
             size="sm"
             onClick={() => refetch()}
             disabled={isFetching}
-            className="flex items-center gap-1.5 font-mono text-xs cursor-pointer border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800"
+            className="flex items-center gap-1.5 font-mono text-xs cursor-pointer border-default bg-surface text-default hover:bg-surface-sunken"
           >
             <RotateCcw className={`size-3.5 ${isFetching ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
@@ -231,35 +229,35 @@ export const PlatformSupportWorkspace: React.FC = () => {
       {/* KPI Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono text-xs">
-          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 shadow-sm">
-            <span className="text-slate-400 block text-[11px] mb-1 uppercase">Total Tickets</span>
-            <span className="text-xl font-bold text-slate-100">{stats.total}</span>
+          <div className="p-4 rounded-xl bg-surface border border-default shadow-xs">
+            <span className="text-muted block text-[11px] mb-1 uppercase">Total Tickets</span>
+            <span className="text-xl font-bold text-default">{stats.total}</span>
           </div>
-          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 shadow-sm">
-            <span className="text-amber-400 block text-[11px] mb-1 uppercase">Open & In Progress</span>
-            <span className="text-xl font-bold text-amber-400">{stats.open + stats.in_progress}</span>
+          <div className="p-4 rounded-xl bg-surface border border-default shadow-xs">
+            <span className="text-amber-500 block text-[11px] mb-1 uppercase">Open & In Progress</span>
+            <span className="text-xl font-bold text-amber-500">{stats.open + stats.in_progress}</span>
           </div>
-          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 shadow-sm">
-            <span className="text-cyan-400 block text-[11px] mb-1 uppercase">Awaiting Tenant</span>
-            <span className="text-xl font-bold text-cyan-400">{stats.waiting}</span>
+          <div className="p-4 rounded-xl bg-surface border border-default shadow-xs">
+            <span className="text-cyan-500 block text-[11px] mb-1 uppercase">Awaiting Tenant</span>
+            <span className="text-xl font-bold text-cyan-500">{stats.waiting}</span>
           </div>
-          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 shadow-sm">
-            <span className="text-emerald-400 block text-[11px] mb-1 uppercase">Resolved</span>
-            <span className="text-xl font-bold text-emerald-400">{stats.resolved + stats.closed}</span>
+          <div className="p-4 rounded-xl bg-surface border border-default shadow-xs">
+            <span className="text-emerald-500 block text-[11px] mb-1 uppercase">Resolved</span>
+            <span className="text-xl font-bold text-emerald-500">{stats.resolved + stats.closed}</span>
           </div>
         </div>
       )}
 
       {/* Filters Bar */}
-      <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-wrap items-center gap-3">
+      <div className="p-4 rounded-2xl bg-surface border border-default flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-50">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search ticket #, subject, or description..."
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-hidden focus:border-amber-500 font-mono"
+            className="w-full bg-surface-sunken border border-default rounded-xl pl-9 pr-3 py-1.5 text-xs text-default placeholder:text-muted focus:outline-hidden focus:border-amber-500 font-mono"
           />
         </div>
 
@@ -294,79 +292,80 @@ export const PlatformSupportWorkspace: React.FC = () => {
       </div>
 
       {/* Tickets Table */}
-      <div className="rounded-2xl bg-slate-900 border border-slate-800 shadow-xl overflow-hidden">
+      <div className="rounded-2xl bg-surface border border-default shadow-xl overflow-hidden">
         {isLoading ? (
-          <div className="p-12 text-center text-slate-400 font-mono text-xs">
-            Loading support tickets...
+          <div className="p-12 text-center text-muted font-mono text-xs">
+            Loading support incidents...
           </div>
-        ) : tickets.length > 0 ? (
+        ) : tickets.length === 0 ? (
+          <div className="p-12 text-center text-muted font-mono text-xs">
+            No support tickets match your current filters.
+          </div>
+        ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-slate-950/60 border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+            <table className="w-full min-w-187.5 text-left text-xs font-mono">
+              <thead className="bg-surface-sunken border-b border-default text-muted uppercase text-[10px]">
                 <tr>
                   <th className="px-5 py-3">Ticket #</th>
-                  <th className="px-5 py-3">Tenant</th>
+                  <th className="px-5 py-3">Tenant Organization</th>
                   <th className="px-5 py-3">Subject</th>
                   <th className="px-5 py-3">Priority</th>
                   <th className="px-5 py-3">Status</th>
                   <th className="px-5 py-3">Category</th>
                   <th className="px-5 py-3">Created</th>
-                  <th className="px-5 py-3 text-right">Conversation</th>
+                  <th className="px-5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/50">
+              <tbody className="divide-y divide-default">
                 {tickets.map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="px-5 py-3 font-bold text-slate-100">{t.ticket_number}</td>
+                  <tr key={t.id} className="hover:bg-surface-sunken/60 transition-colors">
+                    <td className="px-5 py-3 font-bold text-default">{t.ticket_number}</td>
                     <td className="px-5 py-3">
-                      <div className="flex items-center gap-1.5 text-slate-200">
-                        <Building2 className="size-3 text-slate-500" />
-                        <span>{t.tenant?.name ?? `Tenant #${t.tenant_id}`}</span>
+                      <div className="flex items-center gap-1.5 text-default">
+                        <Building2 className="size-3 text-muted" />
+                        <span className="font-semibold">{t.tenant?.name ?? `Tenant #${t.tenant_id}`}</span>
                       </div>
                     </td>
-                    <td className="px-5 py-3 font-sans font-medium text-slate-200 max-w-xs truncate">
+                    <td className="px-5 py-3 font-sans font-medium text-default max-w-xs truncate">
                       {t.title}
                     </td>
                     <td className="px-5 py-3">
                       <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${
                           t.priority === 'urgent'
-                            ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                            ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
                             : t.priority === 'high'
-                            ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                            : 'bg-slate-800 text-slate-300'
+                            ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                            : 'bg-surface-sunken text-muted border border-default'
                         }`}
                       >
-                        {t.priority === 'urgent' && <Flame className="size-2.5" />}
-                        {t.priority === 'high' && <AlertTriangle className="size-2.5" />}
-                        <span>{t.priority}</span>
+                        {t.priority}
                       </span>
                     </td>
                     <td className="px-5 py-3">
                       <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${
                           t.status === 'open'
-                            ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                            ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30'
                             : t.status === 'in_progress'
-                            ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                            ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
                             : t.status === 'resolved'
-                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                            : 'bg-slate-800 text-slate-400'
+                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                            : 'bg-surface-sunken text-muted border border-default'
                         }`}
                       >
-                        <span>{t.status.replace(/_/g, ' ')}</span>
+                        {t.status.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-slate-400 capitalize">{t.category}</td>
-                    <td className="px-5 py-3 text-slate-400">{new Date(t.created_at).toLocaleDateString()}</td>
+                    <td className="px-5 py-3 text-muted capitalize">{t.category}</td>
+                    <td className="px-5 py-3 text-muted">{new Date(t.created_at).toLocaleDateString()}</td>
                     <td className="px-5 py-3 text-right">
                       <button
-                        type="button"
                         onClick={() => setSelectedTicket(t)}
-                        className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold text-xs flex items-center gap-1 ml-auto cursor-pointer transition-colors"
+                        className="px-3 py-1 rounded-lg bg-surface-sunken hover:bg-surface text-amber-600 dark:text-amber-400 border border-default font-bold text-xs flex items-center gap-1 ml-auto cursor-pointer transition-colors"
                       >
                         <MessageSquare className="size-3" />
-                        <span>Thread ({t.notes_count ?? 0})</span>
+                        <span>Manage</span>
                       </button>
                     </td>
                   </tr>
@@ -374,128 +373,125 @@ export const PlatformSupportWorkspace: React.FC = () => {
               </tbody>
             </table>
           </div>
-        ) : (
-          <div className="p-12 text-center text-slate-400 font-mono text-xs">
-            No support tickets match the current filters.
-          </div>
         )}
 
-        {data?.meta?.pagination && data.meta.pagination.total_pages > 1 && (
-          <div className="p-4 border-t border-slate-800 flex items-center justify-between text-xs font-mono text-slate-400 bg-slate-950/40">
-            <span>
-              Showing {((page - 1) * 25) + 1} to {Math.min(page * 25, data.meta.pagination.total)} of {data.meta.pagination.total} tickets
-            </span>
-            <div className="flex items-center gap-2">
+        {/* Pagination */}
+        {data && data.meta.pagination.total_pages > 1 && (
+          <div className="p-4 border-t border-default flex items-center justify-between text-xs font-mono text-muted bg-surface-sunken">
+            <div>
+              Showing page <strong className="text-default">{data.meta.pagination.page}</strong> of{' '}
+              <strong className="text-default">{data.meta.pagination.total_pages}</strong> ({data.meta.pagination.total} tickets)
+            </div>
+            <div className="flex items-center gap-1.5">
               <button
-                type="button"
-                disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="p-1.5 rounded-lg border border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-300 disabled:opacity-30 cursor-pointer"
+                disabled={page === 1}
+                className="p-1.5 rounded-lg border border-default bg-surface hover:bg-surface-sunken text-default disabled:opacity-30 cursor-pointer"
               >
-                <ChevronLeft className="size-4" />
+                <ChevronLeft className="size-3.5" />
               </button>
-              <span className="text-slate-200 font-bold px-2">
-                Page {page} of {data.meta.pagination.total_pages}
+              <span className="text-default font-bold px-2">
+                {page}
               </span>
               <button
-                type="button"
-                disabled={page >= data.meta.pagination.total_pages}
-                onClick={() => setPage((p) => p + 1)}
-                className="p-1.5 rounded-lg border border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-300 disabled:opacity-30 cursor-pointer"
+                onClick={() => setPage((p) => Math.min(data.meta.pagination.total_pages, p + 1))}
+                disabled={page === data.meta.pagination.total_pages}
+                className="p-1.5 rounded-lg border border-default bg-surface hover:bg-surface-sunken text-default disabled:opacity-30 cursor-pointer"
               >
-                <ChevronRight className="size-4" />
+                <ChevronRight className="size-3.5" />
               </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Ticket Details & Conversation Drawer */}
+      {/* Ticket Details Slide-over Drawer */}
       {selectedTicket && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-end p-0">
-          <div className="bg-slate-900 border-l border-slate-800 w-full max-w-xl h-full shadow-2xl flex flex-col font-mono text-xs">
+        <div className="fixed inset-0 bg-overlay/80 backdrop-blur-sm z-50 flex items-center justify-end p-0">
+          <div className="bg-surface-raised border-l border-default w-full max-w-xl h-full shadow-2xl flex flex-col font-mono text-xs">
             {/* Drawer Header */}
-            <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+            <div className="p-5 border-b border-default flex items-center justify-between bg-surface-sunken">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-100 text-sm">{selectedTicket.ticket_number}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold uppercase">
-                    {selectedTicket.priority}
+                  <span className="font-bold text-default text-sm">{selectedTicket.ticket_number}</span>
+                  <span className="text-amber-500 font-semibold font-sans">
+                    • {selectedTicket.tenant?.name ?? `Tenant #${selectedTicket.tenant_id}`}
                   </span>
                 </div>
-                <h3 className="font-sans font-bold text-slate-200 mt-1 text-base">{selectedTicket.title}</h3>
-                <span className="text-[11px] text-slate-400">
-                  {selectedTicket.tenant?.name} • Opened {new Date(selectedTicket.created_at).toLocaleString()}
+                <h3 className="font-sans font-bold text-default mt-1 text-base">{selectedTicket.title}</h3>
+                <span className="text-[11px] text-muted">
+                  Opened by {selectedTicket.creator?.name ?? 'Admin'} on {new Date(selectedTicket.created_at).toLocaleString()}
                 </span>
               </div>
-
               <button
-                type="button"
-                onClick={() => setSelectedTicket(null)}
-                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 cursor-pointer"
+                onClick={() => {
+                  setSelectedTicket(null);
+                  setNewNoteContent('');
+                }}
+                className="p-1.5 rounded-lg bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default cursor-pointer"
               >
                 <X className="size-4" />
               </button>
             </div>
 
-            {/* Ticket Status Controls */}
-            <div className="p-4 border-b border-slate-800 bg-slate-950/30 flex items-center justify-between gap-3">
-              <span className="text-slate-400 text-[11px]">Lifecycle Status:</span>
-              <div className="flex items-center gap-1.5">
-                {(['open', 'in_progress', 'waiting_on_tenant', 'resolved', 'closed'] as const).map((s) => (
+            {/* Quick Status Control Bar */}
+            <div className="p-4 border-b border-default bg-surface flex items-center justify-between gap-3">
+              <span className="text-muted text-[11px]">Lifecycle Status:</span>
+              <div className="flex items-center gap-1.5 font-sans">
+                {['open', 'in_progress', 'waiting_on_tenant', 'resolved', 'closed'].map((st) => (
                   <button
-                    key={s}
-                    type="button"
-                    onClick={() => updateStatusMutation.mutate({ id: selectedTicket.id, status: s })}
-                    className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase transition-all cursor-pointer ${
-                      (activeTicketDetails?.status ?? selectedTicket.status) === s
-                        ? 'bg-amber-500 text-slate-950'
-                        : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                    key={st}
+                    onClick={() => updateStatusMutation.mutate({ id: selectedTicket.id, status: st })}
+                    disabled={updateStatusMutation.isPending || selectedTicket.status === st}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                      selectedTicket.status === st
+                        ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
+                        : 'bg-surface-sunken text-muted hover:text-default border border-default'
                     }`}
                   >
-                    {s.replace(/_/g, ' ')}
+                    {st.replace(/_/g, ' ')}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Conversation Body */}
+            {/* Conversation History & Notes */}
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
-              {/* Initial Issue Description */}
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-                <div className="flex items-center justify-between text-[11px] text-slate-500">
-                  <span className="flex items-center gap-1 font-bold text-slate-300">
-                    <User className="size-3 text-amber-400" />
-                    <span>Original Inquiry</span>
+              {/* Original Ticket Description */}
+              <div className="p-4 rounded-xl bg-surface-sunken border border-default space-y-2">
+                <div className="flex items-center justify-between text-[11px] text-muted">
+                  <span className="flex items-center gap-1 font-bold text-default">
+                    <User className="size-3 text-amber-500" />
+                    <span>Issue Description</span>
                   </span>
-                  <span>{new Date(selectedTicket.created_at).toLocaleString()}</span>
+                  <span>{new Date(selectedTicket.created_at).toLocaleTimeString()}</span>
                 </div>
-                <p className="font-sans text-slate-300 text-xs whitespace-pre-wrap leading-relaxed">
+                <p className="font-sans text-default text-xs whitespace-pre-wrap leading-relaxed">
                   {selectedTicket.description}
                 </p>
               </div>
 
-              {/* Notes Thread */}
+              {/* Notes Stream */}
               {activeTicketDetails?.notes && activeTicketDetails.notes.length > 0 && (
                 <div className="space-y-3 pt-2">
-                  <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider block">
-                    Responses & Internal Thread
+                  <span className="text-[10px] font-bold uppercase text-muted tracking-wider block">
+                    Staff & Client Timeline ({activeTicketDetails.notes.length})
                   </span>
                   {activeTicketDetails.notes.map((note) => (
                     <div
                       key={note.id}
                       className={`p-3.5 rounded-xl border ${
                         note.is_internal
-                          ? 'bg-amber-950/20 border-amber-900/40 text-amber-200'
-                          : 'bg-slate-800/40 border-slate-800 text-slate-200'
+                          ? 'bg-amber-500/10 border-amber-500/30 text-default'
+                          : 'bg-surface-sunken border-default text-default'
                       }`}
                     >
-                      <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1.5">
-                        <span className="font-bold text-slate-300">
-                          {note.author?.name ?? 'Admin Staff'}
+                      <div className="flex items-center justify-between text-[10px] text-muted mb-1.5">
+                        <span className="flex items-center gap-1.5 font-bold text-default">
+                          <span>{note.user?.name ?? 'Support Agent'}</span>
                           {note.is_internal && (
-                            <span className="ml-1.5 px-1.5 py-0.2 rounded-sm bg-amber-500/20 text-amber-400 text-[9px]">
-                              INTERNAL MEMO
+                            <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono text-[9px] uppercase border border-amber-500/30">
+                              Internal
                             </span>
                           )}
                         </span>
@@ -509,15 +505,15 @@ export const PlatformSupportWorkspace: React.FC = () => {
             </div>
 
             {/* Add Note Reply Box */}
-            <form onSubmit={handleSendNote} className="p-4 border-t border-slate-800 bg-slate-950/60 space-y-2">
+            <form onSubmit={handleSendNote} className="p-4 border-t border-default bg-surface space-y-2">
               <div className="flex items-center justify-between text-[11px]">
-                <label className="text-slate-400">Add Staff Response</label>
-                <label className="flex items-center gap-1.5 text-slate-400 cursor-pointer">
+                <label className="text-muted">Add Staff Response</label>
+                <label className="flex items-center gap-1.5 text-muted cursor-pointer">
                   <input
                     type="checkbox"
                     checked={isInternalNote}
                     onChange={(e) => setIsInternalNote(e.target.checked)}
-                    className="rounded-sm border-slate-700 bg-slate-900 text-amber-500"
+                    className="rounded-sm border-default bg-surface-sunken text-amber-500"
                   />
                   <span>Internal note only (hidden from tenant)</span>
                 </label>
@@ -529,7 +525,7 @@ export const PlatformSupportWorkspace: React.FC = () => {
                   value={newNoteContent}
                   onChange={(e) => setNewNoteContent(e.target.value)}
                   placeholder="Type message to tenant or internal note..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 pr-10 text-xs text-slate-100 focus:outline-hidden focus:border-amber-500 resize-none font-sans"
+                  className="w-full bg-surface-sunken border border-default rounded-xl p-3 pr-10 text-xs text-default focus:outline-hidden focus:border-amber-500 resize-none font-sans"
                 />
                 <button
                   type="submit"
@@ -546,21 +542,21 @@ export const PlatformSupportWorkspace: React.FC = () => {
 
       {/* Open Ticket Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs">
-            <h2 className="text-lg font-bold text-slate-100 font-sans">Open Support Ticket</h2>
-            <p className="text-slate-400 mt-1">
+        <div className="fixed inset-0 bg-overlay/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-raised border border-default rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs">
+            <h2 className="text-lg font-bold text-default font-sans">Open Support Ticket</h2>
+            <p className="text-muted mt-1">
               Initialize a support tracking incident for a specific tenant.
             </p>
 
             <form onSubmit={handleCreateTicket} className="mt-4 space-y-3">
               <div>
-                <label className="block text-slate-300 mb-1">Target Tenant *</label>
+                <label className="block text-default mb-1">Target Tenant *</label>
                 <select
                   value={targetTenantId}
                   onChange={(e) => setTargetTenantId(e.target.value ? Number(e.target.value) : '')}
                   required
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                 >
                   <option value="">Select a tenant...</option>
                   {tenants.map((t) => (
@@ -572,24 +568,24 @@ export const PlatformSupportWorkspace: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1">Subject *</label>
+                <label className="block text-default mb-1">Subject *</label>
                 <input
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Domain SSL configuration issue"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-300 mb-1">Category</label>
+                  <label className="block text-default mb-1">Category</label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                    className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                   >
                     <option value="technical">Technical / Bug</option>
                     <option value="billing">Billing & Plan</option>
@@ -599,11 +595,11 @@ export const PlatformSupportWorkspace: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 mb-1">Priority</label>
+                  <label className="block text-default mb-1">Priority</label>
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as 'low' | 'normal' | 'high' | 'urgent')}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                    className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                   >
                     <option value="low">Low</option>
                     <option value="normal">Normal</option>
@@ -614,14 +610,14 @@ export const PlatformSupportWorkspace: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1">Detailed Description *</label>
+                <label className="block text-default mb-1">Detailed Description *</label>
                 <textarea
                   required
                   rows={4}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe the problem, error message, or inquiry..."
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500 resize-none font-sans"
+                  className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500 resize-none font-sans"
                 />
               </div>
 
@@ -629,7 +625,7 @@ export const PlatformSupportWorkspace: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default cursor-pointer"
                 >
                   Cancel
                 </button>

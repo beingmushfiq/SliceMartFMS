@@ -290,7 +290,7 @@ export const PlatformDashboardWorkspace: React.FC = () => {
 
         {data?.recent_activity && data.recent_activity.length > 0 ? (
           <div className="overflow-x-auto rounded-xl border border-default">
-            <table className="w-full text-left text-xs text-default">
+            <table className="w-full min-w-162.5 text-left text-xs text-default">
               <thead className="border-b border-default bg-surface-sunken/70 text-muted uppercase font-mono text-[10px]">
                 <tr>
                   <th className="py-3.5 pl-4 pr-3">Timestamp</th>

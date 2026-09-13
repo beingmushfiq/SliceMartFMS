@@ -24,6 +24,7 @@ import {
   ShoppingCart,
   DollarSign,
   AlertTriangle,
+  Calendar,
 } from 'lucide-react';
 
 interface TenantDetailPayload {
@@ -278,6 +279,21 @@ export const TenantDetailWorkspace: React.FC = () => {
     }
   };
 
+  const openExtendModal = () => {
+    setActionError(null);
+    if (tenant?.subscription_ends_at) {
+      setCustomExpiryDate(tenant.subscription_ends_at.substring(0, 10));
+    } else if (tenant?.trial_ends_at) {
+      setCustomExpiryDate(tenant.trial_ends_at.substring(0, 10));
+    } else {
+      const d = new Date();
+      d.setDate(d.getDate() + 30);
+      setCustomExpiryDate(d.toISOString().substring(0, 10));
+    }
+    setGracePeriodDays(tenant?.grace_period_days ?? 7);
+    setModalType('extend');
+  };
+
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tenant) return;
@@ -467,11 +483,11 @@ export const TenantDetailWorkspace: React.FC = () => {
 
   if (!tenant) {
     return (
-      <div className="p-12 text-center text-slate-400 text-xs font-mono space-y-3">
+      <div className="p-12 text-center text-muted text-xs font-mono space-y-3">
         <p>Tenant #{id} not found in master platform registry.</p>
         <Link
           to="/platform/tenants"
-          className="text-xs text-amber-400 hover:text-amber-300 underline font-mono inline-block"
+          className="text-xs text-amber-500 hover:underline font-mono inline-block"
         >
           ← Return to Tenant Directory
         </Link>
@@ -493,43 +509,45 @@ export const TenantDetailWorkspace: React.FC = () => {
       {/* Back button */}
       <Link
         to="/platform/tenants"
-        className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors font-mono"
+        className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-default transition-colors font-mono"
       >
         <ArrowLeft className="size-4" />
         <span>Back to Tenant Directory</span>
       </Link>
 
       {/* Header Profile Banner */}
-      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <div className="p-6 rounded-2xl bg-surface border border-default shadow-xl flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div className="flex items-center gap-4">
-          <div className="size-14 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 font-bold shadow-inner">
+          <div className="size-14 rounded-2xl bg-surface-sunken border border-default flex items-center justify-center text-amber-500 font-bold shadow-inner">
             <Building2 className="size-7" />
           </div>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-100">{tenant.name}</h1>
-              <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-mono font-bold">
+              <h1 className="text-2xl font-bold text-default">{tenant.name}</h1>
+              <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-mono font-bold">
                 {tenant.plan?.name ?? 'Standard Plan'}
               </span>
               <span
                 className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase ${
                   tenant.status === 'active'
-                    ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                     : tenant.status === 'trial'
-                    ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30'
-                    : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                    ? 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30'
+                    : tenant.status === 'past_due'
+                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                    : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
                 }`}
               >
-                {tenant.status}
+                {tenant.effective_status ?? tenant.status}
               </span>
             </div>
-            <div className="flex items-center gap-3 mt-1 text-xs text-slate-400 font-mono">
+            <div className="flex items-center gap-3 mt-1 text-xs text-muted font-mono">
               <span>{tenant.slug}.devcenterpoint.com</span>
               <a
                 href={`https://${tenant.slug}.devcenterpoint.com`}
                 target="_blank"
                 rel="noreferrer"
-                className="text-slate-500 hover:text-amber-400 transition-colors"
+                className="text-subtle hover:text-amber-500 transition-colors"
                 title="Launch Subdomain"
               >
                 <ExternalLink className="size-3.5" />
@@ -556,7 +574,7 @@ export const TenantDetailWorkspace: React.FC = () => {
               setActionError(null);
               setModalType('plan');
             }}
-            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all cursor-pointer"
+            className="px-3 py-2 rounded-xl bg-surface-sunken hover:bg-surface text-default border border-default transition-all cursor-pointer"
           >
             Change Plan Tier
           </button>
@@ -568,8 +586,8 @@ export const TenantDetailWorkspace: React.FC = () => {
             }}
             className={`px-3 py-2 rounded-xl border transition-all cursor-pointer ${
               tenant.status === 'active'
-                ? 'bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border-rose-800/40'
-                : 'bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 border-emerald-800/40'
+                ? 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border-rose-500/30'
+                : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
             }`}
           >
             {tenant.status === 'active' ? 'Suspend Access' : 'Reactivate Access'}
@@ -578,7 +596,7 @@ export const TenantDetailWorkspace: React.FC = () => {
       </div>
 
       {/* Workspace Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto font-mono text-xs">
+      <div className="flex items-center gap-2 border-b border-default pb-2 overflow-x-auto font-mono text-xs">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.key;
@@ -589,7 +607,7 @@ export const TenantDetailWorkspace: React.FC = () => {
               className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all cursor-pointer shrink-0 ${
                 isActive
                   ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/10'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                  : 'text-muted hover:text-default hover:bg-surface-sunken'
               }`}
             >
               <Icon className="size-3.5" />
@@ -603,16 +621,16 @@ export const TenantDetailWorkspace: React.FC = () => {
       {activeTab === 'authority' && (
         <div className="space-y-6 font-mono text-xs">
           {/* Module Capabilities Overrides */}
-          <div className="p-6 rounded-2xl bg-slate-900 border border-amber-500/30 shadow-xl relative overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+          <div className="p-6 rounded-2xl bg-surface border border-amber-500/30 shadow-xl relative overflow-hidden">
+            <div className="flex items-center justify-between border-b border-default pb-4 mb-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <ShieldAlert className="size-4 text-amber-400" />
-                  <h2 className="text-sm font-bold text-slate-100 font-sans uppercase tracking-wider">
+                  <ShieldAlert className="size-4 text-amber-500" />
+                  <h2 className="text-sm font-bold text-default font-sans uppercase tracking-wider">
                     Tenant Module Capability Overrides
                   </h2>
                 </div>
-                <p className="text-slate-400 text-[11px] mt-0.5">
+                <p className="text-muted text-[11px] mt-0.5">
                   Super-Admin privilege: Bypass subscription plan tier limits and force-enable or revoke modules for this tenant.
                 </p>
               </div>
@@ -638,17 +656,17 @@ export const TenantDetailWorkspace: React.FC = () => {
                     key={m.key}
                     className={`p-3.5 rounded-xl border transition-all flex items-center justify-between ${
                       isEnabled
-                        ? 'bg-slate-950 border-emerald-500/40 text-slate-100'
-                        : 'bg-slate-950/60 border-slate-800 text-slate-500'
+                        ? 'bg-surface-sunken border-emerald-500/40 text-default'
+                        : 'bg-surface-sunken/60 border-default text-muted'
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
-                      <div className={`p-2 rounded-lg ${isEnabled ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-900 text-slate-600'}`}>
+                      <div className={`p-2 rounded-lg ${isEnabled ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-surface text-muted'}`}>
                         <Icon className="size-4" />
                       </div>
                       <div>
-                        <div className="font-sans font-semibold text-xs text-slate-200">{m.label}</div>
-                        <div className="text-[10px] text-slate-500">{m.key}</div>
+                        <div className="font-sans font-semibold text-xs text-default">{m.label}</div>
+                        <div className="text-[10px] text-muted">{m.key}</div>
                       </div>
                     </div>
 
@@ -665,8 +683,8 @@ export const TenantDetailWorkspace: React.FC = () => {
                       }
                       className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
                         isEnabled
-                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                          : 'bg-slate-800 text-slate-400 border border-slate-700'
+                          ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40'
+                          : 'bg-surface hover:bg-surface-raised text-muted border border-default'
                       }`}
                     >
                       {isEnabled ? 'Enabled' : 'Disabled'}
@@ -678,16 +696,16 @@ export const TenantDetailWorkspace: React.FC = () => {
           </div>
 
           {/* Quota Limits Overrides */}
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+          <div className="p-6 rounded-2xl bg-surface border border-default shadow-xl">
+            <div className="flex items-center justify-between border-b border-default pb-4 mb-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <Sliders className="size-4 text-cyan-400" />
-                  <h2 className="text-sm font-bold text-slate-100 font-sans uppercase tracking-wider">
+                  <Sliders className="size-4 text-cyan-500" />
+                  <h2 className="text-sm font-bold text-default font-sans uppercase tracking-wider">
                     Custom Resource Quota Overrides
                   </h2>
                 </div>
-                <p className="text-slate-400 text-[11px] mt-0.5">
+                <p className="text-muted text-[11px] mt-0.5">
                   Assign bespoke high quotas or relaxed thresholds independent of standard subscription tier specs.
                 </p>
               </div>
@@ -695,7 +713,7 @@ export const TenantDetailWorkspace: React.FC = () => {
               <button
                 onClick={handleSaveQuotaOverrides}
                 disabled={overrideSaving}
-                className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer disabled:opacity-50"
               >
                 <Save className="size-3.5" />
                 <span>{overrideSaving ? 'Saving...' : 'Save Quota Overrides'}</span>
@@ -704,79 +722,79 @@ export const TenantDetailWorkspace: React.FC = () => {
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
-                <label className="block text-slate-400 mb-1">Max Users</label>
+                <label className="block text-muted mb-1">Max Users</label>
                 <input
                   type="number"
                   min="1"
                   value={customLimits.max_users}
                   onChange={(e) => setCustomLimits({ ...customLimits, max_users: parseInt(e.target.value) || 1 })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:outline-hidden focus:border-cyan-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl px-3 py-2 text-default focus:outline-hidden focus:border-cyan-500"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1">Max Warehouses</label>
+                <label className="block text-muted mb-1">Max Warehouses</label>
                 <input
                   type="number"
                   min="1"
                   value={customLimits.max_warehouses}
                   onChange={(e) => setCustomLimits({ ...customLimits, max_warehouses: parseInt(e.target.value) || 1 })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:outline-hidden focus:border-cyan-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl px-3 py-2 text-default focus:outline-hidden focus:border-cyan-500"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1">Monthly Orders Limit</label>
+                <label className="block text-muted mb-1">Monthly Orders Limit</label>
                 <input
                   type="number"
                   min="10"
                   value={customLimits.max_monthly_orders}
                   onChange={(e) => setCustomLimits({ ...customLimits, max_monthly_orders: parseInt(e.target.value) || 10 })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:outline-hidden focus:border-cyan-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl px-3 py-2 text-default focus:outline-hidden focus:border-cyan-500"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1">Max Products</label>
+                <label className="block text-muted mb-1">Max Products</label>
                 <input
                   type="number"
                   min="10"
                   value={customLimits.max_products}
                   onChange={(e) => setCustomLimits({ ...customLimits, max_products: parseInt(e.target.value) || 10 })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:outline-hidden focus:border-cyan-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl px-3 py-2 text-default focus:outline-hidden focus:border-cyan-500"
                 />
               </div>
             </div>
           </div>
 
           {/* Owner Password Override */}
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl">
+          <div className="p-6 rounded-2xl bg-surface border border-default shadow-xl">
             <div className="flex items-center gap-2 mb-2">
-              <Key className="size-4 text-amber-400" />
-              <h2 className="text-sm font-bold text-slate-100 font-sans uppercase tracking-wider">
+              <Key className="size-4 text-amber-500" />
+              <h2 className="text-sm font-bold text-default font-sans uppercase tracking-wider">
                 Emergency Owner Password Reset
               </h2>
             </div>
-            <p className="text-slate-400 text-[11px] mb-4">
+            <p className="text-muted text-[11px] mb-4">
               Directly override and assign a new password for the primary administrator account of this tenant.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 max-w-lg">
               <div className="relative flex-1">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-slate-500" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted" />
                 <input
                   type="password"
                   value={ownerNewPassword}
                   onChange={(e) => setOwnerNewPassword(e.target.value)}
                   placeholder="Enter new 8+ character password"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-slate-100 focus:outline-hidden focus:border-amber-500 text-xs"
+                  className="w-full bg-surface-sunken border border-default rounded-xl pl-9 pr-3 py-2 text-default focus:outline-hidden focus:border-amber-500 text-xs"
                 />
               </div>
               <button
                 type="button"
                 onClick={handleResetOwnerPassword}
                 disabled={overrideSaving || ownerNewPassword.length < 8}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 font-bold transition-all cursor-pointer disabled:opacity-40 whitespace-nowrap"
+                className="px-4 py-2 rounded-xl bg-surface-sunken hover:bg-surface text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold transition-all cursor-pointer disabled:opacity-40 whitespace-nowrap"
               >
                 Force Reset Password
               </button>
@@ -784,12 +802,12 @@ export const TenantDetailWorkspace: React.FC = () => {
           </div>
 
           {/* Danger Zone: Tenant Deletion */}
-          <div className="p-6 rounded-2xl bg-slate-900 border border-rose-900/60 shadow-xl">
-            <div className="flex items-center gap-2 text-rose-400 mb-1 font-bold">
+          <div className="p-6 rounded-2xl bg-surface border border-rose-500/30 shadow-xl">
+            <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 mb-1 font-bold">
               <AlertTriangle className="size-4" />
               <span className="font-sans uppercase tracking-wider text-sm">Danger Zone: Deprovision Tenant</span>
             </div>
-            <p className="text-slate-400 text-[11px] mb-4">
+            <p className="text-muted text-[11px] mb-4">
               Soft-delete this tenant, revoke all associated active authentication tokens, and detach domain bindings.
             </p>
 
@@ -810,43 +828,43 @@ export const TenantDetailWorkspace: React.FC = () => {
       {/* Tab: Overview */}
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 font-mono text-xs">
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
-            <h2 className="text-sm font-bold text-slate-200 uppercase tracking-wider font-sans">
+          <div className="p-6 rounded-2xl bg-surface border border-default shadow-xl space-y-4">
+            <h2 className="text-sm font-bold text-default uppercase tracking-wider font-sans">
               Tenancy Identifiers
             </h2>
             <div className="space-y-3">
-              <div className="flex justify-between border-b border-slate-800 pb-2">
-                <span className="text-slate-400">Database ID:</span>
-                <span className="text-slate-200 font-bold">#{tenant.id}</span>
+              <div className="flex justify-between border-b border-default pb-2">
+                <span className="text-muted">Database ID:</span>
+                <span className="text-default font-bold">#{tenant.id}</span>
               </div>
-              <div className="flex justify-between border-b border-slate-800 pb-2">
-                <span className="text-slate-400">UUID:</span>
-                <span className="text-slate-300 font-mono text-[11px]">{tenant.uuid}</span>
+              <div className="flex justify-between border-b border-default pb-2">
+                <span className="text-muted">UUID:</span>
+                <span className="text-default font-mono text-[11px]">{tenant.uuid}</span>
               </div>
-              <div className="flex justify-between border-b border-slate-800 pb-2">
-                <span className="text-slate-400">Subdomain:</span>
-                <span className="text-amber-400 font-bold">{tenant.slug}</span>
+              <div className="flex justify-between border-b border-default pb-2">
+                <span className="text-muted">Subdomain:</span>
+                <span className="text-amber-600 dark:text-amber-400 font-bold">{tenant.slug}</span>
               </div>
-              <div className="flex justify-between border-b border-slate-800 pb-2">
-                <span className="text-slate-400">Custom Domain:</span>
-                <span className="text-slate-200">{tenant.domain || 'None configured'}</span>
+              <div className="flex justify-between border-b border-default pb-2">
+                <span className="text-muted">Custom Domain:</span>
+                <span className="text-default">{tenant.domain || 'None configured'}</span>
               </div>
-              <div className="flex justify-between border-b border-slate-800 pb-2">
-                <span className="text-slate-400">Currency / Locale:</span>
-                <span className="text-slate-200">{tenant.currency_code} ({tenant.timezone})</span>
+              <div className="flex justify-between border-b border-default pb-2">
+                <span className="text-muted">Currency / Locale:</span>
+                <span className="text-default">{tenant.currency_code} ({tenant.timezone})</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Provisioned At:</span>
-                <span className="text-slate-200">{new Date(tenant.created_at).toLocaleString()}</span>
+                <span className="text-muted">Provisioned At:</span>
+                <span className="text-default">{new Date(tenant.created_at).toLocaleString()}</span>
               </div>
             </div>
           </div>
 
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
-            <h2 className="text-sm font-bold text-slate-200 uppercase tracking-wider font-sans">
+          <div className="p-6 rounded-2xl bg-surface border border-default shadow-xl space-y-4">
+            <h2 className="text-sm font-bold text-default uppercase tracking-wider font-sans">
               Tenant Settings & Metadata
             </h2>
-            <pre className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-300 overflow-x-auto max-h-72">
+            <pre className="p-4 rounded-xl bg-surface-sunken border border-default text-[11px] text-default overflow-x-auto max-h-72">
               {JSON.stringify(tenant.settings || {}, null, 2)}
             </pre>
           </div>
@@ -856,47 +874,100 @@ export const TenantDetailWorkspace: React.FC = () => {
       {/* Tab: Billing & Subscriptions */}
       {activeTab === 'billing' && (
         <div className="space-y-6">
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl">
-            <h2 className="text-sm font-bold text-slate-200 uppercase tracking-wider font-mono mb-4">
-              Active Subscription
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs">
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800">
-                <span className="text-slate-400 block mb-1">Plan Tier</span>
-                <span className="text-base font-bold text-amber-400">{tenant.plan?.name ?? 'Starter'}</span>
-                <span className="text-slate-400 block mt-1">${tenant.plan?.price}/month</span>
+          <div className="p-6 rounded-2xl bg-surface border border-default shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <div>
+                <h2 className="text-sm font-bold text-default uppercase tracking-wider font-mono">
+                  Active Subscription & Validity
+                </h2>
+                <p className="text-muted text-[11px] font-mono mt-0.5">
+                  Platform tier governance, validity expiration window, and grace period controls.
+                </p>
               </div>
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800">
-                <span className="text-slate-400 block mb-1">Current Lifecycle Status</span>
-                <span className="text-base font-bold text-emerald-400 capitalize">{tenant.status}</span>
-                <span className="text-slate-400 block mt-1">
-                  {tenant.trial_ends_at ? `Trial ends ${new Date(tenant.trial_ends_at).toLocaleDateString()}` : 'Standard Active'}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={openExtendModal}
+                  className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold font-mono text-xs flex items-center gap-1.5 transition-all shadow-md shadow-amber-500/20 cursor-pointer"
+                >
+                  <Calendar className="size-3.5" />
+                  <span>Manage Validity / Term</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono text-xs">
+              <div className="p-4 rounded-xl bg-surface-sunken border border-default">
+                <span className="text-muted block mb-1">Plan Tier</span>
+                <span className="text-base font-bold text-amber-600 dark:text-amber-400">{tenant.plan?.name ?? 'Starter'}</span>
+                <span className="text-muted block mt-1">
+                  ${tenant.plan?.price ?? 0} / {tenant.plan?.billing_period ?? 'month'}
                 </span>
               </div>
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
-                <div>
-                  <span className="text-slate-400 block mb-1">Subscription Actions</span>
-                  <button
-                    onClick={() => {
-                      setActionError(null);
-                      setModalType('extend');
-                    }}
-                    className="text-amber-400 hover:text-amber-300 font-bold transition-colors cursor-pointer"
-                  >
-                    + Extend Term
-                  </button>
+
+              <div className="p-4 rounded-xl bg-surface-sunken border border-default">
+                <span className="text-muted block mb-1">Lifecycle Status</span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className={`px-2 py-0.5 rounded-md text-xs font-bold uppercase ${
+                    tenant.status === 'active'
+                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                      : tenant.status === 'trial'
+                      ? 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30'
+                      : tenant.status === 'past_due'
+                      ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                      : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                  }`}>
+                    {tenant.effective_status ?? tenant.status}
+                  </span>
                 </div>
+                <span className="text-muted block mt-1.5 text-[11px]">
+                  {tenant.is_in_grace_period ? 'Operating within grace period' : 'Normal operating state'}
+                </span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-surface-sunken border border-default">
+                <span className="text-muted block mb-1">Subscription Expiration</span>
+                <span className="text-base font-bold text-default">
+                  {tenant.subscription_ends_at
+                    ? new Date(tenant.subscription_ends_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                    : tenant.trial_ends_at
+                    ? `Trial: ${new Date(tenant.trial_ends_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}`
+                    : 'Permanent / Unlimited'}
+                </span>
+                <span className="text-muted block mt-1 text-[11px]">
+                  {tenant.days_remaining !== null && tenant.days_remaining !== undefined
+                    ? tenant.days_remaining > 7
+                      ? `${tenant.days_remaining} days remaining`
+                      : tenant.days_remaining > 0
+                      ? `⚠️ Expiring in ${tenant.days_remaining} days`
+                      : tenant.days_remaining === 0
+                      ? '⚠️ Expiring today'
+                      : `Expired ${tenant.days_overdue ?? 0} days ago`
+                    : 'Active validity window'}
+                </span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-surface-sunken border border-default">
+                <span className="text-muted block mb-1">Grace Period Window</span>
+                <span className="text-base font-bold text-default">
+                  {tenant.grace_period_days ?? 7} Days
+                </span>
+                <span className="text-muted block mt-1 text-[11px]">
+                  {tenant.grace_period_ends_at
+                    ? `Ends ${new Date(tenant.grace_period_ends_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+                    : 'Post-expiry access buffer'}
+                </span>
               </div>
             </div>
           </div>
 
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl">
-            <h2 className="text-sm font-bold text-slate-200 uppercase tracking-wider font-mono mb-4">
+          <div className="p-6 rounded-2xl bg-surface border border-default shadow-xl">
+            <h2 className="text-sm font-bold text-default uppercase tracking-wider font-mono mb-4">
               Subscription Transition History
             </h2>
             {subscriptions && subscriptions.length > 0 ? (
               <table className="w-full text-left text-xs font-mono">
-                <thead className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                <thead className="border-b border-default text-muted uppercase text-[10px]">
                   <tr>
                     <th className="pb-3">Sub ID</th>
                     <th className="pb-3">Plan</th>
@@ -905,35 +976,35 @@ export const TenantDetailWorkspace: React.FC = () => {
                     <th className="pb-3">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-default">
                   {subscriptions.map((sub) => (
-                    <tr key={sub.id} className="hover:bg-slate-800/30">
-                      <td className="py-3 text-slate-400">#{sub.id}</td>
-                      <td className="py-3 text-slate-200 font-bold">{sub.plan?.name ?? 'Tier'}</td>
-                      <td className="py-3 text-slate-400">{new Date(sub.starts_at).toLocaleDateString()}</td>
-                      <td className="py-3 text-slate-400">
+                    <tr key={sub.id} className="hover:bg-surface-sunken">
+                      <td className="py-3 text-muted">#{sub.id}</td>
+                      <td className="py-3 text-default font-bold">{sub.plan?.name ?? 'Tier'}</td>
+                      <td className="py-3 text-muted">{new Date(sub.starts_at).toLocaleDateString()}</td>
+                      <td className="py-3 text-muted">
                         {sub.ends_at ? new Date(sub.ends_at).toLocaleDateString() : 'Permanent'}
                       </td>
-                      <td className="py-3 text-emerald-400 uppercase">{sub.status}</td>
+                      <td className="py-3 text-emerald-600 dark:text-emerald-400 uppercase font-bold">{sub.status}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             ) : (
-              <div className="py-6 text-center text-slate-400 text-xs font-mono">
+              <div className="py-6 text-center text-muted text-xs font-mono">
                 No past subscription transitions recorded.
               </div>
             )}
           </div>
 
           {/* SaaS Payments Ledger */}
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl">
+          <div className="p-6 rounded-2xl bg-surface border border-default shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-sm font-bold text-slate-200 uppercase tracking-wider font-mono">
+                <h2 className="text-sm font-bold text-default uppercase tracking-wider font-mono">
                   SaaS Payments Ledger
                 </h2>
-                <p className="text-slate-400 text-[11px] font-mono mt-0.5">
+                <p className="text-muted text-[11px] font-mono mt-0.5">
                   Direct billing receipts and transactions recorded for this tenant.
                 </p>
               </div>
@@ -955,7 +1026,7 @@ export const TenantDetailWorkspace: React.FC = () => {
             {payments && payments.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs font-mono">
-                  <thead className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                  <thead className="border-b border-default text-muted uppercase text-[10px]">
                     <tr>
                       <th className="pb-3">Invoice Ref</th>
                       <th className="pb-3">Amount</th>
@@ -965,24 +1036,24 @@ export const TenantDetailWorkspace: React.FC = () => {
                       <th className="pb-3">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+                  <tbody className="divide-y divide-default">
                     {payments.map((p) => (
-                      <tr key={p.id} className="hover:bg-slate-800/30">
-                        <td className="py-3 text-slate-200 font-bold">{p.invoice_reference}</td>
-                        <td className="py-3 text-amber-400 font-bold">
+                      <tr key={p.id} className="hover:bg-surface-sunken">
+                        <td className="py-3 text-default font-bold">{p.invoice_reference}</td>
+                        <td className="py-3 text-amber-600 dark:text-amber-400 font-bold">
                           {p.currency_code === 'BDT' ? '৳' : p.currency_code + ' '}
                           {Number(p.amount).toLocaleString()}
                         </td>
-                        <td className="py-3 text-slate-300 capitalize">{p.payment_method.replace('_', ' ')}</td>
-                        <td className="py-3 text-slate-400 text-[11px]">{p.transaction_reference || '—'}</td>
-                        <td className="py-3 text-slate-400">{new Date(p.payment_date).toLocaleDateString()}</td>
+                        <td className="py-3 text-default capitalize">{p.payment_method.replace('_', ' ')}</td>
+                        <td className="py-3 text-muted text-[11px]">{p.transaction_reference || '—'}</td>
+                        <td className="py-3 text-muted">{new Date(p.payment_date).toLocaleDateString()}</td>
                         <td className="py-3">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                             p.status === 'paid'
-                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                               : p.status === 'pending'
-                              ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                              : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                              ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                              : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
                           }`}>
                             {p.status}
                           </span>
@@ -993,7 +1064,7 @@ export const TenantDetailWorkspace: React.FC = () => {
                 </table>
               </div>
             ) : (
-              <div className="py-6 text-center text-slate-400 text-xs font-mono">
+              <div className="py-6 text-center text-muted text-xs font-mono">
                 No billing payments recorded for this tenant yet.
               </div>
             )}
@@ -1003,14 +1074,14 @@ export const TenantDetailWorkspace: React.FC = () => {
 
       {/* Tab: Scoped Users */}
       {activeTab === 'users' && (
-        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl">
-          <h2 className="text-sm font-bold text-slate-200 uppercase tracking-wider font-mono mb-4">
+        <div className="p-6 rounded-2xl bg-surface border border-default shadow-xl">
+          <h2 className="text-sm font-bold text-default uppercase tracking-wider font-mono mb-4">
             Users Enrolled in Tenant #{tenant.id}
           </h2>
           {users.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-mono">
-                <thead className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                <thead className="border-b border-default text-muted uppercase text-[10px]">
                   <tr>
                     <th className="pb-3">User ID</th>
                     <th className="pb-3">Name</th>
@@ -1019,14 +1090,14 @@ export const TenantDetailWorkspace: React.FC = () => {
                     <th className="pb-3">Last Active</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-default">
                   {users.map((u) => (
-                    <tr key={u.id} className="hover:bg-slate-800/30">
-                      <td className="py-3 text-slate-400">#{u.id}</td>
-                      <td className="py-3 text-slate-100 font-bold">{u.name}</td>
-                      <td className="py-3 text-slate-300">{u.email}</td>
-                      <td className="py-3 text-emerald-400 uppercase">{u.status}</td>
-                      <td className="py-3 text-slate-400">
+                    <tr key={u.id} className="hover:bg-surface-sunken">
+                      <td className="py-3 text-muted">#{u.id}</td>
+                      <td className="py-3 text-default font-bold">{u.name}</td>
+                      <td className="py-3 text-default">{u.email}</td>
+                      <td className="py-3 text-emerald-600 dark:text-emerald-400 uppercase font-bold">{u.status}</td>
+                      <td className="py-3 text-muted">
                         {u.last_login_at ? new Date(u.last_login_at).toLocaleString() : 'Never'}
                       </td>
                     </tr>
@@ -1035,7 +1106,7 @@ export const TenantDetailWorkspace: React.FC = () => {
               </table>
             </div>
           ) : (
-            <div className="py-8 text-center text-slate-400 text-xs font-mono">
+            <div className="py-8 text-center text-muted text-xs font-mono">
               No users loaded for this tenant.
             </div>
           )}
@@ -1044,29 +1115,29 @@ export const TenantDetailWorkspace: React.FC = () => {
 
       {/* Tab: Usage & Quotas */}
       {activeTab === 'usage' && (
-        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl">
-          <h2 className="text-sm font-bold text-slate-200 uppercase tracking-wider font-mono mb-4">
+        <div className="p-6 rounded-2xl bg-surface border border-default shadow-xl">
+          <h2 className="text-sm font-bold text-default uppercase tracking-wider font-mono mb-4">
             Current Resource Usage & Plan Quotas
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs">
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800">
-              <span className="text-slate-400 block mb-1">Monthly Orders Processed</span>
-              <span className="text-xl font-bold text-slate-100">0</span>
-              <span className="text-[10px] text-slate-400 block mt-1">
+            <div className="p-4 rounded-xl bg-surface-sunken border border-default">
+              <span className="text-muted block mb-1">Monthly Orders Processed</span>
+              <span className="text-xl font-bold text-default">0</span>
+              <span className="text-[10px] text-muted block mt-1">
                 Limit: {customLimits.max_monthly_orders ?? tenant.plan?.limits?.['max_monthly_orders'] ?? 'Unlimited'}
               </span>
             </div>
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800">
-              <span className="text-slate-400 block mb-1">Active User Accounts</span>
-              <span className="text-xl font-bold text-slate-100">{users.length}</span>
-              <span className="text-[10px] text-slate-400 block mt-1">
+            <div className="p-4 rounded-xl bg-surface-sunken border border-default">
+              <span className="text-muted block mb-1">Active User Accounts</span>
+              <span className="text-xl font-bold text-default">{users.length}</span>
+              <span className="text-[10px] text-muted block mt-1">
                 Limit: {customLimits.max_users ?? tenant.plan?.limits?.['max_users'] ?? 'Unlimited'}
               </span>
             </div>
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800">
-              <span className="text-slate-400 block mb-1">Warehouses Scope</span>
-              <span className="text-xl font-bold text-slate-100">1</span>
-              <span className="text-[10px] text-slate-400 block mt-1">
+            <div className="p-4 rounded-xl bg-surface-sunken border border-default">
+              <span className="text-muted block mb-1">Warehouses Scope</span>
+              <span className="text-xl font-bold text-default">1</span>
+              <span className="text-[10px] text-muted block mt-1">
                 Limit: {customLimits.max_warehouses ?? tenant.plan?.limits?.['max_warehouses'] ?? '2'}
               </span>
             </div>
@@ -1076,22 +1147,22 @@ export const TenantDetailWorkspace: React.FC = () => {
 
       {/* Extend / Term Adjustment Modal */}
       {modalType === 'extend' && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono">
-            <h2 className="text-lg font-bold text-slate-100 font-sans">Subscription Term Management</h2>
-            <p className="text-xs text-slate-400 mt-1">
-              Adjust validity and expiry controls for <strong className="text-slate-200">{tenant.name}</strong>.
+        <div className="fixed inset-0 bg-overlay/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-raised border border-default rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs text-default">
+            <h2 className="text-lg font-bold text-default font-sans">Subscription Term Management</h2>
+            <p className="text-xs text-muted mt-1">
+              Adjust validity and expiry controls for <strong className="text-default">{tenant.name}</strong>.
             </p>
 
             {/* Mode selection tabs */}
-            <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 mt-4 text-xs font-sans">
+            <div className="flex bg-surface-sunken p-1 rounded-xl border border-default mt-4 text-xs font-sans">
               <button
                 type="button"
                 onClick={() => setExtendMode('days')}
                 className={`flex-1 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
                   extendMode === 'days'
                     ? 'bg-amber-500 text-slate-950 shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200'
+                    : 'text-muted hover:text-default'
                 }`}
               >
                 + Days
@@ -1102,7 +1173,7 @@ export const TenantDetailWorkspace: React.FC = () => {
                 className={`flex-1 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
                   extendMode === 'date'
                     ? 'bg-amber-500 text-slate-950 shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200'
+                    : 'text-muted hover:text-default'
                 }`}
               >
                 Exact Expiry
@@ -1113,7 +1184,7 @@ export const TenantDetailWorkspace: React.FC = () => {
                 className={`flex-1 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
                   extendMode === 'grace'
                     ? 'bg-amber-500 text-slate-950 shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200'
+                    : 'text-muted hover:text-default'
                 }`}
               >
                 Grace Period
@@ -1121,49 +1192,49 @@ export const TenantDetailWorkspace: React.FC = () => {
             </div>
 
             {actionError && (
-              <div className="mt-3 p-3 rounded-lg bg-rose-950/50 border border-rose-800 text-rose-300 text-xs">
+              <div className="mt-3 p-3 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs">
                 {actionError}
               </div>
             )}
 
             {extendMode === 'days' && (
               <div className="mt-4">
-                <label className="block text-xs text-slate-300 mb-1">Additional Validity (Days):</label>
+                <label className="block text-xs text-muted mb-1 font-semibold">Additional Validity (Days):</label>
                 <input
                   type="number"
                   min="1"
                   max="365"
                   value={extendDays}
                   onChange={(e) => setExtendDays(parseInt(e.target.value) || 30)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl p-3 text-xs text-default focus:outline-hidden focus:border-amber-500"
                 />
               </div>
             )}
 
             {extendMode === 'date' && (
               <div className="mt-4">
-                <label className="block text-xs text-slate-300 mb-1">Set Absolute Expiration Date:</label>
+                <label className="block text-xs text-muted mb-1 font-semibold">Set Absolute Expiration Date:</label>
                 <input
                   type="date"
                   value={customExpiryDate}
                   onChange={(e) => setCustomExpiryDate(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl p-3 text-xs text-default focus:outline-hidden focus:border-amber-500"
                 />
               </div>
             )}
 
             {extendMode === 'grace' && (
               <div className="mt-4">
-                <label className="block text-xs text-slate-300 mb-1">Grace Period Days Post-Expiry:</label>
+                <label className="block text-xs text-muted mb-1 font-semibold">Grace Period Days Post-Expiry:</label>
                 <input
                   type="number"
                   min="0"
                   max="60"
                   value={gracePeriodDays}
                   onChange={(e) => setGracePeriodDays(parseInt(e.target.value) || 0)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl p-3 text-xs text-default focus:outline-hidden focus:border-amber-500"
                 />
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-[11px] text-muted mt-1">
                   Tenant retains full read/write access during grace period before suspension.
                 </p>
               </div>
@@ -1171,12 +1242,14 @@ export const TenantDetailWorkspace: React.FC = () => {
 
             <div className="mt-6 flex justify-end gap-3 text-xs">
               <button
+                type="button"
                 onClick={() => setModalType(null)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-surface-sunken hover:bg-surface border border-default text-default cursor-pointer"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={() => {
                   if (extendMode === 'days') handleManageSubscription('extend');
                   else if (extendMode === 'date') handleManageSubscription('set_expiry');
@@ -1194,15 +1267,15 @@ export const TenantDetailWorkspace: React.FC = () => {
 
       {/* Record SaaS Payment Modal */}
       {modalType === 'payment' && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs">
-            <h2 className="text-lg font-bold text-slate-100 font-sans">Record SaaS Payment</h2>
-            <p className="text-slate-400 mt-1">
-              Add subscription transaction record for <strong className="text-slate-200">{tenant.name}</strong>.
+        <div className="fixed inset-0 bg-overlay/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-raised border border-default rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs text-default">
+            <h2 className="text-lg font-bold text-default font-sans">Record SaaS Payment</h2>
+            <p className="text-muted mt-1">
+              Add subscription transaction record for <strong className="text-default">{tenant.name}</strong>.
             </p>
 
             {actionError && (
-              <div className="mt-3 p-3 rounded-lg bg-rose-950/50 border border-rose-800 text-rose-300">
+              <div className="mt-3 p-3 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400">
                 {actionError}
               </div>
             )}
@@ -1210,7 +1283,7 @@ export const TenantDetailWorkspace: React.FC = () => {
             <form onSubmit={handleRecordPayment} className="mt-4 space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-300 mb-1">Amount:</label>
+                  <label className="block text-muted mb-1">Amount:</label>
                   <input
                     type="number"
                     step="0.01"
@@ -1218,15 +1291,15 @@ export const TenantDetailWorkspace: React.FC = () => {
                     value={paymentAmount}
                     onChange={(e) => setPaymentAmount(e.target.value)}
                     placeholder="0.00"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                    className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-300 mb-1">Currency:</label>
+                  <label className="block text-muted mb-1">Currency:</label>
                   <select
                     value={paymentCurrency}
                     onChange={(e) => setPaymentCurrency(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                    className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                   >
                     <option value="BDT">BDT (৳)</option>
                     <option value="USD">USD ($)</option>
@@ -1237,11 +1310,11 @@ export const TenantDetailWorkspace: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1">Payment Method:</label>
+                <label className="block text-muted mb-1">Payment Method:</label>
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                 >
                   <option value="bank_transfer">Bank Transfer (EFT/NPSB)</option>
                   <option value="bkash">bKash Merchant</option>
@@ -1252,24 +1325,24 @@ export const TenantDetailWorkspace: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1">Txn / Bank Ref ID:</label>
+                <label className="block text-muted mb-1">Txn / Bank Ref ID:</label>
                 <input
                   type="text"
                   value={paymentRef}
                   onChange={(e) => setPaymentRef(e.target.value)}
                   placeholder="e.g. TRX-98234812"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1">Notes / Invoice Memo:</label>
+                <label className="block text-muted mb-1">Notes / Invoice Memo:</label>
                 <input
                   type="text"
                   value={paymentNotes}
                   onChange={(e) => setPaymentNotes(e.target.value)}
                   placeholder="Optional billing note..."
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
                 />
               </div>
 
@@ -1277,7 +1350,7 @@ export const TenantDetailWorkspace: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setModalType(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-surface-sunken hover:bg-surface border border-default text-default cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1296,11 +1369,11 @@ export const TenantDetailWorkspace: React.FC = () => {
 
       {/* Change Plan Modal */}
       {modalType === 'plan' && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono">
-            <h2 className="text-lg font-bold text-slate-100 font-sans">Switch SaaS Plan Tier</h2>
-            <p className="text-xs text-slate-400 mt-1">
-              Target Tenant: <strong className="text-slate-200">{tenant.name}</strong>
+        <div className="fixed inset-0 bg-overlay/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-raised border border-default rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-default">
+            <h2 className="text-lg font-bold text-default font-sans">Switch SaaS Plan Tier</h2>
+            <p className="text-xs text-muted mt-1">
+              Target Tenant: <strong className="text-default">{tenant.name}</strong>
             </p>
 
             <div className="mt-4 space-y-2">
@@ -1311,8 +1384,8 @@ export const TenantDetailWorkspace: React.FC = () => {
                   onClick={() => setNewPlanId(p.id)}
                   className={`w-full p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all text-left ${
                     newPlanId === p.id
-                      ? 'bg-amber-500/10 border-amber-500 text-amber-400 font-bold'
-                      : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
+                      ? 'bg-amber-500/10 border-amber-500 text-amber-600 dark:text-amber-400 font-bold'
+                      : 'bg-surface-sunken border-default text-default hover:bg-surface'
                   }`}
                 >
                   <span>{p.name}</span>
@@ -1323,12 +1396,14 @@ export const TenantDetailWorkspace: React.FC = () => {
 
             <div className="mt-6 flex justify-end gap-3 text-xs">
               <button
+                type="button"
                 onClick={() => setModalType(null)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-surface-sunken hover:bg-surface border border-default text-default cursor-pointer"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={() => handleManageSubscription('change_plan')}
                 disabled={actionLoading || !newPlanId}
                 className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold cursor-pointer disabled:opacity-50"
@@ -1342,41 +1417,43 @@ export const TenantDetailWorkspace: React.FC = () => {
 
       {/* Status Modal */}
       {modalType === 'status' && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono">
-            <h2 className="text-lg font-bold text-slate-100 font-sans">
+        <div className="fixed inset-0 bg-overlay/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-raised border border-default rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-default">
+            <h2 className="text-lg font-bold text-default font-sans">
               {tenant.status === 'active' ? 'Suspend Tenant Access' : 'Reactivate Tenant'}
             </h2>
-            <p className="text-xs text-slate-400 mt-1">
-              Target: <strong className="text-slate-200">{tenant.name}</strong>
+            <p className="text-xs text-muted mt-1">
+              Target: <strong className="text-default">{tenant.name}</strong>
             </p>
 
             {actionError && (
-              <div className="mt-3 p-3 rounded-lg bg-rose-950/50 border border-rose-800 text-rose-300 text-xs">
+              <div className="mt-3 p-3 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs">
                 {actionError}
               </div>
             )}
 
             <div className="mt-4">
-              <label className="block text-xs text-slate-300 mb-1">Reason for state change:</label>
+              <label className="block text-xs text-muted mb-1">Reason for state change:</label>
               <textarea
                 value={actionReason}
                 onChange={(e) => setActionReason(e.target.value)}
                 placeholder="Logged in platform audit trail..."
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 focus:outline-hidden focus:border-amber-500"
+                className="w-full bg-surface-sunken border border-default rounded-xl p-3 text-xs text-default focus:outline-hidden focus:border-amber-500"
                 rows={3}
               />
             </div>
 
             <div className="mt-6 flex justify-end gap-3 text-xs">
               <button
+                type="button"
                 onClick={() => setModalType(null)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-surface-sunken hover:bg-surface border border-default text-default cursor-pointer"
               >
                 Cancel
               </button>
               {tenant.status === 'active' ? (
                 <button
+                  type="button"
                   onClick={() => handleUpdateStatus('suspended')}
                   disabled={actionLoading}
                   className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold cursor-pointer disabled:opacity-50"
@@ -1385,6 +1462,7 @@ export const TenantDetailWorkspace: React.FC = () => {
                 </button>
               ) : (
                 <button
+                  type="button"
                   onClick={() => handleUpdateStatus('active')}
                   disabled={actionLoading}
                   className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer disabled:opacity-50"
@@ -1399,22 +1477,22 @@ export const TenantDetailWorkspace: React.FC = () => {
 
       {/* Delete Tenant Modal */}
       {modalType === 'delete' && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-rose-900/60 rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs">
-            <div className="flex items-center gap-2 text-rose-400 font-bold text-base font-sans">
+        <div className="fixed inset-0 bg-overlay/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-raised border border-rose-500/40 rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs text-default">
+            <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold text-base font-sans">
               <Trash2 className="size-5" />
               <span>Deprovision Tenant</span>
             </div>
-            <p className="text-slate-400 mt-2 leading-relaxed">
-              This will deprovision and soft-delete <strong className="text-slate-100">{tenant.name}</strong>.
+            <p className="text-muted mt-2 leading-relaxed">
+              This will deprovision and soft-delete <strong className="text-default">{tenant.name}</strong>.
             </p>
 
-            <div className="my-4 p-3 rounded-xl bg-rose-950/40 border border-rose-800/40 text-rose-300">
-              Please type <strong className="text-white select-all">{tenant.slug}</strong> to confirm.
+            <div className="my-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-300">
+              Please type <strong className="select-all font-bold">{tenant.slug}</strong> to confirm.
             </div>
 
             {actionError && (
-              <div className="mb-4 p-3 rounded-xl bg-rose-950/50 border border-rose-800 text-rose-300">
+              <div className="mb-4 p-3 rounded-xl bg-rose-500/20 border border-rose-500 text-rose-600 dark:text-rose-300">
                 {actionError}
               </div>
             )}
@@ -1424,20 +1502,22 @@ export const TenantDetailWorkspace: React.FC = () => {
               value={deleteConfirmation}
               onChange={(e) => setDeleteConfirmation(e.target.value)}
               placeholder={tenant.slug}
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:outline-hidden focus:border-rose-500"
+              className="w-full bg-surface-sunken border border-default rounded-xl px-3 py-2 text-default focus:outline-hidden focus:border-rose-500"
             />
 
             <div className="mt-6 flex items-center justify-end gap-3">
               <button
+                type="button"
                 onClick={() => {
                   setModalType(null);
                   setDeleteConfirmation('');
                 }}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-surface-sunken hover:bg-surface border border-default text-default cursor-pointer"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleDeleteTenant}
                 disabled={actionLoading || deleteConfirmation !== tenant.slug}
                 className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold cursor-pointer disabled:opacity-40"

@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { usePlatformAuthStore } from '../../lib/auth/platformAuthStore';
-import { ShieldCheck, LogOut, Terminal, Server, Sun, Moon } from 'lucide-react';
+import { ShieldCheck, LogOut, Terminal, Sun, Moon, Menu } from 'lucide-react';
 
-export const PlatformHeader: React.FC = () => {
+interface PlatformHeaderProps {
+  onToggleSidebar?: () => void;
+}
+
+export const PlatformHeader: React.FC<PlatformHeaderProps> = ({ onToggleSidebar }) => {
   const { user, logout } = usePlatformAuthStore();
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -34,9 +38,20 @@ export const PlatformHeader: React.FC = () => {
   };
 
   return (
-    <header className="h-16 border-b border-default bg-surface/90 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-600 dark:text-amber-400 text-xs font-mono font-bold shadow-2xs">
+    <header className="h-16 border-b border-default bg-surface/90 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Mobile Sidebar Hamburger Toggle */}
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          className="lg:hidden p-2 rounded-xl border border-default bg-surface-sunken hover:bg-surface text-default transition-all shadow-2xs cursor-pointer"
+          title="Toggle Navigation Menu"
+          aria-label="Toggle Navigation Menu"
+        >
+          <Menu className="size-4" />
+        </button>
+
+        <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-600 dark:text-amber-400 text-xs font-mono font-bold shadow-2xs">
           <Terminal className="size-3.5" />
           <span>CONTROL PLANE</span>
         </div>
@@ -46,15 +61,16 @@ export const PlatformHeader: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 sm:gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         {/* Theme Toggle */}
         <button
           type="button"
           onClick={toggleTheme}
           className="p-2 rounded-xl border border-default bg-surface-sunken hover:bg-surface text-muted hover:text-default transition-all shadow-2xs cursor-pointer"
           title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          aria-label="Toggle Theme"
         >
-          {theme === 'dark' ? <Sun className="size-4 text-amber-400" /> : <Moon className="size-4 text-slate-600" />}
+          {theme === 'dark' ? <Sun className="size-4 text-amber-400" /> : <Moon className="size-4 text-default" />}
         </button>
 
         {/* Super Admin Pill */}
@@ -69,22 +85,10 @@ export const PlatformHeader: React.FC = () => {
           </span>
         </div>
 
-        {/* Quick Link to Tenant App */}
-        <a
-          href="/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-default bg-surface-sunken hover:bg-surface text-xs font-semibold text-default transition-all shadow-2xs"
-          title="Open Slice Mart Tenant Portal in new tab"
-        >
-          <Server className="size-3.5 text-blue-500" />
-          <span>Tenant Portal</span>
-        </a>
-
         {/* Logout */}
         <button
           onClick={() => logout()}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-xs font-semibold text-rose-700 dark:text-rose-300 transition-all shadow-2xs"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-xs font-semibold text-rose-700 dark:text-rose-300 transition-all shadow-2xs cursor-pointer"
           title="Sign out of Platform Control Plane"
         >
           <LogOut className="size-3.5" />

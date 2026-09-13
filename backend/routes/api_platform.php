@@ -99,7 +99,7 @@ Route::prefix('v1/platform')
             // Platform Settings & Maintenance Mode
             Route::get('settings', [PlatformSettingsController::class, 'index'])->name('settings.index');
             Route::post('settings/maintenance', [PlatformSettingsController::class, 'toggleMaintenance'])->name('settings.maintenance');
-            Route::patch('settings/{group}', [PlatformSettingsController::class, 'update'])->name('settings.update');
+            Route::match(['patch', 'post', 'put'], 'settings/{group}', [PlatformSettingsController::class, 'update'])->name('settings.update');
 
             // System Health & Queue Jobs
             Route::get('health', [PlatformSystemHealthController::class, 'index'])->name('health.index');

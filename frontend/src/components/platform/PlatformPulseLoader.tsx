@@ -39,7 +39,7 @@ export const PlatformPulseLoader: React.FC<PlatformPulseLoaderProps> = ({
             fill="none"
             stroke="currentColor"
             strokeWidth={dimensions.stroke}
-            className="text-slate-800/80 dark:text-slate-800/80"
+            className="text-border-default/40"
           />
 
           {/* Clockwise Amber Beam */}
@@ -119,12 +119,12 @@ export const PlatformPulseLoader: React.FC<PlatformPulseLoaderProps> = ({
           transition={{ duration: 0.3 }}
           className="mt-4 space-y-1"
         >
-          <div className="text-xs font-bold tracking-wider text-slate-100 flex items-center justify-center gap-1.5 font-sans">
+          <div className="text-xs font-bold tracking-wider text-default flex items-center justify-center gap-1.5 font-sans">
             <span className="size-1.5 rounded-full bg-amber-400 animate-ping" />
             <span>{label}</span>
           </div>
           {sublabel && (
-            <p className="text-[11px] text-slate-400 max-w-xs mx-auto leading-relaxed">
+            <p className="text-[11px] text-muted max-w-xs mx-auto leading-relaxed">
               {sublabel}
             </p>
           )}
@@ -135,7 +135,7 @@ export const PlatformPulseLoader: React.FC<PlatformPulseLoaderProps> = ({
 
   if (fullScreen) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-base/80 backdrop-blur-md">
         {content}
       </div>
     );

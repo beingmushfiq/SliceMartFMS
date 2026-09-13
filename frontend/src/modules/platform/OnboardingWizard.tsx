@@ -373,7 +373,7 @@ export const OnboardingWizard: React.FC = () => {
 
           {/* Progress Track */}
           <div className="space-y-1.5">
-            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-surface-raised border border-default/40">
               <div
                 className="h-full bg-linear-to-r from-indigo-500 via-primary to-emerald-500 transition-all duration-500"
                 style={{ width: `${Math.max(5, liveCompletionPercentage)}%` }}

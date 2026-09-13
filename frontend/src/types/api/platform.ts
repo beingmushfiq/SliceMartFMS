@@ -66,6 +66,9 @@ export interface PlatformTenant {
   plan_id: number;
   users_count?: number;
   trial_ends_at?: string | null;
+  subscription_ends_at?: string | null;
+  grace_period_ends_at?: string | null;
+  grace_period_days?: number | null;
   suspended_at?: string | null;
   archived_at?: string | null;
   settings?: Record<string, unknown> | null;
@@ -333,6 +336,11 @@ export interface PlatformSupportTicket {
     name: string;
     slug: string;
   };
+  creator?: {
+    id: number;
+    name: string;
+    email: string;
+  } | null;
   assignee?: {
     id: number;
     name: string;
@@ -348,6 +356,11 @@ export interface PlatformSupportTicketNote {
   note: string;
   is_internal: boolean;
   created_at: string;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+  } | null;
   author?: {
     id: number;
     name: string;

@@ -194,9 +194,8 @@ export const TenantDirectoryWorkspace: React.FC = () => {
             <span>Suspended</span>
           </span>
         );
-      default:
         return (
-          <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 text-[10px] font-mono font-bold uppercase w-fit">
+          <span className="px-2.5 py-0.5 rounded-full bg-surface-raised text-muted border border-default text-[10px] font-mono font-bold uppercase w-fit">
             {status}
           </span>
         );
@@ -204,19 +203,19 @@ export const TenantDirectoryWorkspace: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-6 font-sans text-default">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-default pb-5">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
               Platform Master Authority
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-100">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-default">
             Tenant Fleet Directory
           </h1>
-          <p className="mt-1 text-xs text-slate-400 max-w-2xl leading-relaxed font-mono">
+          <p className="mt-1 text-xs text-muted max-w-2xl leading-relaxed font-mono">
             Provision, monitor, override module capabilities, enforce quotas, and control multi-tenant isolation states.
           </p>
         </div>
@@ -225,10 +224,10 @@ export const TenantDirectoryWorkspace: React.FC = () => {
           <button
             onClick={() => refetch()}
             disabled={isFetching}
-            className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 text-xs font-mono flex items-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+            className="p-2.5 rounded-xl bg-surface-sunken border border-default hover:bg-surface text-default text-xs font-mono flex items-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
             title="Refresh Directory"
           >
-            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin text-amber-400' : ''}`} />
+            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin text-amber-500' : ''}`} />
           </button>
           <Link
             to="/platform/tenants/new"
@@ -246,83 +245,83 @@ export const TenantDirectoryWorkspace: React.FC = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
-          className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-md relative overflow-hidden"
+          className="p-4 rounded-2xl bg-surface border border-default shadow-md relative overflow-hidden"
         >
-          <div className="flex items-center justify-between text-slate-400">
+          <div className="flex items-center justify-between text-muted">
             <span className="text-[10px] font-mono uppercase tracking-wider">Total Tenants</span>
-            <Building2 className="size-4 text-amber-400" />
+            <Building2 className="size-4 text-amber-500" />
           </div>
-          <div className="text-2xl font-bold font-mono text-slate-100 mt-1">{stats.total}</div>
-          <div className="text-[10px] font-mono text-slate-500 mt-1">{stats.totalUsers} Scoped Users</div>
+          <div className="text-2xl font-bold font-mono text-default mt-1">{stats.total}</div>
+          <div className="text-[10px] font-mono text-muted mt-1">{stats.totalUsers} Scoped Users</div>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2, delay: 0.04 }}
-          className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-md"
+          className="p-4 rounded-2xl bg-surface border border-default shadow-md"
         >
-          <div className="flex items-center justify-between text-emerald-400">
+          <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400">
             <span className="text-[10px] font-mono uppercase tracking-wider">Active Status</span>
             <CheckCircle className="size-4" />
           </div>
-          <div className="text-2xl font-bold font-mono text-emerald-400 mt-1">{stats.active}</div>
-          <div className="text-[10px] font-mono text-slate-500 mt-1">Operational</div>
+          <div className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1">{stats.active}</div>
+          <div className="text-[10px] font-mono text-muted mt-1">Operational</div>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2, delay: 0.08 }}
-          className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-md"
+          className="p-4 rounded-2xl bg-surface border border-default shadow-md"
         >
-          <div className="flex items-center justify-between text-cyan-400">
+          <div className="flex items-center justify-between text-cyan-600 dark:text-cyan-400">
             <span className="text-[10px] font-mono uppercase tracking-wider">In Trial</span>
             <Clock className="size-4" />
           </div>
-          <div className="text-2xl font-bold font-mono text-cyan-400 mt-1">{stats.trial}</div>
-          <div className="text-[10px] font-mono text-slate-500 mt-1">Evaluating SaaS</div>
+          <div className="text-2xl font-bold font-mono text-cyan-600 dark:text-cyan-400 mt-1">{stats.trial}</div>
+          <div className="text-[10px] font-mono text-muted mt-1">Evaluating SaaS</div>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2, delay: 0.12 }}
-          className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-md"
+          className="p-4 rounded-2xl bg-surface border border-default shadow-md"
         >
-          <div className="flex items-center justify-between text-rose-400">
+          <div className="flex items-center justify-between text-rose-600 dark:text-rose-400">
             <span className="text-[10px] font-mono uppercase tracking-wider">Suspended</span>
             <XCircle className="size-4" />
           </div>
-          <div className="text-2xl font-bold font-mono text-rose-400 mt-1">{stats.suspended}</div>
-          <div className="text-[10px] font-mono text-slate-500 mt-1">Access Blocked</div>
+          <div className="text-2xl font-bold font-mono text-rose-600 dark:text-rose-400 mt-1">{stats.suspended}</div>
+          <div className="text-[10px] font-mono text-muted mt-1">Access Blocked</div>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2, delay: 0.16 }}
-          className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-md col-span-2 sm:col-span-1"
+          className="p-4 rounded-2xl bg-surface border border-default shadow-md col-span-2 sm:col-span-1"
         >
-          <div className="flex items-center justify-between text-amber-400">
+          <div className="flex items-center justify-between text-amber-500">
             <span className="text-[10px] font-mono uppercase tracking-wider">Estimated MRR</span>
             <TrendingUp className="size-4" />
           </div>
-          <div className="text-2xl font-bold font-mono text-slate-100 mt-1">${stats.estimatedMrr.toLocaleString()}</div>
-          <div className="text-[10px] font-mono text-slate-500 mt-1">Active Subscriptions</div>
+          <div className="text-2xl font-bold font-mono text-default mt-1">${stats.estimatedMrr.toLocaleString()}</div>
+          <div className="text-[10px] font-mono text-muted mt-1">Active Subscriptions</div>
         </motion.div>
       </div>
 
       {/* Filter Toolbar */}
-      <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-md flex flex-wrap gap-3 items-center justify-between font-mono text-xs">
+      <div className="p-4 rounded-2xl bg-surface border border-default shadow-md flex flex-wrap gap-3 items-center justify-between font-mono text-xs">
         <form onSubmit={handleSearchSubmit} className="relative flex-1 min-w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by tenant name, subdomain, or slug..."
-            className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder:text-slate-500 focus:outline-hidden focus:border-amber-500 transition-all text-xs"
+            className="w-full pl-9 pr-3 py-2 bg-surface-sunken border border-default rounded-xl text-default placeholder:text-muted focus:outline-hidden focus:border-amber-500 transition-all text-xs"
           />
         </form>
 
@@ -357,7 +356,7 @@ export const TenantDirectoryWorkspace: React.FC = () => {
       </div>
 
       {/* Directory Table */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900 shadow-xl overflow-hidden">
+      <div className="rounded-2xl border border-default bg-surface shadow-xl overflow-hidden">
         {isLoading ? (
           <div className="p-16">
             <PlatformPulseLoader
@@ -367,16 +366,16 @@ export const TenantDirectoryWorkspace: React.FC = () => {
           </div>
         ) : tenants.length === 0 ? (
           <div className="p-16 text-center font-mono">
-            <Building2 className="size-10 text-slate-600 mx-auto mb-3" />
-            <div className="text-sm font-bold text-slate-300 font-sans">No Tenants Found</div>
-            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+            <Building2 className="size-10 text-muted mx-auto mb-3" />
+            <div className="text-sm font-bold text-default font-sans">No Tenants Found</div>
+            <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
               No active or registered tenants match your current filter criteria.
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300 font-mono">
-              <thead className="bg-slate-950/80 border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+            <table className="w-full min-w-200 text-left text-xs text-default font-mono">
+              <thead className="bg-surface-sunken border-b border-default text-muted uppercase text-[10px]">
                 <tr>
                   <th className="py-3.5 pl-6">Tenant Organization</th>
                   <th className="py-3.5 px-4">Plan Tier</th>
@@ -386,7 +385,7 @@ export const TenantDirectoryWorkspace: React.FC = () => {
                   <th className="py-3.5 pr-6 text-right">Master Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-default">
                 <AnimatePresence>
                   {tenants.map((t) => (
                     <motion.tr
@@ -394,29 +393,29 @@ export const TenantDirectoryWorkspace: React.FC = () => {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="hover:bg-slate-800/30 transition-colors"
+                      className="hover:bg-surface-sunken/60 transition-colors"
                     >
                       <td className="py-4 pl-6">
                         <div className="flex items-center gap-3">
-                          <div className="size-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 font-bold shrink-0 shadow-inner">
+                          <div className="size-10 rounded-xl bg-surface-sunken border border-default flex items-center justify-center text-amber-500 font-bold shrink-0 shadow-xs">
                             <Building2 className="size-5" />
                           </div>
                           <div>
                             <Link
                               to={`/platform/tenants/${t.id}`}
-                              className="font-bold text-slate-100 hover:text-amber-400 transition-colors text-sm font-sans block"
+                              className="font-bold text-default hover:text-amber-500 transition-colors text-sm font-sans block"
                             >
                               {t.name}
                             </Link>
-                            <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400">
-                              <span className="text-amber-400/80">#{t.id}</span>
+                            <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted">
+                              <span className="text-amber-500 font-semibold">#{t.id}</span>
                               <span>•</span>
                               <span>{t.slug}.devcenterpoint.com</span>
                               <a
                                 href={`https://${t.slug}.devcenterpoint.com`}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="text-slate-500 hover:text-amber-400 transition-colors"
+                                className="text-muted hover:text-amber-500 transition-colors"
                                 title="Open Tenant Portal"
                               >
                                 <ExternalLink className="size-3" />
@@ -428,10 +427,10 @@ export const TenantDirectoryWorkspace: React.FC = () => {
 
                       <td className="py-4 px-4">
                         <div className="space-y-0.5">
-                          <span className="font-bold text-slate-200">
+                          <span className="font-bold text-default">
                             {t.plan?.name ?? 'Standard SaaS'}
                           </span>
-                          <div className="text-[10px] text-slate-400">
+                          <div className="text-[10px] text-muted">
                             ${t.plan?.price ?? (t.subscription?.amount || 0)}/{t.plan?.billing_period ?? 'mo'}
                           </div>
                         </div>
@@ -439,14 +438,14 @@ export const TenantDirectoryWorkspace: React.FC = () => {
 
                       <td className="py-4 px-4">{getStatusBadge(t.status)}</td>
 
-                      <td className="py-4 px-4 text-slate-400 text-[11px]">
-                        <div className="font-bold text-slate-200">{t.currency_code}</div>
-                        <div className="text-[10px] text-slate-500">{t.timezone}</div>
+                      <td className="py-4 px-4 text-muted text-[11px]">
+                        <div className="font-bold text-default">{t.currency_code}</div>
+                        <div className="text-[10px] text-muted">{t.timezone}</div>
                       </td>
 
-                      <td className="py-4 px-4 text-slate-400 text-[11px]">
+                      <td className="py-4 px-4 text-muted text-[11px]">
                         <div>{new Date(t.created_at).toLocaleDateString()}</div>
-                        <div className="text-[10px] text-slate-500">{t.users_count || 0} user(s)</div>
+                        <div className="text-[10px] text-muted">{t.users_count || 0} user(s)</div>
                       </td>
 
                       <td className="py-4 pr-6 text-right">
@@ -454,7 +453,7 @@ export const TenantDirectoryWorkspace: React.FC = () => {
                           {/* Impersonate Button */}
                           <button
                             onClick={() => handleImpersonate(t)}
-                            className="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                            className="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
                             title="Impersonate Tenant"
                           >
                             <LogIn className="size-3" />
@@ -464,7 +463,7 @@ export const TenantDirectoryWorkspace: React.FC = () => {
                           {/* View Details */}
                           <Link
                             to={`/platform/tenants/${t.id}`}
-                            className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition-all flex items-center gap-1"
+                            className="px-2.5 py-1.5 rounded-lg bg-surface-sunken hover:bg-surface text-default border border-default text-xs font-semibold transition-all flex items-center gap-1"
                           >
                             <Eye className="size-3" />
                             <span>Dossier</span>
@@ -477,7 +476,7 @@ export const TenantDirectoryWorkspace: React.FC = () => {
                                 setSelectedTenant(t);
                                 setModalType('status');
                               }}
-                              className="px-2 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/40 text-xs font-semibold transition-all cursor-pointer"
+                              className="px-2 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30 text-xs font-semibold transition-all cursor-pointer"
                               title="Suspend Access"
                             >
                               Suspend
@@ -488,7 +487,7 @@ export const TenantDirectoryWorkspace: React.FC = () => {
                                 setSelectedTenant(t);
                                 setModalType('status');
                               }}
-                              className="px-2 py-1.5 rounded-lg bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-800/40 text-xs font-semibold transition-all cursor-pointer"
+                              className="px-2 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 text-xs font-semibold transition-all cursor-pointer"
                               title="Reactivate Access"
                             >
                               Activate
@@ -503,7 +502,7 @@ export const TenantDirectoryWorkspace: React.FC = () => {
                               setDeleteConfirmationInput('');
                               setActionError(null);
                             }}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/30 transition-all cursor-pointer"
+                            className="p-1.5 rounded-lg text-muted hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
                             title="Delete Tenant"
                           >
                             <Trash2 className="size-3.5" />
@@ -521,30 +520,30 @@ export const TenantDirectoryWorkspace: React.FC = () => {
 
       {/* Status Modal */}
       {modalType === 'status' && selectedTenant && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs">
-            <h2 className="text-base font-bold text-slate-100 font-sans">
+        <div className="fixed inset-0 bg-overlay/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-raised border border-default rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs">
+            <h2 className="text-base font-bold text-default font-sans">
               {selectedTenant.status === 'active' ? 'Suspend Tenant Access' : 'Reactivate Tenant'}
             </h2>
-            <p className="text-slate-400 mt-1">
-              Target Tenant: <strong className="text-slate-100">{selectedTenant.name}</strong> ({selectedTenant.slug})
+            <p className="text-muted mt-1">
+              Target Tenant: <strong className="text-default">{selectedTenant.name}</strong> ({selectedTenant.slug})
             </p>
 
             {actionError && (
-              <div className="mt-4 p-3 rounded-xl bg-rose-950/50 border border-rose-800 text-rose-300">
+              <div className="mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300">
                 {actionError}
               </div>
             )}
 
             <div className="mt-4">
-              <label className="block text-slate-300 mb-1">
+              <label className="block text-default mb-1">
                 Reason for state change (Logged in Platform Audit Trail)
               </label>
               <textarea
                 value={actionReason}
                 onChange={(e) => setActionReason(e.target.value)}
                 placeholder="e.g. Terms violation, billing default, or administrative reactivation."
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-200 focus:outline-hidden focus:border-amber-500"
+                className="w-full bg-surface-sunken border border-default rounded-xl p-3 text-default focus:outline-hidden focus:border-amber-500"
                 rows={3}
               />
             </div>
@@ -555,7 +554,7 @@ export const TenantDirectoryWorkspace: React.FC = () => {
                   setModalType(null);
                   setSelectedTenant(null);
                 }}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -577,22 +576,22 @@ export const TenantDirectoryWorkspace: React.FC = () => {
 
       {/* Delete Tenant Modal */}
       {modalType === 'delete' && selectedTenant && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-rose-900/60 rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs">
-            <div className="flex items-center gap-2 text-rose-400 font-bold text-base font-sans">
+        <div className="fixed inset-0 bg-overlay/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-raised border border-rose-500/40 rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs">
+            <div className="flex items-center gap-2 text-rose-500 font-bold text-base font-sans">
               <Trash2 className="size-5" />
               <span>Delete Tenant</span>
             </div>
-            <p className="text-slate-400 mt-2 leading-relaxed">
-              This action will soft-delete <strong className="text-slate-100">{selectedTenant.name}</strong> and revoke all tenant user access.
+            <p className="text-muted mt-2 leading-relaxed">
+              This action will soft-delete <strong className="text-default">{selectedTenant.name}</strong> and revoke all tenant user access.
             </p>
 
-            <div className="my-4 p-3 rounded-xl bg-rose-950/40 border border-rose-800/40 text-rose-300">
-              Please type <strong className="text-white select-all">{selectedTenant.slug}</strong> to confirm deletion.
+            <div className="my-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300">
+              Please type <strong className="text-default font-bold select-all">{selectedTenant.slug}</strong> to confirm deletion.
             </div>
 
             {actionError && (
-              <div className="mb-4 p-3 rounded-xl bg-rose-950/50 border border-rose-800 text-rose-300">
+              <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300">
                 {actionError}
               </div>
             )}
@@ -602,7 +601,7 @@ export const TenantDirectoryWorkspace: React.FC = () => {
               value={deleteConfirmationInput}
               onChange={(e) => setDeleteConfirmationInput(e.target.value)}
               placeholder={selectedTenant.slug}
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:outline-hidden focus:border-rose-500"
+              className="w-full bg-surface-sunken border border-default rounded-xl px-3 py-2 text-default focus:outline-hidden focus:border-rose-500"
             />
 
             <div className="mt-6 flex items-center justify-end gap-3">
@@ -612,7 +611,7 @@ export const TenantDirectoryWorkspace: React.FC = () => {
                   setSelectedTenant(null);
                   setDeleteConfirmationInput('');
                 }}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-surface-sunken hover:bg-surface text-muted hover:text-default border border-default transition-colors cursor-pointer"
               >
                 Cancel
               </button>

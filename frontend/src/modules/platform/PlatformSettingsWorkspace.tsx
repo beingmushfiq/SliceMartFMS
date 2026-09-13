@@ -153,41 +153,41 @@ const PlatformSettingsForm: React.FC<PlatformSettingsFormProps> = ({
   };
 
   return (
-    <div className="rounded-2xl bg-slate-900 border border-slate-800 shadow-xl p-6 font-mono text-xs max-w-3xl">
+    <div className="rounded-2xl bg-surface border border-default shadow-xl p-6 font-mono text-xs max-w-3xl">
       {/* General Tab */}
       {activeTab === 'general' && (
         <form onSubmit={handleGeneralSubmit} className="space-y-4">
-          <h2 className="text-sm font-bold text-slate-100 font-sans uppercase tracking-wider mb-2">
+          <h2 className="text-sm font-bold text-default font-sans uppercase tracking-wider mb-2">
             Universal Platform Defaults
           </h2>
 
           <div>
-            <label className="block text-slate-300 mb-1">Platform Brand Name</label>
+            <label className="block text-default mb-1">Platform Brand Name</label>
             <input
               type="text"
               value={platformName}
               onChange={(e) => setPlatformName(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+              className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
             />
           </div>
 
           <div>
-            <label className="block text-slate-300 mb-1">Root Support Email</label>
+            <label className="block text-default mb-1">Root Support Email</label>
             <input
               type="email"
               value={supportEmail}
               onChange={(e) => setSupportEmail(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+              className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-slate-300 mb-1">Default Base Currency</label>
+              <label className="block text-default mb-1">Default Base Currency</label>
               <select
                 value={defaultCurrency}
                 onChange={(e) => setDefaultCurrency(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
               >
                 <option value="BDT">BDT (৳ - Bangladeshi Taka)</option>
                 <option value="USD">USD ($ - US Dollar)</option>
@@ -196,14 +196,14 @@ const PlatformSettingsForm: React.FC<PlatformSettingsFormProps> = ({
             </div>
 
             <div>
-              <label className="block text-slate-300 mb-1">Default Free Trial (Days)</label>
+              <label className="block text-default mb-1">Default Free Trial (Days)</label>
               <input
                 type="number"
                 min="0"
                 max="90"
                 value={defaultTrialDays}
                 onChange={(e) => setDefaultTrialDays(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
               />
             </div>
           </div>
@@ -224,39 +224,39 @@ const PlatformSettingsForm: React.FC<PlatformSettingsFormProps> = ({
       {/* Billing Tab */}
       {activeTab === 'billing' && (
         <form onSubmit={handleBillingSubmit} className="space-y-4">
-          <h2 className="text-sm font-bold text-slate-100 font-sans uppercase tracking-wider mb-2">
+          <h2 className="text-sm font-bold text-default font-sans uppercase tracking-wider mb-2">
             SaaS Billing & Subscription Policies
           </h2>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-slate-300 mb-1">Default Grace Period (Days)</label>
+              <label className="block text-default mb-1">Default Grace Period (Days)</label>
               <input
                 type="number"
                 min="0"
                 max="60"
                 value={defaultGracePeriodDays}
                 onChange={(e) => setDefaultGracePeriodDays(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
               />
-              <p className="text-[10px] text-slate-400 mt-1">
+              <p className="text-[10px] text-muted mt-1">
                 Allowed grace period before tenant enters suspended status.
               </p>
             </div>
 
             <div>
-              <label className="block text-slate-300 mb-1">Invoice Reference Prefix</label>
+              <label className="block text-default mb-1">Invoice Reference Prefix</label>
               <input
                 type="text"
                 value={invoicePrefix}
                 onChange={(e) => setInvoicePrefix(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-slate-300 mb-1">Standard SaaS Tax / VAT Rate (%)</label>
+            <label className="block text-default mb-1">Standard SaaS Tax / VAT Rate (%)</label>
             <input
               type="number"
               min="0"
@@ -264,7 +264,7 @@ const PlatformSettingsForm: React.FC<PlatformSettingsFormProps> = ({
               step="0.1"
               value={taxPercentage}
               onChange={(e) => setTaxPercentage(Number(e.target.value))}
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+              className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
             />
           </div>
 
@@ -284,57 +284,57 @@ const PlatformSettingsForm: React.FC<PlatformSettingsFormProps> = ({
       {/* Security Tab */}
       {activeTab === 'security' && (
         <form onSubmit={handleSecuritySubmit} className="space-y-4">
-          <h2 className="text-sm font-bold text-slate-100 font-sans uppercase tracking-wider mb-2">
+          <h2 className="text-sm font-bold text-default font-sans uppercase tracking-wider mb-2">
             Access Security & Session Throttling
           </h2>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-slate-300 mb-1">Max Failed Login Attempts</label>
+              <label className="block text-default mb-1">Max Failed Login Attempts</label>
               <input
                 type="number"
                 min="1"
                 max="20"
                 value={maxLoginAttempts}
                 onChange={(e) => setMaxLoginAttempts(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
               />
             </div>
 
             <div>
-              <label className="block text-slate-300 mb-1">Account Lockout Duration (Mins)</label>
+              <label className="block text-default mb-1">Account Lockout Duration (Mins)</label>
               <input
                 type="number"
                 min="1"
                 max="1440"
                 value={lockoutMinutes}
                 onChange={(e) => setLockoutMinutes(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-slate-300 mb-1">Admin Session Idle Expiry (Mins)</label>
+            <label className="block text-default mb-1">Admin Session Idle Expiry (Mins)</label>
             <input
               type="number"
               min="15"
               max="1440"
               value={sessionTimeoutMinutes}
               onChange={(e) => setSessionTimeoutMinutes(Number(e.target.value))}
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+              className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-amber-500"
             />
           </div>
 
-          <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-3 mt-3">
+          <div className="p-3 rounded-xl bg-surface-sunken border border-default flex items-center gap-3 mt-3">
             <input
               type="checkbox"
               id="impersonateCheckbox"
               checked={impersonationAllowed}
               onChange={(e) => setImpersonationAllowed(e.target.checked)}
-              className="rounded-sm border-slate-700 bg-slate-900 text-amber-500 focus:ring-amber-500"
+              className="rounded-sm border-default bg-surface text-amber-500 focus:ring-amber-500"
             />
-            <label htmlFor="impersonateCheckbox" className="text-slate-300 cursor-pointer">
+            <label htmlFor="impersonateCheckbox" className="text-default cursor-pointer">
               Enable platform super-admin impersonation into tenant applications for diagnostics
             </label>
           </div>
@@ -355,48 +355,48 @@ const PlatformSettingsForm: React.FC<PlatformSettingsFormProps> = ({
       {/* Maintenance Tab */}
       {activeTab === 'maintenance' && (
         <form onSubmit={handleMaintenanceSubmit} className="space-y-4">
-          <div className="flex items-center gap-2 text-rose-400 mb-1 font-bold">
+          <div className="flex items-center gap-2 text-rose-500 mb-1 font-bold">
             <AlertTriangle className="size-4" />
             <h2 className="text-sm uppercase tracking-wider font-sans">
               Platform-Wide Maintenance Lockout
             </h2>
           </div>
-          <p className="text-slate-400 text-[11px] mb-4">
+          <p className="text-muted text-[11px] mb-4">
             When active, non-whitelisted traffic will be intercepted with a 503 Maintenance response.
           </p>
 
-          <div className="p-4 rounded-xl bg-rose-950/20 border border-rose-900/40 space-y-3">
+          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-3">
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
                 id="maintenanceToggle"
                 checked={maintenanceEnabled}
                 onChange={(e) => setMaintenanceEnabled(e.target.checked)}
-                className="rounded-sm border-rose-700 bg-rose-950 text-rose-500 focus:ring-rose-500"
+                className="rounded-sm border-rose-500 bg-surface text-rose-500 focus:ring-rose-500"
               />
-              <label htmlFor="maintenanceToggle" className="text-rose-200 font-bold cursor-pointer">
+              <label htmlFor="maintenanceToggle" className="text-rose-600 dark:text-rose-300 font-bold cursor-pointer">
                 ENABLE PLATFORM MAINTENANCE MODE
               </label>
             </div>
 
             <div>
-              <label className="block text-slate-300 mb-1">Public Display Message</label>
+              <label className="block text-default mb-1">Public Display Message</label>
               <input
                 type="text"
                 value={maintenanceMessage}
                 onChange={(e) => setMaintenanceMessage(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-rose-500"
+                className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-rose-500"
               />
             </div>
 
             <div>
-              <label className="block text-slate-300 mb-1">Whitelisted IP Addresses (comma separated)</label>
+              <label className="block text-default mb-1">Whitelisted IP Addresses (comma separated)</label>
               <input
                 type="text"
                 value={whitelistedIps}
                 onChange={(e) => setWhitelistedIps(e.target.value)}
                 placeholder="127.0.0.1, 103.25.12.8"
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-rose-500 font-mono"
+                className="w-full bg-surface-sunken border border-default rounded-xl p-2.5 text-default focus:outline-hidden focus:border-rose-500 font-mono"
               />
             </div>
           </div>
@@ -438,7 +438,7 @@ export const PlatformSettingsWorkspace: React.FC = () => {
   // Save Settings Mutation
   const saveMutation = useMutation({
     mutationFn: async ({ group, settings }: { group: string; settings: Record<string, unknown> }) => {
-      const res = await api.post(`/platform/settings/${group}`, { settings });
+      const res = await api.patch(`/platform/settings/${group}`, { settings });
       return res.data;
     },
     onSuccess: (_, variables) => {
@@ -451,18 +451,18 @@ export const PlatformSettingsWorkspace: React.FC = () => {
     },
   });
 
-  // Maintenance Toggle Mutation
+  // Maintenance Mutation
   const maintenanceMutation = useMutation({
     mutationFn: async (payload: { enabled: boolean; message: string; whitelisted_ips: string[] }) => {
-      const res = await api.post('/platform/settings/maintenance-mode', payload);
+      const res = await api.post('/platform/settings/maintenance', payload);
       return res.data;
     },
-    onSuccess: (_, variables) => {
-      toast.success(variables.enabled ? 'Platform Maintenance Mode ACTIVATED' : 'Platform Maintenance Mode DEACTIVATED');
+    onSuccess: () => {
+      toast.success('Platform maintenance state updated successfully');
       queryClient.invalidateQueries({ queryKey: ['platform', 'settings'] });
     },
     onError: (err: unknown) => {
-      const msg = err instanceof Error ? err.message : 'Failed to update maintenance mode';
+      const msg = err instanceof Error ? err.message : 'Failed to update maintenance state';
       toast.error(msg);
     },
   });
@@ -474,8 +474,8 @@ export const PlatformSettingsWorkspace: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Platform Configuration & Controls</h1>
-          <p className="text-xs text-slate-400 mt-1 font-mono">
+          <h1 className="text-2xl font-bold text-default tracking-tight">Platform Configuration & Controls</h1>
+          <p className="text-xs text-muted mt-1 font-mono">
             Universal SaaS platform settings, billing defaults, security lockout policies, and maintenance gateways.
           </p>
         </div>
@@ -485,7 +485,7 @@ export const PlatformSettingsWorkspace: React.FC = () => {
           size="sm"
           onClick={() => refetch()}
           disabled={isFetching}
-          className="flex items-center gap-1.5 font-mono text-xs cursor-pointer border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 self-start"
+          className="flex items-center gap-1.5 font-mono text-xs cursor-pointer border-default bg-surface text-default hover:bg-surface-sunken self-start"
         >
           <RotateCcw className={`size-3.5 ${isFetching ? 'animate-spin' : ''}`} />
           <span>Reload Config</span>
@@ -493,14 +493,14 @@ export const PlatformSettingsWorkspace: React.FC = () => {
       </div>
 
       {/* Settings Navigation Tabs */}
-      <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 max-w-lg">
+      <div className="flex bg-surface-sunken p-1 rounded-xl border border-default max-w-lg">
         <button
           type="button"
           onClick={() => setActiveTab('general')}
           className={`flex-1 py-1.5 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
             activeTab === 'general'
-              ? 'bg-amber-500 text-slate-950 shadow-xs'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
+              : 'text-muted hover:text-default'
           }`}
         >
           <Globe className="size-3.5" />
@@ -511,8 +511,8 @@ export const PlatformSettingsWorkspace: React.FC = () => {
           onClick={() => setActiveTab('billing')}
           className={`flex-1 py-1.5 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
             activeTab === 'billing'
-              ? 'bg-amber-500 text-slate-950 shadow-xs'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
+              : 'text-muted hover:text-default'
           }`}
         >
           <CreditCard className="size-3.5" />
@@ -523,8 +523,8 @@ export const PlatformSettingsWorkspace: React.FC = () => {
           onClick={() => setActiveTab('security')}
           className={`flex-1 py-1.5 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
             activeTab === 'security'
-              ? 'bg-amber-500 text-slate-950 shadow-xs'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
+              : 'text-muted hover:text-default'
           }`}
         >
           <Shield className="size-3.5" />
@@ -535,8 +535,8 @@ export const PlatformSettingsWorkspace: React.FC = () => {
           onClick={() => setActiveTab('maintenance')}
           className={`flex-1 py-1.5 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
             activeTab === 'maintenance'
-              ? 'bg-amber-500 text-slate-950 shadow-xs'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
+              : 'text-muted hover:text-default'
           }`}
         >
           <AlertTriangle className="size-3.5" />
@@ -545,7 +545,7 @@ export const PlatformSettingsWorkspace: React.FC = () => {
       </div>
 
       {isLoading ? (
-        <div className="p-12 text-center text-slate-400 font-mono text-xs">
+        <div className="p-12 text-center text-muted font-mono text-xs">
           Loading platform configuration...
         </div>
       ) : (

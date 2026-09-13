@@ -252,9 +252,17 @@ class PlatformTenantController extends Controller
     public function manageSubscription(int $id, Request $request, ManageSubscriptionAction $action): JsonResponse
     {
         $validated = $request->validate([
-            'action' => 'required|string|in:extend,change_plan,renew',
-            'days' => 'nullable|integer|min:1|max:365',
+            'action' => 'required|string|in:extend,change_plan,renew,set_expiry,set_grace_period',
+            'days' => 'nullable|integer|min:1|max:3650',
             'plan_id' => 'nullable|integer|exists:plans,id',
+            'ends_at' => 'nullable|date',
+            'grace_period_days' => 'nullable|integer|min:0|max:180',
+            'notes' => 'nullable|string|max:1000',
+            'billing_cycle' => 'nullable|string|in:monthly,yearly',
+            'amount' => 'nullable|numeric|min:0',
+            'discount_type' => 'nullable|string|in:none,percentage,fixed',
+            'discount_value' => 'nullable|numeric|min:0',
+            'currency_code' => 'nullable|string|max:10',
         ]);
 
         $result = $action->execute(array_merge($validated, ['tenant_id' => $id]));
@@ -475,6 +483,9 @@ class PlatformTenantController extends Controller
             'custom_limits' => $tenant->settings['custom_limits'] ?? null,
             'branding' => $tenant->branding,
             'trial_ends_at' => $tenant->trial_ends_at?->toIso8601String(),
+            'subscription_ends_at' => $endsAt?->toIso8601String(),
+            'grace_period_ends_at' => $graceEndsAt?->toIso8601String(),
+            'grace_period_days' => $activeSub?->grace_period_days ?? 7,
             'activated_at' => $tenant->activated_at?->toIso8601String(),
             'suspended_at' => $tenant->suspended_at?->toIso8601String(),
             'archived_at' => $tenant->archived_at?->toIso8601String(),

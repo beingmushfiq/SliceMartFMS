@@ -201,11 +201,11 @@ export const PlanManagerWorkspace: React.FC = () => {
               Subscription Architecture
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-100 flex items-center gap-2.5">
-            <Sparkles className="size-6 text-amber-400" />
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-default flex items-center gap-2.5">
+            <Sparkles className="size-6 text-amber-500" />
             <span>SaaS Package & Plan Manager</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1 font-mono max-w-2xl">
+          <p className="text-xs text-muted mt-1 font-mono max-w-2xl">
             Configure pricing tiers, compute operational quotas, enforce module entitlements, and control multi-tenant plan availability.
           </p>
         </div>
@@ -214,10 +214,10 @@ export const PlanManagerWorkspace: React.FC = () => {
           <button
             onClick={() => refetch()}
             disabled={isFetching}
-            className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl border border-slate-700 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+            className="p-2.5 text-muted hover:text-default hover:bg-surface-raised rounded-xl border border-default transition-all cursor-pointer shadow-xs disabled:opacity-50"
             title="Refresh Plans"
           >
-            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin text-amber-400' : ''}`} />
+            <RefreshCw className={`size-4 ${isFetching ? 'animate-spin text-amber-500' : ''}`} />
           </button>
           <button
             onClick={openCreateModal}
@@ -239,9 +239,9 @@ export const PlanManagerWorkspace: React.FC = () => {
         </div>
       ) : plans.length === 0 ? (
         <div className="py-20 text-center font-mono">
-          <Layers className="size-10 text-slate-600 mx-auto mb-3" />
-          <div className="text-sm font-bold text-slate-300 font-sans">No Subscription Plans Found</div>
-          <p className="text-xs text-slate-500 mt-1">Create your first SaaS operational tier to begin onboarding tenants.</p>
+          <Layers className="size-10 text-subtle mx-auto mb-3" />
+          <div className="text-sm font-bold text-default font-sans">No Subscription Plans Found</div>
+          <p className="text-xs text-muted mt-1">Create your first SaaS operational tier to begin onboarding tenants.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -256,66 +256,66 @@ export const PlanManagerWorkspace: React.FC = () => {
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25, delay: index * 0.05 }}
-                  className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl flex flex-col justify-between relative overflow-hidden group hover:border-amber-500/40 transition-all"
+                  className="p-6 rounded-2xl bg-surface border border-default shadow-xl flex flex-col justify-between relative overflow-hidden group hover:border-amber-500/40 transition-all"
                 >
                   <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-amber-500 via-amber-400 to-cyan-500" />
 
                   <div>
                     {/* Top Badges */}
                     <div className="flex items-center justify-between mb-3">
-                      <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-md bg-slate-800 text-amber-400 border border-slate-700">
+                      <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-md bg-surface-raised text-amber-500 border border-default">
                         {plan.code.toUpperCase()}
                       </span>
                       <div className="flex items-center gap-2">
                         {plan.is_active === false && (
-                          <span className="px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 text-[10px] font-mono font-bold border border-rose-500/20">
+                          <span className="px-2 py-0.5 rounded bg-rose-500/10 text-rose-500 text-[10px] font-mono font-bold border border-rose-500/20">
                             Inactive
                           </span>
                         )}
-                        <span className="text-[11px] font-mono text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded-full">
+                        <span className="text-[11px] font-mono text-muted bg-surface-raised px-2 py-0.5 rounded-full border border-default">
                           {plan.tenants_count ?? 0} Tenant(s)
                         </span>
                       </div>
                     </div>
 
-                    <h3 className="text-xl font-bold text-slate-100 font-sans">{plan.name}</h3>
+                    <h3 className="text-xl font-bold text-default font-sans">{plan.name}</h3>
 
                     {/* Pricing */}
                     <div className="my-4 flex items-baseline gap-1.5 font-mono">
-                      <span className="text-3xl font-extrabold text-slate-100">${plan.price}</span>
-                      <span className="text-xs text-slate-400">/{plan.billing_period}</span>
+                      <span className="text-3xl font-extrabold text-default">${plan.price}</span>
+                      <span className="text-xs text-muted">/{plan.billing_period}</span>
                     </div>
 
                     {/* Quota Limits */}
-                    <div className="space-y-2 border-t border-slate-800/80 pt-4 font-mono text-xs text-slate-300">
+                    <div className="space-y-2 border-t border-default/60 pt-4 font-mono text-xs text-default">
                       <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-2 text-slate-400">
-                          <Users className="size-3.5 text-amber-400" />
+                        <span className="flex items-center gap-2 text-muted">
+                          <Users className="size-3.5 text-amber-500" />
                           <span>Max Users:</span>
                         </span>
-                        <strong className="text-slate-200">{limits['max_users'] ?? 'Unlimited'}</strong>
+                        <strong className="text-default">{limits['max_users'] ?? 'Unlimited'}</strong>
                       </div>
 
                       <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-2 text-slate-400">
-                          <Building2 className="size-3.5 text-amber-400" />
+                        <span className="flex items-center gap-2 text-muted">
+                          <Building2 className="size-3.5 text-amber-500" />
                           <span>Warehouses:</span>
                         </span>
-                        <strong className="text-slate-200">{limits['max_warehouses'] ?? 'Unlimited'}</strong>
+                        <strong className="text-default">{limits['max_warehouses'] ?? 'Unlimited'}</strong>
                       </div>
 
                       <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-2 text-slate-400">
-                          <ShoppingCart className="size-3.5 text-amber-400" />
+                        <span className="flex items-center gap-2 text-muted">
+                          <ShoppingCart className="size-3.5 text-amber-500" />
                           <span>Monthly Orders:</span>
                         </span>
-                        <strong className="text-slate-200">{limits['max_monthly_orders'] ?? 'Unlimited'}</strong>
+                        <strong className="text-default">{limits['max_monthly_orders'] ?? 'Unlimited'}</strong>
                       </div>
                     </div>
 
                     {/* Dynamic Modules Matrix */}
-                    <div className="mt-4 pt-4 border-t border-slate-800/80 space-y-2 font-mono text-xs">
-                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 block mb-1">
+                    <div className="mt-4 pt-4 border-t border-default/60 space-y-2 font-mono text-xs">
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-muted block mb-1">
                         Module Entitlements
                       </span>
                       {MODULE_OPTIONS.map((m) => {
@@ -325,17 +325,17 @@ export const PlanManagerWorkspace: React.FC = () => {
                           <div
                             key={m.key}
                             className={`flex items-center justify-between py-0.5 ${
-                              isEnabled ? 'text-slate-300' : 'text-slate-600'
+                              isEnabled ? 'text-default' : 'text-subtle'
                             }`}
                           >
                             <span className="flex items-center gap-2">
-                              <Icon className={`size-3.5 ${isEnabled ? 'text-emerald-400' : 'text-slate-600'}`} />
-                              <span className={isEnabled ? '' : 'line-through opacity-70'}>{m.label}</span>
+                              <Icon className={`size-3.5 ${isEnabled ? 'text-emerald-500' : 'text-subtle'}`} />
+                              <span className={isEnabled ? '' : 'line-through opacity-60'}>{m.label}</span>
                             </span>
                             {isEnabled ? (
-                              <Check className="size-3.5 text-emerald-400" />
+                              <Check className="size-3.5 text-emerald-500" />
                             ) : (
-                              <X className="size-3.5 text-slate-600" />
+                              <X className="size-3.5 text-subtle" />
                             )}
                           </div>
                         );
@@ -344,19 +344,19 @@ export const PlanManagerWorkspace: React.FC = () => {
                   </div>
 
                   {/* Card Action Controls */}
-                  <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between gap-2">
+                  <div className="mt-6 pt-4 border-t border-default flex items-center justify-between gap-2">
                     <button
                       onClick={() => openEditModal(plan)}
-                      className="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer font-sans shadow-xs"
+                      className="flex-1 py-2 rounded-xl bg-surface-raised hover:bg-surface text-default text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer font-sans shadow-xs border border-default"
                     >
-                      <Edit2 className="size-3.5 text-amber-400" />
+                      <Edit2 className="size-3.5 text-amber-500" />
                       <span>Edit Package</span>
                     </button>
 
                     <button
                       onClick={() => handleDeletePlan(plan)}
                       disabled={deletingPlanId === plan.id || (plan.tenants_count ?? 0) > 0}
-                      className="p-2 rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-950/30 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-2 rounded-xl text-subtle hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                       title={
                         (plan.tenants_count ?? 0) > 0
                           ? 'Cannot delete: active tenants assigned'
@@ -375,22 +375,22 @@ export const PlanManagerWorkspace: React.FC = () => {
 
       {/* Create / Edit Plan Modal */}
       {isCreating && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-overlay/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-lg w-full shadow-2xl font-mono text-xs max-h-[90vh] overflow-y-auto"
+            className="bg-surface border border-default rounded-2xl p-6 max-w-lg w-full shadow-2xl font-mono text-xs max-h-[90vh] overflow-y-auto"
           >
-            <h2 className="text-lg font-bold text-slate-100 font-sans">
+            <h2 className="text-lg font-bold text-default font-sans">
               {editingPlan ? `Edit Plan Tier: ${editingPlan.name}` : 'Create SaaS Subscription Tier'}
             </h2>
-            <p className="text-xs text-slate-400 mt-1 font-mono">
+            <p className="text-xs text-muted mt-1 font-mono">
               Configure quotas, rate limits, and module entitlements.
             </p>
 
             {formError && (
-              <div className="mt-4 p-3 rounded-xl bg-rose-950/50 border border-rose-800 text-rose-300">
+              <div className="mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500">
                 {formError}
               </div>
             )}
@@ -398,31 +398,31 @@ export const PlanManagerWorkspace: React.FC = () => {
             <form onSubmit={handleSavePlan} className="mt-5 space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
-                  <label className="block text-slate-300 mb-1 font-semibold">Plan Name *</label>
+                  <label className="block text-default mb-1 font-semibold">Plan Name *</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Enterprise Global"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                    className="w-full bg-surface-sunken border border-default rounded-xl px-3 py-2 text-default focus:outline-hidden focus:border-amber-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 mb-1 font-semibold">Plan Code *</label>
+                  <label className="block text-default mb-1 font-semibold">Plan Code *</label>
                   <input
                     type="text"
                     required
                     placeholder="ENTERPRISE_GLOBAL"
                     value={formData.code}
                     onChange={(e) => setFormData({ ...formData, code: e.target.value.toLowerCase() })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:outline-hidden focus:border-amber-500 uppercase font-mono"
+                    className="w-full bg-surface-sunken border border-default rounded-xl px-3 py-2 text-default focus:outline-hidden focus:border-amber-500 uppercase font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 mb-1 font-semibold">Price ($) *</label>
+                  <label className="block text-default mb-1 font-semibold">Price ($) *</label>
                   <input
                     type="number"
                     min="0"
@@ -430,12 +430,12 @@ export const PlanManagerWorkspace: React.FC = () => {
                     required
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:outline-hidden focus:border-amber-500 font-mono"
+                    className="w-full bg-surface-sunken border border-default rounded-xl px-3 py-2 text-default focus:outline-hidden focus:border-amber-500 font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 mb-1">Billing Frequency</label>
+                  <label className="block text-default mb-1">Billing Frequency</label>
                   <SelectDropdown
                     options={[
                       { value: 'monthly', label: 'Monthly' },
@@ -444,48 +444,48 @@ export const PlanManagerWorkspace: React.FC = () => {
                     value={formData.billing_period}
                     onChange={(val) => setFormData({ ...formData, billing_period: val })}
                     size="md"
-                    buttonClassName="w-full bg-slate-950 border-slate-700 text-slate-100 font-mono"
+                    buttonClassName="w-full bg-surface-sunken border-default text-default font-mono"
                     aria-label="Billing frequency"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 mb-1">Max Users</label>
+                  <label className="block text-default mb-1">Max Users</label>
                   <input
                     type="number"
                     min="1"
                     value={formData.max_users}
                     onChange={(e) => setFormData({ ...formData, max_users: parseInt(e.target.value) || 1 })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:outline-hidden focus:border-amber-500 font-mono"
+                    className="w-full bg-surface-sunken border border-default rounded-xl px-3 py-2 text-default focus:outline-hidden focus:border-amber-500 font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 mb-1">Max Warehouses</label>
+                  <label className="block text-default mb-1">Max Warehouses</label>
                   <input
                     type="number"
                     min="1"
                     value={formData.max_warehouses}
                     onChange={(e) => setFormData({ ...formData, max_warehouses: parseInt(e.target.value) || 1 })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:outline-hidden focus:border-amber-500 font-mono"
+                    className="w-full bg-surface-sunken border border-default rounded-xl px-3 py-2 text-default focus:outline-hidden focus:border-amber-500 font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 mb-1">Max Monthly Orders</label>
+                  <label className="block text-default mb-1">Max Monthly Orders</label>
                   <input
                     type="number"
                     min="10"
                     value={formData.max_monthly_orders}
                     onChange={(e) => setFormData({ ...formData, max_monthly_orders: parseInt(e.target.value) || 10 })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:outline-hidden focus:border-amber-500 font-mono"
+                    className="w-full bg-surface-sunken border border-default rounded-xl px-3 py-2 text-default focus:outline-hidden focus:border-amber-500 font-mono"
                   />
                 </div>
               </div>
 
               {/* Module Inclusion Toggles */}
-              <div className="pt-3 border-t border-slate-800">
-                <span className="block text-slate-300 mb-2 font-semibold">Included Module Entitlements</span>
+              <div className="pt-3 border-t border-default">
+                <span className="block text-default mb-2 font-semibold">Included Module Entitlements</span>
                 <div className="grid grid-cols-2 gap-2">
                   {MODULE_OPTIONS.map((m) => {
                     const checked = Boolean(formData.features[m.key]);
@@ -494,8 +494,8 @@ export const PlanManagerWorkspace: React.FC = () => {
                         key={m.key}
                         className={`flex items-center gap-2 p-2.5 rounded-xl border transition-all cursor-pointer ${
                           checked
-                            ? 'bg-amber-500/10 border-amber-500/40 text-slate-100'
-                            : 'bg-slate-950 border-slate-800 text-slate-500'
+                            ? 'bg-amber-500/10 border-amber-500/40 text-default'
+                            : 'bg-surface-sunken border-default text-subtle'
                         }`}
                       >
                         <input
@@ -510,7 +510,7 @@ export const PlanManagerWorkspace: React.FC = () => {
                               },
                             })
                           }
-                          className="rounded border-slate-700 text-amber-500 focus:ring-amber-500"
+                          className="rounded border-default text-amber-500 focus:ring-amber-500"
                         />
                         <span className="text-[11px] font-sans font-medium">{m.label}</span>
                       </label>
@@ -519,13 +519,13 @@ export const PlanManagerWorkspace: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
-                <label className="flex items-center gap-2 text-slate-300 cursor-pointer">
+              <div className="pt-4 border-t border-default flex items-center justify-between">
+                <label className="flex items-center gap-2 text-default cursor-pointer">
                   <input
                     type="checkbox"
                     checked={formData.is_active}
                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className="rounded border-slate-700 text-amber-500 focus:ring-amber-500"
+                    className="rounded border-default text-amber-500 focus:ring-amber-500"
                   />
                   <span>Active Tier Available for Signup</span>
                 </label>
@@ -537,7 +537,7 @@ export const PlanManagerWorkspace: React.FC = () => {
                       setIsCreating(false);
                       setEditingPlan(null);
                     }}
-                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-surface-raised hover:bg-surface text-default border border-default transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
