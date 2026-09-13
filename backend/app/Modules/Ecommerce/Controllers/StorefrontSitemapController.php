@@ -28,7 +28,7 @@ class StorefrontSitemapController extends Controller
         if (! $tenantId) {
             $subdomain = $request->header('X-Storefront-Subdomain')
                 ?: $request->header('X-Tenant-Subdomain')
-                ?: $request->query('subdomain', 'slicemart');
+                ?: $request->query('subdomain');
 
             $storefront = Storefront::withoutTenantScope()
                 ->where('subdomain', $subdomain)

@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const qcParameterImportSchema: ImportSchemaConfig = {
   entityTitle: 'Quality Control (QC) Parameters',
-  templateFileName: 'slicemart_qc_parameters_import_template',
+  templateFileName: 'erp_qc_parameters_import_template',
   uniqueIdentifierKey: 'name',
   supportsUpsert: true,
   apiEndpoint: '/qc/parameters/bulk-import',

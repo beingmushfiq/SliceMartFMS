@@ -581,7 +581,7 @@ export default function QcWorkspace() {
               Standardized Quality Controls & Material Disposition
             </h4>
             <p className="text-xs text-muted leading-relaxed">
-              SliceMart QC enforces multi-tier quality gates from receiving dock to final packing, standard tolerance
+              The Quality Control engine enforces multi-tier quality gates from receiving dock to final packing, standard tolerance
               band parameter rules, rework defect routing with salvage yield auditing, and strict process scrap valuation.
             </p>
           </div>

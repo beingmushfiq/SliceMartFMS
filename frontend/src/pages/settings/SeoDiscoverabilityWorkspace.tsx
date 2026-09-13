@@ -895,7 +895,7 @@ export const SeoDiscoverabilityWorkspace: React.FC<SeoDiscoverabilityWorkspacePr
                   type="email"
                   value={settings.email}
                   onChange={(e) => setSettings({ ...settings, email: e.target.value })}
-                  placeholder="support@slicemart.tech"
+                  placeholder="support@yourdomain.com"
                   className="w-full rounded-xl border border-default bg-surface-sunken/40 px-3 py-2 text-xs font-medium text-default focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 transition-all"
                 />
               </div>
@@ -1151,7 +1151,7 @@ export const SeoDiscoverabilityWorkspace: React.FC<SeoDiscoverabilityWorkspacePr
                   rows={4}
                   value={pingUrls}
                   onChange={(e) => setPingUrls(e.target.value)}
-                  placeholder="https://slicemart.tech/products/new-item-123&#10;https://slicemart.tech/products/new-item-456"
+                  placeholder="https://yourdomain.com/products/item-123&#10;https://yourdomain.com/products/item-456"
                   className="w-full rounded-xl border border-default bg-surface-sunken/40 p-3 font-mono text-default focus:bg-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 transition-all"
                 />
               </div>

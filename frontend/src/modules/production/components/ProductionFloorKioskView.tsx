@@ -130,7 +130,7 @@ export const ProductionFloorKioskView: React.FC<ProductionFloorKioskViewProps> =
               </span>
             </div>
             <p className="text-xs font-medium text-slate-400 tracking-wider">
-              SliceMart FMS Real-Time Shop Floor Intelligence
+              Real-Time Shop Floor Intelligence
             </p>
           </div>
         </div>

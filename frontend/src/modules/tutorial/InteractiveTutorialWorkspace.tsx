@@ -61,14 +61,14 @@ export const InteractiveTutorialWorkspace: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold text-default">
-                  Interactive SliceMart Academy & System Tour
+                  Interactive ERP Academy & System Tour
                 </h1>
                 <span className="rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-bold font-mono text-primary">
                   {completedSteps.length}/{TUTORIAL_STEPS.length} Completed ({progressPercent}%)
                 </span>
               </div>
               <p className="text-xs text-muted mt-1">
-                Learn how SliceMart orchestrates manufacturing, inventory, sales, POS, and accounting through guided simulations.
+                Learn how the platform orchestrates manufacturing, inventory, sales, POS, and accounting through guided simulations.
               </p>
             </div>
           </div>

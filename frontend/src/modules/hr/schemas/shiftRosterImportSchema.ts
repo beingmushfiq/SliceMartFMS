@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const shiftRosterImportSchema: ImportSchemaConfig = {
   entityTitle: 'Shift Rosters & Assignments',
-  templateFileName: 'slicemart_shift_rosters_import_template',
+  templateFileName: 'erp_shift_rosters_import_template',
   uniqueIdentifierKey: 'employee_code',
   supportsUpsert: true,
   apiEndpoint: '/hr/shifts/roster/bulk-import',

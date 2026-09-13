@@ -1000,7 +1000,7 @@ export const UsersManagementWorkspace: React.FC = () => {
                 required
                 value={newUserEmail}
                 onChange={(e) => setNewUserEmail(e.target.value)}
-                placeholder="user@slicemart.test"
+                placeholder="user@company.com"
                 className="w-full px-3 py-2 text-sm bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
             </div>

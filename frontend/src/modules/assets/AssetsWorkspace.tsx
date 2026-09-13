@@ -2507,7 +2507,7 @@ export const AssetsWorkspace: React.FC = () => {
             {/* Action Footer */}
             <div className="flex items-center justify-between pt-3 border-t border-default">
               <span className="text-2xs text-muted">
-                Asset ID: #{viewingAsset.id} • Registered under SliceMart Enterprise Plant Register
+                Asset ID: #{viewingAsset.id} • Registered under Enterprise Plant Register
               </span>
               <div className="flex items-center gap-2">
                 <button

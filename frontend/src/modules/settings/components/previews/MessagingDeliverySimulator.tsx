@@ -6,6 +6,7 @@ import {
   Send,
 } from 'lucide-react';
 import { Button } from '../../../../components/ui/Button';
+import { useTenantBranding } from '../../../../lib/theme/useTenantBranding';
 
 interface MessagingDeliverySimulatorProps {
   smsProvider?: string;
@@ -15,9 +16,10 @@ interface MessagingDeliverySimulatorProps {
 
 export const MessagingDeliverySimulator: React.FC<MessagingDeliverySimulatorProps> = ({
   smsProvider = 'greenweb',
-  smsSenderId = 'SLICEMART',
+  smsSenderId = '',
   whatsappPhoneNumberId = '',
 }) => {
+  const { companyName } = useTenantBranding();
   const [activeTab, setActiveTab] = useState<'sms' | 'whatsapp'>('whatsapp');
 
   return (
@@ -83,7 +85,7 @@ export const MessagingDeliverySimulator: React.FC<MessagingDeliverySimulatorProp
                 </div>
                 <div>
                   <div className="flex items-center gap-1">
-                    <span className="text-xs font-bold text-default">SliceMart Official</span>
+                    <span className="text-xs font-bold text-default">{companyName || 'Enterprise'} Official</span>
                     <CheckCheck className="size-3 text-emerald-500" />
                   </div>
                   <span className="text-2xs text-muted font-mono">
@@ -115,7 +117,7 @@ export const MessagingDeliverySimulator: React.FC<MessagingDeliverySimulatorProp
               <div className="flex items-center justify-between border-b border-primary/20 pb-2">
                 <div>
                   <span className="text-xs font-bold text-default block">
-                    {smsSenderId || 'SLICEMART'}
+                    {smsSenderId || (companyName ? companyName.toUpperCase().slice(0, 11) : 'ENTERPRISE')}
                   </span>
                   <span className="text-2xs text-muted uppercase">Masked Sender ID</span>
                 </div>

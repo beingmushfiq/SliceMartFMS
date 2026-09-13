@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const fixedAssetImportSchema: ImportSchemaConfig = {
   entityTitle: 'Fixed Assets Register',
-  templateFileName: 'slicemart_fixed_assets_import_template',
+  templateFileName: 'erp_fixed_assets_import_template',
   uniqueIdentifierKey: 'asset_code',
   supportsUpsert: true,
   apiEndpoint: '/assets/bulk-import',

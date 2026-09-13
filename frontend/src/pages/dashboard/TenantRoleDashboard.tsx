@@ -345,11 +345,13 @@ export const TenantRoleDashboard: React.FC = () => {
     )
       return false;
     const isInstalled =
-      localStorage.getItem('slicemart_pwa_installed') === 'true' ||
-      localStorage.getItem('pwa_installed') === 'true';
+      localStorage.getItem('erp_pwa_installed') === 'true' ||
+      localStorage.getItem('pwa_installed') === 'true' ||
+      localStorage.getItem('slicemart_pwa_installed') === 'true';
     const isDismissed =
-      localStorage.getItem('slicemart_pwa_dismissed') === 'true' ||
-      localStorage.getItem('pwa_dismissed') === 'true';
+      localStorage.getItem('erp_pwa_dismissed') === 'true' ||
+      localStorage.getItem('pwa_dismissed') === 'true' ||
+      localStorage.getItem('slicemart_pwa_dismissed') === 'true';
     const isStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as unknown as { standalone?: boolean }).standalone === true;
@@ -376,8 +378,8 @@ export const TenantRoleDashboard: React.FC = () => {
     };
 
     const handleAppInstalled = () => {
-      localStorage.setItem('slicemart_pwa_installed', 'true');
-      localStorage.setItem('slicemart_pwa_dismissed', 'true');
+      localStorage.setItem('erp_pwa_installed', 'true');
+      localStorage.setItem('erp_pwa_dismissed', 'true');
       localStorage.setItem('pwa_installed', 'true');
       localStorage.setItem('pwa_dismissed', 'true');
       setShowPwaPrompt(false);
@@ -405,8 +407,8 @@ export const TenantRoleDashboard: React.FC = () => {
     } catch (err) {
       console.warn('PWA install prompt error:', err);
     } finally {
-      localStorage.setItem('slicemart_pwa_installed', 'true');
-      localStorage.setItem('slicemart_pwa_dismissed', 'true');
+      localStorage.setItem('erp_pwa_installed', 'true');
+      localStorage.setItem('erp_pwa_dismissed', 'true');
       localStorage.setItem('pwa_installed', 'true');
       localStorage.setItem('pwa_dismissed', 'true');
       setShowPwaPrompt(false);
@@ -414,7 +416,7 @@ export const TenantRoleDashboard: React.FC = () => {
   };
 
   const handleDismissPwa = () => {
-    localStorage.setItem('slicemart_pwa_dismissed', 'true');
+    localStorage.setItem('erp_pwa_dismissed', 'true');
     localStorage.setItem('pwa_dismissed', 'true');
     setShowPwaPrompt(false);
   };

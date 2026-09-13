@@ -188,7 +188,7 @@ class SliceMartBrainService
 
         return [
             'thought' => "Parsed query for warehouse inventory ➔ Dispatched internal tool: 'QueryStockLedger' ➔ Calculated total on-hand units and absorbed standard cost valuation across all warehouses.",
-            'answer' => "SliceMart warehouse network currently holds **" . number_format($totalUnits, 0) . " physical units** across **{$totalSkus} SKUs**, with a total inventory valuation of **৳" . number_format($totalValuation, 2) . "**.\n\n" .
+            'answer' => "The warehouse network currently holds **" . number_format($totalUnits, 0) . " physical units** across **{$totalSkus} SKUs**, with a total inventory valuation of **৳" . number_format($totalValuation, 2) . "**.\n\n" .
                 (!empty($lowStockSummary) ? "**Low Stock Alerts (< 50 units):**\n" . implode("\n", array_map(fn($s) => "• " . $s, $lowStockSummary)) : "All stocked items are currently operating above minimum safety thresholds."),
             'metrics' => [
                 ['label' => 'Inventory Valuation', 'value' => '৳' . number_format($totalValuation, 0), 'tone' => 'success'],
@@ -217,7 +217,7 @@ class SliceMartBrainService
 
         return [
             'thought' => "Parsed query for shopfloor quality metrics ➔ Dispatched internal tool: 'QueryQcInspections' ➔ Evaluated inspection pass/fail records, AQL tolerances, and quarantine holds.",
-            'answer' => "Quality Control records indicate **{$totalInspections} total inspections** logged. Overall quality yield is **{$passRate}%** ({$passed} passed, {$failed} failed).\n\nUnder SliceMart Flow's automated interlock rule, failed batches are placed under immediate quarantine hold until a secondary supervisor rework inspection is completed.",
+            'answer' => "Quality Control records indicate **{$totalInspections} total inspections** logged. Overall quality yield is **{$passRate}%** ({$passed} passed, {$failed} failed).\n\nUnder automated quality interlock rules, failed batches are placed under immediate quarantine hold until a secondary supervisor rework inspection is completed.",
             'metrics' => [
                 ['label' => 'Quality Pass Rate', 'value' => "{$passRate}%", 'tone' => $passRate >= 95 ? 'success' : 'amber'],
                 ['label' => 'Passed Inspections', 'value' => (string) $passed, 'tone' => 'success'],
@@ -266,7 +266,7 @@ class SliceMartBrainService
 
         return [
             'thought' => "Parsed query for procurement operations ➔ Dispatched internal tool: 'QueryPurchasingOrders' ➔ Cross-referenced Purchase Orders, Goods Receipt Notes (GRN), and 3-way matched supplier bills.",
-            'answer' => "Procurement records show **{$poCount} Purchase Orders**, **{$grnCount} Goods Receipt Notes (GRN)**, and **{$billCount} approved Supplier Bills** in the system.\n\nSliceMart enforces mandatory 3-way matching between PO quantity, GRN received count, and supplier invoice pricing before releasing accounts payable payments.",
+            'answer' => "Procurement records show **{$poCount} Purchase Orders**, **{$grnCount} Goods Receipt Notes (GRN)**, and **{$billCount} approved Supplier Bills** in the system.\n\nThe system enforces mandatory 3-way matching between PO quantity, GRN received count, and supplier invoice pricing before releasing accounts payable payments.",
             'metrics' => [
                 ['label' => 'Purchase Orders', 'value' => (string) $poCount, 'tone' => 'primary'],
                 ['label' => 'Goods Receipts (GRN)', 'value' => (string) $grnCount, 'tone' => 'success'],
@@ -305,21 +305,21 @@ class SliceMartBrainService
 
     private function handleKnowledgeBaseQuery(string $q): array
     {
-        $topic = "SliceMart Enterprise SOP & Architecture";
+        $topic = "Enterprise SOP & Architecture";
         $explanation = "";
 
         if (str_contains($q, 'fifo') || str_contains($q, 'avco') || str_contains($q, 'valuation')) {
             $topic = "Inventory Valuation Policy (FIFO vs AVCO)";
-            $explanation = "SliceMart supports both **FIFO (First-In, First-Out)** and **AVCO (Weighted Average Cost)** valuation. Under FIFO, materials consumed in manufacturing batches absorb the unit cost of the oldest inbound PO batch first, giving precise gross margin recognition during inflation periods.";
+            $explanation = "The ERP supports both **FIFO (First-In, First-Out)** and **AVCO (Weighted Average Cost)** valuation. Under FIFO, materials consumed in manufacturing batches absorb the unit cost of the oldest inbound PO batch first, giving precise gross margin recognition during inflation periods.";
         } elseif (str_contains($q, 'matching') || str_contains($q, '3-way')) {
             $topic = "3-Way Procurement Matching Interlock";
-            $explanation = "To eliminate duplicate or inflated vendor charges, SliceMart validates: (1) Purchase Order authorized price and terms, (2) Goods Receipt Note warehouse physical received count, and (3) Vendor Invoice line item charges. If quantity discrepancy exceeds ±0.5%, the bill is held for manager override.";
+            $explanation = "To eliminate duplicate or inflated vendor charges, the system validates: (1) Purchase Order authorized price and terms, (2) Goods Receipt Note warehouse physical received count, and (3) Vendor Invoice line item charges. If quantity discrepancy exceeds ±0.5%, the bill is held for manager override.";
         } elseif (str_contains($q, 'rbac') || str_contains($q, 'permission') || str_contains($q, 'role')) {
             $topic = "Multi-Tenant Granular RBAC Permissions";
             $explanation = "Access control is governed by tenant-isolated role matrices. Users are assigned roles (e.g. Super Admin, Factory Operator, QC Inspector, Cashier, Warehouse Keeper), mapping to 120+ granular atomic permissions scoped to specific branches and companies.";
         } else {
-            $topic = "SliceMart Event Automation & Flow Engine";
-            $explanation = "SliceMart Flow is an event-driven automation engine connecting triggers (e.g. low stock, failed QC, overdue invoice) with configurable business condition matrices and multi-channel actions (SMS, WhatsApp, batch locking, draft POs).";
+            $topic = "Event Automation & Operations Flow Engine";
+            $explanation = "The Operations Flow engine connects triggers (e.g. low stock, failed QC, overdue invoice) with configurable business condition matrices and multi-channel actions (SMS, WhatsApp, batch locking, draft POs).";
         }
 
         return [
@@ -454,7 +454,7 @@ class SliceMartBrainService
 
         return [
             'thought' => "Interpreting general operational query ➔ Executed comprehensive tenant telemetry scanner across Products, Workforce, Production, and Treasury.",
-            'answer' => "I am **SliceMart Brain**, your self-contained operational ERP assistant. I execute actions, navigate modules, and query live data directly on your local system without any external cloud APIs.\n\n**Current System Health Summary:**\n• **{$products} SKUs** active in product catalog\n• **{$employees} Employees** on active payroll\n• **{$batches} Production Batches** recorded\n• **{$bankAccounts} Bank Accounts** active in treasury",
+            'answer' => "I am your **Operations AI Brain**, a self-contained operational ERP assistant. I execute actions, navigate modules, and query live data directly on your local system without any external cloud APIs.\n\n**Current System Health Summary:**\n• **{$products} SKUs** active in product catalog\n• **{$employees} Employees** on active payroll\n• **{$batches} Production Batches** recorded\n• **{$bankAccounts} Bank Accounts** active in treasury",
             'metrics' => [
                 ['label' => 'Active SKUs', 'value' => (string) $products, 'tone' => 'primary'],
                 ['label' => 'Workforce Staff', 'value' => (string) $employees, 'tone' => 'success'],
@@ -608,7 +608,7 @@ class SliceMartBrainService
         $firstName = 'Mohammad';
         $lastName = 'Hassan';
         $phone = '+880 1912-345678';
-        $email = 'hassan@slicemart.local';
+        $email = 'hassan@company.local';
         $salary = 28000.0;
 
         if (preg_match('/(?:add|create|new)\s+(?:an?\s+)?(?:employee|staff|worker)\s+(?:named\s+)?([A-Za-z]+)(?:\s+([A-Za-z]+))?/i', $input, $m)) {
@@ -749,7 +749,7 @@ class SliceMartBrainService
                 'fields' => [
                     'batch_number' => $code,
                     'planned_quantity' => (string) $qty,
-                    'notes' => 'Batch scheduled via SliceMart Brain local agent',
+                    'notes' => 'Batch scheduled via Operations Brain local agent',
                 ],
             ],
             'actions' => [
@@ -903,7 +903,7 @@ class SliceMartBrainService
     {
         return [
             'thought' => "Audited full system capability register ➔ Identified 11 foundational business entities ready for immediate interactive creation.",
-            'answer' => "You can create and manage **any entity** in SliceMart directly through this assistant without leaving this dialog!\n\n**Everything that can be added in the system:**\n\n• **Product**: Add finished goods, raw materials, or services with pricing & opening stock\n• **Customer**: Register business or retail client accounts with credit limits\n• **Supplier**: Onboard material vendors with contact details\n• **Employee**: Enroll workforce staff on active payroll with salary structure\n• **Warehouse**: Set up distribution hubs, storage rooms, or factory godowns\n• **Expense**: Record operational utility or travel expenditures into finance\n• **Production Batch**: Launch manufacturing shopfloor work orders\n• **CRM Lead**: Capture high-value sales pipeline opportunities\n• **Category**: Organize catalogue product taxonomies\n• **Brand**: Register product brand lines and trademarks\n• **Department**: Define corporate divisions and workforce units\n\nSimply click one of the quick buttons below or ask me (e.g. *\"Add product Laptop\"*, *\"Create customer Acme Corp\"*, *\"Record expense 4500\"*).",
+            'answer' => "You can create and manage **any entity** in the system directly through this assistant without leaving this dialog!\n\n**Everything that can be added in the system:**\n\n• **Product**: Add finished goods, raw materials, or services with pricing & opening stock\n• **Customer**: Register business or retail client accounts with credit limits\n• **Supplier**: Onboard material vendors with contact details\n• **Employee**: Enroll workforce staff on active payroll with salary structure\n• **Warehouse**: Set up distribution hubs, storage rooms, or factory godowns\n• **Expense**: Record operational utility or travel expenditures into finance\n• **Production Batch**: Launch manufacturing shopfloor work orders\n• **CRM Lead**: Capture high-value sales pipeline opportunities\n• **Category**: Organize catalogue product taxonomies\n• **Brand**: Register product brand lines and trademarks\n• **Department**: Define corporate divisions and workforce units\n\nSimply click one of the quick buttons below or ask me (e.g. *\"Add product Laptop\"*, *\"Create customer Acme Corp\"*, *\"Record expense 4500\"*).",
             'metrics' => [
                 ['label' => 'Addable Entities', 'value' => '11 Core Types', 'tone' => 'success'],
                 ['label' => 'Execution Mode', 'value' => '100% Deterministic', 'tone' => 'primary'],
@@ -1120,7 +1120,7 @@ class SliceMartBrainService
             $lastName = trim((string) ($payload['last_name'] ?? ''));
             $code = trim((string) ($payload['employee_code'] ?? 'EMP-' . strtoupper(Str::random(5))));
             $phone = trim((string) ($payload['phone'] ?? '+880 1700-000000'));
-            $email = trim((string) ($payload['email'] ?? 'staff@slicemart.local'));
+            $email = trim((string) ($payload['email'] ?? 'staff@company.local'));
             $salary = (float) ($payload['salary_amount'] ?? 25000);
             $displayName = trim($firstName . ' ' . $lastName);
 

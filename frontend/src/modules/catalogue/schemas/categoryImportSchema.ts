@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const categoryImportSchema: ImportSchemaConfig = {
   entityTitle: 'Categories',
-  templateFileName: 'slicemart_categories_import_template',
+  templateFileName: 'erp_categories_import_template',
   uniqueIdentifierKey: 'code',
   supportsUpsert: true,
   apiEndpoint: '/categories/bulk-import',

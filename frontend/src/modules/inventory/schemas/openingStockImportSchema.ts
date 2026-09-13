@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const openingStockImportSchema: ImportSchemaConfig = {
   entityTitle: 'Initial Stock Balances & Batches',
-  templateFileName: 'slicemart_opening_stock_import_template',
+  templateFileName: 'erp_opening_stock_import_template',
   uniqueIdentifierKey: 'sku',
   supportsUpsert: true,
   apiEndpoint: '/inventory/opening-stock/bulk-import',

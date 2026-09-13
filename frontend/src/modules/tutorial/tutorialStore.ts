@@ -19,11 +19,12 @@ interface TutorialState {
   resetProgress: () => void;
 }
 
-const STORAGE_KEY = 'slicemart_interactive_tutorial_progress';
+const STORAGE_KEY = 'erp_interactive_tutorial_progress';
+const LEGACY_STORAGE_KEY = 'slicemart_interactive_tutorial_progress';
 
 function loadSavedCompletedSteps(): number[] {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
     return saved ? JSON.parse(saved) : [];
   } catch {
     return [];

@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const salesTargetImportSchema: ImportSchemaConfig = {
   entityTitle: 'Salesman Targets & Quotas',
-  templateFileName: 'slicemart_salesman_targets_import_template',
+  templateFileName: 'erp_salesman_targets_import_template',
   uniqueIdentifierKey: 'employee_code',
   supportsUpsert: true,
   apiEndpoint: '/sales/targets/bulk-import',

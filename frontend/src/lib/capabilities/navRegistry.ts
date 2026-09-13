@@ -329,7 +329,7 @@ export const PLATFORM_NAV_DEFINITIONS: DynamicNavSection[] = [
       },
       {
         id: 'workflows',
-        defaultLabel: 'SliceMart Flow (Automation)',
+        defaultLabel: 'Flow Automation',
         to: '/settings/workflows',
         icon: Zap,
         permission: ['core.setting.view', 'core.setting.manage'],

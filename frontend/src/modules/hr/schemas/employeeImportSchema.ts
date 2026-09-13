@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const employeeImportSchema: ImportSchemaConfig = {
   entityTitle: 'Employees',
-  templateFileName: 'slicemart_employees_import_template',
+  templateFileName: 'erp_employees_import_template',
   uniqueIdentifierKey: 'employee_code',
   supportsUpsert: true,
   apiEndpoint: '/hr/employees/bulk-import',
@@ -45,7 +45,7 @@ export const employeeImportSchema: ImportSchemaConfig = {
       label: 'Email Address',
       required: false,
       type: 'email',
-      sampleValue: 'rahim.uddin@slicemart.com',
+      sampleValue: 'rahim.uddin@company.com',
       aliases: ['email', 'e-mail', 'mail'],
     },
     {

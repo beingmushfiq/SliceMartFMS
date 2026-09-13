@@ -7,6 +7,7 @@ import {
   Scissors,
 } from 'lucide-react';
 import { Button } from '../../../../components/ui/Button';
+import { useTenantBranding } from '../../../../lib/theme/useTenantBranding';
 
 interface ThermalReceiptSimulatorProps {
   receiptHeaderNote?: string;
@@ -17,12 +18,13 @@ interface ThermalReceiptSimulatorProps {
 }
 
 export const ThermalReceiptSimulator: React.FC<ThermalReceiptSimulatorProps> = ({
-  receiptHeaderNote = 'Thank you for shopping with SliceMart!',
+  receiptHeaderNote = 'Thank you for your business!',
   receiptFooterNote = 'Goods once sold can be exchanged within 7 days with original receipt.',
   receiptPrinterTemplate = 'standard_80mm',
   requirePinForDiscount = true,
   requirePinForVoid = true,
 }) => {
+  const { companyName } = useTenantBranding();
   const [paperWidth, setPaperWidth] = useState<'80mm' | '58mm'>(
     receiptPrinterTemplate?.includes('58') ? '58mm' : '80mm'
   );
@@ -87,7 +89,7 @@ export const ThermalReceiptSimulator: React.FC<ThermalReceiptSimulatorProps> = (
 
           {/* Store Header */}
           <div className="text-center space-y-0.5 pt-1">
-            <h5 className="font-bold text-sm uppercase tracking-tight">SLICEMART ERP</h5>
+            <h5 className="font-bold text-sm uppercase tracking-tight">{companyName?.toUpperCase() || 'ENTERPRISE ERP'}</h5>
             <p className="text-2xs text-muted">Branch: Metro Outlet #01</p>
             <p className="text-2xs text-muted">BIN: 002918471-0101</p>
             {receiptHeaderNote && (

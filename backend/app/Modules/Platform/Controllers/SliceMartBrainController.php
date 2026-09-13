@@ -34,7 +34,7 @@ class SliceMartBrainController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'name' => 'SliceMart Brain Agent',
+                'name' => 'Operations AI Brain Agent',
                 'mode' => 'Self-Contained / Local Agentic Execution',
                 'external_apis_used' => false,
                 'tools' => [

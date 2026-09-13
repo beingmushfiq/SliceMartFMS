@@ -111,7 +111,7 @@ class BankAccountController extends Controller
                 'company_id' => $defaultCompanyId,
                 'account_name' => 'Primary Operational Bank',
                 'account_number' => 'OP-DEFAULT-01',
-                'bank_name' => 'SliceMart Treasury Bank',
+                'bank_name' => 'Primary Treasury Bank',
                 'branch_name' => 'Head Office',
                 'chart_of_account_id' => $coa->id,
                 'currency_code' => 'BDT',

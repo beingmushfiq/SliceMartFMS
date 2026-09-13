@@ -2671,7 +2671,7 @@ export function ProductsSection() {
             <input
               required
               type="text"
-              placeholder="e.g. SliceMart Originals, Baker's Choice"
+              placeholder="e.g. Signature Series, Baker's Choice"
               value={quickBrandDraft.name}
               onChange={(e) => setQuickBrandDraft({ ...quickBrandDraft, name: e.target.value })}
               className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-2xs"

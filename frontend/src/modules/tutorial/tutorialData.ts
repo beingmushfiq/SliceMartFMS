@@ -41,7 +41,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     targetRoute: '/dashboard',
     routeLabel: 'Open Executive Cockpit',
     overview:
-      'SliceMart adapts to your role. As a Super Administrator or Manager, you can toggle between 9 specialized operational perspectives (Executive, Production, Inventory, QC, Sales, Finance, HR, Procurement, Logistics) in real time without signing out.',
+      'The ERP platform adapts to your role. As a Super Administrator or Manager, you can toggle between 9 specialized operational perspectives (Executive, Production, Inventory, QC, Sales, Finance, HR, Procurement, Logistics) in real time without signing out.',
     keyTakeaways: [
       'The top role card displays your active identity and real-time live sync pulse.',
       'Clicking any perspective tab instantly swaps metrics, recent items, and priority actions.',
@@ -54,7 +54,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     ],
     interactiveType: 'role_cockpit',
     tips: [
-      'Default test admin login: admin@slicemart.test / Password123!',
+      'Seeded test demo admin login: admin@slicemart.test / Password123!',
       'Press Ctrl+K at any moment to search across the entire ERP.',
     ],
   },
@@ -67,7 +67,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     targetRoute: '/settings',
     routeLabel: 'Open Settings Center',
     overview:
-      'Before processing live transactions, SliceMart requires baseline parameters: legal tax identity, primary raw material and finished goods warehouses, production lines, and accounting currencies.',
+      'Before processing live transactions, the system requires baseline parameters: legal tax identity, primary raw material and finished goods warehouses, production lines, and accounting currencies.',
     keyTakeaways: [
       'Your uploaded company logo automatically appears on invoices, receipts, and challans.',
       'Configure operating branches and factory line capacities.',
@@ -80,7 +80,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     ],
     interactiveType: 'overview',
     tips: [
-      'SliceMart includes 30 settings domains grouped neatly in the Settings Center.',
+      'The platform includes 30 settings domains grouped neatly in the Settings Center.',
       'Mobile view provides a quick grouped selector to jump between settings.',
     ],
   },
@@ -144,7 +144,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     targetRoute: '/inventory',
     routeLabel: 'Open Warehouse Ledger',
     overview:
-      'SliceMart operates on an append-only stock movement ledger. Every single quantity change is backed by an immutable transaction record (Purchase GRN, Sales Delivery, Production Issue, Transfer, or Physical Audit).',
+      'The platform operates on an append-only stock movement ledger. Every single quantity change is backed by an immutable transaction record (Purchase GRN, Sales Delivery, Production Issue, Transfer, or Physical Audit).',
     keyTakeaways: [
       'Stock states: Available (ready to use), Reserved (locked for orders), In-Transit (on transfer), Quarantine (in QC).',
       'Inter-warehouse transfers use dual-stage dispatch and receive confirmation.',
@@ -219,7 +219,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     targetRoute: '/sales',
     routeLabel: 'Open Sales & CRM',
     overview:
-      'From corporate B2B wholesale orders to dealer distribution, SliceMart tracks client leads, generates formal quotations, reserves stock automatically, and prints professional tax invoices with QR codes.',
+      'From corporate B2B wholesale orders to dealer distribution, the system tracks client leads, generates formal quotations, reserves stock automatically, and prints professional tax invoices with QR codes.',
     keyTakeaways: [
       'Confirming a Sales Order immediately marks stock as "Reserved" to prevent overselling.',
       'Generate Invoices with flexible payment terms (Immediate, Net 15, Net 30, Partial).',
@@ -295,7 +295,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     targetRoute: '/finance',
     routeLabel: 'Open Finance & Accounts',
     overview:
-      'SliceMart runs a continuous double-entry accounting engine in the background. Sales, procurement receipts, and inventory dispatches automatically generate balanced debit and credit journal entries.',
+      'A continuous double-entry accounting engine runs in the background. Sales, procurement receipts, and inventory dispatches automatically generate balanced debit and credit journal entries.',
     keyTakeaways: [
       'Automatic COGS and revenue posting removes manual bookkeeping burden.',
       'Record operational expenses (rent, utilities, machine repairs) with receipt attachments.',
@@ -345,7 +345,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     targetRoute: '/storefront',
     routeLabel: 'Open Storefront CMS',
     overview:
-      'SliceMart includes a public-facing e-commerce storefront connected directly to your warehouse stock. Customize banners, flash sales, and carousels with the visual page builder while customers browse and track orders live.',
+      'The platform includes a public-facing e-commerce storefront connected directly to your warehouse stock. Customize banners, flash sales, and carousels with the visual page builder while customers browse and track orders live.',
     keyTakeaways: [
       'Toggle "Show in Storefront" on any product to publish it online with rich photos and badges.',
       'Visual Page Builder allows drag-and-drop customization of homepage hero sections and banners.',

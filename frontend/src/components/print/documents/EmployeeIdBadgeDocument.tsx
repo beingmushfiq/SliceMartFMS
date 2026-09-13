@@ -184,7 +184,7 @@ function SingleEmployeeBadge({
                 <span className="font-serif italic text-[7pt] text-slate-800 font-bold">HR Dept.</span>
               </div>
               <div className="text-[5pt] text-center text-slate-500">
-                Security Desk Hotline: +880 1700-000000 • hr@slicemart.local
+                Security Desk Hotline: +880 1700-000000 • hr@company.local
               </div>
             </div>
           </div>

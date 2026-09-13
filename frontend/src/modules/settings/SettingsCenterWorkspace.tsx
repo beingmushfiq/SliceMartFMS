@@ -130,7 +130,7 @@ const GROUP_LABELS: Record<string, string> = {
   audit_logs: 'Security Audit Trail',
   profile: 'Workstation & Profile',
   seo: 'SEO & Discoverability',
-  workflows: 'SliceMart Flow (Automation)',
+  workflows: 'Flow Automation',
   custom_domains: 'Custom Domains & SSL',
   modules: 'ERP Modules & Navigation Order',
   terminology: 'Vocabulary & Terminology',
@@ -925,7 +925,7 @@ export const SettingsCenterWorkspace: React.FC = () => {
                   <SeoDiscoverabilityWorkspace onBackToHub={() => setActiveGroup('overview')} />
                 </div>
               ) : activeGroup === 'workflows' ? (
-                /* SliceMart Flow Workflow Automation Hub Embedded */
+                /* Flow Workflow Automation Hub Embedded */
                 <div className="space-y-6">
                   <WorkflowAutomationWorkspace />
                 </div>
@@ -1547,7 +1547,7 @@ export const SettingsCenterWorkspace: React.FC = () => {
           <FormGroup label="Domain Name" required>
             <Input
               type="text"
-              placeholder="e.g. store.slicemart.com"
+              placeholder="e.g. store.yourcompany.com"
               value={newDomainInput}
               onChange={(e) => setNewDomainInput(e.target.value)}
               required

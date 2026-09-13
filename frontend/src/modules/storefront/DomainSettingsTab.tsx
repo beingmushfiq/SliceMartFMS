@@ -255,7 +255,7 @@ export const DomainSettingsTab: React.FC = () => {
             </h2>
             <p className="text-slate-300 text-sm max-w-2xl">
               Connect your branded custom domain (e.g.{' '}
-              <span className="text-indigo-300 font-mono font-medium">slicemart.tech</span>) or use your default platform
+              <span className="text-indigo-300 font-mono font-medium">yourbrand.com</span>) or use your default platform
               subdomain. All domains feature automated edge SSL certificate provisioning and global Anycast routing.
             </p>
           </div>
@@ -695,7 +695,7 @@ export const DomainSettingsTab: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. slicemart.tech or shop.slicemart.com"
+                  placeholder="e.g. yourbrand.com or shop.yourbrand.com"
                   value={newDomain}
                   onChange={(e) => setNewDomain(e.target.value)}
                   className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono outline-hidden"
@@ -703,7 +703,7 @@ export const DomainSettingsTab: React.FC = () => {
                 />
                 <p className="text-xs text-slate-500 mt-1.5">
                   Enter your domain without http:// or https:// (e.g.{' '}
-                  <span className="font-mono text-slate-700">slicemart.tech</span>)
+                  <span className="font-mono text-slate-700">yourbrand.com</span>)
                 </p>
               </div>
 
@@ -837,7 +837,7 @@ export const DomainSettingsTab: React.FC = () => {
                     </span>
                   </div>
                   <div className="text-slate-500 font-mono text-[11px] truncate bg-white p-2 rounded border border-slate-200">
-                    Points To: {activeDiagnostics?.expected_cname?.target || diagnosticsDomain?.dns_records_expected?.cname_record?.value || 'slicemart.tech'}
+                    Points To: {activeDiagnostics?.expected_cname?.target || diagnosticsDomain?.dns_records_expected?.cname_record?.value || 'cname.platform.net'}
                   </div>
                 </div>
 

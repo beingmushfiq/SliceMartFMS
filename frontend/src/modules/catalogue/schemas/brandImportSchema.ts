@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const brandImportSchema: ImportSchemaConfig = {
   entityTitle: 'Brands',
-  templateFileName: 'slicemart_brands_import_template',
+  templateFileName: 'erp_brands_import_template',
   uniqueIdentifierKey: 'code',
   supportsUpsert: true,
   apiEndpoint: '/brands/bulk-import',

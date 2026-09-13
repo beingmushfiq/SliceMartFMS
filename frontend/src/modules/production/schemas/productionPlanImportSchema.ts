@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const productionPlanImportSchema: ImportSchemaConfig = {
   entityTitle: 'Production Plans & Schedules',
-  templateFileName: 'slicemart_production_plans_import_template',
+  templateFileName: 'erp_production_plans_import_template',
   uniqueIdentifierKey: 'plan_number',
   supportsUpsert: true,
   apiEndpoint: '/production/plans/bulk-import',

@@ -368,7 +368,7 @@ export const HrWorkspace: React.FC = () => {
       last_name: 'Karim',
       display_name: 'Abdul Karim',
       phone: '+8801711223344',
-      email: 'karim.worker@slicemart.com',
+      email: 'karim.worker@company.local',
       company_id: 1,
       department_id: 1,
       department: departments[0],
@@ -410,7 +410,7 @@ export const HrWorkspace: React.FC = () => {
       last_name: 'Akter',
       display_name: 'Farhana Akter',
       phone: '+8801733445566',
-      email: 'farhana.admin@slicemart.com',
+      email: 'farhana.admin@company.local',
       company_id: 1,
       department_id: 3,
       department: departments[2],
@@ -4774,7 +4774,7 @@ export const HrWorkspace: React.FC = () => {
               </div>
               <div>
                 <span className="text-2xs uppercase text-muted font-semibold block">Company Registry</span>
-                <span className="text-default font-semibold">SliceMart Factory Operations</span>
+                <span className="text-default font-semibold">Factory Operations</span>
               </div>
             </div>
 

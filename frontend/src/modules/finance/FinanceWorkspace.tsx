@@ -616,7 +616,7 @@ export const FinanceWorkspace: React.FC = () => {
       id: 1,
       uuid: 'ba-01',
       company_id: 1,
-      account_name: 'SliceMart Principal Operating',
+      account_name: 'Principal Operating Account',
       account_number: '1501204892001',
       bank_name: 'BRAC Bank PLC',
       branch_name: 'Gulshan Branch',
@@ -631,7 +631,7 @@ export const FinanceWorkspace: React.FC = () => {
       id: 2,
       uuid: 'ba-02',
       company_id: 1,
-      account_name: 'SliceMart Factory Payroll',
+      account_name: 'Factory Payroll Account',
       account_number: '2050189340002',
       bank_name: 'Islami Bank Bangladesh PLC',
       branch_name: 'Tejgaon Industrial Area',
@@ -3031,7 +3031,7 @@ export const FinanceWorkspace: React.FC = () => {
               Double-Entry Financial Integrity & Cost Governance
             </h4>
             <p className="text-xs text-muted leading-relaxed">
-              SliceMart Finance provides continuous double-entry ledger balancing, audit-trailed journals,
+              The Finance engine provides continuous double-entry ledger balancing, audit-trailed journals,
               hierarchical COA management, real-time trial balance and automated P&L statements, customer aging
               collection analysis, and multi-component production cost rollups.
             </p>

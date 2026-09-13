@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const historicalInvoiceImportSchema: ImportSchemaConfig = {
   entityTitle: 'Historical Opening Invoices & AR Balances',
-  templateFileName: 'slicemart_historical_invoices_import_template',
+  templateFileName: 'erp_historical_invoices_import_template',
   uniqueIdentifierKey: 'invoice_number',
   supportsUpsert: true,
   apiEndpoint: '/sales/invoices/bulk-import',

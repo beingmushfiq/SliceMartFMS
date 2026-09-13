@@ -15,8 +15,8 @@ export const SerpPreviewCard: React.FC<SerpPreviewCardProps> = ({
   title,
   description,
   urlPath,
-  domain = 'slicemart.tech',
-  brandName = 'Slice Mart',
+  domain = 'yourbrand.com',
+  brandName = 'Enterprise',
   imageUrl,
 }) => {
   const [deviceMode, setDeviceMode] = useState<'desktop' | 'mobile'>('desktop');

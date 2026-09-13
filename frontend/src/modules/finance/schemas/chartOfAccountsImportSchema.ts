@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const chartOfAccountsImportSchema: ImportSchemaConfig = {
   entityTitle: 'Chart of Accounts',
-  templateFileName: 'slicemart_chart_of_accounts_import_template',
+  templateFileName: 'erp_chart_of_accounts_import_template',
   uniqueIdentifierKey: 'account_code',
   supportsUpsert: true,
   apiEndpoint: '/finance/accounts/bulk-import',

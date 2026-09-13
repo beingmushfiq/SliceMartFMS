@@ -369,7 +369,7 @@ class AuthController extends Controller
         $tenant = \App\Models\Tenant::where('status', 'active')->first();
         $logoUrl = null;
         $faviconUrl = null;
-        $companyName = 'SliceMart ERP';
+        $companyName = 'Enterprise Cloud ERP';
 
         if ($tenant) {
             $logoSetting = \App\Models\Setting::withoutTenantScope()

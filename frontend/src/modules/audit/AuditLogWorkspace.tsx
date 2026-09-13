@@ -11,7 +11,7 @@ const MOCK_AUDIT_LOGS: AuditLogItem[] = [
     user: {
       id: 1,
       name: 'Tanvir Hossain (Admin)',
-      email: 'tanvir@slicemart.com',
+      email: 'tanvir@company.com',
     },
     action: 'updated',
     auditable_type: 'Product',
@@ -42,7 +42,7 @@ const MOCK_AUDIT_LOGS: AuditLogItem[] = [
     user: {
       id: 2,
       name: 'Rahim Uddin (Accountant)',
-      email: 'rahim@slicemart.com',
+      email: 'rahim@company.com',
     },
     action: 'posted',
     auditable_type: 'JournalEntry',
@@ -74,7 +74,7 @@ const MOCK_AUDIT_LOGS: AuditLogItem[] = [
     user: {
       id: 1,
       name: 'Tanvir Hossain (Admin)',
-      email: 'tanvir@slicemart.com',
+      email: 'tanvir@company.com',
     },
     action: 'created',
     auditable_type: 'ProductionBatch',

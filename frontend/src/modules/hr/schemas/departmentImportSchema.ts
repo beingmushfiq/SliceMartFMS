@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const departmentImportSchema: ImportSchemaConfig = {
   entityTitle: 'Departments',
-  templateFileName: 'slicemart_departments_import_template',
+  templateFileName: 'erp_departments_import_template',
   uniqueIdentifierKey: 'name',
   supportsUpsert: true,
   apiEndpoint: '/hr/departments/bulk-import',

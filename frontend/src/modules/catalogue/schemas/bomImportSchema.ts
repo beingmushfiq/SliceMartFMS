@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const bomImportSchema: ImportSchemaConfig = {
   entityTitle: 'Bills of Materials (Recipes)',
-  templateFileName: 'slicemart_bom_import_template',
+  templateFileName: 'erp_bom_import_template',
   uniqueIdentifierKey: 'finished_sku',
   supportsUpsert: true,
   apiEndpoint: '/bill-of-materials/bulk-import',

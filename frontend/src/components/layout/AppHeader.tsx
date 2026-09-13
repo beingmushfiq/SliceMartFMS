@@ -697,12 +697,12 @@ export function AppHeader({
           )}
         </div>
 
-        {/* SliceMart Brain Local Agentic AI */}
+        {/* Local Agentic Operations AI Brain */}
         <button
           type="button"
           onClick={() => setIsBrainOpen(true)}
           className="flex items-center gap-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/25 px-2.5 py-1 text-xs font-bold transition-all cursor-pointer shadow-2xs group"
-          title="SliceMart Brain — 100% Local Agentic AI (Ctrl+Space)"
+          title="Operations AI Brain — 100% Local Agentic AI (Ctrl+Space)"
         >
           <Brain className="size-3.5 group-hover:scale-110 transition-transform" />
           <span className="hidden sm:inline">Brain</span>
@@ -750,8 +750,8 @@ export function AppHeader({
           {isUserMenuOpen && (
             <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-default bg-surface-raised p-1.5 shadow-2xl z-50 animate-fade-in">
               <div className="border-b border-default px-3 py-2.5">
-                <p className="text-xs font-bold text-default">{user?.name ?? 'Mushfiqur Rahman'}</p>
-                <p className="text-[11px] text-muted truncate">{user?.email ?? 'factory.manager@slicemart.com'}</p>
+                <p className="text-xs font-bold text-default">{user?.name ?? 'Operations User'}</p>
+                <p className="text-[11px] text-muted truncate">{user?.email ?? 'operations@company.com'}</p>
                 <div className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-[9px] font-semibold text-blue-600 dark:text-blue-400 border border-blue-500/20">
                   <Zap className="size-2.5" />
                   <span>Factory Operator</span>

@@ -121,7 +121,7 @@ export const BadgePunchTerminalModal: React.FC<BadgePunchTerminalModalProps> = (
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               Terminal Kiosk #01 • Plant Floor Gate
             </span>
-            <h2 className="text-xl font-bold tracking-tight">SliceMart Workforce Clock</h2>
+            <h2 className="text-xl font-bold tracking-tight">Workforce Time Clock</h2>
             <p className="text-xs text-slate-400">
               {currentTime.toLocaleDateString(undefined, {
                 weekday: 'long',

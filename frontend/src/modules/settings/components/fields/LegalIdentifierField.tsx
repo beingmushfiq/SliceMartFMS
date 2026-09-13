@@ -32,7 +32,7 @@ const FIELD_CONFIG: Record<
   company_legal_name: {
     icon: Building2,
     authorityTag: 'Primary Legal Entity',
-    placeholder: 'e.g. SliceMart Industries Ltd.',
+    placeholder: 'e.g. Acme Industries Ltd.',
     contextHint: 'Official name printed on commercial invoices, delivery challans, and statutory tax filings.',
   },
   trade_license_no: {

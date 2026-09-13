@@ -139,11 +139,17 @@ export function RiderRunSheetChallanDocument({
         <div className="max-w-[55%]">
           <div className="flex items-center gap-2 mb-1">
             <div className="size-8 rounded bg-slate-900 text-white font-black text-xs flex items-center justify-center tracking-wider">
-              SM
+              {(businessConfig.name || 'Enterprise')
+                .split(' ')
+                .map((w) => w[0])
+                .filter(Boolean)
+                .slice(0, 2)
+                .join('')
+                .toUpperCase() || 'EP'}
             </div>
             <div>
               <h1 className="text-sm font-black text-slate-950 uppercase tracking-tight">
-                {businessConfig.name || 'SliceMart'}
+                {businessConfig.name || 'Enterprise'}
               </h1>
               <p className="text-[7pt] font-bold text-slate-600 tracking-wider uppercase">
                 Fleet Logistics & Dispatch Division • রাইডার ডেলিভারি চালান
@@ -154,7 +160,7 @@ export function RiderRunSheetChallanDocument({
             <p>{businessConfig.address || 'Industrial Processing Zone, Tejgaon I/A, Dhaka'}</p>
             <p>
               <span className="font-semibold text-slate-800">Hotline:</span>{' '}
-              {businessConfig.phone || '+880 9612-888999'} • <span className="font-semibold text-slate-800">Dispatch:</span> dispatch@slicemart.com
+              {businessConfig.phone || '+880 9612-888999'} • <span className="font-semibold text-slate-800">Dispatch:</span> dispatch@company.com
             </p>
           </div>
         </div>

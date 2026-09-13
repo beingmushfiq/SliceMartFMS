@@ -197,7 +197,7 @@ export const WorkflowAutomationWorkspace: React.FC = () => {
           <div>
             <div className="flex items-center gap-2 mb-1.5">
               <span className="px-2 py-0.5 rounded-full text-3xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 flex items-center gap-1">
-                <Zap className="size-3" /> SliceMart Flow Engine
+                <Zap className="size-3" /> Operations Flow Engine
               </span>
               <span className="text-3xs text-muted font-medium">BPMN 2.0 Event Automation</span>
             </div>

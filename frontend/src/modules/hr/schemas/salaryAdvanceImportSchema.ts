@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const salaryAdvanceImportSchema: ImportSchemaConfig = {
   entityTitle: 'Salary Advances & Loans',
-  templateFileName: 'slicemart_salary_advances_import_template',
+  templateFileName: 'erp_salary_advances_import_template',
   uniqueIdentifierKey: 'advance_number',
   supportsUpsert: true,
   apiEndpoint: '/hr/payroll/advances/bulk-import',

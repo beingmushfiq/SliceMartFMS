@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const shiftImportSchema: ImportSchemaConfig = {
   entityTitle: 'Work Shifts & Timings',
-  templateFileName: 'slicemart_shifts_import_template',
+  templateFileName: 'erp_shifts_import_template',
   uniqueIdentifierKey: 'name',
   supportsUpsert: true,
   apiEndpoint: '/hr/shifts/bulk-import',

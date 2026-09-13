@@ -213,7 +213,7 @@ export default function LoginPage() {
                 id="email"
                 type="email"
                 autoComplete="email"
-                placeholder="name@slicemart.test"
+                placeholder="name@company.com"
                 {...register('email')}
                 className={`block w-full rounded-xl border bg-surface-sunken py-2.5 pr-3.5 pl-10 text-xs text-default placeholder:text-muted transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 ${
                   errors.email

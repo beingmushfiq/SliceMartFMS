@@ -485,7 +485,7 @@ export default function ProductionWorkspace() {
       >
         <div className="space-y-4 text-xs text-default py-1">
           <p className="text-muted leading-relaxed">
-            SliceMart ERP manufacturing engine seamlessly bridges high-level BOM schedules with real-time shop floor execution, raw material consumption tracking, finished goods receipt, and piece-rate worker payroll.
+            The manufacturing operations engine seamlessly bridges high-level BOM schedules with real-time shop floor execution, raw material consumption tracking, finished goods receipt, and piece-rate worker payroll.
           </p>
 
           <div className="space-y-3 pt-2">

@@ -351,7 +351,8 @@ export const ReportsWorkspace: React.FC = () => {
 
     setExportStatus(`Generating ${exportFormat.toUpperCase()} export file...`);
 
-    const filenameBase = `SliceMart_${activeDef.code || 'report'}_${new Date().toISOString().split('T')[0]}`;
+    const brandPrefix = businessConfig?.name?.replace(/[^a-zA-Z0-9]/g, '_') || 'ERP';
+    const filenameBase = `${brandPrefix}_${activeDef.code || 'report'}_${new Date().toISOString().split('T')[0]}`;
 
     // Direct spreadsheet generation helper via SheetJS (for instant and fallback downloads)
     const exportClientSpreadsheet = (fmt: 'xlsx' | 'csv' | 'json') => {

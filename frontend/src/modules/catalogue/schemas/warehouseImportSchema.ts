@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const warehouseImportSchema: ImportSchemaConfig = {
   entityTitle: 'Warehouses & Bins',
-  templateFileName: 'slicemart_warehouses_import_template',
+  templateFileName: 'erp_warehouses_import_template',
   uniqueIdentifierKey: 'code',
   supportsUpsert: true,
   apiEndpoint: '/warehouses/bulk-import',

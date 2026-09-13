@@ -31,13 +31,13 @@ export const SeoHead: React.FC<SeoMetaProps> = ({
   twitterCard = 'summary_large_image',
   twitterHandle,
   schema,
-  brandName = 'Slice Mart',
+  brandName = 'Enterprise',
   lang = 'en',
   alternateLocales = [],
 }) => {
   useEffect(() => {
     // 1. Format document title
-    const activeBrand = brandName || 'Slice Mart';
+    const activeBrand = brandName || 'Enterprise';
     const finalTitle = title
       ? titleTemplate
         ? titleTemplate.replace('{title}', title).replace('{brand}', activeBrand)
@@ -123,14 +123,14 @@ export const SeoHead: React.FC<SeoMetaProps> = ({
     document.documentElement.lang = lang;
 
     // 9. JSON-LD Structured Data Injection
-    const existingSchemaScript = document.getElementById('slicemart-jsonld-schema');
+    const existingSchemaScript = document.getElementById('erp-jsonld-schema');
     if (existingSchemaScript) {
       existingSchemaScript.remove();
     }
 
     if (schema) {
       const script = document.createElement('script');
-      script.id = 'slicemart-jsonld-schema';
+      script.id = 'erp-jsonld-schema';
       script.type = 'application/ld+json';
       script.textContent = JSON.stringify(schema, null, 2);
       document.head.appendChild(script);

@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const partyImportSchema: ImportSchemaConfig = {
   entityTitle: 'Parties (Customers & Suppliers)',
-  templateFileName: 'slicemart_parties_import_template',
+  templateFileName: 'erp_parties_import_template',
   uniqueIdentifierKey: 'code',
   supportsUpsert: true,
   apiEndpoint: '/parties/bulk-import',

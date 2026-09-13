@@ -15,6 +15,23 @@ interface CustomerState {
   logout: () => void;
 }
 
+const STORAGE_KEY = 'erp_storefront_customer';
+const LEGACY_STORAGE_KEY = 'slicemart_storefront_customer';
+
+// Migrate legacy storefront customer if exists and new key doesn't
+if (typeof window !== 'undefined') {
+  try {
+    const current = localStorage.getItem(STORAGE_KEY);
+    const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (!current && legacy) {
+      localStorage.setItem(STORAGE_KEY, legacy);
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+    }
+  } catch {
+    // Ignore storage access errors
+  }
+}
+
 export const useStorefrontCustomerStore = create<CustomerState>()(
   persist(
     (set) => ({
@@ -24,7 +41,7 @@ export const useStorefrontCustomerStore = create<CustomerState>()(
       logout: () => set({ token: null, customer: null }),
     }),
     {
-      name: 'slicemart_storefront_customer',
+      name: STORAGE_KEY,
     }
   )
 );

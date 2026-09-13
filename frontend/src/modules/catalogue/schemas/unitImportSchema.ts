@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const unitImportSchema: ImportSchemaConfig = {
   entityTitle: 'Units of Measure',
-  templateFileName: 'slicemart_units_import_template',
+  templateFileName: 'erp_units_import_template',
   uniqueIdentifierKey: 'code',
   supportsUpsert: true,
   apiEndpoint: '/units/bulk-import',

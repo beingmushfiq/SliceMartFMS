@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const attendanceImportSchema: ImportSchemaConfig = {
   entityTitle: 'Biometric & Shift Attendance Logs',
-  templateFileName: 'slicemart_attendance_import_template',
+  templateFileName: 'erp_attendance_import_template',
   uniqueIdentifierKey: 'employee_code',
   supportsUpsert: true,
   apiEndpoint: '/hr/attendances/bulk-import',

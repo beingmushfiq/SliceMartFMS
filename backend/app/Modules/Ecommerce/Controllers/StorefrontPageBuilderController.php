@@ -65,12 +65,16 @@ final class StorefrontPageBuilderController extends Controller
      */
     public function seedDefaultPages(int $tenantId, int $storefrontId): void
     {
+        $storefront = Storefront::find($storefrontId);
+        $brandName = $storefront?->store_name ?? 'Factory Direct Store';
+        $storeSlug = $storefront?->subdomain ?? 'store';
+
         $defaultPages = [
             [
                 'title' => 'Storefront Homepage',
                 'slug' => 'home',
                 'page_type' => 'home',
-                'meta_title' => 'Next-Gen Infrared Cookers & Premium Stoves — SliceMart Direct',
+                'meta_title' => "Next-Gen Infrared Cookers & Premium Stoves — {$brandName}",
                 'meta_description' => 'Direct-from-factory kitchen appliances, infrared cookers, and double-burner stoves with 1-year official warranty.',
                 'status' => 'published',
                 'sort_order' => 0,
@@ -110,7 +114,7 @@ final class StorefrontPageBuilderController extends Controller
                     [
                         'id' => 'b_journey',
                         'type' => 'quality_journey',
-                        'title' => 'The SliceMart Quality Journey',
+                        'title' => "The {$brandName} Quality Journey",
                         'subtitle' => 'How we ensure every batch meets stringent safety and thermal efficiency standards.',
                         'steps' => [
                             ['step' => '01 / SOURCING', 'title' => 'Components & Glass', 'desc' => 'A-grade ceramic panels, pure copper coils, and flame-retardant chassis.'],
@@ -143,7 +147,7 @@ final class StorefrontPageBuilderController extends Controller
                     [
                         'id' => 'b_vip',
                         'type' => 'newsletter_vip',
-                        'title' => 'Join the SliceMart VIP Club',
+                        'title' => "Join the {$brandName} VIP Club",
                         'subtitle' => 'Get instant alerts when new products launch, plus exclusive perks and promotions.',
                         'button_text' => 'Subscribe',
                     ],
@@ -154,7 +158,7 @@ final class StorefrontPageBuilderController extends Controller
                 'slug' => 'about-us',
                 'page_type' => 'content',
                 'meta_title' => 'About Our Manufacturing Heritage & Precision Engineering',
-                'meta_description' => 'SliceMart manufactures energy-efficient infrared cookers and heavy-duty gas stoves with industrial-grade microcrystalline glass technology.',
+                'meta_description' => "{$brandName} manufactures energy-efficient infrared cookers and heavy-duty gas stoves with industrial-grade microcrystalline glass technology.",
                 'status' => 'published',
                 'sort_order' => 1,
                 'blocks' => [
@@ -164,18 +168,18 @@ final class StorefrontPageBuilderController extends Controller
                         'title' => 'Precision Engineering & Thermal Innovation',
                         'subtitle' => 'High-efficiency infrared cookers, induction surfaces, and precision gas stoves direct from our ISO-certified factory.',
                         'cta_text' => 'Explore Product Catalog',
-                        'cta_url' => '/store/slicemart',
+                        'cta_url' => "/store/{$storeSlug}",
                     ],
                     [
                         'id' => 'b2',
                         'type' => 'rich_text',
                         'title' => 'Our Manufacturing Heritage',
-                        'content' => 'Founded with a dedication to energy efficiency and culinary reliability, SliceMart produces appliances with A-grade microcrystalline ceramic glass, precision thermocouples, and pure copper heating cores. Every unit undergoes rigorous 5-stage quality assurance before leaving our assembly floor.',
+                        'content' => "Founded with a dedication to energy efficiency and culinary reliability, {$brandName} produces appliances with A-grade microcrystalline ceramic glass, precision thermocouples, and pure copper heating cores. Every unit undergoes rigorous 5-stage quality assurance before leaving our assembly floor.",
                     ],
                     [
                         'id' => 'b3',
                         'type' => 'features',
-                        'title' => 'Why Choose SliceMart Appliances',
+                        'title' => "Why Choose {$brandName} Appliances",
                         'subtitle' => 'Quality and safety standards built into every single unit.',
                     ],
                 ],
@@ -185,7 +189,7 @@ final class StorefrontPageBuilderController extends Controller
                 'slug' => 'faq',
                 'page_type' => 'faq',
                 'meta_title' => 'Frequently Asked Questions & Support',
-                'meta_description' => 'Find answers to common questions regarding SliceMart infrared cookers, gas stoves, warranty, delivery, and spare parts.',
+                'meta_description' => "Find answers to common questions regarding {$brandName} infrared cookers, gas stoves, warranty, delivery, and spare parts.",
                 'status' => 'published',
                 'sort_order' => 2,
                 'blocks' => [
@@ -196,12 +200,12 @@ final class StorefrontPageBuilderController extends Controller
                         'subtitle' => 'Everything you need to know about our products, orders, and warranty coverage.',
                         'faqs' => [
                             [
-                                'q' => 'What cookware is compatible with SliceMart Infrared Cookers?',
-                                'a' => 'All flat-bottom cookware works seamlessly on SliceMart infrared cookers, including stainless steel, cast iron, ceramic, tempered glass, and aluminum. Unlike induction, no magnetic base is required.',
+                                'q' => "What cookware is compatible with {$brandName} Infrared Cookers?",
+                                'a' => "All flat-bottom cookware works seamlessly on {$brandName} infrared cookers, including stainless steel, cast iron, ceramic, tempered glass, and aluminum. Unlike induction, no magnetic base is required.",
                             ],
                             [
                                 'q' => 'What warranty is provided with appliances?',
-                                'a' => 'All SliceMart infrared cookers and gas stoves include a 1-year comprehensive replacement and service warranty backed by nationwide authorized service centers.',
+                                'a' => "All {$brandName} infrared cookers and gas stoves include a 1-year comprehensive replacement and service warranty backed by nationwide authorized service centers.",
                             ],
                             [
                                 'q' => 'How long does nationwide delivery take?',
@@ -227,7 +231,7 @@ final class StorefrontPageBuilderController extends Controller
                     [
                         'id' => 'b1',
                         'type' => 'rich_text',
-                        'title' => 'SliceMart 7-Day Replacement Guarantee',
+                        'title' => "{$brandName} 7-Day Replacement Guarantee",
                         'content' => 'If your product arrives damaged, defective, or does not match specifications, contact our customer support within 7 days of delivery for an immediate free doorstep replacement.',
                     ],
                     [

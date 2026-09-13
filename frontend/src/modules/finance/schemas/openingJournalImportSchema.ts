@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const openingJournalImportSchema: ImportSchemaConfig = {
   entityTitle: 'Opening Journal Entries',
-  templateFileName: 'slicemart_opening_journal_import_template',
+  templateFileName: 'erp_opening_journal_import_template',
   uniqueIdentifierKey: 'entry_number',
   supportsUpsert: true,
   apiEndpoint: '/finance/journal-entries/bulk-import',

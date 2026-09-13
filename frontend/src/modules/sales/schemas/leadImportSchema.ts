@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const leadImportSchema: ImportSchemaConfig = {
   entityTitle: 'CRM Leads & Prospects',
-  templateFileName: 'slicemart_crm_leads_import_template',
+  templateFileName: 'erp_crm_leads_import_template',
   uniqueIdentifierKey: 'lead_number',
   supportsUpsert: true,
   apiEndpoint: '/sales/leads/bulk-import',

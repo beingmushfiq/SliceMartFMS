@@ -286,7 +286,7 @@ export function BrandsSection() {
             <input
               required
               type="text"
-              placeholder="e.g. SLICEMART, ARTISAN"
+              placeholder="e.g. APEX, ARTISAN"
               value={draft.code}
               onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase() })}
               className="w-full rounded-xl border border-default bg-surface px-3 py-2 text-xs text-default focus:border-primary focus:outline-none uppercase"
@@ -298,7 +298,7 @@ export function BrandsSection() {
             <input
               required
               type="text"
-              placeholder="e.g. SliceMart Classic, Artisan Crust"
+              placeholder="e.g. Apex Classic, Artisan Reserve"
               value={draft.name}
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
               className="w-full rounded-xl border border-default bg-surface px-3 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"

@@ -5,6 +5,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { Button } from '../../../../components/ui/Button';
+import { useTenantBranding } from '../../../../lib/theme/useTenantBranding';
 
 interface DocumentReportSimulatorProps {
   defaultExportFormat?: string;
@@ -21,6 +22,7 @@ export const DocumentReportSimulator: React.FC<DocumentReportSimulatorProps> = (
   printCompanyHeader = true,
   includeTimestampFooter = true,
 }) => {
+  const { companyName } = useTenantBranding();
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>(
     defaultReportOrientation === 'landscape' ? 'landscape' : 'portrait'
   );
@@ -82,7 +84,7 @@ export const DocumentReportSimulator: React.FC<DocumentReportSimulatorProps> = (
             <div className="border-b-2 border-primary/30 pb-2.5 flex items-center justify-between">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-default block">
-                  SLICEMART ENTERPRISE FMS
+                  {companyName?.toUpperCase() || 'ENTERPRISE OPERATIONS ERP'}
                 </span>
                 <span className="text-2xs text-muted block">
                   Audited Operational &amp; Financial Statement

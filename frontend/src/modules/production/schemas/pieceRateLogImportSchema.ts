@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const pieceRateLogImportSchema: ImportSchemaConfig = {
   entityTitle: 'Worker Piece-Rate Floor Logs',
-  templateFileName: 'slicemart_piece_rate_logs_import_template',
+  templateFileName: 'erp_piece_rate_logs_import_template',
   uniqueIdentifierKey: 'employee_code',
   supportsUpsert: true,
   apiEndpoint: '/production/worker-entries/bulk-import',

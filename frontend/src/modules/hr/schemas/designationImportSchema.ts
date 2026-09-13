@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const designationImportSchema: ImportSchemaConfig = {
   entityTitle: 'Designations & Job Titles',
-  templateFileName: 'slicemart_designations_import_template',
+  templateFileName: 'erp_designations_import_template',
   uniqueIdentifierKey: 'name',
   supportsUpsert: true,
   apiEndpoint: '/hr/designations/bulk-import',

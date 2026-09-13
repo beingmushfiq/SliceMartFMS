@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const couponImportSchema: ImportSchemaConfig = {
   entityTitle: 'Storefront Discount Coupons & Promo Codes',
-  templateFileName: 'slicemart_coupons_import_template',
+  templateFileName: 'erp_coupons_import_template',
   uniqueIdentifierKey: 'code',
   supportsUpsert: true,
   apiEndpoint: '/storefront/coupons/bulk-import',

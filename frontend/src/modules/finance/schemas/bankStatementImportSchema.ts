@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const bankStatementImportSchema: ImportSchemaConfig = {
   entityTitle: 'Bank Statement Feeds',
-  templateFileName: 'slicemart_bank_statement_import_template',
+  templateFileName: 'erp_bank_statement_import_template',
   uniqueIdentifierKey: 'reference_number',
   supportsUpsert: true,
   apiEndpoint: '/finance/bank-transactions/bulk-import',

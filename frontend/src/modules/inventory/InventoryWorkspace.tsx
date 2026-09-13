@@ -603,7 +603,7 @@ export default function InventoryWorkspace() {
               Unified Multi-Facility Warehouse Management
             </h4>
             <p className="text-xs text-muted leading-relaxed">
-              SliceMart Inventory provides double-entry physical stock integrity, append-only lot traceability,
+              The Inventory engine provides double-entry physical stock integrity, append-only lot traceability,
               two-step inter-warehouse transit logistics, and strict scrap and discrepancy reconciliation.
             </p>
           </div>

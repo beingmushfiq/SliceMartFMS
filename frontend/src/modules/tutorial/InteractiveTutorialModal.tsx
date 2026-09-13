@@ -71,7 +71,7 @@ export const InteractiveTutorialModal: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-bold text-default">
-                  SliceMart Interactive System Guide & Tour
+                  Interactive System Guide & Tour
                 </h2>
                 <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold font-mono text-primary">
                   {completedSteps.length} / {TUTORIAL_STEPS.length} Completed ({progressPercent}%)

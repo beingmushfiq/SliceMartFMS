@@ -116,7 +116,7 @@ describe('HrWorkspace Component & Action Controls', () => {
 
     fireEvent.click(kioskButtons[0]!);
     expect(screen.getByText(/Biometric & NFC Attendance Punch Terminal/i)).toBeInTheDocument();
-    expect(screen.getByText(/SliceMart Workforce Clock/i)).toBeInTheDocument();
+    expect(screen.getByText(/Workforce Time Clock/i)).toBeInTheDocument();
   });
 
   it('renders Compensation & Salary Structures tab with interactive calculation', () => {

@@ -31,6 +31,8 @@ import {
   Briefcase,
   ArrowLeftRight,
 } from 'lucide-react';
+import { useTenantBranding } from '../../lib/theme/useTenantBranding';
+import { useAuthStore } from '../../lib/auth/authStore';
 import { api } from '../../lib/api/client';
 import { Button } from '../ui/Button';
 import { notify } from '../ui/Toast';
@@ -465,11 +467,15 @@ function UniversalActionExecutionCard({
 
 export const SliceMartBrainModal: React.FC<SliceMartBrainModalProps> = ({ open, onClose }) => {
   const navigate = useNavigate();
+  const { companyName } = useTenantBranding();
+  const tenant = useAuthStore((s) => s.tenant);
+  const brandName = companyName || tenant?.name || 'Enterprise';
+
   const [messages, setMessages] = useState<BrainMessage[]>([
     {
       id: 'init-msg',
       sender: 'agent',
-      text: "Hello! I am **SliceMart Brain**, your self-contained operational ERP assistant.\n\nI run 100% locally with **zero external cloud APIs**. You can ask me live questions, or **add any entity into the system directly** through this chat:\n• **Products & Stock**\n• **Customers & Suppliers**\n• **Staff & Payroll**\n• **Warehouses & Storage**\n• **Operating Expenses**\n• **Manufacturing Batches**\n• **CRM Sales Leads**",
+      text: `Hello! I am your **Operations AI Brain**, the self-contained ERP assistant for ${brandName}.\n\nI run 100% locally with **zero external cloud APIs**. You can ask me live questions, or **add any entity into the system directly** through this chat:\n• **Products & Stock**\n• **Customers & Suppliers**\n• **Staff & Payroll**\n• **Warehouses & Storage**\n• **Operating Expenses**\n• **Manufacturing Batches**\n• **CRM Sales Leads**`,
       metrics: [
         ['System Mode', '100% Local', 'success'] as const,
         ['Addable Entities', '11 Types', 'primary'] as const,
@@ -687,7 +693,7 @@ export const SliceMartBrainModal: React.FC<SliceMartBrainModalProps> = ({ open, 
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="SliceMart Brain AI Assistant"
+        aria-label={`${brandName} AI Operations Brain`}
         className="relative w-full max-w-3xl h-[90vh] max-h-195 bg-surface rounded-2xl border border-default shadow-2xl flex flex-col min-h-0 overflow-hidden animate-in zoom-in-95 duration-150"
       >
         {/* Top Accent Gradient */}
@@ -701,7 +707,7 @@ export const SliceMartBrainModal: React.FC<SliceMartBrainModalProps> = ({ open, 
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold text-default tracking-tight">SliceMart Brain</h2>
+                <h2 className="text-sm font-bold text-default tracking-tight">{brandName} AI Brain</h2>
                 <span className="px-2 py-0.5 rounded-full text-3xs font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 flex items-center gap-1">
                   <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   Self-Contained Agentic AI
@@ -721,7 +727,7 @@ export const SliceMartBrainModal: React.FC<SliceMartBrainModalProps> = ({ open, 
               type="button"
               onClick={onClose}
               className="p-1.5 rounded-lg text-muted hover:text-default hover:bg-surface-sunken transition-colors cursor-pointer"
-              aria-label="Close SliceMart Brain"
+              aria-label="Close AI Brain"
             >
               <X className="size-4" />
             </button>
@@ -987,7 +993,7 @@ export const SliceMartBrainModal: React.FC<SliceMartBrainModalProps> = ({ open, 
             </div>
           </form>
           <div className="flex items-center justify-between text-3xs text-muted mt-2 px-1">
-            <span>Powered by SliceMart Local Intent Engine</span>
+            <span>Powered by Local Intent Engine</span>
             <span>Zero external API calls · 100% Deterministic Execution</span>
           </div>
         </div>

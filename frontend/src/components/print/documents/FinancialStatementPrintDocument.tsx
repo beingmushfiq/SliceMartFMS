@@ -101,13 +101,13 @@ export const FinancialStatementPrintDocument: React.FC<FinancialStatementPrintDo
   const totalLiabilitiesAndEquity = totalLiabilities + totalEquity;
   const isBalanced = Math.abs(totalAssets - totalLiabilitiesAndEquity) < 0.01;
 
-  const companyInitials = (businessConfig.name || 'SliceMart')
+  const companyInitials = (businessConfig.name || 'Enterprise')
     .split(' ')
     .map((w) => w[0])
     .filter(Boolean)
     .slice(0, 2)
     .join('')
-    .toUpperCase() || 'SM';
+    .toUpperCase() || 'EP';
 
   const barcodeSvg = useMemo(() => {
     return generateBarcodeSvg({
@@ -511,7 +511,7 @@ export const FinancialStatementPrintDocument: React.FC<FinancialStatementPrintDo
       {/* Digital Stamp Footer */}
       <div className="mt-4 pt-2 border-t border-slate-200 flex justify-between items-center text-[6.5pt] text-slate-400 font-mono">
         <div>
-          SliceMart ERP Document Engine &bull; Ref: {data.reportCode} &bull; Security Checksum: VALID
+          {businessConfig.name || 'Enterprise'} Document Engine &bull; Ref: {data.reportCode} &bull; Security Checksum: VALID
         </div>
         <div>
           Official Copy &bull; Page 1 of 1

@@ -2,7 +2,7 @@ import type { ImportSchemaConfig } from '../../../components/import/types';
 
 export const priceListImportSchema: ImportSchemaConfig = {
   entityTitle: 'Customer Price Lists',
-  templateFileName: 'slicemart_price_lists_import_template',
+  templateFileName: 'erp_price_lists_import_template',
   uniqueIdentifierKey: 'product_sku',
   supportsUpsert: true,
   apiEndpoint: '/pricing/price-lists/bulk-import',

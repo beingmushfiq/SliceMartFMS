@@ -34,6 +34,7 @@ import {
 import { api } from '../../lib/api/client';
 import { notify } from '../../components/ui/Toast';
 import { StorefrontThemeToggle } from '../../components/storefront/StorefrontThemeToggle';
+import { useAuthStore } from '../../lib/auth/authStore';
 
 export type BlockType =
   | 'hero_banner'
@@ -89,6 +90,8 @@ export interface CmsPage {
 }
 
 export const StorefrontPageBuilderWorkspace: React.FC = () => {
+  const tenant = useAuthStore((s) => s.tenant);
+  const storeSlug = tenant?.slug || 'store';
   const [pages, setPages] = useState<CmsPage[]>([]);
   const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
   const [selectedPage, setSelectedPage] = useState<CmsPage | null>(null);
@@ -318,7 +321,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
         {
           id: 'b_journey',
           type: 'quality_journey',
-          title: 'The SliceMart Quality Journey',
+          title: 'The Quality Journey',
           subtitle: 'How we ensure every batch meets stringent safety and thermal efficiency standards.',
           steps: [
             { step: '01 / SOURCING', title: 'Components & Glass', desc: 'A-grade ceramic panels, pure copper coils, and flame-retardant chassis.' },
@@ -342,14 +345,14 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
           title: 'Got Questions? We’ve Got Answers.',
           subtitle: 'Frequently Asked Questions',
           faqs: [
-            { q: 'What cookware is compatible with SliceMart Infrared Cookers?', a: 'All cookware materials work seamlessly on infrared cookers, including ceramic, stainless steel, cast iron, glass, and aluminum.' },
-            { q: 'What warranty is provided with appliances?', a: 'All SliceMart infrared cookers and gas stoves include a 1-year comprehensive replacement and service warranty.' },
+            { q: 'What cookware is compatible with Infrared Cookers?', a: 'All cookware materials work seamlessly on infrared cookers, including ceramic, stainless steel, cast iron, glass, and aluminum.' },
+            { q: 'What warranty is provided with appliances?', a: 'All infrared cookers and appliances include a 1-year comprehensive replacement and service warranty.' },
           ],
         },
         {
           id: 'b_vip',
           type: 'newsletter_vip',
-          title: 'Join the SliceMart VIP Club',
+          title: 'Join the VIP Member Club',
           subtitle: 'Get instant alerts when new products launch, plus exclusive perks and promotions.',
           button_text: 'Subscribe',
         },
@@ -383,12 +386,12 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
           title: 'Frequently Asked Questions',
           faqs: [
             {
-              q: 'What cookware is compatible with SliceMart Infrared Cookers?',
+              q: 'What cookware is compatible with Infrared Cookers?',
               a: 'All cookware materials work seamlessly on infrared cookers, including ceramic, stainless steel, cast iron, glass, and aluminum.',
             },
             {
               q: 'What warranty is provided with appliances?',
-              a: 'All SliceMart infrared cookers and gas stoves include a 1-year comprehensive replacement and service warranty.',
+              a: 'All infrared cookers and appliances include a 1-year comprehensive replacement and service warranty.',
             },
           ],
         },
@@ -466,11 +469,11 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
           : type === 'value_props'
           ? 'Why Buy Direct From Factory'
           : type === 'quality_journey'
-          ? 'The SliceMart Quality Journey'
+          ? 'The Quality Journey'
           : type === 'promo_split_banner'
           ? 'Special Promotional Feature'
           : type === 'newsletter_vip'
-          ? 'Join the SliceMart VIP Club'
+          ? 'Join the VIP Member Club'
           : type === 'faq'
           ? 'Frequently Asked Questions'
           : 'Custom Content Section',
@@ -744,7 +747,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                     <div className="flex items-center gap-1">
                       {/* View Live Storefront Page */}
                       <a
-                        href={isHome ? '/store/slicemart' : `/store/slicemart/pages/${p.slug}`}
+                        href={isHome ? `/store/${storeSlug}` : `/store/${storeSlug}/pages/${p.slug}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
@@ -892,7 +895,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
 
                   {/* View Live */}
                   <a
-                    href={selectedPage.slug === 'home' ? '/store/slicemart' : `/store/slicemart/pages/${selectedPage.slug}`}
+                    href={selectedPage.slug === 'home' ? `/store/${storeSlug}` : `/store/${storeSlug}/pages/${selectedPage.slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-default bg-surface hover:bg-surface-sunken text-xs font-semibold text-default transition-colors"
@@ -952,7 +955,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Next-Gen Infrared Cookers & Stoves — SliceMart"
+                    placeholder="e.g. Next-Gen Modern Appliances"
                     value={selectedPage.meta_title || ''}
                     onChange={(e) => setSelectedPage({ ...selectedPage, meta_title: e.target.value })}
                     className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-xs text-default placeholder:text-muted focus:border-primary focus:outline-none"
@@ -980,10 +983,10 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                   <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono">Live SERP</span>
                 </div>
                 <div className="text-xs text-emerald-600 dark:text-emerald-400 font-sans truncate">
-                  https://slicemart.com › {selectedPage.slug === 'home' ? '' : `pages › `}<span className="font-mono">{selectedPage.slug === 'home' ? '' : selectedPage.slug || 'untitled'}</span>
+                  https://store.yourdomain.com › {selectedPage.slug === 'home' ? '' : `pages › `}<span className="font-mono">{selectedPage.slug === 'home' ? '' : selectedPage.slug || 'untitled'}</span>
                 </div>
                 <div className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
-                  {selectedPage.meta_title || selectedPage.title || 'Page Title — SliceMart Appliances'}
+                  {selectedPage.meta_title || selectedPage.title || 'Page Title — Storefront'}
                 </div>
                 <div className="text-xs text-muted line-clamp-2">
                   {selectedPage.meta_description ||
@@ -1704,7 +1707,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                           <input
                             type="text"
                             value={block.title || ''}
-                            placeholder="e.g. Join the SliceMart VIP Club"
+                            placeholder="e.g. Join the VIP Member Club"
                             onChange={(e) => {
                               const blocks = [...selectedPage.blocks];
                               blocks[idx] = { ...block, title: e.target.value };
@@ -2182,7 +2185,7 @@ export const StorefrontPageBuilderWorkspace: React.FC = () => {
                 <label className="font-semibold text-default block">SEO Meta Title</label>
                 <input
                   type="text"
-                  placeholder="e.g. Next-Gen Infrared Cookers & Stoves — SliceMart"
+                  placeholder="e.g. Next-Gen Modern Appliances"
                   value={editForm.meta_title}
                   onChange={(e) => setEditForm({ ...editForm, meta_title: e.target.value })}
                   className="w-full rounded-xl border border-default bg-surface-sunken px-3.5 py-2 text-xs text-default focus:border-primary focus:outline-none"
