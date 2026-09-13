@@ -28,7 +28,7 @@ class ManageSubscriptionAction extends Action
         $tenantId = (int) $input['tenant_id'];
         $tenant = Tenant::findOrFail($tenantId);
 
-        $actionType = (string) ($input['action'] ?? 'extend'); // 'extend' | 'change_plan' | 'renew'
+        $actionType = (string) ($input['action'] ?? 'extend'); // 'extend' | 'change_plan' | 'renew' | 'set_expiry' | 'set_grace_period'
 
         if ($actionType === 'change_plan') {
             $newPlanId = (int) ($input['plan_id'] ?? 0);
@@ -37,9 +37,9 @@ class ManageSubscriptionAction extends Action
             $oldPlanId = $tenant->plan_id;
             $tenant->update(['plan_id' => $newPlan->id]);
 
-            // Update active subscription
+            // Update active subscription or create one if none exists
             $subscription = TenantSubscription::where('tenant_id', $tenant->id)
-                ->whereIn('status', ['active', 'trial'])
+                ->whereIn('status', ['active', 'trial', 'past_due', 'grace_period'])
                 ->latest('id')
                 ->first();
 
@@ -47,6 +47,7 @@ class ManageSubscriptionAction extends Action
                 $subscription->update([
                     'plan_id' => $newPlan->id,
                     'amount' => $newPlan->price,
+                    'updated_by' => Auth::id(),
                 ]);
             }
 
@@ -71,18 +72,90 @@ class ManageSubscriptionAction extends Action
             ];
         }
 
+        if ($actionType === 'set_expiry') {
+            $endsAtInput = $input['ends_at'] ?? null;
+            if (! $endsAtInput) {
+                throw ValidationException::withMessages([
+                    'ends_at' => ['An absolute expiry date (ends_at) is required.'],
+                ]);
+            }
+
+            $newEndsAt = Carbon::parse((string) $endsAtInput);
+            $subscription = TenantSubscription::where('tenant_id', $tenant->id)->latest('id')->first();
+
+            $notes = isset($input['notes']) ? (string) $input['notes'] : null;
+            $updates = [
+                'ends_at' => $newEndsAt,
+                'status' => 'active',
+                'renewed_by' => Auth::id(),
+                'updated_by' => Auth::id(),
+            ];
+            if ($notes !== null) {
+                $updates['notes'] = $notes;
+            }
+
+            if ($subscription !== null) {
+                $subscription->update($updates);
+            } else {
+                $subscription = TenantSubscription::create(array_merge($updates, [
+                    'tenant_id' => $tenant->id,
+                    'uuid' => (string) Str::uuid(),
+                    'plan_id' => $tenant->plan_id,
+                    'starts_at' => Carbon::now(),
+                    'amount' => $tenant->plan?->price ?? 0,
+                    'currency_code' => 'BDT',
+                    'created_by' => Auth::id(),
+                ]));
+            }
+
+            $tenant->update(['status' => 'active', 'suspended_at' => null]);
+
+            AuditLog::withoutTenantScope()->create([
+                'uuid' => (string) Str::uuid(),
+                'user_id' => Auth::id(),
+                'action' => \App\Core\Audit\AuditAction::Updated,
+                'auditable_type' => 'TenantSubscription',
+                'auditable_id' => $subscription->id,
+                'ip' => request()->ip() ?? '127.0.0.1',
+                'user_agent' => request()->userAgent() ?? 'Master SaaS Admin',
+                'created_at' => Carbon::now(),
+                'after' => [
+                    'action' => 'set_expiry',
+                    'ends_at' => $newEndsAt->toIso8601String(),
+                    'notes' => $notes,
+                ],
+            ]);
+
+            return [
+                'tenant_id' => $tenant->id,
+                'status' => 'active',
+                'ends_at' => $newEndsAt->toIso8601String(),
+                'notes' => $notes,
+            ];
+        }
+
         if ($actionType === 'extend') {
             $days = (int) ($input['days'] ?? 30);
             $subscription = TenantSubscription::where('tenant_id', $tenant->id)->latest('id')->first();
 
-            $baseDate = $subscription?->ends_at ?? Carbon::now();
+            $baseDate = ($subscription && $subscription->ends_at && $subscription->ends_at->isFuture())
+                ? $subscription->ends_at
+                : Carbon::now();
+
             $newEndsAt = Carbon::parse($baseDate)->addDays($days);
+            $notes = isset($input['notes']) ? (string) $input['notes'] : null;
 
             if ($subscription !== null) {
-                $subscription->update([
+                $subUpdates = [
                     'ends_at' => $newEndsAt,
                     'status' => 'active',
-                ]);
+                    'renewed_by' => Auth::id(),
+                    'updated_by' => Auth::id(),
+                ];
+                if ($notes !== null) {
+                    $subUpdates['notes'] = $notes;
+                }
+                $subscription->update($subUpdates);
             }
 
             $tenant->update(['status' => 'active', 'suspended_at' => null]);
@@ -96,13 +169,107 @@ class ManageSubscriptionAction extends Action
                 'ip' => request()->ip() ?? '127.0.0.1',
                 'user_agent' => request()->userAgent() ?? 'Master SaaS Admin',
                 'created_at' => Carbon::now(),
-                'after' => ['extended_days' => $days, 'ends_at' => $newEndsAt->toIso8601String()],
+                'after' => ['extended_days' => $days, 'ends_at' => $newEndsAt->toIso8601String(), 'notes' => $notes],
             ]);
 
             return [
                 'tenant_id' => $tenant->id,
                 'status' => 'active',
                 'ends_at' => $newEndsAt->toIso8601String(),
+            ];
+        }
+
+        if ($actionType === 'set_grace_period') {
+            $graceDays = (int) ($input['grace_period_days'] ?? 7);
+            $subscription = TenantSubscription::where('tenant_id', $tenant->id)->latest('id')->first();
+
+            if ($subscription !== null) {
+                $base = $subscription->ends_at ?? Carbon::now();
+                $graceEndsAt = Carbon::parse($base)->addDays($graceDays);
+                $subscription->update([
+                    'grace_period_days' => $graceDays,
+                    'grace_period_ends_at' => $graceEndsAt,
+                    'updated_by' => Auth::id(),
+                ]);
+            }
+
+            AuditLog::withoutTenantScope()->create([
+                'uuid' => (string) Str::uuid(),
+                'user_id' => Auth::id(),
+                'action' => \App\Core\Audit\AuditAction::Updated,
+                'auditable_type' => 'TenantSubscription',
+                'auditable_id' => $subscription?->id ?? $tenant->id,
+                'ip' => request()->ip() ?? '127.0.0.1',
+                'user_agent' => request()->userAgent() ?? 'Master SaaS Admin',
+                'created_at' => Carbon::now(),
+                'after' => ['grace_period_days' => $graceDays],
+            ]);
+
+            return [
+                'tenant_id' => $tenant->id,
+                'grace_period_days' => $graceDays,
+            ];
+        }
+
+        if ($actionType === 'renew') {
+            $plan = $tenant->plan ?? Plan::findOrFail($tenant->plan_id);
+            $billingCycle = (string) ($input['billing_cycle'] ?? $plan->billing_period ?? 'monthly');
+            $months = $billingCycle === 'yearly' ? 12 : 1;
+
+            $currentSub = TenantSubscription::where('tenant_id', $tenant->id)->latest('id')->first();
+            $startsAt = ($currentSub && $currentSub->ends_at && $currentSub->ends_at->isFuture())
+                ? $currentSub->ends_at
+                : Carbon::now();
+            $endsAt = Carbon::parse($startsAt)->addMonths($months);
+
+            $amount = isset($input['amount']) ? (float) $input['amount'] : (float) $plan->price;
+            $discountType = (string) ($input['discount_type'] ?? 'none');
+            $discountValue = (float) ($input['discount_value'] ?? 0);
+            $notes = isset($input['notes']) ? (string) $input['notes'] : 'Manual admin renewal';
+
+            $newSub = TenantSubscription::create([
+                'tenant_id' => $tenant->id,
+                'uuid' => (string) Str::uuid(),
+                'plan_id' => $plan->id,
+                'starts_at' => $startsAt,
+                'ends_at' => $endsAt,
+                'status' => 'active',
+                'amount' => $amount,
+                'currency_code' => $input['currency_code'] ?? 'BDT',
+                'billing_cycle' => $billingCycle,
+                'discount_type' => $discountType,
+                'discount_value' => $discountValue,
+                'notes' => $notes,
+                'renewed_by' => Auth::id(),
+                'created_by' => Auth::id(),
+            ]);
+
+            $tenant->update(['status' => 'active', 'suspended_at' => null]);
+
+            AuditLog::withoutTenantScope()->create([
+                'uuid' => (string) Str::uuid(),
+                'user_id' => Auth::id(),
+                'action' => \App\Core\Audit\AuditAction::Created,
+                'auditable_type' => 'TenantSubscription',
+                'auditable_id' => $newSub->id,
+                'ip' => request()->ip() ?? '127.0.0.1',
+                'user_agent' => request()->userAgent() ?? 'Master SaaS Admin',
+                'created_at' => Carbon::now(),
+                'after' => [
+                    'renewed_sub_id' => $newSub->id,
+                    'starts_at' => $startsAt->toIso8601String(),
+                    'ends_at' => $endsAt->toIso8601String(),
+                    'amount' => $amount,
+                ],
+            ]);
+
+            return [
+                'tenant_id' => $tenant->id,
+                'subscription_id' => $newSub->id,
+                'status' => 'active',
+                'starts_at' => $startsAt->toIso8601String(),
+                'ends_at' => $endsAt->toIso8601String(),
+                'amount' => $amount,
             ];
         }
 

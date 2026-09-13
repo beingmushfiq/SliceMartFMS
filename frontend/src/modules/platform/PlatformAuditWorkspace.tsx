@@ -8,40 +8,45 @@ import {
   Filter,
   RefreshCw,
   Eye,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
+
+interface AuditResponsePayload {
+  data: PlatformAuditLog[];
+  meta: {
+    pagination: {
+      total: number;
+      page: number;
+      per_page: number;
+      total_pages: number;
+    };
+  };
+}
 
 export const PlatformAuditWorkspace: React.FC = () => {
   const [selectedLog, setSelectedLog] = useState<PlatformAuditLog | null>(null);
 
-  // Filters
+  // Filters & Pagination
   const [entityType, setEntityType] = useState<string>('all');
   const [actionFilter, setActionFilter] = useState<string>('all');
+  const [page, setPage] = useState<number>(1);
+  const [perPage] = useState<number>(25);
 
-  const { data: logs = [], isLoading, isFetching, refetch } = useQuery<PlatformAuditLog[]>({
-    queryKey: ['platform', 'audit-logs', entityType, actionFilter],
+  const { data, isLoading, isFetching, refetch } = useQuery<AuditResponsePayload>({
+    queryKey: ['platform', 'audit-logs', entityType, actionFilter, page, perPage],
     queryFn: async () => {
-      try {
-        const params: Record<string, string> = {};
-        if (entityType !== 'all') params['entity_type'] = entityType;
-        if (actionFilter !== 'all') params['action'] = actionFilter;
+      const params: Record<string, string | number> = { page, per_page: perPage };
+      if (entityType !== 'all') params['entity_type'] = entityType;
+      if (actionFilter !== 'all') params['action'] = actionFilter;
 
-        const response = await api.get<{
-          data: PlatformAuditLog[];
-          meta: { pagination: { total: number; current_page: number } };
-        }>('/platform/audit-logs', { params });
-
-        // Handle envelope structure
-        if (Array.isArray(response.data)) {
-          return response.data as PlatformAuditLog[];
-        } else if (response.data && Array.isArray((response.data as { data?: PlatformAuditLog[] }).data)) {
-          return (response.data as { data: PlatformAuditLog[] }).data;
-        }
-      } catch {
-        // Error fallback
-      }
-      return [];
+      const response = await api.get<AuditResponsePayload>('/platform/audit-logs', { params });
+      return response.data;
     },
   });
+
+  const logs = data?.data ?? [];
+  const pagination = data?.meta?.pagination;
 
   return (
     <div className="space-y-6 font-sans">
@@ -161,6 +166,33 @@ export const PlatformAuditWorkspace: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination Bar */}
+        {pagination && pagination.total_pages > 1 && (
+          <div className="px-6 py-3.5 bg-slate-950/60 border-t border-slate-800 flex items-center justify-between font-mono text-xs text-slate-400">
+            <div>
+              Showing page <span className="text-white font-bold">{pagination.page}</span> of <span className="text-white font-bold">{pagination.total_pages}</span> ({pagination.total} total events)
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={pagination.page <= 1 || isFetching}
+                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-200 flex items-center gap-1 transition-colors"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Prev</span>
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.min(pagination.total_pages, p + 1))}
+                disabled={pagination.page >= pagination.total_pages || isFetching}
+                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-200 flex items-center gap-1 transition-colors"
+              >
+                <span>Next</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         )}
       </div>

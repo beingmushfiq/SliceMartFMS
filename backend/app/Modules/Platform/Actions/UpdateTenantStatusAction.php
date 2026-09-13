@@ -27,7 +27,7 @@ class UpdateTenantStatusAction extends Action
         $newStatus = trim(strtolower((string) $input['status']));
         $reason = trim((string) ($input['reason'] ?? ''));
 
-        $allowed = ['active', 'trial', 'past_due', 'suspended', 'cancelled'];
+        $allowed = ['active', 'trial', 'past_due', 'suspended', 'cancelled', 'pending', 'archived'];
         if (! in_array($newStatus, $allowed, true)) {
             throw ValidationException::withMessages([
                 'status' => ["Status must be one of: ".implode(', ', $allowed)],
@@ -40,8 +40,12 @@ class UpdateTenantStatusAction extends Action
         $updates = ['status' => $newStatus];
         if ($newStatus === 'suspended') {
             $updates['suspended_at'] = Carbon::now();
+        } elseif ($newStatus === 'archived') {
+            $updates['archived_at'] = Carbon::now();
+            $updates['suspended_at'] = Carbon::now();
         } elseif ($newStatus === 'active') {
             $updates['suspended_at'] = null;
+            $updates['archived_at'] = null;
             if ($tenant->activated_at === null) {
                 $updates['activated_at'] = Carbon::now();
             }
@@ -64,6 +68,7 @@ class UpdateTenantStatusAction extends Action
                 'status' => $newStatus,
                 'reason' => $reason,
                 'suspended_at' => $tenant->suspended_at?->toIso8601String(),
+                'archived_at' => $tenant->archived_at?->toIso8601String(),
             ],
         ]);
 
@@ -74,6 +79,7 @@ class UpdateTenantStatusAction extends Action
             'status' => $tenant->status,
             'suspended_at' => $tenant->suspended_at?->toIso8601String(),
             'activated_at' => $tenant->activated_at?->toIso8601String(),
+            'archived_at' => $tenant->archived_at?->toIso8601String(),
         ];
     }
 }

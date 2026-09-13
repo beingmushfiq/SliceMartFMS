@@ -66,6 +66,7 @@ class Tenant extends Model
         'trial_ends_at',
         'activated_at',
         'suspended_at',
+        'archived_at',
     ];
 
     /**
@@ -76,6 +77,36 @@ class Tenant extends Model
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class, 'plan_id');
+    }
+
+    /**
+     * Subscriptions history for this tenant.
+     *
+     * @return HasMany<TenantSubscription, $this>
+     */
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(TenantSubscription::class, 'tenant_id');
+    }
+
+    /**
+     * SaaS subscription payments for this tenant.
+     *
+     * @return HasMany<PlatformSubscriptionPayment, $this>
+     */
+    public function subscriptionPayments(): HasMany
+    {
+        return $this->hasMany(PlatformSubscriptionPayment::class, 'tenant_id');
+    }
+
+    /**
+     * Support tickets for this tenant.
+     *
+     * @return HasMany<PlatformSupportTicket, $this>
+     */
+    public function supportTickets(): HasMany
+    {
+        return $this->hasMany(PlatformSupportTicket::class, 'tenant_id');
     }
 
     /**
@@ -153,6 +184,7 @@ class Tenant extends Model
             'activated_at' => 'datetime',
             'grace_period_ends_at' => 'datetime',
             'suspended_at' => 'datetime',
+            'archived_at' => 'datetime',
         ];
     }
 }

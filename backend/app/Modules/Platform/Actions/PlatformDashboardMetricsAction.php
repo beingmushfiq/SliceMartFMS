@@ -85,6 +85,7 @@ class PlatformDashboardMetricsAction extends Action
                 'suspended_tenants' => $suspendedTenants,
                 'past_due_tenants' => $pastDueTenants,
                 'expiring_subscriptions' => $expiringSubscriptions,
+                'expiring_subscriptions_30d' => $expiringSubscriptions,
                 'estimated_mrr' => $mrr,
                 'total_users' => $totalUsers,
             ],

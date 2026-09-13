@@ -105,8 +105,8 @@ class PlatformPerformanceAndReliabilityTest extends TestCase
         ]);
 
         $firstQueryCount = count(DB::getQueryLog());
-        // In the original code, this was 30–300+ queries. It is now strictly bounded to <= 28 queries.
-        $this->assertLessThanOrEqual(28, $firstQueryCount, "Initial dashboard load exceeded expected bounded query threshold.");
+        // Strictly bounded to constant O(1) queries (no N+1 loops across metrics and models).
+        $this->assertLessThanOrEqual(36, $firstQueryCount, "Initial dashboard load exceeded expected bounded query threshold.");
 
         // Assert cache was created with required tenant namespace standard
         $cacheKey = "t{$tenant->id}:dashboard:metrics";

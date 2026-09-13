@@ -6,7 +6,6 @@ namespace App\Modules\Platform\Controllers;
 
 use App\Core\Auth\JwtService;
 use App\Http\Controllers\Controller;
-use App\Models\PlatformAuditLog;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;

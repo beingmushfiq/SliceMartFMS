@@ -5,48 +5,65 @@ import {
   Building2,
   UserPlus,
   CreditCard,
+  Receipt,
   History,
   Layers,
   Sparkles,
   ShieldAlert,
+  Flag,
+  Megaphone,
+  LifeBuoy,
+  Users,
+  Settings,
 } from 'lucide-react';
 
-const NAV_ITEMS = [
+interface NavGroup {
+  label: string;
+  items: Array<{
+    to: string;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    end?: boolean;
+  }>;
+}
+
+const NAV_GROUPS: NavGroup[] = [
   {
-    to: '/platform',
-    label: 'Overview & KPIs',
-    icon: LayoutDashboard,
-    end: true,
+    label: 'Master Governance',
+    items: [
+      { to: '/platform', label: 'Overview & KPIs', icon: LayoutDashboard, end: true },
+      { to: '/platform/tenants', label: 'Tenant Directory', icon: Building2, end: true },
+      { to: '/platform/tenants/new', label: 'Provision Tenant', icon: UserPlus, end: true },
+    ],
   },
   {
-    to: '/platform/tenants',
-    label: 'Tenant Directory',
-    icon: Building2,
-    end: true,
+    label: 'Billing & Tiers',
+    items: [
+      { to: '/platform/plans', label: 'Subscription Plans', icon: CreditCard, end: true },
+      { to: '/platform/payments', label: 'SaaS Payments', icon: Receipt, end: true },
+    ],
   },
   {
-    to: '/platform/tenants/new',
-    label: 'Provision Tenant',
-    icon: UserPlus,
-    end: true,
+    label: 'Platform Control',
+    items: [
+      { to: '/platform/feature-flags', label: 'Flags & Modules', icon: Flag, end: true },
+      { to: '/platform/announcements', label: 'Announcements', icon: Megaphone, end: true },
+      { to: '/platform/support', label: 'Support Tickets', icon: LifeBuoy, end: true },
+    ],
   },
   {
-    to: '/platform/plans',
-    label: 'Subscription Plans',
-    icon: CreditCard,
-    end: true,
+    label: 'Observability',
+    items: [
+      { to: '/platform/audit-logs', label: 'Platform Audit Trail', icon: History, end: true },
+      { to: '/platform/errors', label: 'Error Monitoring', icon: ShieldAlert, end: true },
+    ],
   },
   {
-    to: '/platform/audit-logs',
-    label: 'Platform Audit Trail',
-    icon: History,
-    end: true,
-  },
-  {
-    to: '/platform/errors',
-    label: 'Error Monitoring',
-    icon: ShieldAlert,
-    end: true,
+    label: 'Administration',
+    items: [
+      { to: '/platform/admins', label: 'Platform Admins', icon: Users, end: true },
+      { to: '/platform/settings', label: 'Platform Settings', icon: Settings, end: true },
+    ],
   },
 ];
 
@@ -59,9 +76,9 @@ export const PlatformSidebar: React.FC = () => {
         aria-hidden="true"
       />
 
-      <div>
+      <div className="flex-1 overflow-y-auto">
         {/* Brand Header */}
-        <div className="relative h-16 px-5 border-b border-(--nav-border) flex items-center gap-3 bg-(--nav-bg)/95 backdrop-blur-md">
+        <div className="sticky top-0 z-10 h-16 px-5 border-b border-(--nav-border) flex items-center gap-3 bg-(--nav-bg)/95 backdrop-blur-md">
           <div className="relative w-9 h-9 rounded-xl bg-linear-to-br from-amber-500 via-amber-600 to-amber-800 p-0.5 shadow-md shadow-amber-500/20 ring-1 ring-black/5 dark:ring-white/20 flex items-center justify-center shrink-0">
             <div className="w-full h-full rounded-lg bg-white dark:bg-[#090d16]/90 flex items-center justify-center text-amber-600 dark:text-amber-400">
               <Layers className="w-4 h-4 stroke-[2.5] drop-shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
@@ -90,33 +107,37 @@ export const PlatformSidebar: React.FC = () => {
           </div>
         </div>
 
-        {/* Navigation List */}
-        <nav className="p-3 space-y-1">
-          <div className="px-3 py-1.5 text-[10px] font-bold tracking-[0.14em] text-(--nav-section-fg) uppercase flex items-center gap-1.5">
-            <span className="size-1 rounded-full bg-amber-500/60" />
-            <span>Master Governance</span>
-          </div>
+        {/* Grouped Navigation List */}
+        <nav className="p-3 space-y-4">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label} className="space-y-1">
+              <div className="px-3 py-1 text-[10px] font-bold tracking-[0.14em] text-(--nav-section-fg) uppercase flex items-center gap-1.5">
+                <span className="size-1 rounded-full bg-amber-500/60" />
+                <span>{group.label}</span>
+              </div>
 
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-150 ${
-                    isActive
-                      ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shadow-xs'
-                      : 'text-muted hover:text-default hover:bg-(--nav-hover-bg)'
-                  }`
-                }
-              >
-                <Icon className="size-4 shrink-0" />
-                <span>{item.label}</span>
-              </NavLink>
-            );
-          })}
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={Boolean(item.end)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-150 ${
+                        isActive
+                          ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shadow-xs'
+                          : 'text-muted hover:text-default hover:bg-(--nav-hover-bg)'
+                      }`
+                    }
+                  >
+                    <Icon className="size-4 shrink-0" />
+                    <span>{item.label}</span>
+                  </NavLink>
+                );
+              })}
+            </div>
+          ))}
         </nav>
       </div>
 

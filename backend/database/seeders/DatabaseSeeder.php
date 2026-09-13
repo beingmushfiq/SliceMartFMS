@@ -13,6 +13,8 @@ final class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        \App\Modules\Platform\Services\PlatformRbacService::seedDefaultRoles();
+
         $this->call([
             BusinessTypeSeeder::class,
             IndustryProfileSeeder::class,

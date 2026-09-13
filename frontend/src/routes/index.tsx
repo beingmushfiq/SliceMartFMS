@@ -93,6 +93,12 @@ const PlatformAuditWorkspace = lazy(() => import('../modules/platform/PlatformAu
 const PlatformErrorMonitoringWorkspace = lazy(
   () => import('../modules/platform/PlatformErrorMonitoringWorkspace')
 );
+const PlatformPaymentsWorkspace = lazy(() => import('../modules/platform/PlatformPaymentsWorkspace'));
+const PlatformFeatureFlagsWorkspace = lazy(() => import('../modules/platform/PlatformFeatureFlagsWorkspace'));
+const PlatformAnnouncementsWorkspace = lazy(() => import('../modules/platform/PlatformAnnouncementsWorkspace'));
+const PlatformSupportWorkspace = lazy(() => import('../modules/platform/PlatformSupportWorkspace'));
+const PlatformAdminWorkspace = lazy(() => import('../modules/platform/PlatformAdminWorkspace'));
+const PlatformSettingsWorkspace = lazy(() => import('../modules/platform/PlatformSettingsWorkspace'));
 
 // Public Headless E-Commerce Storefront imports
 import { StorefrontShell } from '../components/storefront/StorefrontShell';
@@ -265,12 +271,36 @@ export const router = createBrowserRouter([
             element: <PlanManagerWorkspace />,
           },
           {
+            path: 'payments',
+            element: <PlatformPaymentsWorkspace />,
+          },
+          {
+            path: 'feature-flags',
+            element: <PlatformFeatureFlagsWorkspace />,
+          },
+          {
+            path: 'announcements',
+            element: <PlatformAnnouncementsWorkspace />,
+          },
+          {
+            path: 'support',
+            element: <PlatformSupportWorkspace />,
+          },
+          {
             path: 'audit-logs',
             element: <PlatformAuditWorkspace />,
           },
           {
             path: 'errors',
             element: <PlatformErrorMonitoringWorkspace />,
+          },
+          {
+            path: 'admins',
+            element: <PlatformAdminWorkspace />,
+          },
+          {
+            path: 'settings',
+            element: <PlatformSettingsWorkspace />,
           },
           {
             path: '*',

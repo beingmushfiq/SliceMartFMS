@@ -40,7 +40,16 @@ class TenantSubscription extends Model
         'ends_at',
         'status',
         'amount',
+        'currency_code',
+        'billing_cycle',
+        'grace_period_days',
+        'grace_period_ends_at',
+        'auto_renew',
+        'discount_type',
+        'discount_value',
         'external_reference',
+        'notes',
+        'renewed_by',
         'created_by',
         'updated_by',
     ];
@@ -62,6 +71,22 @@ class TenantSubscription extends Model
     }
 
     /**
+     * @return BelongsTo<User, $this>
+     */
+    public function renewedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'renewed_by');
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<PlatformSubscriptionPayment, $this>
+     */
+    public function payments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PlatformSubscriptionPayment::class, 'subscription_id');
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
@@ -69,7 +94,11 @@ class TenantSubscription extends Model
         return [
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
+            'grace_period_ends_at' => 'datetime',
             'amount' => 'decimal:4',
+            'discount_value' => 'decimal:4',
+            'grace_period_days' => 'integer',
+            'auto_renew' => 'boolean',
         ];
     }
 }

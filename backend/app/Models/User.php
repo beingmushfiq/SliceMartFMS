@@ -212,6 +212,47 @@ class User extends Authenticatable
     }
 
     /**
+     * Master Platform Roles assigned to this user.
+     *
+     * @return BelongsToMany<PlatformRole, $this>
+     */
+    public function platformRoles(): BelongsToMany
+    {
+        return $this->belongsToMany(PlatformRole::class, 'platform_role_user', 'user_id', 'platform_role_id')
+            ->withPivot(['granted_by', 'granted_at']);
+    }
+
+    /**
+     * Check if user has a platform-level permission.
+     */
+    public function hasPlatformPermission(string $permission): bool
+    {
+        if (! $this->is_platform_user) {
+            return false;
+        }
+
+        $this->loadMissing('platformRoles');
+
+        // If no explicit platform roles assigned yet, backward compatibility grants full access to is_platform_user
+        if ($this->platformRoles->isEmpty()) {
+            return true;
+        }
+
+        foreach ($this->platformRoles as $role) {
+            $perms = (array) ($role->permissions ?? []);
+            if (in_array('*', $perms, true) || in_array($permission, $perms, true)) {
+                return true;
+            }
+            $parts = explode('.', $permission);
+            if (count($parts) >= 2 && in_array($parts[0] . '.*', $perms, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api, setAccessToken } from '../../lib/api/client';
-import type { PlatformTenant, PlatformPlan } from '../../types/api/platform';
+import type { PlatformTenant, PlatformPlan, PlatformPayment } from '../../types/api/platform';
 import { PlatformPulseLoader } from '../../components/platform/PlatformPulseLoader';
 import { Button } from '../../components/ui/Button';
 import {
@@ -85,13 +85,23 @@ export const TenantDetailWorkspace: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'billing' | 'users' | 'usage' | 'authority'>('overview');
 
   // Action Modals
-  const [modalType, setModalType] = useState<'status' | 'extend' | 'plan' | 'delete' | null>(null);
+  const [modalType, setModalType] = useState<'status' | 'extend' | 'plan' | 'delete' | 'payment' | null>(null);
   const [actionReason, setActionReason] = useState('');
+  const [extendMode, setExtendMode] = useState<'days' | 'date' | 'grace'>('days');
   const [extendDays, setExtendDays] = useState(30);
+  const [customExpiryDate, setCustomExpiryDate] = useState('');
+  const [gracePeriodDays, setGracePeriodDays] = useState(7);
   const [newPlanId, setNewPlanId] = useState<number | ''>('');
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
+
+  // Payment Recording State
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentCurrency, setPaymentCurrency] = useState('BDT');
+  const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
+  const [paymentRef, setPaymentRef] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
 
   // Authority Overrides State
   const [moduleOverrides, setModuleOverrides] = useState<Record<string, { enabled: boolean; plan_allowed: boolean }>>({});
@@ -154,6 +164,24 @@ export const TenantDetailWorkspace: React.FC = () => {
     },
   });
 
+  const { data: payments = [], refetch: refetchPayments } = useQuery<PlatformPayment[]>({
+    queryKey: ['platform', 'tenant', id, 'payments'],
+    queryFn: async () => {
+      if (!id) return [];
+      try {
+        const res = await api.get<{ data: PlatformPayment[] } | PlatformPayment[]>(`/platform/tenants/${id}/payments`);
+        if (Array.isArray(res.data)) return res.data;
+        if (res.data && 'data' in res.data && Array.isArray(res.data.data)) {
+          return res.data.data;
+        }
+        return [];
+      } catch {
+        return [];
+      }
+    },
+    enabled: Boolean(id),
+  });
+
   // Sync loaded modules & limits to state
   useEffect(() => {
     if (!tenant) return;
@@ -213,7 +241,7 @@ export const TenantDetailWorkspace: React.FC = () => {
     }
   };
 
-  const handleManageSubscription = async (action: 'extend' | 'change_plan') => {
+  const handleManageSubscription = async (action: 'extend' | 'change_plan' | 'set_expiry' | 'set_grace_period') => {
     if (!tenant) return;
     setActionLoading(true);
     setActionError(null);
@@ -221,16 +249,63 @@ export const TenantDetailWorkspace: React.FC = () => {
       const payload: Record<string, unknown> = { action };
       if (action === 'extend') {
         payload['days'] = extendDays;
+      } else if (action === 'set_expiry') {
+        if (!customExpiryDate) throw new Error('Please select an expiry date');
+        payload['ends_at'] = customExpiryDate;
+      } else if (action === 'set_grace_period') {
+        payload['grace_period_days'] = gracePeriodDays;
       } else if (action === 'change_plan') {
         payload['plan_id'] = newPlanId;
       }
 
       await api.post(`/platform/tenants/${tenant.id}/manage-subscription`, payload);
       setModalType(null);
-      toast.success(action === 'extend' ? `Subscription extended by ${extendDays} days` : 'Subscription plan updated');
+      const msg = action === 'extend'
+        ? `Subscription extended by ${extendDays} days`
+        : action === 'set_expiry'
+        ? `Subscription expiration set to ${customExpiryDate}`
+        : action === 'set_grace_period'
+        ? `Grace period set to ${gracePeriodDays} days`
+        : 'Subscription plan updated';
+      toast.success(msg);
       queryClient.invalidateQueries({ queryKey: ['platform', 'tenant', id] });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Subscription update failed';
+      setActionError(msg);
+      toast.error(msg);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRecordPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tenant) return;
+    if (!paymentAmount || Number(paymentAmount) <= 0) {
+      toast.error('Please enter a valid payment amount');
+      return;
+    }
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      await api.post(`/platform/tenants/${tenant.id}/payments`, {
+        amount: Number(paymentAmount),
+        currency_code: paymentCurrency,
+        payment_method: paymentMethod,
+        transaction_reference: paymentRef || null,
+        notes: paymentNotes || null,
+        payment_date: new Date().toISOString().split('T')[0],
+        status: 'paid',
+      });
+      setModalType(null);
+      setPaymentAmount('');
+      setPaymentRef('');
+      setPaymentNotes('');
+      toast.success('Subscription payment recorded successfully');
+      refetchPayments();
+      queryClient.invalidateQueries({ queryKey: ['platform', 'tenant', id] });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to record payment';
       setActionError(msg);
       toast.error(msg);
     } finally {
@@ -850,6 +925,79 @@ export const TenantDetailWorkspace: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* SaaS Payments Ledger */}
+          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-sm font-bold text-slate-200 uppercase tracking-wider font-mono">
+                  SaaS Payments Ledger
+                </h2>
+                <p className="text-slate-400 text-[11px] font-mono mt-0.5">
+                  Direct billing receipts and transactions recorded for this tenant.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setActionError(null);
+                  setPaymentAmount(tenant.plan?.price ? String(tenant.plan.price) : '0');
+                  setPaymentCurrency(tenant.currency_code || 'BDT');
+                  setModalType('payment');
+                }}
+                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-emerald-600/20"
+              >
+                <CreditCard className="size-3.5" />
+                <span>+ Record Payment</span>
+              </button>
+            </div>
+
+            {payments && payments.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs font-mono">
+                  <thead className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                    <tr>
+                      <th className="pb-3">Invoice Ref</th>
+                      <th className="pb-3">Amount</th>
+                      <th className="pb-3">Method</th>
+                      <th className="pb-3">Txn Ref</th>
+                      <th className="pb-3">Payment Date</th>
+                      <th className="pb-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {payments.map((p) => (
+                      <tr key={p.id} className="hover:bg-slate-800/30">
+                        <td className="py-3 text-slate-200 font-bold">{p.invoice_reference}</td>
+                        <td className="py-3 text-amber-400 font-bold">
+                          {p.currency_code === 'BDT' ? '৳' : p.currency_code + ' '}
+                          {Number(p.amount).toLocaleString()}
+                        </td>
+                        <td className="py-3 text-slate-300 capitalize">{p.payment_method.replace('_', ' ')}</td>
+                        <td className="py-3 text-slate-400 text-[11px]">{p.transaction_reference || '—'}</td>
+                        <td className="py-3 text-slate-400">{new Date(p.payment_date).toLocaleDateString()}</td>
+                        <td className="py-3">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                            p.status === 'paid'
+                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                              : p.status === 'pending'
+                              ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                              : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                          }`}>
+                            {p.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="py-6 text-center text-slate-400 text-xs font-mono">
+                No billing payments recorded for this tenant yet.
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -926,26 +1074,100 @@ export const TenantDetailWorkspace: React.FC = () => {
         </div>
       )}
 
-      {/* Extend Subscription Modal */}
+      {/* Extend / Term Adjustment Modal */}
       {modalType === 'extend' && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono">
-            <h2 className="text-lg font-bold text-slate-100 font-sans">Extend Subscription</h2>
+            <h2 className="text-lg font-bold text-slate-100 font-sans">Subscription Term Management</h2>
             <p className="text-xs text-slate-400 mt-1">
-              Add days to {tenant.name}&apos;s current active period.
+              Adjust validity and expiry controls for <strong className="text-slate-200">{tenant.name}</strong>.
             </p>
 
-            <div className="mt-4">
-              <label className="block text-xs text-slate-300 mb-1">Additional Validity (Days):</label>
-              <input
-                type="number"
-                min="1"
-                max="365"
-                value={extendDays}
-                onChange={(e) => setExtendDays(parseInt(e.target.value) || 30)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 focus:outline-hidden focus:border-amber-500"
-              />
+            {/* Mode selection tabs */}
+            <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 mt-4 text-xs font-sans">
+              <button
+                type="button"
+                onClick={() => setExtendMode('days')}
+                className={`flex-1 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
+                  extendMode === 'days'
+                    ? 'bg-amber-500 text-slate-950 shadow-xs'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                + Days
+              </button>
+              <button
+                type="button"
+                onClick={() => setExtendMode('date')}
+                className={`flex-1 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
+                  extendMode === 'date'
+                    ? 'bg-amber-500 text-slate-950 shadow-xs'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Exact Expiry
+              </button>
+              <button
+                type="button"
+                onClick={() => setExtendMode('grace')}
+                className={`flex-1 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
+                  extendMode === 'grace'
+                    ? 'bg-amber-500 text-slate-950 shadow-xs'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Grace Period
+              </button>
             </div>
+
+            {actionError && (
+              <div className="mt-3 p-3 rounded-lg bg-rose-950/50 border border-rose-800 text-rose-300 text-xs">
+                {actionError}
+              </div>
+            )}
+
+            {extendMode === 'days' && (
+              <div className="mt-4">
+                <label className="block text-xs text-slate-300 mb-1">Additional Validity (Days):</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="365"
+                  value={extendDays}
+                  onChange={(e) => setExtendDays(parseInt(e.target.value) || 30)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 focus:outline-hidden focus:border-amber-500"
+                />
+              </div>
+            )}
+
+            {extendMode === 'date' && (
+              <div className="mt-4">
+                <label className="block text-xs text-slate-300 mb-1">Set Absolute Expiration Date:</label>
+                <input
+                  type="date"
+                  value={customExpiryDate}
+                  onChange={(e) => setCustomExpiryDate(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 focus:outline-hidden focus:border-amber-500"
+                />
+              </div>
+            )}
+
+            {extendMode === 'grace' && (
+              <div className="mt-4">
+                <label className="block text-xs text-slate-300 mb-1">Grace Period Days Post-Expiry:</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="60"
+                  value={gracePeriodDays}
+                  onChange={(e) => setGracePeriodDays(parseInt(e.target.value) || 0)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 focus:outline-hidden focus:border-amber-500"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Tenant retains full read/write access during grace period before suspension.
+                </p>
+              </div>
+            )}
 
             <div className="mt-6 flex justify-end gap-3 text-xs">
               <button
@@ -955,13 +1177,119 @@ export const TenantDetailWorkspace: React.FC = () => {
                 Cancel
               </button>
               <button
-                onClick={() => handleManageSubscription('extend')}
-                disabled={actionLoading}
+                onClick={() => {
+                  if (extendMode === 'days') handleManageSubscription('extend');
+                  else if (extendMode === 'date') handleManageSubscription('set_expiry');
+                  else if (extendMode === 'grace') handleManageSubscription('set_grace_period');
+                }}
+                disabled={actionLoading || (extendMode === 'date' && !customExpiryDate)}
                 className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold cursor-pointer disabled:opacity-50"
               >
-                {actionLoading ? 'Extending...' : 'Apply Extension'}
+                {actionLoading ? 'Saving...' : 'Apply Term Changes'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Record SaaS Payment Modal */}
+      {modalType === 'payment' && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl font-mono text-xs">
+            <h2 className="text-lg font-bold text-slate-100 font-sans">Record SaaS Payment</h2>
+            <p className="text-slate-400 mt-1">
+              Add subscription transaction record for <strong className="text-slate-200">{tenant.name}</strong>.
+            </p>
+
+            {actionError && (
+              <div className="mt-3 p-3 rounded-lg bg-rose-950/50 border border-rose-800 text-rose-300">
+                {actionError}
+              </div>
+            )}
+
+            <form onSubmit={handleRecordPayment} className="mt-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 mb-1">Amount:</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 mb-1">Currency:</label>
+                  <select
+                    value={paymentCurrency}
+                    onChange={(e) => setPaymentCurrency(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  >
+                    <option value="BDT">BDT (৳)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 mb-1">Payment Method:</label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                >
+                  <option value="bank_transfer">Bank Transfer (EFT/NPSB)</option>
+                  <option value="bkash">bKash Merchant</option>
+                  <option value="nagad">Nagad Direct</option>
+                  <option value="stripe">Stripe / Credit Card</option>
+                  <option value="cash">Cash / Direct Invoice</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 mb-1">Txn / Bank Ref ID:</label>
+                <input
+                  type="text"
+                  value={paymentRef}
+                  onChange={(e) => setPaymentRef(e.target.value)}
+                  placeholder="e.g. TRX-98234812"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 mb-1">Notes / Invoice Memo:</label>
+                <input
+                  type="text"
+                  value={paymentNotes}
+                  onChange={(e) => setPaymentNotes(e.target.value)}
+                  placeholder="Optional billing note..."
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-hidden focus:border-amber-500"
+                />
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setModalType(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoading || !paymentAmount}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer disabled:opacity-50"
+                >
+                  {actionLoading ? 'Recording...' : 'Confirm Payment'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

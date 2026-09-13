@@ -154,9 +154,13 @@ class PlatformTenantController extends Controller
             'users' => fn ($q) => $q->where('is_platform_user', false),
         ])->findOrFail($id);
 
-        $subscriptions = TenantSubscription::where('tenant_id', $tenant->id)->latest('id')->get();
+        $subscriptions = TenantSubscription::where('tenant_id', $tenant->id)
+            ->with(['plan:id,name,code', 'renewedBy:id,name,email'])
+            ->latest('id')
+            ->get();
         $usageCounters = TenantUsageCounter::where('tenant_id', $tenant->id)->get();
-        $recentAudit = AuditLog::with('actor:id,name,email')
+        $recentAudit = AuditLog::withoutTenantScope()
+            ->with('user:id,name,email')
             ->where('tenant_id', $tenant->id)
             ->latest('id')
             ->limit(20)
@@ -165,7 +169,7 @@ class PlatformTenantController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'tenant' => $this->formatTenantProfile($tenant),
+                'tenant' => $this->formatTenantProfile($tenant, $subscriptions->first()),
                 'users' => $this->formatTenantUsers($tenant->users),
                 'subscriptions' => $this->formatTenantSubscriptions($subscriptions),
                 'usage_counters' => $this->formatTenantUsageCounters($usageCounters),
@@ -408,14 +412,51 @@ class PlatformTenantController extends Controller
      *
      * @return array<string, mixed>
      */
-    private function formatTenantProfile(Tenant $tenant): array
+    private function formatTenantProfile(Tenant $tenant, ?TenantSubscription $activeSub = null): array
     {
+        $now = Carbon::now();
+        $endsAt = $activeSub?->ends_at;
+        $graceEndsAt = $activeSub?->grace_period_ends_at;
+
+        $daysRemaining = null;
+        $daysOverdue = null;
+        $isInGracePeriod = false;
+
+        if ($endsAt !== null) {
+            if ($endsAt->isFuture()) {
+                $daysRemaining = (int) $now->diffInDays($endsAt, false);
+            } else {
+                $daysRemaining = 0;
+                $daysOverdue = (int) $now->diffInDays($endsAt, true);
+
+                if ($graceEndsAt !== null && $graceEndsAt->isFuture()) {
+                    $isInGracePeriod = true;
+                }
+            }
+        }
+
+        // Compute effective status
+        $effectiveStatus = $tenant->status;
+        if ($tenant->status === 'active' || $tenant->status === 'trial') {
+            if ($isInGracePeriod) {
+                $effectiveStatus = 'grace_period';
+            } elseif ($daysRemaining !== null && $daysRemaining === 0 && $endsAt !== null && $endsAt->isPast()) {
+                $effectiveStatus = 'expired';
+            } elseif ($daysRemaining !== null && $daysRemaining <= 7) {
+                $effectiveStatus = 'expiring_soon';
+            }
+        }
+
         return [
             'id' => $tenant->id,
             'uuid' => $tenant->uuid,
             'name' => $tenant->name,
             'slug' => $tenant->slug,
             'status' => $tenant->status,
+            'effective_status' => $effectiveStatus,
+            'days_remaining' => $daysRemaining,
+            'days_overdue' => $daysOverdue,
+            'is_in_grace_period' => $isInGracePeriod,
             'plan_id' => $tenant->plan_id,
             'plan' => $tenant->plan !== null ? [
                 'id' => $tenant->plan->id,
@@ -436,6 +477,7 @@ class PlatformTenantController extends Controller
             'trial_ends_at' => $tenant->trial_ends_at?->toIso8601String(),
             'activated_at' => $tenant->activated_at?->toIso8601String(),
             'suspended_at' => $tenant->suspended_at?->toIso8601String(),
+            'archived_at' => $tenant->archived_at?->toIso8601String(),
             'created_at' => $tenant->created_at?->toIso8601String(),
             'modules' => $tenant->modules->map(fn (TenantModule $m): array => [
                 'id' => $m->id,
@@ -473,8 +515,19 @@ class PlatformTenantController extends Controller
             'id' => $s->id,
             'uuid' => $s->uuid,
             'plan_id' => $s->plan_id,
+            'plan_name' => $s->plan?->name,
+            'plan_code' => $s->plan?->code,
             'status' => $s->status,
             'amount' => (float) $s->amount,
+            'currency_code' => $s->currency_code ?? 'BDT',
+            'billing_cycle' => $s->billing_cycle ?? 'monthly',
+            'grace_period_days' => $s->grace_period_days ?? 7,
+            'grace_period_ends_at' => $s->grace_period_ends_at?->toIso8601String(),
+            'auto_renew' => (bool) $s->auto_renew,
+            'discount_type' => $s->discount_type ?? 'none',
+            'discount_value' => (float) ($s->discount_value ?? 0),
+            'notes' => $s->notes,
+            'renewed_by_name' => $s->renewedBy?->name,
             'starts_at' => $s->starts_at?->toIso8601String(),
             'ends_at' => $s->ends_at?->toIso8601String(),
         ])->all();
@@ -501,8 +554,9 @@ class PlatformTenantController extends Controller
     {
         return $recentAudit->map(fn (AuditLog $a): array => [
             'id' => $a->id,
-            'action' => $a->action,
-            'actor_name' => $a->actor?->name ?? 'System',
+            'action' => $a->action instanceof \BackedEnum ? $a->action->value : (string) $a->action,
+            'actor_name' => $a->user?->name ?? 'System',
+            'actor_email' => $a->user?->email,
             'created_at' => $a->created_at?->toIso8601String(),
             'details' => $a->after,
         ])->all();
