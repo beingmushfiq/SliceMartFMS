@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
+  AlertTriangle,
   CheckCircle2,
   Clock,
   ClipboardList,
+  Download,
   Plus,
   RefreshCw,
   Search,
@@ -313,6 +315,12 @@ export function StockCountsSection() {
     });
   };
 
+  const [selectedCountIds, setSelectedCountIds] = useState<Set<number>>(new Set());
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [isBulkReconciling, setIsBulkReconciling] = useState(false);
+  const headerCheckboxRef = useRef<HTMLInputElement>(null);
+
   const filteredCounts = counts.filter((c) => {
     const matchesSearch =
       c.count_number?.toLowerCase().includes(search.toLowerCase()) ||
@@ -322,6 +330,100 @@ export function StockCountsSection() {
     const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const isAllSelected = filteredCounts.length > 0 && selectedCountIds.size === filteredCounts.length;
+  const isIndeterminate = selectedCountIds.size > 0 && selectedCountIds.size < filteredCounts.length;
+
+  useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate = isIndeterminate;
+    }
+  }, [isIndeterminate]);
+
+  const toggleSelectCount = (id: number) => {
+    setSelectedCountIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedCountIds(new Set());
+    } else {
+      setSelectedCountIds(new Set(filteredCounts.map((c) => c.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedCountIds.size === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const ids = Array.from(selectedCountIds);
+      await Promise.all(ids.map((id) => api.delete(`/inventory/counts/${id}`).catch(() => {})));
+      queryClient.setQueryData<StockCount[]>(['inventory', 'counts'], (prev = []) =>
+        prev.filter((c) => !selectedCountIds.has(c.id))
+      );
+      setSelectedCountIds(new Set());
+      setShowBulkDeleteModal(false);
+      toast.success('Selected audits cancelled and deleted.');
+    } catch {
+      toast.error('Failed to delete some audits.');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleBulkReconcile = async () => {
+    if (selectedCountIds.size === 0) return;
+    setIsBulkReconciling(true);
+    try {
+      const ids = Array.from(selectedCountIds);
+      await Promise.all(ids.map((id) => api.post(`/inventory/counts/${id}/reconcile`, {}).catch(() => {})));
+      queryClient.setQueryData<StockCount[]>(['inventory', 'counts'], (prev = []) =>
+        prev.map((c) =>
+          selectedCountIds.has(c.id)
+            ? { ...c, status: 'completed', reconciled_at: new Date().toISOString() }
+            : c
+        )
+      );
+      setSelectedCountIds(new Set());
+      toast.success('Selected audits reconciled.');
+    } catch {
+      toast.error('Failed to reconcile some audits.');
+    } finally {
+      setIsBulkReconciling(false);
+    }
+  };
+
+  const exportSelectedCsv = () => {
+    const selectedItems = counts.filter((c) => selectedCountIds.has(c.id));
+    if (selectedItems.length === 0) return;
+
+    const headers = ['Audit #', 'Warehouse', 'Date', 'Type', 'Status', 'Items Audited', 'Notes'];
+    const rows = selectedItems.map((c) => [
+      c.count_number,
+      c.warehouse_name,
+      c.count_date,
+      c.count_type,
+      c.status,
+      c.items?.length || 0,
+      c.notes || '',
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `stock_counts_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const getStatusBadge = (status: StockCount['status']) => {
     switch (status) {
@@ -463,12 +565,71 @@ export function StockCountsSection() {
         </div>
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedCountIds.size > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5">
+          <div className="flex items-center gap-2">
+            <span className="flex h-6 items-center justify-center rounded-md bg-primary px-2 text-xs font-semibold text-white">
+              {selectedCountIds.size}
+            </span>
+            <span className="text-xs font-medium text-default">
+              {selectedCountIds.size === 1 ? 'audit selected' : 'audits selected'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedCountIds(new Set())}
+              className="text-xs text-muted hover:text-default underline transition-colors cursor-pointer ml-1"
+            >
+              Clear
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleBulkReconcile}
+              disabled={isBulkReconciling}
+              className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+            >
+              <CheckCircle2 className="size-3.5" />
+              <span>{isBulkReconciling ? 'Reconciling...' : 'Bulk Reconcile'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={exportSelectedCsv}
+              className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-surface hover:bg-surface-sunken border border-default text-default flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+            >
+              <Download className="size-3.5" />
+              <span>Export CSV</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowBulkDeleteModal(true)}
+              className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-rose-600 hover:bg-rose-500 text-white flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+            >
+              <Trash2 className="size-3.5" />
+              <span>Bulk Delete ({selectedCountIds.size})</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Counts Table */}
       <div className="rounded-2xl border border-default bg-surface shadow-2xs overflow-hidden">
         <div className="overflow-x-auto min-h-75">
           <table className="w-full text-left text-xs text-default">
             <thead className="bg-surface-sunken text-[11px] font-semibold text-muted uppercase tracking-wider border-b border-default">
               <tr>
+                <th className="w-10 px-4 py-3.5 text-center">
+                  <input
+                    ref={headerCheckboxRef}
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={toggleSelectAll}
+                    className="rounded border-default text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                    aria-label="Select all audits"
+                  />
+                </th>
                 <th className="px-4 py-3.5">Audit # / Date</th>
                 <th className="px-4 py-3.5">Warehouse</th>
                 <th className="px-4 py-3.5">Audit Type</th>
@@ -480,13 +641,27 @@ export function StockCountsSection() {
             <tbody className="divide-y divide-default">
               {filteredCounts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-muted">
+                  <td colSpan={7} className="px-4 py-12 text-center text-muted">
                     {isLoading ? 'Loading audits...' : 'No stock count audits found matching your criteria.'}
                   </td>
                 </tr>
               ) : (
                 filteredCounts.map((c) => (
-                  <tr key={c.id} className="hover:bg-surface-sunken/60 transition-colors">
+                  <tr
+                    key={c.id}
+                    className={`hover:bg-surface-sunken/60 transition-colors ${
+                      selectedCountIds.has(c.id) ? 'bg-primary/5 dark:bg-primary/10' : ''
+                    }`}
+                  >
+                    <td className="w-10 px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedCountIds.has(c.id)}
+                        onChange={() => toggleSelectCount(c.id)}
+                        className="rounded border-default text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                        aria-label={`Select audit ${c.count_number}`}
+                      />
+                    </td>
                     <td className="px-4 py-3.5 font-mono font-medium text-default">
                       <div className="flex items-center gap-1.5">
                         <ClipboardList className="size-3.5 text-primary" />
@@ -996,6 +1171,44 @@ export function StockCountsSection() {
                 className="px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 cursor-pointer"
               >
                 Confirm Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BULK CANCEL / DELETE COUNT AUDIT CONFIRMATION MODAL */}
+      {showBulkDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-sm rounded-2xl border border-default bg-surface p-6 shadow-xl text-center space-y-4">
+            <div className="size-12 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto">
+              <AlertTriangle className="size-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-default">Cancel & Delete Audits?</h3>
+              <p className="text-xs text-muted mt-1">
+                Are you sure you want to permanently cancel and delete{' '}
+                <strong className="text-default">
+                  {selectedCountIds.size} stock {selectedCountIds.size === 1 ? 'audit' : 'audits'}
+                </strong>
+                ? Any pending reconciliation adjustments will be discarded.
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowBulkDeleteModal(false)}
+                className="px-4 py-2 rounded-xl border border-default text-muted hover:text-default cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+                className="px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 cursor-pointer disabled:opacity-50"
+              >
+                {isBulkDeleting ? 'Deleting...' : `Confirm Delete (${selectedCountIds.size})`}
               </button>
             </div>
           </div>

@@ -1,6 +1,8 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  AlertTriangle,
+  Download,
   Edit3,
   Plus,
   Search,
@@ -261,6 +263,103 @@ export function WorkerProductionSection() {
     return `${shiftStr.charAt(0).toUpperCase() + shiftStr.slice(1)} Shift`;
   };
 
+  const [selectedEntryIds, setSelectedEntryIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [isBulkVerifying, setIsBulkVerifying] = useState(false);
+  const headerCheckboxRef = useRef<HTMLInputElement>(null);
+
+  const isAllSelected = entries.length > 0 && selectedEntryIds.size === entries.length;
+  const isSomeSelected = selectedEntryIds.size > 0 && !isAllSelected;
+
+  useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate = isSomeSelected;
+    }
+  }, [isSomeSelected]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedEntryIds.size > 0) {
+        setSelectedEntryIds(new Set());
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedEntryIds.size]);
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedEntryIds(new Set());
+    } else {
+      setSelectedEntryIds(new Set(entries.map((e) => e.id)));
+    }
+  };
+
+  const toggleSelectEntry = (id: string) => {
+    setSelectedEntryIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedEntryIds(new Set());
+
+  const handleBulkVerify = async () => {
+    setIsBulkVerifying(true);
+    try {
+      await Promise.allSettled(
+        Array.from(selectedEntryIds).map((id) => api.post(`/production/worker-entries/${id}/verify`))
+      );
+      await queryClient.invalidateQueries({ queryKey: ['production', 'worker-entries'] });
+      setSelectedEntryIds(new Set());
+    } finally {
+      setIsBulkVerifying(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    setIsBulkDeleting(true);
+    try {
+      await Promise.allSettled(
+        Array.from(selectedEntryIds).map((id) => api.delete(`/production/worker-entries/${id}`))
+      );
+      await queryClient.invalidateQueries({ queryKey: ['production', 'worker-entries'] });
+      setSelectedEntryIds(new Set());
+      setShowBulkDeleteModal(false);
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const exportSelectedCsv = (selectedEntries: WorkerProductionEntry[]) => {
+    if (selectedEntries.length === 0) return;
+    const headers = ['Worker', 'Employee Code', 'Batch', 'Product', 'Date', 'Shift', 'Good Qty', 'Rework Qty', 'Rejected Qty', 'Total Earned', 'Status'];
+    const rows = selectedEntries.map((e) => [
+      `"${(e.employee_name ?? e.employee_id ?? '').replace(/"/g, '""')}"`,
+      `"${e.employee_code ?? ''}"`,
+      `"${e.batch_number ?? e.batch_id ?? ''}"`,
+      `"${(e.product_name ?? e.product_id ?? '').replace(/"/g, '""')}"`,
+      `"${e.work_date}"`,
+      `"${e.shift}"`,
+      `"${e.good_quantity}"`,
+      `"${e.rework_quantity}"`,
+      `"${e.rejected_quantity}"`,
+      `"${e.total_earned ?? ''}"`,
+      `"${e.status}"`,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `worker-production-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
       {/* KPI Stats Summary Bar */}
@@ -382,6 +481,55 @@ export function WorkerProductionSection() {
         </div>
       </div>
 
+      {/* Bulk Selection Bar */}
+      {selectedEntryIds.size > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-xs text-primary animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">{selectedEntryIds.size} log{selectedEntryIds.size > 1 ? 's' : ''} selected</span>
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="text-muted hover:text-default underline cursor-pointer ml-2"
+            >
+              Clear
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                const selected = entries.filter((e) => selectedEntryIds.has(e.id));
+                exportSelectedCsv(selected);
+              }}
+              className="flex items-center gap-1.5 text-xs"
+            >
+              <Download className="size-3.5" />
+              <span>Export CSV</span>
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleBulkVerify}
+              disabled={isBulkVerifying}
+              className="flex items-center gap-1.5 text-xs text-emerald-600 hover:text-emerald-700"
+            >
+              <ShieldCheck className="size-3.5" />
+              <span>{isBulkVerifying ? 'Verifying...' : 'Bulk Verify'}</span>
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setShowBulkDeleteModal(true)}
+              className="flex items-center gap-1.5 text-xs font-semibold"
+            >
+              <Trash2 className="size-3.5" />
+              <span>Bulk Delete ({selectedEntryIds.size})</span>
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Entries Table */}
       <QueryBoundary
         status={entriesQuery.status}
@@ -394,6 +542,16 @@ export function WorkerProductionSection() {
             <table className="w-full text-left text-xs text-default border-collapse">
               <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
                 <tr>
+                  <th className="w-10 px-4 py-3.5 text-center">
+                    <input
+                      ref={headerCheckboxRef}
+                      type="checkbox"
+                      checked={isAllSelected}
+                      onChange={toggleSelectAll}
+                      aria-label="Select all entries"
+                      className="size-4 rounded border-default text-primary focus:ring-primary/20 cursor-pointer"
+                    />
+                  </th>
                   <th className="px-4 py-3.5 whitespace-nowrap">Worker</th>
                   <th className="px-4 py-3.5">Batch & Product</th>
                   <th className="px-4 py-3.5 whitespace-nowrap">Shift & Date</th>
@@ -406,7 +564,7 @@ export function WorkerProductionSection() {
               <tbody className="divide-y divide-default">
                 {entries.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-muted">
+                    <td colSpan={8} className="py-12 text-center text-muted">
                       <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-surface-sunken border border-default mb-2">
                         <Users className="h-5 w-5 text-muted" />
                       </div>
@@ -420,7 +578,21 @@ export function WorkerProductionSection() {
                   </tr>
                 ) : (
                   entries.map((entry) => (
-                    <tr key={entry.id} className="hover:bg-surface-sunken/60 transition-colors">
+                    <tr
+                      key={entry.id}
+                      className={`hover:bg-surface-sunken/60 transition-colors ${
+                        selectedEntryIds.has(entry.id) ? 'bg-primary/5' : ''
+                      }`}
+                    >
+                      <td className="w-10 px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedEntryIds.has(entry.id)}
+                          onChange={() => toggleSelectEntry(entry.id)}
+                          aria-label={`Select entry for ${entry.employee_name ?? entry.employee_id}`}
+                          className="size-4 rounded border-default text-primary focus:ring-primary/20 cursor-pointer"
+                        />
+                      </td>
                       <td className="px-4 py-3.5 whitespace-nowrap">
                         <div className="font-semibold text-default flex items-center gap-1.5" title={entry.employee_name ?? entry.employee_id}>
                           <UserCheck className="size-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -576,27 +748,23 @@ export function WorkerProductionSection() {
                                 </button>
                               )}
 
-                              {entry.status === 'draft' && (
-                                <>
-                                  <div className="my-1 border-t border-default/50" />
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenActionMenuId(null);
-                                      setActionMenuAnchor(null);
-                                      setDeleteConfirm({
-                                        open: true,
-                                        id: entry.id,
-                                        name: `${entry.employee_name ?? 'Worker'} (${entry.good_quantity} units)`,
-                                      });
-                                    }}
-                                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
-                                  >
-                                    <Trash2 className="size-3.5 text-rose-600 shrink-0" />
-                                    <span>Delete Entry</span>
-                                  </button>
-                                </>
-                              )}
+                              <div className="my-1 border-t border-default/50" />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenActionMenuId(null);
+                                  setActionMenuAnchor(null);
+                                  setDeleteConfirm({
+                                    open: true,
+                                    id: entry.id,
+                                    name: `${entry.employee_name ?? 'Worker'} (${entry.good_quantity} units)`,
+                                  });
+                                }}
+                                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="size-3.5 text-rose-600 shrink-0" />
+                                <span>Delete Entry</span>
+                              </button>
                             </ActionMenuPortal>
                           </div>
                         </div>
@@ -935,6 +1103,48 @@ export function WorkerProductionSection() {
           </div>
         </div>
       </Modal>
+
+      {/* Bulk Delete Confirmation Modal */}
+      {showBulkDeleteModal && (
+        <Modal
+          open={showBulkDeleteModal}
+          onClose={() => !isBulkDeleting && setShowBulkDeleteModal(false)}
+          title="Confirm Bulk Deletion"
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400">
+              <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">Confirm Bulk Worker Output Logs Deletion</p>
+                <p className="mt-1 text-muted">
+                  Are you sure you want to permanently delete{' '}
+                  <strong className="text-default font-mono">
+                    {selectedEntryIds.size}
+                  </strong>{' '}
+                  selected worker production entries? This action cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-default">
+              <Button
+                variant="ghost"
+                onClick={() => setShowBulkDeleteModal(false)}
+                disabled={isBulkDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+              >
+                {isBulkDeleting ? 'Deleting...' : `Delete ${selectedEntryIds.size} Logs`}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       <UniversalImportModal
         isOpen={isImportOpen}

@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertOctagon,
   AlertTriangle,
   DollarSign,
+  Download,
   Edit2,
   Plus,
   Search,
@@ -182,12 +183,92 @@ export function WastageRecordsSection() {
     });
   };
 
+  const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const headerCheckboxRef = useRef<HTMLInputElement>(null);
+
   const records = wastageQuery.data?.data ?? [];
   const products = productsQuery.data?.data ?? [];
   const units = unitsQuery.data?.data ?? [];
   const batches = batchesQuery.data?.data ?? [];
   const warehouses = warehousesQuery.data?.data ?? [];
   const reasonCodes = reasonCodesQuery.data?.data ?? [];
+
+  const isAllSelected = records.length > 0 && selectedRecordIds.size === records.length;
+  const isSomeSelected = selectedRecordIds.size > 0 && !isAllSelected;
+
+  useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate = isSomeSelected;
+    }
+  }, [isSomeSelected]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedRecordIds.size > 0) {
+        setSelectedRecordIds(new Set());
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedRecordIds.size]);
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedRecordIds(new Set());
+    } else {
+      setSelectedRecordIds(new Set(records.map((r) => r.id)));
+    }
+  };
+
+  const toggleSelectRecord = (id: string) => {
+    setSelectedRecordIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedRecordIds(new Set());
+
+  const handleBulkDelete = async () => {
+    setIsBulkDeleting(true);
+    try {
+      await Promise.allSettled(
+        Array.from(selectedRecordIds).map((id) => api.delete(`/qc/wastage-records/${id}`))
+      );
+      await queryClient.invalidateQueries({ queryKey: ['qc', 'wastage-records'] });
+      setSelectedRecordIds(new Set());
+      setShowBulkDeleteModal(false);
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const exportSelectedCsv = (recs: WastageRecord[]) => {
+    if (recs.length === 0) return;
+    const headers = ['Record Number', 'Product', 'Batch', 'Stage', 'Reason', 'Quantity', 'Cost Impact', 'Recoverable'];
+    const rows = recs.map((r) => [
+      `"${r.record_number ?? r.wastage_number ?? ''}"`,
+      `"${(r.product_name ?? r.product_id ?? '').replace(/"/g, '""')}"`,
+      `"${r.batch_number ?? ''}"`,
+      `"${((r as { stage?: string }).stage ?? 'in_process')}"`,
+      `"${typeof r.reason_code === 'object' && r.reason_code !== null ? ((r.reason_code as { name?: string }).name ?? '') : (r.reason_name ?? '')}"`,
+      `"${r.quantity ?? '0'}"`,
+      `"${r.total_cost ?? (r as { estimated_cost?: string }).estimated_cost ?? '0'}"`,
+      `"${(r as { is_recoverable?: boolean }).is_recoverable ? 'YES' : 'NO'}"`,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `wastage-records-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-6">
@@ -247,6 +328,45 @@ export function WastageRecordsSection() {
         </Button>
       </div>
 
+      {/* Bulk Selection Bar */}
+      {selectedRecordIds.size > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-xs text-primary animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">{selectedRecordIds.size} record{selectedRecordIds.size > 1 ? 's' : ''} selected</span>
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="text-muted hover:text-default underline cursor-pointer ml-2"
+            >
+              Clear
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                const selected = records.filter((r) => selectedRecordIds.has(r.id));
+                exportSelectedCsv(selected);
+              }}
+              className="flex items-center gap-1.5 text-xs"
+            >
+              <Download className="size-3.5" />
+              <span>Export CSV</span>
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setShowBulkDeleteModal(true)}
+              className="flex items-center gap-1.5 text-xs font-semibold"
+            >
+              <Trash2 className="size-3.5" />
+              <span>Bulk Delete ({selectedRecordIds.size})</span>
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <QueryBoundary
         status={wastageQuery.status}
@@ -259,7 +379,17 @@ export function WastageRecordsSection() {
             <table className="w-full text-left text-xs text-default">
               <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
                 <tr>
-                  <th className="py-3.5 pl-4 pr-3">Record Number</th>
+                  <th className="w-10 px-4 py-3.5 text-center">
+                    <input
+                      ref={headerCheckboxRef}
+                      type="checkbox"
+                      checked={isAllSelected}
+                      onChange={toggleSelectAll}
+                      aria-label="Select all records"
+                      className="size-4 rounded border-default text-primary focus:ring-primary/20 cursor-pointer"
+                    />
+                  </th>
+                  <th className="py-3.5 px-3">Record Number</th>
                   <th className="py-3.5 px-3">Product / Batch</th>
                   <th className="py-3.5 px-3">Process Stage</th>
                   <th className="py-3.5 px-3">Reason Code</th>
@@ -272,7 +402,7 @@ export function WastageRecordsSection() {
               <tbody className="divide-y divide-default">
                 {records.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-muted">
+                    <td colSpan={9} className="py-12 text-center text-muted">
                       <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-surface-sunken border border-default mb-2">
                         <Trash2 className="h-5 w-5 text-muted" />
                       </div>
@@ -286,8 +416,22 @@ export function WastageRecordsSection() {
                   </tr>
                 ) : (
                   records.map((rec) => (
-                    <tr key={rec.id} className="hover:bg-surface-sunken/60 transition-colors">
-                      <td className="py-3 pl-4 pr-3 font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                    <tr
+                      key={rec.id}
+                      className={`hover:bg-surface-sunken/60 transition-colors ${
+                        selectedRecordIds.has(rec.id) ? 'bg-primary/5' : ''
+                      }`}
+                    >
+                      <td className="w-10 px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedRecordIds.has(rec.id)}
+                          onChange={() => toggleSelectRecord(rec.id)}
+                          aria-label={`Select record ${rec.record_number ?? rec.wastage_number}`}
+                          className="size-4 rounded border-default text-primary focus:ring-primary/20 cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-3 px-3 font-mono font-medium text-emerald-600 dark:text-emerald-400">
                         {rec.record_number ?? rec.wastage_number}
                       </td>
                       <td className="py-3 px-3">
@@ -845,6 +989,48 @@ export function WastageRecordsSection() {
                 disabled={deleteMutation.isPending}
               >
                 {deleteMutation.isPending ? 'Deleting...' : 'Delete Record'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {showBulkDeleteModal && (
+        <Modal
+          open={showBulkDeleteModal}
+          onClose={() => !isBulkDeleting && setShowBulkDeleteModal(false)}
+          title="Confirm Bulk Deletion"
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400">
+              <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">Confirm Bulk Wastage Records Deletion</p>
+                <p className="mt-1 text-muted">
+                  Are you sure you want to permanently delete{' '}
+                  <strong className="text-default font-mono">
+                    {selectedRecordIds.size}
+                  </strong>{' '}
+                  selected wastage records? This action cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-default">
+              <Button
+                variant="ghost"
+                onClick={() => setShowBulkDeleteModal(false)}
+                disabled={isBulkDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+              >
+                {isBulkDeleting ? 'Deleting...' : `Delete ${selectedRecordIds.size} Records`}
               </Button>
             </div>
           </div>

@@ -260,7 +260,23 @@ export function ProductionBatchesSection() {
     id: '',
     name: '',
   });
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const headerCheckboxRef = useRef<HTMLInputElement>(null);
+
+  const handleBulkDelete = async () => {
+    setIsBulkDeleting(true);
+    try {
+      await Promise.allSettled(
+        Array.from(selectedBatchIds).map((id) => api.delete(`/production/batches/${id}`))
+      );
+      await queryClient.invalidateQueries({ queryKey: ['production', 'batches'] });
+      setSelectedBatchIds(new Set());
+      setShowBulkDeleteModal(false);
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
@@ -444,6 +460,15 @@ export function ProductionBatchesSection() {
               >
                 <Download className="size-3.5" />
                 <span>Export Selected CSV ({selectedBatchIds.size})</span>
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setShowBulkDeleteModal(true)}
+                className="flex items-center gap-1.5 text-xs font-semibold"
+              >
+                <Trash2 className="size-3.5" />
+                <span>Bulk Delete ({selectedBatchIds.size})</span>
               </Button>
             </>
           ) : (
@@ -1410,6 +1435,16 @@ export function ProductionBatchesSection() {
               <span>Export CSV</span>
             </Button>
 
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setShowBulkDeleteModal(true)}
+              className="flex items-center gap-1.5 text-xs font-semibold shadow-xs"
+            >
+              <Trash2 className="size-3.5" />
+              <span>Bulk Delete ({selectedBatchIds.size})</span>
+            </Button>
+
             <button
               type="button"
               onClick={clearSelection}
@@ -1421,6 +1456,43 @@ export function ProductionBatchesSection() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {showBulkDeleteModal && (
+        <Modal
+          open={showBulkDeleteModal}
+          onClose={() => !isBulkDeleting && setShowBulkDeleteModal(false)}
+          title="Confirm Bulk Deletion"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-default">
+              Are you sure you want to permanently delete{' '}
+              <span className="font-mono font-bold text-rose-600 dark:text-rose-400">
+                {selectedBatchIds.size}
+              </span>{' '}
+              selected production batches? This action cannot be undone.
+            </p>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-default">
+              <Button
+                variant="ghost"
+                onClick={() => setShowBulkDeleteModal(false)}
+                disabled={isBulkDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+                className="bg-rose-600 hover:bg-rose-700 text-white font-medium"
+              >
+                {isBulkDeleting ? 'Deleting...' : `Delete ${selectedBatchIds.size} Batches`}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

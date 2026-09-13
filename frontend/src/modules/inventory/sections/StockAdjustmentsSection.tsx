@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
+  AlertTriangle,
   ArrowDownRight,
   ArrowUpRight,
   CheckCircle2,
   Clock,
+  Download,
   Plus,
   RefreshCw,
   Search,
@@ -294,6 +296,12 @@ export function StockAdjustmentsSection() {
     });
   };
 
+  const [selectedAdjustmentIds, setSelectedAdjustmentIds] = useState<Set<number>>(new Set());
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [isBulkApproving, setIsBulkApproving] = useState(false);
+  const headerCheckboxRef = useRef<HTMLInputElement>(null);
+
   const filteredAdjustments = adjustments.filter((a) => {
     const matchesSearch =
       a.adjustment_number?.toLowerCase().includes(search.toLowerCase()) ||
@@ -304,6 +312,100 @@ export function StockAdjustmentsSection() {
     const matchesStatus = statusFilter === 'all' || a.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const isAllSelected = filteredAdjustments.length > 0 && selectedAdjustmentIds.size === filteredAdjustments.length;
+  const isIndeterminate = selectedAdjustmentIds.size > 0 && selectedAdjustmentIds.size < filteredAdjustments.length;
+
+  useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate = isIndeterminate;
+    }
+  }, [isIndeterminate]);
+
+  const toggleSelectAdjustment = (id: number) => {
+    setSelectedAdjustmentIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedAdjustmentIds(new Set());
+    } else {
+      setSelectedAdjustmentIds(new Set(filteredAdjustments.map((a) => a.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedAdjustmentIds.size === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const ids = Array.from(selectedAdjustmentIds);
+      await Promise.all(ids.map((id) => api.delete(`/inventory/adjustments/${id}`).catch(() => {})));
+      queryClient.setQueryData<StockAdjustment[]>(['inventory', 'adjustments'], (prev = []) =>
+        prev.filter((a) => !selectedAdjustmentIds.has(a.id))
+      );
+      setSelectedAdjustmentIds(new Set());
+      setShowBulkDeleteModal(false);
+      toast.success('Selected adjustments voided and deleted.');
+    } catch {
+      toast.error('Failed to delete some adjustments.');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleBulkApprove = async () => {
+    if (selectedAdjustmentIds.size === 0) return;
+    setIsBulkApproving(true);
+    try {
+      const ids = Array.from(selectedAdjustmentIds);
+      await Promise.all(ids.map((id) => api.post(`/inventory/adjustments/${id}/approve`, {}).catch(() => {})));
+      queryClient.setQueryData<StockAdjustment[]>(['inventory', 'adjustments'], (prev = []) =>
+        prev.map((a) =>
+          selectedAdjustmentIds.has(a.id)
+            ? { ...a, status: 'approved', approved_at: new Date().toISOString() }
+            : a
+        )
+      );
+      setSelectedAdjustmentIds(new Set());
+      toast.success('Selected adjustments approved and posted to ledger.');
+    } catch {
+      toast.error('Failed to approve some adjustments.');
+    } finally {
+      setIsBulkApproving(false);
+    }
+  };
+
+  const exportSelectedCsv = () => {
+    const selectedItems = adjustments.filter((a) => selectedAdjustmentIds.has(a.id));
+    if (selectedItems.length === 0) return;
+
+    const headers = ['Adjustment #', 'Warehouse', 'Date', 'Reason', 'Status', 'Items Count', 'Notes'];
+    const rows = selectedItems.map((a) => [
+      a.adjustment_number,
+      a.warehouse_name,
+      a.adjustment_date,
+      a.reason_name,
+      a.status,
+      a.items?.length || 0,
+      a.notes || '',
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `stock_adjustments_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const getStatusBadge = (status: StockAdjustment['status']) => {
     switch (status) {
@@ -440,12 +542,71 @@ export function StockAdjustmentsSection() {
         </div>
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedAdjustmentIds.size > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5">
+          <div className="flex items-center gap-2">
+            <span className="flex h-6 items-center justify-center rounded-md bg-primary px-2 text-xs font-semibold text-white">
+              {selectedAdjustmentIds.size}
+            </span>
+            <span className="text-xs font-medium text-default">
+              {selectedAdjustmentIds.size === 1 ? 'adjustment selected' : 'adjustments selected'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedAdjustmentIds(new Set())}
+              className="text-xs text-muted hover:text-default underline transition-colors cursor-pointer ml-1"
+            >
+              Clear
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleBulkApprove}
+              disabled={isBulkApproving}
+              className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+            >
+              <CheckCircle2 className="size-3.5" />
+              <span>{isBulkApproving ? 'Approving...' : 'Bulk Approve'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={exportSelectedCsv}
+              className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-surface hover:bg-surface-sunken border border-default text-default flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+            >
+              <Download className="size-3.5" />
+              <span>Export CSV</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowBulkDeleteModal(true)}
+              className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-rose-600 hover:bg-rose-500 text-white flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+            >
+              <Trash2 className="size-3.5" />
+              <span>Bulk Void/Delete ({selectedAdjustmentIds.size})</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Adjustments Table */}
       <div className="rounded-2xl border border-default bg-surface shadow-2xs overflow-hidden">
         <div className="overflow-x-auto min-h-75">
           <table className="w-full text-left text-xs text-default">
             <thead className="bg-surface-sunken text-[11px] font-semibold text-muted uppercase tracking-wider border-b border-default">
               <tr>
+                <th className="w-10 px-4 py-3.5 text-center">
+                  <input
+                    ref={headerCheckboxRef}
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={toggleSelectAll}
+                    className="rounded border-default text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                    aria-label="Select all adjustments"
+                  />
+                </th>
                 <th className="px-4 py-3.5">Adjustment # / Date</th>
                 <th className="px-4 py-3.5">Warehouse Location</th>
                 <th className="px-4 py-3.5">Reason Category</th>
@@ -457,13 +618,27 @@ export function StockAdjustmentsSection() {
             <tbody className="divide-y divide-default">
               {filteredAdjustments.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-muted">
+                  <td colSpan={7} className="px-4 py-12 text-center text-muted">
                     {isLoading ? 'Loading adjustments...' : 'No stock adjustments found matching your criteria.'}
                   </td>
                 </tr>
               ) : (
                 filteredAdjustments.map((a) => (
-                  <tr key={a.id} className="hover:bg-surface-sunken/60 transition-colors">
+                  <tr
+                    key={a.id}
+                    className={`hover:bg-surface-sunken/60 transition-colors ${
+                      selectedAdjustmentIds.has(a.id) ? 'bg-primary/5 dark:bg-primary/10' : ''
+                    }`}
+                  >
+                    <td className="w-10 px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedAdjustmentIds.has(a.id)}
+                        onChange={() => toggleSelectAdjustment(a.id)}
+                        className="rounded border-default text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                        aria-label={`Select adjustment ${a.adjustment_number}`}
+                      />
+                    </td>
                     <td className="px-4 py-3.5 font-mono font-medium text-default">
                       <div className="flex items-center gap-1.5">
                         <Sliders className="size-3.5 text-primary" />
@@ -1002,6 +1177,44 @@ export function StockAdjustmentsSection() {
                 className="px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 cursor-pointer"
               >
                 Confirm Void
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BULK VOID/DELETE ADJUSTMENT CONFIRMATION MODAL */}
+      {showBulkDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-sm rounded-2xl border border-default bg-surface p-6 shadow-xl text-center space-y-4">
+            <div className="size-12 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto">
+              <AlertTriangle className="size-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-default">Void & Delete Adjustments?</h3>
+              <p className="text-xs text-muted mt-1">
+                Are you sure you want to void and delete{' '}
+                <strong className="text-default">
+                  {selectedAdjustmentIds.size} stock {selectedAdjustmentIds.size === 1 ? 'adjustment' : 'adjustments'}
+                </strong>
+                ? Any unposted valuation impacts will be removed.
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowBulkDeleteModal(false)}
+                className="px-4 py-2 rounded-xl border border-default text-muted hover:text-default cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+                className="px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 cursor-pointer disabled:opacity-50"
+              >
+                {isBulkDeleting ? 'Deleting...' : `Confirm Void (${selectedAdjustmentIds.size})`}
               </button>
             </div>
           </div>

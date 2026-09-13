@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertTriangle,
   CheckCircle2,
+  Download,
   Edit2,
   Eye,
   Microscope,
@@ -239,10 +240,106 @@ export function QcInspectionsSection() {
     });
   };
 
+  const [selectedInspectionIds, setSelectedInspectionIds] = useState<Set<string>>(new Set());
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [isBulkApproving, setIsBulkApproving] = useState(false);
+  const headerCheckboxRef = useRef<HTMLInputElement>(null);
+
   const inspections = inspectionsQuery.data?.data ?? [];
   const batches = batchesQuery.data?.data ?? [];
   const products = productsQuery.data?.data ?? [];
   const parameters = paramsQuery.data?.data ?? [];
+
+  const isAllSelected = inspections.length > 0 && selectedInspectionIds.size === inspections.length;
+  const isIndeterminate = selectedInspectionIds.size > 0 && selectedInspectionIds.size < inspections.length;
+
+  useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate = isIndeterminate;
+    }
+  }, [isIndeterminate]);
+
+  const toggleSelectInspection = (id: string) => {
+    setSelectedInspectionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedInspectionIds(new Set());
+    } else {
+      setSelectedInspectionIds(new Set(inspections.map((i) => i.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedInspectionIds.size === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const ids = Array.from(selectedInspectionIds);
+      await Promise.all(ids.map((id) => api.delete(`/qc/inspections/${id}`)));
+      await queryClient.invalidateQueries({ queryKey: ['qc', 'inspections'] });
+      setSelectedInspectionIds(new Set());
+      setShowBulkDeleteModal(false);
+    } catch (err) {
+      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to delete selected inspections.');
+      else setErrorMsg('Error deleting selected inspections.');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleBulkApprove = async () => {
+    if (selectedInspectionIds.size === 0) return;
+    setIsBulkApproving(true);
+    try {
+      const ids = Array.from(selectedInspectionIds);
+      await Promise.all(ids.map((id) => api.post(`/qc/inspections/${id}/approve`)));
+      await queryClient.invalidateQueries({ queryKey: ['qc', 'inspections'] });
+      setSelectedInspectionIds(new Set());
+    } catch (err) {
+      if (isApiError(err)) setErrorMsg(err.message ?? 'Failed to approve selected inspections.');
+      else setErrorMsg('Error approving selected inspections.');
+    } finally {
+      setIsBulkApproving(false);
+    }
+  };
+
+  const exportSelectedCsv = () => {
+    const selectedItems = inspections.filter((i) => selectedInspectionIds.has(i.id));
+    if (selectedItems.length === 0) return;
+
+    const headers = ['Inspection #', 'Type', 'Date', 'Product', 'Batch', 'Sample Size', 'Inspected', 'Passed', 'Rejected', 'Status', 'Result'];
+    const rows = selectedItems.map((i) => [
+      i.inspection_number,
+      i.inspection_type,
+      i.inspection_date,
+      i.product_name ?? i.product_id,
+      i.batch_number ?? '',
+      i.sample_size,
+      i.inspected_quantity,
+      i.passed_quantity,
+      i.rejected_quantity ?? i.failed_quantity ?? '0',
+      i.status ?? 'draft',
+      i.result ?? 'pass',
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `qc_inspections_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-6">
@@ -319,6 +416,58 @@ export function QcInspectionsSection() {
         </Button>
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedInspectionIds.size > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5">
+          <div className="flex items-center gap-2">
+            <span className="flex h-6 items-center justify-center rounded-md bg-primary px-2 text-xs font-semibold text-white">
+              {selectedInspectionIds.size}
+            </span>
+            <span className="text-xs font-medium text-default">
+              {selectedInspectionIds.size === 1 ? 'inspection selected' : 'inspections selected'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedInspectionIds(new Set())}
+              className="text-xs text-muted hover:text-default underline transition-colors cursor-pointer ml-1"
+            >
+              Clear
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleBulkApprove}
+              disabled={isBulkApproving}
+              className="flex items-center gap-1.5 text-emerald-600 hover:text-emerald-700"
+            >
+              <ShieldCheck className="h-3.5 w-3.5" />
+              <span>{isBulkApproving ? 'Approving...' : 'Bulk Approve'}</span>
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={exportSelectedCsv}
+              className="flex items-center gap-1.5"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span>Export CSV</span>
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setShowBulkDeleteModal(true)}
+              className="flex items-center gap-1.5"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span>Bulk Delete ({selectedInspectionIds.size})</span>
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <QueryBoundary
         status={inspectionsQuery.status}
@@ -331,7 +480,17 @@ export function QcInspectionsSection() {
             <table className="w-full text-left text-xs text-default">
               <thead className="border-b border-default bg-surface-sunken text-[11px] font-semibold uppercase tracking-wider text-muted">
                 <tr>
-                  <th className="py-3.5 pl-4 pr-3">Inspection #</th>
+                  <th className="w-10 px-4 py-3.5 text-center">
+                    <input
+                      ref={headerCheckboxRef}
+                      type="checkbox"
+                      checked={isAllSelected}
+                      onChange={toggleSelectAll}
+                      className="rounded border-default text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                      aria-label="Select all inspections"
+                    />
+                  </th>
+                  <th className="py-3.5 pl-2 pr-3">Inspection #</th>
                   <th className="py-3.5 px-3">Type & Date</th>
                   <th className="py-3.5 px-3">Product / Batch</th>
                   <th className="py-3.5 px-3">Sample / Inspected</th>
@@ -343,7 +502,7 @@ export function QcInspectionsSection() {
               <tbody className="divide-y divide-default">
                 {inspections.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-muted">
+                    <td colSpan={8} className="py-12 text-center text-muted">
                       <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-surface-sunken border border-default mb-2">
                         <Microscope className="h-5 w-5 text-muted" />
                       </div>
@@ -355,8 +514,22 @@ export function QcInspectionsSection() {
                   </tr>
                 ) : (
                   inspections.map((insp) => (
-                    <tr key={insp.id} className="hover:bg-surface-sunken/60 transition-colors">
-                      <td className="py-3.5 pl-4 pr-3 font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                    <tr
+                      key={insp.id}
+                      className={`hover:bg-surface-sunken/60 transition-colors ${
+                        selectedInspectionIds.has(insp.id) ? 'bg-primary/5 dark:bg-primary/10' : ''
+                      }`}
+                    >
+                      <td className="w-10 px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedInspectionIds.has(insp.id)}
+                          onChange={() => toggleSelectInspection(insp.id)}
+                          className="rounded border-default text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                          aria-label={`Select inspection ${insp.inspection_number}`}
+                        />
+                      </td>
+                      <td className="py-3.5 pl-2 pr-3 font-mono font-medium text-emerald-600 dark:text-emerald-400">
                         {insp.inspection_number}
                       </td>
                       <td className="py-3.5 px-3">
@@ -1126,6 +1299,44 @@ export function QcInspectionsSection() {
                 disabled={deleteMutation.isPending}
               >
                 {deleteMutation.isPending ? 'Deleting...' : 'Delete Inspection'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Bulk Delete Modal */}
+      {showBulkDeleteModal && (
+        <Modal
+          open={showBulkDeleteModal}
+          onClose={() => setShowBulkDeleteModal(false)}
+          title="Delete Inspections in Bulk"
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400">
+              <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">Confirm Bulk Inspection Deletion</p>
+                <p className="mt-1 text-muted">
+                  Are you sure you want to permanently delete{' '}
+                  <strong className="text-default">
+                    {selectedInspectionIds.size} inspection {selectedInspectionIds.size === 1 ? 'record' : 'records'}
+                  </strong>
+                  ? This will delete these inspection runs and their associated defect logs. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-default">
+              <Button variant="ghost" onClick={() => setShowBulkDeleteModal(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+              >
+                {isBulkDeleting ? 'Deleting...' : `Delete ${selectedInspectionIds.size} Records`}
               </Button>
             </div>
           </div>
